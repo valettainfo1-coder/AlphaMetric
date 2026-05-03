@@ -1,0 +1,73 @@
+import type { Metadata } from "next";
+import Footer from "@/components/Footer";
+
+export const metadata: Metadata = {
+  title: "Über uns",
+  description: "AlphaMetric macht institutionelle Aktienanalyse für jeden zugänglich. Live-Kurse, KI-Analyst Metrio, Portfolio-Coaching — kostenlos.",
+};
+
+export default function About() {
+  const Section = ({ children, title }: { children: React.ReactNode; title: string }) => (
+    <section style={{ marginBottom: 36 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 14, letterSpacing: "-0.02em" }}>{title}</h2>
+      <div style={{ color: "var(--am-text-secondary)", lineHeight: 1.75, fontSize: 15 }}>
+        {children}
+      </div>
+    </section>
+  );
+
+  return (
+    <div style={{ background: "var(--am-bg)", minHeight: "100vh", color: "var(--am-text)", padding: "80px 24px 60px" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto" }}>
+        {/* Hero */}
+        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--am-text-faint)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 12 }}>
+          Über AlphaMetric
+        </p>
+        <h1 style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1.1, marginBottom: 20 }}>
+          Wir machen das schwierigste Werkzeug der Welt verständlich.
+        </h1>
+        <p style={{ fontSize: 17, color: "var(--am-text-muted)", lineHeight: 1.65, marginBottom: 48, maxWidth: 600 }}>
+          Aktienanalyse war 30 Jahre lang das Privileg von Goldman, McKinsey und JP Morgan. AlphaMetric ist die Antwort auf die Frage, warum eigentlich. Institutionelle Daten, KI-Analyst und Portfolio-Coaching — kostenlos im Starter-Tier, ohne Ausreden.
+        </p>
+
+        <Section title="Warum es uns gibt">
+          <p style={{ marginBottom: 12 }}>
+            Über 60 % der deutschen Privatanleger geben in Umfragen an, „nicht zu verstehen, was sie eigentlich besitzen". Das ist kein Bildungsproblem — das ist ein Produktproblem. Tools wie Bloomberg Terminal kosten 24.000 € im Jahr, die kostenlosen Alternativen sind Werbe-Friedhöfe ohne Tiefe.
+          </p>
+          <p style={{ marginBottom: 12 }}>
+            AlphaMetric schließt die Lücke: 60+ Börsen weltweit, Echtzeitkurse, Piotroski-, Altman- und Beneish-Scores, Metrio AI als persönlicher Analyst, Risikoprofil-Onboarding für Einsteiger, Paper-Trading-Portfolio. Alles in einer Sitzung. Alles auf Deutsch. Alles kostenlos im Starter-Tier.
+          </p>
+        </Section>
+
+        <Section title="Unsere Prinzipien">
+          <ul style={{ paddingLeft: 18, lineHeight: 1.85 }}>
+            <li><strong>Klartext vor Jargon.</strong> Wenn ein Achtklässler es nicht versteht, ist es schlecht erklärt.</li>
+            <li><strong>Daten vor Meinung.</strong> Jede Aussage hat eine Quelle, jede Zahl ein Datum.</li>
+            <li><strong>Keine Anlageberatung, kein Kompromiss.</strong> § 85 WpHG ist klar — wir bilden, wir empfehlen nicht.</li>
+            <li><strong>Privatsphäre als Default.</strong> Portfolio-Daten bleiben lokal im Browser, kein Tracking.</li>
+            <li><strong>Datenqualität vor Feature-Flut.</strong> Lieber drei perfekte Kennzahlen als dreißig halbgare.</li>
+          </ul>
+        </Section>
+
+        <Section title="Datenquellen">
+          <p>
+            Marktdaten von Finnhub und Yahoo Finance. Charts von TradingView. KI-Analyse über Groq (Llama 3.3 70B) als Primärmodell, Anthropic Claude und OpenAI als Fallback. Hosting auf Vercel. Alle Daten werden DSGVO-konform verarbeitet, siehe <a href="/datenschutz" style={{ color: "var(--am-accent)" }}>Datenschutzerklärung</a>.
+          </p>
+        </Section>
+
+        <Section title="Kontakt & rechtliche Hinweise">
+          <p>
+            Für Presse-, Kooperations- oder Support-Anfragen besuche unsere <a href="/kontakt" style={{ color: "var(--am-accent)" }}>Kontaktseite</a>.
+            Vollständige Anbieterkennzeichnung im <a href="/impressum" style={{ color: "var(--am-accent)" }}>Impressum</a>.
+            Risikohinweise zur Wertpapieranlage findest du im <a href="/risikohinweis" style={{ color: "var(--am-accent)" }}>Risikohinweis</a>.
+          </p>
+        </Section>
+
+        <p style={{ fontSize: 12, color: "var(--am-text-faint)", marginTop: 48 }}>
+          AlphaMetric ist ein Bildungs- und Analyseprodukt. Es stellt keine Anlageberatung im Sinne des § 85 WpHG dar.
+        </p>
+      </div>
+      <Footer />
+    </div>
+  );
+}

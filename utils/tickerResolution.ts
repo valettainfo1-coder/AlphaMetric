@@ -92,6 +92,23 @@ const TICKER_TABLE: TickerEntry[] = [
   { display: "WMT",  apiFetch: "WMT",  tradingView: "NYSE:WMT",  currency: "USD", exchange: "NYSE", name: "Walmart Inc.",            sector: "Retail",    region: "US" },
   { display: "JNJ",  apiFetch: "JNJ",  tradingView: "NYSE:JNJ",  currency: "USD", exchange: "NYSE", name: "Johnson & Johnson",      sector: "Healthcare", region: "US" },
   { display: "GS",   apiFetch: "GS",   tradingView: "NYSE:GS",   currency: "USD", exchange: "NYSE", name: "Goldman Sachs Group",    sector: "Banking",    region: "US" },
+
+  // ── EUROPE (non‑German) ────────────────────────────────────────
+  // ASML: Dutch company, trades on Euronext Amsterdam (ASML.AS) and NASDAQ (ASML).
+  // TradingView prefers NASDAQ:ASML for ADR‑style clean data; .PA (Paris) also exists as Euronext Paris.
+  { display: "ASML", apiFetch: "ASML.AS", tradingView: "AMS:ASML",  currency: "EUR", exchange: "Euronext AMS", name: "ASML Holding N.V.",       sector: "Semiconductors", region: "OTHER" },
+  { display: "NVO",  apiFetch: "NVO",     tradingView: "NYSE:NVO",  currency: "USD", exchange: "NYSE",          name: "Novo Nordisk A/S (ADR)",  sector: "Pharma",         region: "OTHER" },
+  { display: "LVMH", apiFetch: "MC.PA",   tradingView: "EURONEXT:MC", currency: "EUR", exchange: "Euronext PAR", name: "LVMH Moët Hennessy",      sector: "Luxury",         region: "OTHER" },
+  { display: "OR",   apiFetch: "OR.PA",   tradingView: "EURONEXT:OR", currency: "EUR", exchange: "Euronext PAR", name: "L'Oréal S.A.",            sector: "Consumer",       region: "OTHER" },
+  { display: "AIR",  apiFetch: "AIR.PA",  tradingView: "EURONEXT:AIR", currency: "EUR", exchange: "Euronext PAR", name: "Airbus SE",               sector: "Aerospace",      region: "OTHER" },
+  { display: "TTE",  apiFetch: "TTE.PA",  tradingView: "EURONEXT:TTE", currency: "EUR", exchange: "Euronext PAR", name: "TotalEnergies SE",        sector: "Energy",         region: "OTHER" },
+  { display: "NESN", apiFetch: "NESN.SW", tradingView: "SIX:NESN",    currency: "CHF", exchange: "SIX",          name: "Nestlé S.A.",             sector: "Consumer",       region: "OTHER" },
+  { display: "ROG",  apiFetch: "ROG.SW",  tradingView: "SIX:ROG",     currency: "CHF", exchange: "SIX",          name: "Roche Holding AG",        sector: "Pharma",         region: "OTHER" },
+  { display: "NOVN", apiFetch: "NOVN.SW", tradingView: "SIX:NOVN",    currency: "CHF", exchange: "SIX",          name: "Novartis AG",             sector: "Pharma",         region: "OTHER" },
+  { display: "HSBA", apiFetch: "HSBA.L",  tradingView: "LSE:HSBA",    currency: "GBP", exchange: "LSE",          name: "HSBC Holdings plc",       sector: "Banking",        region: "OTHER" },
+  { display: "SHEL", apiFetch: "SHEL.L",  tradingView: "LSE:SHEL",    currency: "GBP", exchange: "LSE",          name: "Shell plc",               sector: "Energy",         region: "OTHER" },
+  { display: "AZN",  apiFetch: "AZN.L",   tradingView: "LSE:AZN",     currency: "GBP", exchange: "LSE",          name: "AstraZeneca plc",         sector: "Pharma",         region: "OTHER" },
+  { display: "ULVR", apiFetch: "ULVR.L",  tradingView: "LSE:ULVR",    currency: "GBP", exchange: "LSE",          name: "Unilever plc",            sector: "Consumer",       region: "OTHER" },
 ];
 
 // ─── O(1) LOOKUP INDEXES ─────────────────────────────────────────
@@ -133,6 +150,15 @@ const NAME_ALIASES: Record<string, string> = {
   "VISA": "V", "MASTERCARD": "MA", "COCA COLA": "KO",
   "COCA-COLA": "KO", "EXXON": "XOM",
   "WALMART": "WMT", "GOLDMAN": "GS", "GOLDMAN SACHS": "GS",
+  // Europe (non‑German)
+  "ASML": "ASML", "NOVO NORDISK": "NVO", "NOVO": "NVO",
+  "LVMH": "LVMH", "MOET HENNESSY": "LVMH",
+  "LOREAL": "OR", "L'OREAL": "OR", "L OREAL": "OR",
+  "AIRBUS": "AIR", "TOTAL": "TTE", "TOTALENERGIES": "TTE",
+  "NESTLE": "NESN", "NESTLÉ": "NESN",
+  "ROCHE": "ROG", "NOVARTIS": "NOVN",
+  "HSBC": "HSBA", "SHELL": "SHEL",
+  "ASTRAZENECA": "AZN", "UNILEVER": "ULVR",
 };
 
 // ─── CORE RESOLUTION ─────────────────────────────────────────────
@@ -184,10 +210,15 @@ export function resolveTickerSafe(raw: string): TickerEntry {
   const known = resolveTicker(raw);
   if (known) return known;
 
+  // Strip any common exchange suffix/prefix so we can still attempt a lookup
   const clean = raw.trim().toUpperCase()
-    .replace(/^(XETR|FWB|NASDAQ|NYSE):/i, "")
-    .replace(/\.(DE|F|BE)$/i, "");
+    .replace(/^(XETR|FWB|NASDAQ|NYSE|LSE|SIX|EURONEXT|AMS|PAR|MIL|MAD|TSE|HKG|ASX):/i, "")
+    .replace(/\.(DE|F|BE|HM|MU|SG|ETR|L|PA|AS|MC|SW|TO|MI|MX|HK|T|SI|AX|ST|CO|HE|OL|BR|VI|LS|WA|AT)$/i, "");
 
+  // One more try: maybe the stripped bare symbol IS in our table (e.g. "ASML.PA" → "ASML")
+  if (BY_DISPLAY.has(clean)) return BY_DISPLAY.get(clean)!;
+
+  // Last resort — treat as unknown US ticker (bare symbol) so Yahoo can at least try
   return {
     display: clean,
     apiFetch: clean,

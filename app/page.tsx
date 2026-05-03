@@ -1,0 +1,1460 @@
+"use client";
+// ═══════════════════════════════════════════════════════════════════
+// LANDING PAGE — AlphaMetric
+// Hero + product story + Metrio showcase + pricing + footer
+//
+// NOTE: Global Header is now in layout.tsx via <Header />.
+//       Inline nav has been REMOVED to avoid duplication.
+// ═══════════════════════════════════════════════════════════════════
+
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowRight, Brain, Zap, ChevronRight, Send, TrendingUp, TrendingDown, Check, Sparkles, Building2 } from "lucide-react";
+import { formatMetrio } from "@/utils/formatMetrio";
+import SearchWithExchange, { SelectedStock } from "@/components/SearchWithExchange";
+import MarketPulse from "@/components/MarketPulse";
+import MeshBackground from "@/components/MeshBackground";
+import Reveal from "@/components/Reveal";
+import Footer from "@/components/Footer";
+import PortfolioRiskProfiler from "@/components/PortfolioRiskProfiler";
+import { HOMEPAGE_PILLS } from "@/utils/exchangeMapper";
+
+// ─── LANDING PAGE INNER ──────────────────────────────────────────
+const METRIO_INITIAL_MSG = "Ich helfe dir, Aktien in Klartext einzuordnen: Bewertung, Risiken, Wachstum, Dividende und Marktumfeld. Frag zum Beispiel: 'Ist Siemens fair bewertet?' oder 'Was spricht aktuell für BMW - und was dagegen?'.";
+const METRIO_PILLS = ["Ist Siemens fair bewertet?", "BMW oder Mercedes?", "Was ist das Risiko bei Nvidia?", "Welche Aktie sollte ich zuerst prüfen?"];
+
+interface TrendingStock {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePct: number;
+}
+
+// ─── LIQUID-GLASS NEWS CAROUSEL ──────────────────────────────────
+// N24-style auto-swipe with the most relevant market news.
+type NewsCard = {
+  id: string;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  image: string;
+  publishedAt: string;
+  category: string;
+  impact: "HIGH" | "MED" | "LOW";
+  relevanceScore?: number;
+};
+
+function NewsCarousel({ noWrap = false }: { noWrap?: boolean } = {}) {
+  const [items, setItems] = useState<NewsCard[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/news/feed?sort=relevance&limit=24&verify=0", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : { items: [] })
+      // 8 items keeps the card meaty without overflowing the side-by-side
+      // layout. The full feed lives at /earnings → "Alle News im Daily Brief".
+      .then(d => { if (!cancelled) setItems((d.items ?? []).slice(0, 8)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const impactColor = (k: NewsCard["impact"]) =>
+    k === "HIGH" ? "#dc2626" : k === "MED" ? "#d97706" : "var(--am-text-muted)";
+
+  const fmtAgo = (iso: string) => {
+    const d = Math.max(0, Date.now() - +new Date(iso));
+    const m = Math.round(d / 60000);
+    if (m < 60) return `vor ${m} Min.`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `vor ${h} Std.`;
+    return `vor ${Math.round(h / 24)} Tg.`;
+  };
+
+  // While loading: render a compact skeleton so the grid keeps its column.
+  if (items.length === 0) {
+    if (noWrap) {
+      return (
+        <div style={{
+          borderRadius: 18, height: "100%", minHeight: 260,
+          background: "var(--am-card-soft)",
+          border: "1px solid var(--am-border)",
+        }} aria-busy="true" />
+      );
+    }
+    return null;
+  }
+
+  const card = (
+    <div style={{
+      borderRadius: 18,
+      background: "var(--am-card-soft)",
+      border: "1px solid var(--am-border)",
+      backdropFilter: "blur(22px) saturate(160%)",
+      WebkitBackdropFilter: "blur(22px) saturate(160%)",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 10px 28px -18px rgba(10,10,14,0.18)",
+      overflow: "hidden",
+      height: "100%",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 20px",
+        borderBottom: "1px solid var(--am-border-light, var(--am-border))",
+        gap: 12, flexWrap: "wrap",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 6, height: 6, borderRadius: 3, background: "var(--am-text)", display: "inline-block", boxShadow: "0 0 8px rgba(10,10,14,0.18)" }} />
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", color: "var(--am-text-faint)", textTransform: "uppercase", margin: 0 }}>
+            Live Newsfeed · Top 4
+          </p>
+        </div>
+        <Link
+          href="/earnings"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: 12, fontWeight: 600, color: "var(--am-text-muted)",
+            textDecoration: "none",
+            padding: "6px 10px", borderRadius: 8,
+            border: "1px solid var(--am-border)",
+            background: "var(--am-card)",
+          }}
+        >
+          Alle News im Daily Brief
+          <ArrowRight size={13} strokeWidth={1.7} />
+        </Link>
+      </div>
+      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        {items.map((it, idx) => (
+          <li key={it.id}>
+            <a
+              href={it.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "70px 1fr 90px",
+                alignItems: "center", gap: 14,
+                padding: "13px 20px",
+                borderTop: idx === 0 ? "none" : "1px solid var(--am-border-light, var(--am-border))",
+                textDecoration: "none", color: "var(--am-text)",
+                transition: "background 160ms ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--am-card)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+                padding: "3px 7px", borderRadius: 4,
+                color: impactColor(it.impact),
+                border: `1px solid ${impactColor(it.impact)}55`,
+                background: `${impactColor(it.impact)}12`,
+                textAlign: "center",
+                textTransform: "uppercase",
+                justifySelf: "start",
+              }}>
+                {it.impact === "HIGH" ? "Hoch" : it.impact === "MED" ? "Mittel" : "Info"}
+              </span>
+              <p style={{
+                fontSize: 14, fontWeight: 600, lineHeight: 1.4,
+                letterSpacing: "-0.005em", color: "var(--am-text)",
+                margin: 0,
+                overflow: "hidden", textOverflow: "ellipsis",
+                display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical",
+              }}>{it.headline}</p>
+              <span style={{ fontSize: 10.5, color: "var(--am-text-faint)", textAlign: "right", fontFamily: "'SF Mono', ui-monospace, Menlo, monospace" }}>
+                {fmtAgo(it.publishedAt)}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  if (noWrap) return card;
+
+  return (
+    <section style={{ padding: "20px 24px 0", maxWidth: 1120, margin: "0 auto" }}>
+      {card}
+    </section>
+  );
+}
+
+
+// ─── TOP MOVERS CAROUSEL ─────────────────────────────────────────
+function TopMoversCarousel({ stocks }: { stocks: TrendingStock[] }) {
+  const router = useRouter();
+  const gainers = stocks.filter(s => s.changePct >= 0).sort((a, b) => b.changePct - a.changePct);
+  const losers = stocks.filter(s => s.changePct < 0).sort((a, b) => a.changePct - b.changePct);
+  const leftCol = gainers.slice(0, 5);
+  const rightCol = losers.slice(0, 5);
+
+  return (
+    <div style={{
+      background: "var(--am-card)",
+      border: "1px solid var(--am-border)",
+      borderRadius: 16,
+      padding: "20px 22px",
+      boxShadow: "var(--am-shadow)",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+        <div className="am-icon-frame am-ico-accent am-ico-sm">
+          <TrendingUp size={16} color="#0a0b0e" strokeWidth={2.2} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{
+            margin: 0,
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif",
+            fontSize: 15, fontWeight: 600, letterSpacing: "-0.018em",
+            color: "var(--am-text)",
+          }}>Top Movers</h3>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--am-text-muted)" }}>
+            Stärkste Kursbewegungen heute · Live
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <a href="/screener" style={{
+            fontSize: 11, fontWeight: 700, color: "var(--am-text-secondary)", textDecoration: "none",
+            display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 6,
+            padding: "5px 10px", borderRadius: 7,
+            border: "1px solid var(--am-border)", background: "var(--am-card-soft)",
+          }}>
+            Alle <ArrowRight size={11} />
+          </a>
+        </div>
+      </div>
+
+      {/* Compact overview list to avoid right-edge clipping */}
+      <div className="tm-overview-grid" style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: 8,
+        flex: 1,
+      }}>
+        {[
+          { title: "+ Gewinner", items: leftCol, isPositive: true },
+          { title: "- Verlierer", items: rightCol, isPositive: false },
+        ].map(col => (
+          <div key={col.title} style={{
+            background: "var(--am-card-soft)",
+            border: "1px solid var(--am-border-light, var(--am-border))",
+            borderRadius: 10,
+            overflow: "hidden",
+          }}>
+            <p style={{
+              margin: 0,
+              padding: "8px 10px",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--am-text-faint)",
+              borderBottom: "1px solid var(--am-border-light, var(--am-border))",
+              background: "var(--am-card)",
+            }}>
+              {col.title}
+            </p>
+            {col.items.map(t => (
+              <div
+                key={`${col.title}-${t.symbol}`}
+                onClick={() => router.push(`/stock/${encodeURIComponent(t.symbol)}`)}
+                style={{
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  transition: "all 0.18s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  borderTop: "1px solid var(--am-border-light, var(--am-border))",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "var(--am-card-hover)";
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = `0 8px 20px -12px ${col.isPositive ? "rgba(16,185,129,0.35)" : "rgba(239,68,68,0.35)"}`;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <span style={{
+                    fontSize: 12.5, fontWeight: 800, color: "var(--am-text)",
+                    fontFamily: "'SF Mono', ui-monospace, Menlo, monospace",
+                    letterSpacing: "-0.005em",
+                  }}>{t.symbol}</span>
+                  <span style={{
+                    fontSize: 10.5, fontWeight: 800,
+                    color: col.isPositive ? "var(--am-green-text)" : "var(--am-red-text)",
+                    background: col.isPositive ? "var(--am-green-bg)" : "var(--am-red-bg)",
+                    padding: "2px 6px", borderRadius: 5,
+                    fontVariantNumeric: "tabular-nums",
+                  }}>
+                    {col.isPositive ? "+" : ""}{t.changePct.toFixed(2)}%
+                  </span>
+                </div>
+                <p style={{
+                  fontSize: 10.5, color: "var(--am-text-muted)", margin: 0,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>{t.name}</p>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                  <span style={{
+                    fontSize: 15.5, fontWeight: 800, color: "var(--am-text)",
+                    fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em",
+                  }}>${t.price.toFixed(2)}</span>
+                  {col.isPositive
+                    ? <TrendingUp size={12} color="var(--am-green-text)" style={{ alignSelf: "center" }} />
+                    : <TrendingDown size={12} color="var(--am-red-text)" style={{ alignSelf: "center" }} />}
+                </div>
+              </div>
+            ))}
+            {col.items.length === 0 && (
+              <p style={{ margin: 0, padding: "12px", fontSize: 11, color: "var(--am-text-faint)" }}>
+                Heute keine Daten.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Footnote matches Metrio spacing */}
+      <p style={{
+        marginTop: 14, paddingTop: 12,
+        borderTop: "1px solid var(--am-border-light, var(--am-border))",
+        fontSize: 10.5, color: "var(--am-text-faint)", lineHeight: 1.55, letterSpacing: "-0.005em",
+      }}>
+        Automatisch aktualisiert · Kurse mit bis zu 15 Min. Verzögerung.
+      </p>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .tm-overview-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── SECTION HEADER (einheitlich über die ganze Seite) ────────────
+function SectionHeader({
+  eyebrow, title, subtitle, align = "center", accentColor,
+}: {
+  eyebrow: string;
+  title: React.ReactNode;
+  subtitle?: string;
+  align?: "center" | "left";
+  accentColor?: string;
+}) {
+  return (
+    <div style={{
+      textAlign: align, marginBottom: 40,
+      maxWidth: align === "center" ? 720 : undefined,
+      marginLeft: align === "center" ? "auto" : undefined,
+      marginRight: align === "center" ? "auto" : undefined,
+    }}>
+      <p style={{
+        fontSize: 12, fontWeight: 700,
+        color: accentColor || "var(--am-accent)",
+        textTransform: "uppercase", letterSpacing: "0.14em",
+        marginBottom: 10,
+      }}>{eyebrow}</p>
+      <h2 style={{
+        fontSize: 36, fontWeight: 900, color: "var(--am-text)",
+        letterSpacing: "-0.035em", lineHeight: 1.15, marginBottom: subtitle ? 14 : 0,
+      }}>{title}</h2>
+      {subtitle && (
+        <p style={{
+          fontSize: 15.5, color: "var(--am-text-muted)",
+          lineHeight: 1.65, margin: 0,
+          maxWidth: align === "center" ? 620 : undefined,
+          marginLeft: align === "center" ? "auto" : undefined,
+          marginRight: align === "center" ? "auto" : undefined,
+        }}>{subtitle}</p>
+      )}
+    </div>
+  );
+}
+
+function LandingPageInner() {
+  const router = useRouter();
+
+  // Risk profiler modal (homepage CTA)
+  const [riskProfilerOpen, setRiskProfilerOpen] = useState(false);
+
+  // Live hero market strip — replaces hard-coded values
+  type HeroQuote = { label: string; value: string; deltaPct: number | null };
+  const [heroQuotes, setHeroQuotes] = useState<HeroQuote[]>([
+    { label: "DAX",     value: "—", deltaPct: null },
+    { label: "S&P 500", value: "—", deltaPct: null },
+    { label: "Bitcoin", value: "—", deltaPct: null },
+    { label: "EUR/USD", value: "—", deltaPct: null },
+  ]);
+  useEffect(() => {
+    let cancelled = false;
+    const fmt = (n: number, frac = 2) =>
+      new Intl.NumberFormat("de-DE", { minimumFractionDigits: frac, maximumFractionDigits: frac }).format(n);
+    const fetchOne = async (sym: string) => {
+      try {
+        const r = await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}`, { cache: "no-store" });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return j?.quote?.c != null ? { c: j.quote.c as number, dp: (j.quote.dp ?? 0) as number } : null;
+      } catch { return null; }
+    };
+    (async () => {
+      const [dax, spx, btc, eur] = await Promise.all([
+        fetchOne("^GDAXI"),
+        fetchOne("^GSPC"),
+        fetchOne("BTC-USD"),
+        fetchOne("EURUSD=X"),
+      ]);
+      if (cancelled) return;
+      setHeroQuotes([
+        { label: "DAX",     value: dax ? fmt(dax.c, 2) : "—",            deltaPct: dax?.dp ?? null },
+        { label: "S&P 500", value: spx ? fmt(spx.c, 2) : "—",            deltaPct: spx?.dp ?? null },
+        { label: "Bitcoin", value: btc ? `$${fmt(btc.c, 0)}` : "—",      deltaPct: btc?.dp ?? null },
+        { label: "EUR/USD", value: eur ? fmt(eur.c, 4) : "—",            deltaPct: eur?.dp ?? null },
+      ]);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const [trendingStocks, setTrendingStocks] = useState<TrendingStock[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/movers", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (cancelled || !d) return;
+        setTrendingStocks((d.trending ?? d.gainers ?? []).slice(0, 10));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Metrio chat state
+  const [metrioMsgs, setMetrioMsgs] = useState<{role:"user"|"ai";text:string}[]>([]);
+  const [metrioInput, setMetrioInput] = useState("");
+  const [metrioLoading, setMetrioLoading] = useState(false);
+  const metrioChatRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (metrioChatRef.current) {
+      metrioChatRef.current.scrollTop = metrioChatRef.current.scrollHeight;
+    }
+  }, [metrioMsgs, metrioLoading]);
+
+  const sendMetrio = async (txt?: string) => {
+    const q = txt || metrioInput.trim();
+    if (!q || metrioLoading) return;
+    setMetrioInput("");
+    setMetrioMsgs(m => [...m, { role: "user", text: q }]);
+    setMetrioLoading(true);
+    try {
+      const res = await fetch("/api/metrio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userMessage: q, contextType: "general_chat" }),
+      });
+      const j = await res.json();
+      setMetrioMsgs(m => [...m, { role: "ai", text: j.response || j.error || "Keine Antwort." }]);
+    } catch {
+      setMetrioMsgs(m => [...m, { role: "ai", text: "Verbindungsfehler." }]);
+    }
+    setMetrioLoading(false);
+  };
+
+  const handleSelect = (stock: SelectedStock) => {
+    router.push(`/stock/${stock.symbol}?exchange=${stock.exchange}`);
+  };
+
+  const handlePill = (pill: typeof HOMEPAGE_PILLS[0]) => {
+    router.push(`/stock/${pill.symbol}?exchange=${pill.exchange}`);
+  };
+
+  return (
+    <div style={{ fontFamily: "'Inter','Helvetica Neue',sans-serif", background: "var(--am-bg)", color: "var(--am-text)" }}>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0} html{scroll-behavior:smooth;overflow-x:hidden} body{overflow-x:hidden}
+        input,button{font-family:inherit}
+        @media (max-width: 768px) {
+          .landing-hero h1 { font-size: 32px !important; }
+          .landing-hero p { font-size: 15px !important; }
+          .bento-grid { grid-template-columns: 1fr !important; }
+          .footer-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+          .pill-row { gap: 6px !important; }
+        }
+      `}</style>
+
+      {/* ── HERO ── */}
+      <section className="am-hero landing-hero">
+        <MeshBackground />
+        <div className="am-hero__inner">
+          <span className="am-hero__eyebrow">
+            <span className="am-hero__pulse" />
+            Für Privatanleger · Markt verstehen · Aktien prüfen · Depot einordnen
+          </span>
+
+          <h1 className="am-hero__title">
+            <span className="am-hero__title-line">
+              <span className="am-hero__title-word" style={{ animationDelay: "0.05s" }}>Aktien&nbsp;</span>
+              <span className="am-hero__title-word" style={{ animationDelay: "0.13s" }}>analysieren.</span>
+            </span>
+            <span className="am-hero__title-line">
+              <span className="am-hero__title-word is-accent" style={{ animationDelay: "0.34s" }}>Portfolio&nbsp;</span>
+              <span className="am-hero__title-word is-accent" style={{ animationDelay: "0.42s" }}>verstehen.</span>
+            </span>
+          </h1>
+
+          <p className="am-hero__sub">
+            AlphaMetric bündelt Daily Brief, Top Movers, Aktiensuche, Metrio und Portfolio-Check in einer Oberfläche - damit du eine Aktie nicht nur findest, sondern einordnen kannst.
+          </p>
+
+          {/* SEARCH BAR — primary action, prominent placement */}
+          <div id="search" className="am-hero__search">
+            <SearchWithExchange onSelect={handleSelect} large placeholder="Aktie suchen — BMW, Apple, Allianz, Tesla..." />
+          </div>
+
+          {/* QUICK SELECT PILLS — directly under search */}
+          <div className="pill-row am-hero__pills">
+            {HOMEPAGE_PILLS.map(pill => (
+              <button key={`${pill.symbol}-${pill.exchange}`} onClick={() => handlePill(pill)}
+                className="am-pill"
+                data-cursor
+                style={{
+                  display: "flex", alignItems: "center", gap: 7,
+                  padding: "8px 15px", borderRadius: 999, border: "1px solid var(--am-border)",
+                  background: "var(--am-card)", cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 13, color: "var(--am-text-secondary)", fontWeight: 600,
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  transition: "border-color 0.18s ease, background 0.18s ease, transform 0.18s ease",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--am-text)"; e.currentTarget.style.background = "var(--am-card-hover)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--am-border)"; e.currentTarget.style.background = "var(--am-card)"; e.currentTarget.style.transform = "translateY(0)"; }}
+              >
+                <span style={{
+                  fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+                  color: "var(--am-text-muted)",
+                  padding: "2px 6px", borderRadius: 4,
+                  border: "1px solid var(--am-border-light, var(--am-border))",
+                  background: "var(--am-card-soft)",
+                  fontFamily: "'SF Mono', ui-monospace, Menlo, monospace",
+                }}>{pill.country}</span>
+                <span>{pill.label}</span>
+                <span style={{ fontSize: 10, color: "var(--am-text-faint)", fontWeight: 700, letterSpacing: "0.04em" }}>{pill.exchange}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Live market strip — values fetched from /api/quote on mount */}
+          <div className="am-hero__stats">
+            {heroQuotes.map(q => {
+              const dp = q.deltaPct;
+              const up = dp != null && dp >= 0;
+              const arrow = dp == null ? "·" : up ? "▲" : "▼";
+              const deltaText = dp == null
+                ? "live"
+                : `${arrow} ${Math.abs(dp).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+              const deltaClass = dp == null
+                ? "am-hero__stat-delta"
+                : up
+                  ? "am-hero__stat-delta is-up"
+                  : "am-hero__stat-delta is-down";
+              return (
+                <span key={q.label} className="am-hero__stat" data-cursor>
+                  <span className="am-hero__stat-label">{q.label}</span>
+                  <span className="am-hero__stat-val">{q.value}</span>
+                  <span className={deltaClass}>{deltaText}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════
+          USP SECTION — "Warum AlphaMetric"
+          Emotional, tiefenpsychologisch: spricht Unsicherheit, Zeitmangel
+          und das Bedürfnis nach echter Kontrolle an.
+         ══════════════════════════════════════════════════════════════ */}
+      <Reveal as="section" delay={40}>
+        <section style={{ padding: "34px 24px 18px", maxWidth: 1200, width: "100%", overflow: "hidden", margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 0.95fr)", gap: 22, alignItems: "stretch", width: "100%" }} className="am-command-grid">
+            <div style={{
+              position: "relative",
+              minWidth: 0,
+              minHeight: 470,
+              borderRadius: 28,
+              overflow: "hidden",
+              background: "linear-gradient(135deg, #0a0b0e 0%, #191c22 46%, #d7dbe2 100%)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow: "0 32px 90px -38px rgba(10,10,14,0.65), inset 0 1px 0 rgba(255,255,255,0.14)",
+            }}>
+              <div style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(115deg, rgba(10,11,14,0.92) 0%, rgba(10,11,14,0.78) 42%, rgba(10,11,14,0.18) 100%)," +
+                  "repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 70px)," +
+                  "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 56px)",
+              }} />
+              <div style={{ position: "relative", padding: "42px 42px 34px", minHeight: "100%", display: "flex", flexDirection: "column" }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 9, width: "fit-content",
+                  padding: "7px 13px", borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(255,255,255,0.07)", color: "rgba(244,245,248,0.82)",
+                  fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase",
+                }}>
+                  <Sparkles size={12} /> Dein Entscheidungsraum
+                </span>
+                <h2 style={{
+                  marginTop: 28, maxWidth: 640,
+                  fontSize: "clamp(32px, 5vw, 58px)",
+                  lineHeight: 1.02, fontWeight: 900,
+                  letterSpacing: "-0.04em", color: "#f4f5f8",
+                }}>
+                  Marktüberblick, Aktienresearch und Portfolio-Kontext in einem Workflow.
+                </h2>
+                <p style={{ marginTop: 18, maxWidth: 560, fontSize: 16, lineHeight: 1.7, color: "rgba(244,245,248,0.72)" }}>
+                  Vom Daily Brief über Top Movers bis zur Aktienseite: AlphaMetric führt dich von Marktbewegungen zu konkreter Analyse und anschließend zur Portfolio-Einordnung.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginTop: "auto", paddingTop: 34 }} className="am-command-steps">
+                  {[
+                    { href: "/brief", label: "Heute", text: "Was ist am Markt wichtig?" },
+                    { href: "/screener", label: "Bewegt", text: "Welche Aktien fallen auf?" },
+                    { href: "/#metrio", label: "Klartext", text: "Was bedeutet das?" },
+                    { href: "/portfolio", label: "Depot", text: "Passt es zu mir?" },
+                  ].map(step => (
+                    <Link key={step.label} href={step.href} style={{
+                      minHeight: 104, borderRadius: 14, padding: "14px 14px 13px",
+                      textDecoration: "none", background: "rgba(255,255,255,0.075)",
+                      border: "1px solid rgba(255,255,255,0.13)", color: "#f4f5f8",
+                      display: "flex", flexDirection: "column", justifyContent: "space-between",
+                    }}>
+                      <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{step.label}</span>
+                      <span style={{ fontSize: 12, lineHeight: 1.45, color: "rgba(244,245,248,0.68)" }}>{step.text}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 16, minWidth: 0 }}>
+              <div style={{
+                borderRadius: 22, padding: "24px 26px",
+                background: "var(--am-card)", border: "1px solid var(--am-border)",
+                boxShadow: "var(--am-shadow)",
+              }}>
+                <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--am-text-faint)", marginBottom: 8 }}>
+                  Fokus für Einsteiger
+                </p>
+                <h3 style={{ fontSize: 26, lineHeight: 1.12, fontWeight: 900, letterSpacing: "-0.03em", color: "var(--am-text)", marginBottom: 12 }}>
+                  Nicht noch mehr Tabs. Mehr Klarheit.
+                </h3>
+                <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--am-text-muted)" }}>
+                  News, Kurse und Kennzahlen bleiben drin. Der Unterschied: Alles führt zur Frage, ob du eine Aktie verstehst und ob sie in dein Depot passt.
+                </p>
+              </div>
+              {trendingStocks.length > 0 ? (
+                <TopMoversCarousel stocks={trendingStocks} />
+              ) : (
+                <div style={{ borderRadius: 16, minHeight: 238, background: "var(--am-card-soft)", border: "1px solid var(--am-border)" }} aria-busy="true" />
+              )}
+            </div>
+          </div>
+          <style>{`
+            @media (max-width: 980px) {
+              .am-command-grid { grid-template-columns: 1fr !important; }
+              .am-command-steps { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            }
+            @media (max-width: 560px) {
+              .am-command-steps { grid-template-columns: 1fr !important; }
+            }
+          `}</style>
+        </section>
+      </Reveal>
+
+      <section id="warum" style={{ padding: "64px 24px 48px", maxWidth: 1120, margin: "0 auto" }}>
+        <SectionHeader
+          eyebrow="So funktioniert AlphaMetric"
+          title={<>Entdecken. Verstehen. <span style={{ color: "var(--am-accent)" }}>Einordnen.</span></>}
+          subtitle="Die App bleibt breit, aber nicht beliebig: Daily Brief und Top Movers liefern Ideen, Metrio und Aktienseiten erklären sie, Portfolio und Watchlist machen sie persönlich."
+        />
+
+        <div className="am-pillars" style={{
+          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22,
+        }}>
+          {[
+            {
+              num: "01",
+              kicker: "1. Entdecken",
+              title: "Daily Brief und Top Movers zeigen, was heute wichtig ist.",
+              body: "Du startest nicht bei null. Marktüberblick, News und Bewegungen zeigen dir die Aktien, die Aufmerksamkeit verdienen - danach gehst du gezielt tiefer.",
+              chips: ["Daily Brief", "Top Movers", "News", "Momentum"],
+              ctaLabel: "Daily Brief öffnen",
+              ctaHref: "/brief",
+              ctaAction: null as null | "openProfiler",
+              icon: (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+              ),
+            },
+            {
+              num: "02",
+              kicker: "2. Verstehen",
+              title: "Aktiensuche, Kennzahlen und Metrio machen Recherche greifbar.",
+              body: "Du suchst BMW, Apple oder Allianz und bekommst Kurs, Bewertung, Qualität, Risiken und Klartext-Erklärung an einem Ort.",
+              chips: ["Suche", "Kennzahlen", "Metrio", "Klartext"],
+              ctaLabel: "Aktie suchen",
+              ctaHref: "/#search",
+              ctaAction: null as null | "openProfiler",
+              icon: (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <circle cx="12" cy="12" r="6"/>
+                  <circle cx="12" cy="12" r="2"/>
+                </svg>
+              ),
+            },
+            {
+              num: "03",
+              kicker: "3. Einordnen",
+              title: "Portfolio und Watchlist zeigen, was für dich relevant ist.",
+              body: "Eine interessante Aktie ist nicht automatisch die richtige nächste Position. AlphaMetric spiegelt Ideen gegen dein Depot, deine Gewichtung und deine Risiken.",
+              chips: ["Portfolio", "Watchlist", "Risiko", "Kontext"],
+              ctaLabel: "Portfolio öffnen",
+              ctaHref: "/portfolio",
+              ctaAction: null as null | "openProfiler",
+              icon: (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="9"/>
+                  <rect x="14" y="3" width="7" height="5"/>
+                  <rect x="14" y="12" width="7" height="9"/>
+                  <rect x="3" y="16" width="7" height="5"/>
+                </svg>
+              ),
+            },
+          ].map((card, idx) => (
+            <div key={card.num} className="am-pillar" style={{
+              position: "relative",
+              background: "var(--am-card)",
+              border: "1px solid var(--am-border)",
+              borderRadius: 22,
+              padding: "30px 28px 28px",
+              boxShadow: "var(--am-shadow)",
+              overflow: "hidden",
+              backdropFilter: "blur(28px) saturate(160%)",
+              WebkitBackdropFilter: "blur(28px) saturate(160%)",
+              transition: "transform 0.24s cubic-bezier(0.2,0.85,0.25,1), box-shadow 0.24s ease, border-color 0.24s ease",
+              display: "flex", flexDirection: "column",
+              animation: `pillarArrive 0.55s cubic-bezier(0.2,0.85,0.25,1) ${idx * 90}ms backwards`,
+            }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--am-shadow-lg)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "var(--am-text-faint)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--am-shadow)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "var(--am-border)";
+              }}
+            >
+              {/* Top silver shimmer line */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0, height: 2,
+                background: "linear-gradient(90deg, transparent, rgba(200,205,212,0.95), transparent)",
+              }} />
+              {/* Decorative aura on hover */}
+              <div className="am-pillar__aura" style={{
+                position: "absolute", inset: 0,
+                background: "radial-gradient(60% 50% at 30% 0%, rgba(220,225,235,0.10), transparent 60%)",
+                opacity: 0, transition: "opacity 0.3s ease",
+                pointerEvents: "none",
+              }} />
+
+              {/* Icon + big number */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22, position: "relative" }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: "linear-gradient(180deg, rgba(244,245,248,0.95) 0%, rgba(192,197,206,0.85) 50%, rgba(138,144,153,0.75) 100%)",
+                  border: "1px solid rgba(10,10,14,0.12)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 14px -4px rgba(10,10,14,0.22)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#0a0b0e",
+                }}>
+                  {card.icon}
+                </div>
+                <span style={{
+                  fontSize: 46, fontWeight: 200, color: "var(--am-text-ghost)",
+                  letterSpacing: "-0.05em", lineHeight: 1, fontVariantNumeric: "tabular-nums",
+                  fontFamily: "var(--font-space-grotesk), 'Inter', sans-serif",
+                }}>
+                  {card.num}
+                </span>
+              </div>
+
+              <p style={{
+                fontSize: 11, fontWeight: 800, color: "var(--am-text-muted)",
+                textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 10, position: "relative",
+              }}>
+                {card.kicker}
+              </p>
+              <h3 style={{
+                fontSize: 21, fontWeight: 800, color: "var(--am-text)",
+                letterSpacing: "-0.025em", lineHeight: 1.22, marginBottom: 14, position: "relative",
+              }}>
+                {card.title}
+              </h3>
+              <p style={{ fontSize: 14, color: "var(--am-text-muted)", lineHeight: 1.65, margin: 0, marginBottom: 20, flex: 1, position: "relative" }}>
+                {card.body}
+              </p>
+
+              {/* Feature chips */}
+              {card.chips && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 18, position: "relative" }}>
+                  {card.chips.map(chip => (
+                    <span key={chip} style={{
+                      fontSize: 10.5, fontWeight: 700, color: "var(--am-text-muted)",
+                      background: "var(--am-bg-tertiary)",
+                      padding: "4px 9px", borderRadius: 5,
+                      letterSpacing: "0.02em",
+                    }}>{chip}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* CTA: link or profiler-button */}
+              {card.ctaLabel && (card.ctaAction === "openProfiler" ? (
+                <button
+                  type="button"
+                  onClick={() => setRiskProfilerOpen(true)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    fontSize: 13, fontWeight: 700, color: "var(--am-text)",
+                    background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                    fontFamily: "inherit", letterSpacing: "-0.005em",
+                    alignSelf: "flex-start", position: "relative",
+                  }}>
+                  {card.ctaLabel} <ArrowRight size={14} strokeWidth={2} />
+                </button>
+              ) : (
+                <Link href={card.ctaHref ?? "/"} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontSize: 13, fontWeight: 700, color: "var(--am-text)",
+                  textDecoration: "none", letterSpacing: "-0.005em",
+                  alignSelf: "flex-start", position: "relative",
+                }}>
+                  {card.ctaLabel} <ArrowRight size={14} strokeWidth={2} />
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <style>{`
+          @keyframes pillarArrive {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .am-pillar:hover .am-pillar__aura { opacity: 1 !important; }
+          @media (max-width: 900px) {
+            .am-pillars { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
+
+        {/* Trust strip */}
+        <div style={{
+          marginTop: 48, padding: "28px 32px",
+          background: "var(--am-card-soft)", border: "1px solid var(--am-border-light)", borderRadius: 18,
+          display: "flex", flexWrap: "wrap", gap: 32, justifyContent: "space-around", alignItems: "center",
+          textAlign: "center",
+        }}>
+          {[
+            { n: "Live", l: "Kurse und Marktüberblick" },
+            { n: "Klar", l: "Kennzahlen in Alltagssprache" },
+            { n: "0 €", l: "Ohne Abo startbar" },
+            { n: "DE + US", l: "Privatanleger zuerst gedacht" },
+          ].map(s => (
+            <div key={s.l}>
+              <div style={{ fontSize: 26, fontWeight: 900, color: "var(--am-text)", letterSpacing: "-0.03em", lineHeight: 1 }}>{s.n}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--am-text-muted)", marginTop: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════
+          RISK PROFILE CTA — for visitors who want guidance before
+          they dive into screener, watchlist or portfolio workflows.
+         ══════════════════════════════════════════════════════════════ */}
+      <Reveal as="section" delay={60}>
+        <section style={{
+          maxWidth: 1120, margin: "0 auto", padding: "32px 24px 8px",
+        }}>
+          <div style={{
+            position: "relative",
+            borderRadius: 24,
+            padding: "44px 48px",
+            background: "linear-gradient(135deg, #0d0f12 0%, #1a1d22 50%, #2a2f37 100%)",
+            color: "#e6e8ee",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 32px 80px -28px rgba(10,10,14,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
+            overflow: "hidden",
+          }}>
+            {/* Decorative silver mesh */}
+            <div style={{
+              position: "absolute", inset: 0,
+              background:
+                "radial-gradient(60% 80% at 90% 10%, rgba(220,225,235,0.16), transparent 60%)," +
+                "radial-gradient(50% 70% at 5% 90%, rgba(180,185,195,0.10), transparent 55%)",
+              pointerEvents: "none",
+            }} />
+            <div style={{
+              position: "relative",
+              display: "grid", gridTemplateColumns: "1.6fr 1fr",
+              gap: 32, alignItems: "center",
+            }} className="risk-cta-grid">
+              {/* LEFT — copy */}
+              <div>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "6px 14px", borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(220,225,235,0.06)",
+                  fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase",
+                  color: "rgba(230,232,238,0.85)",
+                  marginBottom: 18,
+                }}>
+                  <Sparkles size={11} /> Wenn du noch keine Strategie hast
+                </span>
+                <h2 style={{
+                  fontSize: "clamp(28px, 4.2vw, 44px)", fontWeight: 900,
+                  letterSpacing: "-0.04em", lineHeight: 1.08,
+                  color: "#f4f5f8", marginBottom: 16,
+                }}>
+                  Du bist unsicher, wo du anfangen sollst?<br />
+                  <span style={{
+                    background: "linear-gradient(90deg, #f4f5f8 0%, #c0c5ce 60%, #8a9099 100%)",
+                    WebkitBackgroundClip: "text", backgroundClip: "text",
+                    color: "transparent",
+                  }}>
+                    Dann starte mit dem Risikoprofil.
+                  </span>
+                </h2>
+                <p style={{
+                  fontSize: 16, lineHeight: 1.65, color: "rgba(230,232,238,0.78)",
+                  maxWidth: 560, marginBottom: 24,
+                }}>
+                  Ein kurzer Fragebogen hilft dir, Risiko, Zeithorizont und Schwerpunkt zu schärfen. Danach bekommst du passende Kandidaten und einen klareren Startpunkt für deine eigene Recherche.
+                </p>
+                <button
+                  onClick={() => setRiskProfilerOpen(true)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 10,
+                    padding: "16px 32px", borderRadius: 14,
+                    background: "linear-gradient(180deg, #f4f5f8 0%, #c8cdd4 55%, #8a9099 100%)",
+                    color: "#0a0b0e",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    fontSize: 15, fontWeight: 800, letterSpacing: "-0.01em",
+                    cursor: "pointer", fontFamily: "inherit",
+                    boxShadow: "0 12px 32px -10px rgba(10,10,14,0.55), inset 0 1px 0 rgba(255,255,255,0.6)",
+                    transition: "transform 0.18s ease, box-shadow 0.18s ease",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+                >
+                  <Brain size={17} /> Risikoprofil starten
+                  <ArrowRight size={15} />
+                </button>
+                <p style={{
+                  fontSize: 12, color: "rgba(230,232,238,0.55)", marginTop: 16,
+                }}>
+                  Kostenlos · Ohne Anmeldung · In unter 2 Minuten
+                </p>
+              </div>
+
+              {/* RIGHT — visual sketch of 3 steps */}
+              <div style={{
+                display: "flex", flexDirection: "column", gap: 12,
+              }}>
+                {[
+                  { n: "1", t: "Profil schärfen", s: "Zeithorizont · Schwankung · Regionen" },
+                  { n: "2", t: "Kandidaten filtern", s: "Nur Aktien, die zu deinen Vorgaben passen" },
+                  { n: "3", t: "Selbst weiterprüfen", s: "Danach direkt im Screener oder mit Metrio weiterarbeiten" },
+                ].map(s => (
+                  <div key={s.n} style={{
+                    display: "flex", alignItems: "center", gap: 14,
+                    padding: "14px 18px", borderRadius: 14,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    backdropFilter: "blur(10px)",
+                    WebkitBackdropFilter: "blur(10px)",
+                  }}>
+                    <span style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "linear-gradient(180deg, #f4f5f8, #8a9099)",
+                      color: "#0a0b0e", fontSize: 13, fontWeight: 800,
+                      fontFamily: "'Space Grotesk',Inter,sans-serif",
+                      flexShrink: 0,
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
+                    }}>{s.n}</span>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#f4f5f8", letterSpacing: "-0.01em" }}>{s.t}</p>
+                      <p style={{ fontSize: 12, color: "rgba(230,232,238,0.62)", marginTop: 2 }}>{s.s}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <style>{`
+            @media (max-width: 768px) {
+              .risk-cta-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+            }
+          `}</style>
+        </section>
+      </Reveal>
+
+      {/* ECOSYSTEM BENTO GRID — REMOVED.
+          The earlier "Drei Säulen. Eine Plattform." duplicated the
+          USP messaging from the section above. Both have been merged
+          into the single canonical pillars section (id="warum"). */}
+
+      {/* ── MEET METRIO (AI Showcase) ── */}
+      <section id="metrio" style={{ padding: "64px 24px", background: "var(--am-bg)" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <SectionHeader
+            eyebrow="Analyse in Klartext"
+            title={<>Frag <span style={{ color: "var(--am-accent)" }}>Metrio</span></>}
+            subtitle="Metrio fasst Kennzahlen in normale Sprache zusammen und nennt auch Gegenargumente. Gut für den ersten Check, bevor du tiefer in eine Aktie gehst."
+            accentColor="var(--am-accent)"
+          />
+
+          {/* Interactive Metrio Chat */}
+          <div style={{
+            background: "var(--am-card-soft)", border: "1px solid var(--am-border)", borderRadius: 20,
+            maxWidth: 640, margin: "0 auto", boxShadow: "var(--am-shadow-lg)",
+            display: "flex", flexDirection: "column", overflow: "hidden",
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", background: "linear-gradient(135deg, #0f172a, #1e293b)", borderRadius: "20px 20px 0 0" }}>
+              <div style={{ width: 38, height: 38, background: "rgba(255,255,255,0.1)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Brain size={18} color="#fff" />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Metrio AI</p>
+                <p style={{ fontSize: 10, color: "#94a3b8" }}>Analyse-Hilfe · Klartext · Live-Daten</p>
+              </div>
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 6, height: 6, background: "#e6e8ee", borderRadius: "50%", boxShadow: "0 0 8px rgba(255,255,255,0.4)" }} />
+                <span style={{ fontSize: 10, color: "#c0c5ce", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Live</span>
+              </div>
+            </div>
+
+            {/* Messages area */}
+            <div ref={metrioChatRef} style={{ maxHeight: 300, overflowY: "auto", padding: "20px 20px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Initial AI message */}
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <div style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--am-accent), var(--am-accent-hover))", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                  <Brain size={12} color="#fff" />
+                </div>
+                <div style={{ background: "var(--am-card)", border: "1px solid var(--am-border)", padding: "14px 16px", borderRadius: "12px 12px 12px 3px", maxWidth: "85%", fontSize: 13, color: "var(--am-text-secondary)", lineHeight: 1.8 }}>
+                  {METRIO_INITIAL_MSG}
+                </div>
+              </div>
+
+              {/* Dynamic messages */}
+              {metrioMsgs.map((msg, i) => msg.role === "user" ? (
+                <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <div style={{ background: "linear-gradient(135deg, var(--am-accent), var(--am-accent-hover))", color: "var(--am-accent-text, #fff)", padding: "10px 14px", borderRadius: "12px 12px 3px 12px", maxWidth: "75%", fontSize: 13, lineHeight: 1.6 }}>
+                    {msg.text}
+                  </div>
+                </div>
+              ) : (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <div style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--am-accent), var(--am-accent-hover))", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <Brain size={12} color="#fff" />
+                  </div>
+                  <div style={{ background: "var(--am-card)", border: "1px solid var(--am-border)", padding: "14px 16px", borderRadius: "12px 12px 12px 3px", maxWidth: "85%", fontSize: 13, color: "var(--am-text-secondary)", lineHeight: 1.8 }}>
+                    <span dangerouslySetInnerHTML={{ __html: formatMetrio(msg.text) }} />
+                  </div>
+                </div>
+              ))}
+
+              {/* Loading indicator */}
+              {metrioLoading && (
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <div style={{ width: 28, height: 28, background: "linear-gradient(135deg, var(--am-accent), var(--am-accent-hover))", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <Brain size={12} color="#fff" />
+                  </div>
+                  <div style={{ background: "var(--am-card)", border: "1px solid var(--am-border)", padding: "14px 16px", borderRadius: "12px 12px 12px 3px", fontSize: 13, color: "var(--am-text-faint)" }}>
+                    Metrio analysiert...
+                  </div>
+                </div>
+              )}
+
+              {/* scroll handled by metrioChatRef */}
+            </div>
+
+            {/* Quick-action pills */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "0 20px 12px" }}>
+              {METRIO_PILLS.map(pill => (
+                <button key={pill} onClick={() => sendMetrio(pill)}
+                  style={{
+                    padding: "5px 12px", borderRadius: 16, border: "1px solid var(--am-border)",
+                    background: "var(--am-card)", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 12, color: "var(--am-text-muted)", fontWeight: 600, transition: "all 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--am-text)"; e.currentTarget.style.color = "var(--am-text)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--am-border)"; e.currentTarget.style.color = "var(--am-text-muted)"; }}
+                >
+                  {pill}
+                </button>
+              ))}
+            </div>
+
+            {/* Input bar */}
+            <div style={{ display: "flex", gap: 8, padding: "12px 20px 20px", borderTop: "1px solid var(--am-border)" }}>
+              <input
+                value={metrioInput}
+                onChange={e => setMetrioInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") sendMetrio(); }}
+                placeholder="Frag Metrio etwas..."
+                style={{
+                  flex: 1, padding: "10px 14px", borderRadius: 12, border: "1px solid var(--am-border)",
+                  fontSize: 13, fontFamily: "inherit", outline: "none", background: "var(--am-input-bg)", color: "var(--am-text)",
+                }}
+              />
+              <button onClick={() => sendMetrio()}
+                disabled={metrioLoading}
+                style={{
+                  width: 40, height: 40, borderRadius: 12, border: "none",
+                  background: metrioLoading ? "var(--am-text-faint)" : "linear-gradient(135deg, var(--am-accent), var(--am-accent-hover))", color: "#fff",
+                  cursor: metrioLoading ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <p style={{ fontSize: 14, color: "var(--am-text-muted)", marginBottom: 14 }}>
+              Nutze danach direkt den Screener oder prüfe ein Portfolio gegen dieselben Daten.
+            </p>
+            <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+              <a href="/screener" style={{
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px",
+                background: "linear-gradient(135deg, var(--am-accent), var(--am-accent-hover))",
+                color: "#fff", borderRadius: 12, textDecoration: "none",
+                fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em",
+                boxShadow: "0 6px 18px -8px rgba(79,140,255,0.6)",
+              }}>
+                <Zap size={16} /> Zum Screener <ChevronRight size={14} />
+              </a>
+              <a href="/portfolio" style={{
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px",
+                background: "var(--am-card)", border: "1px solid var(--am-border)",
+                color: "var(--am-text)", borderRadius: 12, textDecoration: "none",
+                fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em",
+              }}>
+                Paper-Depot <ChevronRight size={14} />
+              </a>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--am-text-faint)", marginTop: 14 }}>
+              Antworten dienen der Einordnung und ersetzen keine individuelle Anlageberatung.
+            </p>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ── MARKET OVERVIEW ── */}
+      <Reveal as="div" delay={60}>
+        <section style={{ padding: "20px 24px 0", maxWidth: 1120, margin: "0 auto" }}>
+          <SectionHeader
+            eyebrow="Marktüberblick"
+            title={<>Was heute am Markt <span style={{ color: "var(--am-accent)" }}>wichtig ist</span></>}
+            subtitle="Wenn du vom Einzelwert wegzoomst, siehst du hier die wichtigsten Schlagzeilen und Marktbewegungen in einer kompakten Übersicht."
+          />
+          <section className="am-news-pulse-row" style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 20,
+            alignItems: "stretch",
+          }}>
+            <div style={{ display: "flex", minHeight: 360 }}>
+              <NewsCarousel noWrap />
+            </div>
+            <div style={{ display: "flex", minHeight: 360 }}>
+              <MarketPulse noWrap />
+            </div>
+          </section>
+        </section>
+      </Reveal>
+      <div className="am-section-seam" />
+      <style>{`
+        .am-news-pulse-row > div > * { width: 100%; }
+        @media (max-width: 900px) {
+          .am-news-pulse-row { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
+      {/* ── PRICING / MONETIZATION ── */}
+      <Reveal as="div" delay={60}>
+      <section id="pricing" style={{ padding: "72px 24px 80px", maxWidth: 1180, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", color: "var(--am-text-faint)", textTransform: "uppercase", margin: 0 }}>
+            Preise · Transparent · Monatlich kündbar
+          </p>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 900, color: "var(--am-text)", letterSpacing: "-0.03em", margin: "10px 0 12px", lineHeight: 1.1 }}>
+            Vom ersten Check bis zur täglichen Nutzung.
+          </h2>
+          <p style={{ fontSize: 15, color: "var(--am-text-muted)", maxWidth: 620, margin: "0 auto", lineHeight: 1.55 }}>
+            Der kostenlose Einstieg reicht zum Kennenlernen. Pro ist für Anleger gedacht, die AlphaMetric täglich nutzen wollen. Enterprise bleibt für Teams und Plattformen.
+          </p>
+        </div>
+
+        <div
+          className="pricing-grid"
+          onMouseMove={(e) => {
+            const t = e.target as HTMLElement | null;
+            const card = t?.closest('[data-cursor="card"]') as HTMLElement | null;
+            if (card) {
+              const r = card.getBoundingClientRect();
+              card.style.setProperty("--mx", `${e.clientX - r.left}px`);
+              card.style.setProperty("--my", `${e.clientY - r.top}px`);
+            }
+          }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 18,
+            alignItems: "stretch",
+          }}
+        >
+          {/* FREE */}
+          <div data-cursor="card" style={{
+            display: "flex", flexDirection: "column",
+            padding: "28px 26px 26px",
+            borderRadius: 18,
+            background: "var(--am-card-soft)",
+            border: "1px solid var(--am-border)",
+            backdropFilter: "blur(22px) saturate(160%)",
+            WebkitBackdropFilter: "blur(22px) saturate(160%)",
+          }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <Sparkles size={16} color="var(--am-text-muted)" strokeWidth={1.7} />
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: "var(--am-text-muted)", textTransform: "uppercase" }}>Starter</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 40, fontWeight: 900, color: "var(--am-text)", letterSpacing: "-0.03em", lineHeight: 1 }}>0 €</span>
+              <span style={{ fontSize: 13, color: "var(--am-text-muted)", fontWeight: 600 }}>/ Monat</span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--am-text-muted)", margin: "8px 0 22px", lineHeight: 1.5 }}>
+              Genug, um das Produkt kennenzulernen und Aktien sauber einzuordnen.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+              {[
+                "Daily Brief & Marktpuls",
+                "Bis zu 3 Watchlists",
+                "Earnings-Kalender (Highlights)",
+                "Metrio-Score Basis",
+                "End-of-Day Kurse",
+              ].map(t => (
+                <li key={t} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13.5, color: "var(--am-text)" }}>
+                  <Check size={15} color="var(--am-text-muted)" strokeWidth={2.2} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/login" style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+              padding: "11px 18px", borderRadius: 11,
+              background: "var(--am-card)", color: "var(--am-text)",
+              border: "1px solid var(--am-border)",
+              fontSize: 13, fontWeight: 700, textDecoration: "none",
+              letterSpacing: "0.01em",
+            }}>
+              Kostenlos starten
+              <ArrowRight size={14} strokeWidth={1.8} />
+            </Link>
+          </div>
+
+          {/* PRO — featured */}
+          <div data-cursor="card" style={{
+            display: "flex", flexDirection: "column",
+            position: "relative",
+            padding: "30px 26px 28px",
+            borderRadius: 18,
+            background: "linear-gradient(180deg, var(--am-accent), var(--am-accent-hover, var(--am-accent)))",
+            color: "var(--am-accent-text)",
+            border: "1px solid var(--am-accent)",
+            boxShadow: "0 24px 48px -24px rgba(15, 23, 42, 0.45), inset 0 1px 0 rgba(255,255,255,0.18)",
+            transform: "translateY(-6px)",
+          }}>
+            <span style={{
+              position: "absolute", top: -10, right: 18,
+              padding: "4px 10px", borderRadius: 999,
+              background: "var(--am-metal)", color: "#0a0b0e",
+              border: "1px solid rgba(10,10,14,0.18)",
+              fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase",
+              boxShadow: "0 4px 14px -4px rgba(10,10,14,0.35)",
+            }}>
+              Empfohlen
+            </span>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <Zap size={16} strokeWidth={1.9} style={{ color: "var(--am-accent-text)" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", opacity: 0.85 }}>Pro</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1 }}>19 €</span>
+              <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.78 }}>/ Monat</span>
+            </div>
+            <p style={{ fontSize: 13, opacity: 0.82, margin: "8px 0 22px", lineHeight: 1.5 }}>
+              Für Anleger, die Watchlists, Live-Daten und tiefere Checks regelmäßig nutzen.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+              {[
+                "Alles aus Starter",
+                "Unbegrenzte Watchlists",
+                "Echtzeit-Kurse (US + EU)",
+                "Vollständiger Metrio-Score & Edge-Signale",
+                "AI-Insights pro Aktie (15 / Tag)",
+                "Earnings-Alerts per E-Mail",
+                "Daten-Export (CSV / Excel)",
+              ].map(t => (
+                <li key={t} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13.5 }}>
+                  <Check size={15} strokeWidth={2.4} style={{ marginTop: 2, flexShrink: 0, opacity: 0.95 }} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/login?upgrade=pro" style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+              padding: "11px 18px", borderRadius: 11,
+              background: "var(--am-accent-text)", color: "var(--am-accent)",
+              border: "none",
+              fontSize: 13, fontWeight: 800, textDecoration: "none",
+              letterSpacing: "0.01em",
+            }}>
+              14 Tage gratis testen
+              <ArrowRight size={14} strokeWidth={2} />
+            </Link>
+          </div>
+
+          {/* ENTERPRISE */}
+          <div data-cursor="card" style={{
+            display: "flex", flexDirection: "column",
+            padding: "28px 26px 26px",
+            borderRadius: 18,
+            background: "var(--am-card-soft)",
+            border: "1px solid var(--am-border)",
+            backdropFilter: "blur(22px) saturate(160%)",
+            WebkitBackdropFilter: "blur(22px) saturate(160%)",
+          }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <Building2 size={16} color="var(--am-text-muted)" strokeWidth={1.7} />
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: "var(--am-text-muted)", textTransform: "uppercase" }}>Enterprise · API</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 32, fontWeight: 900, color: "var(--am-text)", letterSpacing: "-0.03em", lineHeight: 1 }}>Auf Anfrage</span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--am-text-muted)", margin: "8px 0 22px", lineHeight: 1.5 }}>
+              Für Teams, Berater und Plattformen, die Analyse in eigene Workflows einbauen wollen.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+              {[
+                "Whitelabel-Dashboard im Kunden-Branding",
+                "REST + WebSocket API (Metrio-Score, Brief)",
+                "Multi-User-Verwaltung & SSO",
+                "BaFin-konforme Reporting-Module",
+                "Dedicated Onboarding & SLA",
+                "Datenresidenz EU (Frankfurt)",
+              ].map(t => (
+                <li key={t} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13.5, color: "var(--am-text)" }}>
+                  <Check size={15} color="var(--am-text-muted)" strokeWidth={2.2} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/kontakt" style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+              padding: "11px 18px", borderRadius: 11,
+              background: "var(--am-text)", color: "var(--am-bg)",
+              border: "1px solid var(--am-text)",
+              fontSize: 13, fontWeight: 700, textDecoration: "none",
+              letterSpacing: "0.01em",
+            }}>
+              Demo anfragen
+              <ArrowRight size={14} strokeWidth={1.8} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Trust strip */}
+        <div style={{
+          marginTop: 36, padding: "18px 22px",
+          borderRadius: 14,
+          border: "1px dashed var(--am-border)",
+          background: "var(--am-card-soft)",
+          display: "flex", flexWrap: "wrap", gap: 24, justifyContent: "center", alignItems: "center",
+        }}>
+          {[
+            "Keine Karte beim Start",
+            "Monatlich kündbar",
+            "Server in Frankfurt",
+            "DSGVO & § 85 WpHG",
+          ].map(t => (
+            <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--am-text-muted)", fontWeight: 600 }}>
+              <Check size={13} color="var(--am-text)" strokeWidth={2.4} />
+              {t}
+            </span>
+          ))}
+        </div>
+
+        <style>{`
+          @media (max-width: 880px) {
+            .pricing-grid { grid-template-columns: 1fr !important; }
+            .pricing-grid > div { transform: none !important; }
+          }
+        `}</style>
+      </section>
+      </Reveal>
+
+      {/* ── PROFESSIONAL FOOTER ── */}
+      <Footer />
+
+      {/* ── RISK PROFILER MODAL (homepage CTA) ── */}
+      {riskProfilerOpen && (
+        <PortfolioRiskProfiler
+          positions={[]}
+          onClose={() => setRiskProfilerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// No Suspense wrapper here: LandingPageInner doesn't use useSearchParams
+// or any other suspending hook, so wrapping it in Suspense was a no-op
+// that caused a hydration flash where the hero remounted and CSS arrival
+// animations played twice. ScrollToTop in layout.tsx has its own Suspense.
+export default function LandingPage() {
+  return <LandingPageInner />;
+}

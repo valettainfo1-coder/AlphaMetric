@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AlphaMetric · Live Markets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   AlphaMetric — Liquid Markets Showcase
+   Single-file masterpiece: ticker, mesh-bg, particles, custom cursor,
+   GSAP transitions, micro-interactions. 60fps focus.
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --bg-0:        #07080b;
+  --bg-1:        #0c0e13;
+  --bg-2:        #131620;
+  --line:        rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.14);
+  --ink:         #f4f5f7;
+  --ink-mute:    #a3a8b6;
+  --ink-faint:   #5d6373;
+  --pos:         #21d07a;
+  --pos-glow:    rgba(33,208,122,.35);
+  --neg:         #ff4d6b;
+  --neg-glow:    rgba(255,77,107,.35);
+  --accent:      #5d8bff;
+  --accent-soft: rgba(93,139,255,0.16);
+
+  --r-md: 14px;
+  --r-lg: 22px;
+  --shadow-card: 0 30px 60px -28px rgba(0,0,0,.7), 0 0 0 1px var(--line);
+  --tx-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --tx-display: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg-0);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  overflow-x: hidden;
+  cursor: none;
+}
+@media (max-width: 720px) { body { cursor: auto; } }
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: none; border: 0; background: 0; color: inherit; }
+
+/* ── BACKGROUND: mesh-gradient + canvas particles ───────────────── */
+.bg-mesh {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(60vmax 60vmax at 18% 12%, rgba(93,139,255,0.18), transparent 60%),
+    radial-gradient(50vmax 50vmax at 82% 88%, rgba(33,208,122,0.12), transparent 60%),
+    radial-gradient(40vmax 40vmax at 55% 45%, rgba(255,77,107,0.08), transparent 60%),
+    var(--bg-0);
+  filter: saturate(1.1);
+  animation: meshFloat 24s ease-in-out infinite alternate;
+  will-change: transform, filter;
+}
+@keyframes meshFloat {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  50%  { transform: translate3d(-1.5%, 1%, 0) scale(1.04); }
+  100% { transform: translate3d(1.5%, -1%, 0) scale(1.02); }
+}
+#particles { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+/* ── CUSTOM LIQUID CURSOR ─────────────────────────────────────── */
+.cursor-dot, .cursor-ring {
+  position: fixed; top: 0; left: 0; pointer-events: none;
+  z-index: 9999; border-radius: 50%;
+  will-change: transform; mix-blend-mode: difference;
+}
+.cursor-dot {
+  width: 6px; height: 6px; background: #fff;
+  transform: translate(-50%, -50%);
+}
+.cursor-ring {
+  width: 36px; height: 36px;
+  border: 1px solid rgba(255,255,255,.55);
+  transform: translate(-50%, -50%);
+  transition: width .25s cubic-bezier(.2,.7,.3,1),
+              height .25s cubic-bezier(.2,.7,.3,1),
+              border-color .25s ease,
+              background .25s ease;
+}
+.cursor-ring.hover {
+  width: 78px; height: 78px;
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.85);
+}
+.cursor-ring.click { width: 28px; height: 28px; background: rgba(255,255,255,.18); }
+
+/* ═══════════════════════════════════════════════════════════════
+   1. REALTIME TICKER (sticky top)
+   ═══════════════════════════════════════════════════════════════ */
+.ticker {
+  position: sticky; top: 0; z-index: 50;
+  background: linear-gradient(180deg, rgba(7,8,11,.9), rgba(7,8,11,.7) 70%, rgba(7,8,11,0));
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--line);
+  height: 56px; overflow: hidden;
+  contain: layout paint;
+}
+.ticker__viewport {
+  position: relative; height: 100%;
+  display: flex; align-items: center;
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+.ticker__pin {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 0 22px; height: 100%;
+  flex-shrink: 0; z-index: 2;
+  background: linear-gradient(90deg, var(--bg-0) 70%, transparent);
+  border-right: 1px solid var(--line);
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--ink-mute);
+}
+.ticker__pin .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--pos);
+  box-shadow: 0 0 0 0 var(--pos-glow);
+  animation: pulse 1.6s ease-out infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 var(--pos-glow); }
+  70%  { box-shadow: 0 0 0 9px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.ticker__track {
+  display: flex; align-items: center; gap: 0;
+  height: 100%;
+  animation: tickerScroll 60s linear infinite;
+  will-change: transform;
+}
+.ticker:hover .ticker__track { animation-play-state: paused; }
+@keyframes tickerScroll {
+  from { transform: translate3d(0,0,0); }
+  to   { transform: translate3d(-50%,0,0); }
+}
+
+.tk {
+  display: inline-grid;
+  grid-template-columns: auto auto auto auto;
+  align-items: center; gap: 14px;
+  padding: 0 26px; height: 100%;
+  border-right: 1px solid var(--line);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tk__name { font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+.tk__val  {
+  font-family: var(--tx-mono); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 88px;
+  display: inline-block;
+  text-align: right;
+  transition: color .35s ease, text-shadow .45s ease;
+}
+.tk__delta {
+  font-family: var(--tx-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 76px;
+  text-align: right;
+  display: inline-flex; gap: 4px; align-items: center;
+}
+.tk__spark {
+  width: 64px; height: 18px;
+  display: block;
+  opacity: 0.85;
+}
+.tk[data-dir="up"]   .tk__delta { color: var(--pos); }
+.tk[data-dir="down"] .tk__delta { color: var(--neg); }
+
+.tk__val.flash-up   { color: var(--pos); text-shadow: 0 0 18px var(--pos-glow); }
+.tk__val.flash-down { color: var(--neg); text-shadow: 0 0 18px var(--neg-glow); }
+
+/* ═══════════════════════════════════════════════════════════════
+   2. MAIN LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+.shell { max-width: 1280px; margin: 0 auto; padding: 56px 28px 120px; }
+
+.nav {
+  display: flex; align-items: center; gap: 28px;
+  margin-bottom: 64px;
+}
+.brand {
+  font-family: var(--tx-display);
+  font-weight: 700; font-size: 17px;
+  letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 10px;
+}
+.brand .glyph {
+  width: 26px; height: 26px;
+  background: conic-gradient(from 220deg, #5d8bff, #21d07a, #5d8bff);
+  border-radius: 7px;
+  position: relative;
+  box-shadow: 0 6px 20px -8px rgba(93,139,255,.7);
+}
+.brand .glyph::after {
+  content: ""; position: absolute; inset: 1px;
+  border-radius: 6px;
+  background: var(--bg-0);
+}
+.brand .glyph::before {
+  content: "A"; position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-family: var(--tx-display); font-weight: 700;
+  color: #fff; font-size: 14px; z-index: 2;
+}
+.nav__links {
+  display: flex; gap: 22px; margin-left: auto;
+  font-size: 13px; color: var(--ink-mute);
+}
+.nav__links a { transition: color .2s ease; }
+.nav__links a:hover { color: var(--ink); }
+.nav__cta {
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  background: rgba(255,255,255,0.03);
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+.nav__cta:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.4); transform: translateY(-1px); }
+
+/* HERO */
+.hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 36px; align-items: end; margin-bottom: 56px; }
+@media (max-width: 880px) { .hero { grid-template-columns: 1fr; } }
+
+.hero__eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--ink-mute);
+  padding: 6px 12px; border: 1px solid var(--line);
+  border-radius: 100px; margin-bottom: 22px;
+  background: rgba(255,255,255,0.02);
+}
+.hero__eyebrow .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--pos);
+  box-shadow: 0 0 12px var(--pos-glow);
+}
+.hero__title {
+  font-family: var(--tx-display);
+  font-size: clamp(40px, 6vw, 80px);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+.hero__title em {
+  font-style: normal;
+  background: linear-gradient(135deg, #5d8bff, #21d07a 80%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero__lede {
+  margin-top: 22px; max-width: 540px;
+  color: var(--ink-mute); font-size: 16px; line-height: 1.65;
+}
+
+.hero__stat {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 30px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  position: relative; overflow: hidden;
+}
+.hero__stat::before {
+  content: ""; position: absolute; inset: -1px;
+  background: linear-gradient(135deg, rgba(93,139,255,0.6), transparent 35%);
+  -webkit-mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  padding: 1px; border-radius: var(--r-lg);
+  pointer-events: none; opacity: .6;
+}
+.hero__stat .lbl {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--ink-mute);
+}
+.hero__stat .val {
+  font-family: var(--tx-display); font-weight: 700;
+  font-size: 56px; letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  margin: 12px 0 4px;
+}
+.hero__stat .sub {
+  font-size: 13px; color: var(--pos);
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--tx-mono); font-variant-numeric: tabular-nums;
+}
+
+/* GRID */
+.grid {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(12, 1fr);
+}
+.card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.005)),
+    radial-gradient(80% 60% at 100% 0%, rgba(93,139,255,0.06), transparent 60%);
+  padding: 22px 24px;
+  overflow: hidden;
+  transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s ease, box-shadow .35s ease;
+  will-change: transform;
+}
+.card::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(120px 120px at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.10), transparent 60%);
+  opacity: 0; transition: opacity .35s ease;
+  pointer-events: none;
+}
+.card:hover { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: 0 24px 50px -28px rgba(0,0,0,.7); }
+.card:hover::before { opacity: 1; }
+
+.card.col-4 { grid-column: span 4; }
+.card.col-6 { grid-column: span 6; }
+.card.col-8 { grid-column: span 8; }
+.card.col-12 { grid-column: span 12; }
+@media (max-width: 880px) { .card[class*="col-"] { grid-column: 1 / -1; } }
+
+.card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.card__title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-mute);
+}
+.card__chip {
+  font-family: var(--tx-mono); font-size: 10px; letter-spacing: 0.12em;
+  padding: 4px 9px; border: 1px solid var(--line);
+  border-radius: 100px; color: var(--ink-mute);
+  background: rgba(255,255,255,0.02);
+}
+
+/* MOVERS LIST */
+.mover {
+  display: grid; grid-template-columns: 28px 1fr auto auto;
+  align-items: center; gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+}
+.mover:first-of-type { border-top: 0; }
+.mover__rank {
+  font-family: var(--tx-mono); font-size: 10px;
+  color: var(--ink-faint);
+}
+.mover__sym {
+  font-family: var(--tx-mono); font-weight: 600; letter-spacing: 0.04em;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.mover__sym span { font-family: 'Inter', sans-serif; font-weight: 400; color: var(--ink-mute); font-size: 12px; letter-spacing: 0; }
+.mover__price { font-family: var(--tx-mono); font-variant-numeric: tabular-nums; min-width: 78px; text-align: right; }
+.mover__delta { font-family: var(--tx-mono); font-variant-numeric: tabular-nums; min-width: 78px; text-align: right; font-size: 12.5px; }
+.up    { color: var(--pos); }
+.down  { color: var(--neg); }
+
+/* HEATMAP */
+.heat {
+  display: grid; grid-template-columns: repeat(8, 1fr);
+  grid-auto-rows: 56px; gap: 4px;
+}
+.heat .h-cell {
+  border-radius: 6px;
+  position: relative;
+  display: grid; place-items: center;
+  font-family: var(--tx-mono); font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,.85);
+  cursor: none;
+  transition: transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s ease;
+}
+.heat .h-cell:hover { transform: scale(1.08); z-index: 2; box-shadow: 0 8px 20px -4px rgba(0,0,0,.6); }
+.heat .h-cell small { display: block; font-size: 9px; opacity: 0.85; margin-top: 2px; font-weight: 400; }
+
+/* CHART CARD */
+.chart {
+  position: relative;
+  height: 240px;
+  background:
+    linear-gradient(180deg, rgba(93,139,255,0.10), transparent 80%);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.chart svg { width: 100%; height: 100%; display: block; }
+.chart__legend {
+  position: absolute; left: 14px; top: 14px;
+  display: flex; gap: 14px; font-size: 12px;
+}
+.chart__legend i {
+  width: 8px; height: 8px; border-radius: 2px; display: inline-block;
+  margin-right: 6px; vertical-align: middle;
+}
+
+/* SCORE GAUGE */
+.gauge { display: flex; align-items: center; gap: 26px; margin-top: 8px; }
+.gauge__ring { width: 130px; height: 130px; flex-shrink: 0; }
+.gauge__num {
+  font-family: var(--tx-display); font-size: 44px; font-weight: 700;
+  letter-spacing: -0.03em; line-height: 1;
+}
+.gauge__lbl { font-size: 11px; color: var(--ink-mute); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px; }
+.gauge__bullets { font-size: 12.5px; color: var(--ink-mute); line-height: 1.7; margin-top: 10px; }
+.gauge__bullets b { color: var(--ink); font-weight: 500; }
+
+/* FOOTER */
+.foot {
+  margin-top: 80px; padding-top: 22px;
+  border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  font-size: 12px; color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+
+/* PAGE-TRANSITION OVERLAY */
+.page-curtain {
+  position: fixed; inset: 0; z-index: 8000;
+  background: var(--bg-0);
+  transform: translateY(100%);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Reveal animation hooks */
+[data-reveal] { opacity: 0; transform: translateY(24px); }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="bg-mesh" aria-hidden="true"></div>
+<canvas id="particles" aria-hidden="true"></canvas>
+
+<!-- Custom Cursor -->
+<div class="cursor-ring" id="cur-ring" aria-hidden="true"></div>
+<div class="cursor-dot"  id="cur-dot"  aria-hidden="true"></div>
+
+<!-- ════════ TICKER ════════ -->
+<header class="ticker" role="banner" aria-label="Live Markets">
+  <div class="ticker__viewport">
+    <div class="ticker__pin" aria-hidden="true">
+      <span class="dot"></span> Live · Märkte
+    </div>
+    <div class="ticker__track" id="tickerTrack" aria-live="off"></div>
+  </div>
+</header>
+
+<main class="shell">
+  <!-- NAV -->
+  <nav class="nav" data-reveal>
+    <a class="brand" href="#" data-link>
+      <span class="glyph" aria-hidden="true"></span>
+      AlphaMetric<span style="color:var(--ink-mute);font-weight:400;">·Markets</span>
+    </a>
+    <div class="nav__links">
+      <a href="#" data-link>Dashboard</a>
+      <a href="#" data-link>Märkte</a>
+      <a href="#" data-link>Watchlists</a>
+      <a href="#" data-link>Daily Brief</a>
+    </div>
+    <button class="nav__cta" data-hover>Pro öffnen →</button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div data-reveal>
+      <span class="hero__eyebrow"><span class="dot"></span>NYSE · XETRA · NASDAQ — synchron</span>
+      <h1 class="hero__title">Märkte,<br>in <em>Echtzeit</em><br>verstanden.</h1>
+      <p class="hero__lede">Ein Dashboard für Investoren, die Substanz statt Lärm brauchen. Bond-Yields, Sektor-Rotation, Earnings-Highlights — orchestriert in einer einzigen, ruhigen Oberfläche.</p>
+    </div>
+    <div class="hero__stat" data-reveal data-hover>
+      <div class="lbl">S&amp;P 500 · spot</div>
+      <div class="val" id="heroVal">5 814,28</div>
+      <div class="sub" id="heroSub">▲ +18,42 · +0,32 % heute</div>
+    </div>
+  </section>
+
+  <!-- GRID -->
+  <section class="grid">
+
+    <!-- Top Movers -->
+    <article class="card col-4" data-reveal data-hover>
+      <header class="card__head">
+        <span class="card__title">Top Movers · US</span>
+        <span class="card__chip">LIVE</span>
+      </header>
+      <div id="moversList"></div>
+    </article>
+
+    <!-- Sector Heatmap -->
+    <article class="card col-8" data-reveal data-hover>
+      <header class="card__head">
+        <span class="card__title">Sektor-Heatmap · Tagesperformance</span>
+        <span class="card__chip">11 SEKTOREN</span>
+      </header>
+      <div class="heat" id="heat"></div>
+    </article>
+
+    <!-- Chart -->
+    <article class="card col-8" data-reveal data-hover>
+      <header class="card__head">
+        <span class="card__title">DAX vs S&amp;P 500 · Intraday</span>
+        <span class="chart__legend"><span><i style="background:#5d8bff"></i>S&amp;P 500</span><span><i style="background:#21d07a"></i>DAX</span></span>
+      </header>
+      <div class="chart">
+        <svg id="chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>
+      </div>
+    </article>
+
+    <!-- AI Score -->
+    <article class="card col-4" data-reveal data-hover>
+      <header class="card__head">
+        <span class="card__title">Metrio · Marktbarometer</span>
+        <span class="card__chip">KI</span>
+      </header>
+      <div class="gauge">
+        <svg class="gauge__ring" viewBox="0 0 100 100" id="gauge">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="8"/>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="url(#gaugeG)" stroke-width="8"
+            stroke-linecap="round" pathLength="100"
+            stroke-dasharray="0 100" stroke-dashoffset="0"
+            id="gaugePath"
+            transform="rotate(-90 50 50)"/>
+          <defs>
+            <linearGradient id="gaugeG" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#5d8bff"/>
+              <stop offset="100%" stop-color="#21d07a"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div>
+          <div class="gauge__num" id="gaugeNum">72</div>
+          <div class="gauge__lbl">Risk-On Tilt</div>
+          <p class="gauge__bullets">
+            <b>Mid-Caps</b> übergewichten · <b>Energy</b> reduzieren · <b>10Y Yields</b> &gt; 4.4 %
+          </p>
+        </div>
+      </div>
+    </article>
+
+  </section>
+
+  <footer class="foot">
+    <span>© 2026 AlphaMetric · Keine Anlageberatung gem. § 85 WpHG</span>
+    <span>Daten: simulierter Echtzeit-Stream · 60 fps · ⌘K Suche</span>
+  </footer>
+</main>
+
+<!-- Page transition curtain -->
+<div class="page-curtain" id="curtain" aria-hidden="true"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   1. TICKER — sticky scrolling stream with live updates
+   ═══════════════════════════════════════════════════════════════════ */
+const TICKER_DATA = [
+  { sym:'US 10Y',  name:'Treasury',  val:4.387,  dec:3, suffix:' %', vola:0.012 },
+  { sym:'DE 10Y',  name:'Bund',      val:2.486,  dec:3, suffix:' %', vola:0.011 },
+  { sym:'GOLD',    name:'XAU/USD',   val:2654.10, dec:2, suffix:' $', vola:0.85  },
+  { sym:'S&P 500', name:'SPX',       val:5814.28, dec:2, suffix:'',   vola:1.25 },
+  { sym:'DAX',     name:'GDAXI',     val:23954.56, dec:2, suffix:'', vola:5.5 },
+  { sym:'NASDAQ',  name:'IXIC',      val:18621.43, dec:2, suffix:'', vola:4.8 },
+  { sym:'EUR/USD', name:'FX',        val:1.0843,  dec:4, suffix:'',  vola:0.0006 },
+  { sym:'BTC',     name:'EUR',       val:64908.74, dec:2, suffix:' €', vola:55 },
+];
+
+function fmtNum(v, d) {
+  return v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function buildTicker() {
+  const track = document.getElementById('tickerTrack');
+  const html = TICKER_DATA.map((d, i) => {
+    const sparkPath = makeSpark();
+    return `<div class="tk" data-i="${i}" data-dir="up">
+      <span class="tk__name">${d.sym}<span style="opacity:.55;font-weight:400;margin-left:8px;font-size:11px;">${d.name}</span></span>
+      <span class="tk__val" data-val>${fmtNum(d.val, d.dec)}${d.suffix}</span>
+      <svg class="tk__spark" viewBox="0 0 64 18" preserveAspectRatio="none"><path d="${sparkPath}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/></svg>
+      <span class="tk__delta" data-delta>▲ +0.00</span>
+    </div>`;
+  }).join('');
+  // duplicate for seamless loop
+  track.innerHTML = html + html;
+}
+
+function makeSpark() {
+  const pts = [];
+  let y = 9;
+  for (let x = 0; x <= 64; x += 4) {
+    y += (Math.random() - 0.5) * 5;
+    y = Math.max(2, Math.min(16, y));
+    pts.push(`${x.toFixed(0)},${y.toFixed(1)}`);
+  }
+  return 'M ' + pts.join(' L ');
+}
+
+function tickOnce() {
+  const cells = document.querySelectorAll('.ticker__track .tk');
+  // 8 originals + 8 duplicates → update both halves
+  TICKER_DATA.forEach((d, i) => {
+    const noise = (Math.random() - 0.48) * d.vola * 2;
+    d.val = Math.max(0.0001, d.val + noise);
+    const newText = fmtNum(d.val, d.dec) + d.suffix;
+    const dir = noise >= 0 ? 'up' : 'down';
+    const sign = noise >= 0 ? '▲ +' : '▼ ';
+    const deltaText = `${sign}${Math.abs(noise).toFixed(d.dec)}`;
+    [cells[i], cells[i + TICKER_DATA.length]].forEach(cell => {
+      if (!cell) return;
+      cell.dataset.dir = dir;
+      const v = cell.querySelector('[data-val]');
+      const dl = cell.querySelector('[data-delta]');
+      v.textContent = newText;
+      dl.textContent = deltaText;
+      v.classList.remove('flash-up', 'flash-down');
+      // restart animation
+      void v.offsetWidth;
+      v.classList.add(dir === 'up' ? 'flash-up' : 'flash-down');
+    });
+  });
+}
+
+buildTicker();
+setInterval(tickOnce, 1000);
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. CUSTOM LIQUID CURSOR
+   ═══════════════════════════════════════════════════════════════════ */
+const ring = document.getElementById('cur-ring');
+const dot  = document.getElementById('cur-dot');
+let mx = innerWidth / 2, my = innerHeight / 2;
+let rx = mx, ry = my;
+window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+function loopCursor() {
+  rx += (mx - rx) * 0.18;
+  ry += (my - ry) * 0.18;
+  dot.style.transform  = `translate(${mx}px, ${my}px) translate(-50%, -50%)`;
+  ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
+  requestAnimationFrame(loopCursor);
+}
+loopCursor();
+window.addEventListener('mousedown', () => ring.classList.add('click'));
+window.addEventListener('mouseup',   () => ring.classList.remove('click'));
+
+document.querySelectorAll('a, button, [data-hover], .h-cell, .mover, .tk').forEach(el => {
+  el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+  el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. CANVAS PARTICLE FIELD (mouse reactive)
+   ═══════════════════════════════════════════════════════════════════ */
+const cnv = document.getElementById('particles');
+const ctx = cnv.getContext('2d', { alpha: true });
+let W, H, particles = [];
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = cnv.width  = innerWidth  * dpr;
+  H = cnv.height = innerHeight * dpr;
+  cnv.style.width  = innerWidth  + 'px';
+  cnv.style.height = innerHeight + 'px';
+  ctx.scale(dpr, dpr);
+}
+resize();
+addEventListener('resize', resize);
+
+function spawn() {
+  particles = [];
+  const n = Math.min(70, Math.floor(innerWidth / 22));
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x: Math.random() * innerWidth,
+      y: Math.random() * innerHeight,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: (Math.random() - 0.5) * 0.18,
+      r: 0.6 + Math.random() * 1.6,
+      o: 0.18 + Math.random() * 0.32,
+    });
+  }
+}
+spawn();
+addEventListener('resize', spawn);
+
+function frame() {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  // soft connecting lines
+  for (let i = 0; i < particles.length; i++) {
+    const a = particles[i];
+    a.x += a.vx; a.y += a.vy;
+    if (a.x < -10) a.x = innerWidth + 10;
+    if (a.x > innerWidth + 10) a.x = -10;
+    if (a.y < -10) a.y = innerHeight + 10;
+    if (a.y > innerHeight + 10) a.y = -10;
+
+    // mouse repulse
+    const dx = a.x - mx, dy = a.y - my;
+    const d2 = dx*dx + dy*dy;
+    if (d2 < 18000) {
+      const f = (1 - d2 / 18000) * 0.6;
+      a.x += (dx / Math.sqrt(d2 + 0.1)) * f;
+      a.y += (dy / Math.sqrt(d2 + 0.1)) * f;
+    }
+
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${a.o})`;
+    ctx.fill();
+
+    for (let j = i + 1; j < particles.length; j++) {
+      const b = particles[j];
+      const ddx = a.x - b.x, ddy = a.y - b.y;
+      const dd2 = ddx*ddx + ddy*ddy;
+      if (dd2 < 11000) {
+        ctx.strokeStyle = `rgba(255,255,255,${0.05 * (1 - dd2/11000)})`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+frame();
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. CARD CURSOR-LIGHT (radial highlight following the mouse)
+   ═══════════════════════════════════════════════════════════════════ */
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    card.style.setProperty('--my', (e.clientY - r.top)  + 'px');
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. MOVERS LIST
+   ═══════════════════════════════════════════════════════════════════ */
+const MOVERS = [
+  { sym:'NVDA', name:'NVIDIA',     px:138.42, ch:+3.84 },
+  { sym:'TSLA', name:'Tesla',      px:354.18, ch:+2.62 },
+  { sym:'META', name:'Meta',       px:582.04, ch:+1.78 },
+  { sym:'AAPL', name:'Apple',      px:227.55, ch:-0.42 },
+  { sym:'MSFT', name:'Microsoft',  px:412.98, ch:+0.91 },
+  { sym:'AMD',  name:'AMD',        px:142.66, ch:-1.84 },
+  { sym:'GOOG', name:'Alphabet',   px:172.90, ch:+0.55 },
+];
+document.getElementById('moversList').innerHTML = MOVERS.map((m, i) => `
+  <div class="mover">
+    <span class="mover__rank">${String(i+1).padStart(2,'0')}</span>
+    <span class="mover__sym">${m.sym}<span>${m.name}</span></span>
+    <span class="mover__price">${fmtNum(m.px, 2)}</span>
+    <span class="mover__delta ${m.ch >= 0 ? 'up' : 'down'}">${m.ch >= 0 ? '▲ +' : '▼ '}${Math.abs(m.ch).toFixed(2)} %</span>
+  </div>`).join('');
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. SECTOR HEATMAP
+   ═══════════════════════════════════════════════════════════════════ */
+const SECTORS = [
+  ['Tech', 1.42], ['Comm', 0.86], ['Cons. Disc', 0.54], ['Health', 0.21],
+  ['Industrials', 0.12], ['Materials', -0.18], ['Utilities', -0.32],
+  ['Real Est.', -0.51], ['Staples', -0.62], ['Energy', -1.18],
+  ['Financials', 0.73], ['Semis', 1.84],
+];
+const heat = document.getElementById('heat');
+const max = 2;
+SECTORS.forEach(([n, v]) => {
+  const t = Math.max(-1, Math.min(1, v / max));
+  const c = t >= 0
+    ? `rgba(33,208,122, ${0.18 + Math.abs(t)*0.55})`
+    : `rgba(255,77,107, ${0.18 + Math.abs(t)*0.55})`;
+  const cell = document.createElement('div');
+  cell.className = 'h-cell';
+  cell.style.background = c;
+  cell.innerHTML = `<div>${n}<small>${v >= 0 ? '+' : ''}${v.toFixed(2)} %</small></div>`;
+  heat.appendChild(cell);
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. CHART (intraday two-line)
+   ═══════════════════════════════════════════════════════════════════ */
+function genSeries(start, vola, n=120) {
+  const out = [start];
+  for (let i = 1; i < n; i++) out.push(out[i-1] + (Math.random() - 0.49) * vola);
+  return out;
+}
+function pathFor(series, w, h, padY=20) {
+  const min = Math.min(...series), max = Math.max(...series);
+  const range = (max - min) || 1;
+  return series.map((y, i) => {
+    const x = (i / (series.length - 1)) * w;
+    const yy = padY + (1 - (y - min) / range) * (h - padY*2);
+    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${yy.toFixed(1)}`;
+  }).join(' ');
+}
+const chart = document.getElementById('chart');
+const a = genSeries(100, 0.6);
+const b = genSeries(100, 0.5);
+chart.innerHTML = `
+  <defs>
+    <linearGradient id="cha" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5d8bff" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#5d8bff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="chb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#21d07a" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#21d07a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path d="${pathFor(a, 800, 240)} L 800 240 L 0 240 Z" fill="url(#cha)"/>
+  <path d="${pathFor(a, 800, 240)}" fill="none" stroke="#5d8bff" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="${pathFor(b, 800, 240)} L 800 240 L 0 240 Z" fill="url(#chb)"/>
+  <path d="${pathFor(b, 800, 240)}" fill="none" stroke="#21d07a" stroke-width="1.6" stroke-linejoin="round"/>
+`;
+
+/* ═══════════════════════════════════════════════════════════════════
+   8. HERO TICK + GAUGE COUNT-UP
+   ═══════════════════════════════════════════════════════════════════ */
+let heroVal = 5814.28;
+const heroEl = document.getElementById('heroVal');
+const heroSub = document.getElementById('heroSub');
+setInterval(() => {
+  const d = (Math.random() - 0.45) * 1.4;
+  heroVal += d;
+  heroEl.textContent = fmtNum(heroVal, 2);
+  heroEl.classList.remove('flash-up', 'flash-down');
+  void heroEl.offsetWidth;
+  heroEl.classList.add(d >= 0 ? 'flash-up' : 'flash-down');
+  heroSub.innerHTML = `${d >= 0 ? '▲ +' : '▼ '}${Math.abs(d).toFixed(2)} · ${(d/heroVal*100).toFixed(2)} % heute`;
+  heroSub.style.color = d >= 0 ? 'var(--pos)' : 'var(--neg)';
+}, 1500);
+
+/* ═══════════════════════════════════════════════════════════════════
+   9. GSAP — reveal + page-curtain transitions + gauge fill
+   ═══════════════════════════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+  if (!window.gsap) return;
+  gsap.to('[data-reveal]', {
+    opacity: 1, y: 0,
+    duration: 0.9, ease: 'power3.out',
+    stagger: 0.07,
+  });
+  // Gauge dasharray animate to 72
+  gsap.to('#gaugePath', {
+    strokeDasharray: '72 100',
+    duration: 1.6, ease: 'power3.out', delay: 0.3,
+  });
+  let g = 0;
+  const targetG = 72;
+  const gaugeNum = document.getElementById('gaugeNum');
+  const tn = gsap.to({}, {
+    duration: 1.6, ease: 'power3.out', delay: 0.3,
+    onUpdate() {
+      g = Math.round(targetG * this.progress());
+      gaugeNum.textContent = g;
+    },
+  });
+
+  // Page transitions on data-link clicks (no real navigation — overlay demo)
+  document.querySelectorAll('[data-link]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const tl = gsap.timeline();
+      tl.to('#curtain', { y: '0%', duration: 0.55, ease: 'power3.inOut' })
+        .to('#curtain', { y: '-100%', duration: 0.7, ease: 'power3.inOut', delay: 0.15 })
+        .set('#curtain', { y: '100%' });
+    });
+  });
+});
+</script>
+</body>
+</html>
