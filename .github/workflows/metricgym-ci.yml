@@ -1,0 +1,40 @@
+# METRICGYM CI — scoped strictly to the metricgym/ subproject.
+# AlphaMetric (repository root) is untouched by this workflow.
+name: metricgym-ci
+
+on:
+  push:
+    branches: [main]
+    paths: ["metricgym/**", ".github/workflows/metricgym-ci.yml"]
+  pull_request:
+    paths: ["metricgym/**", ".github/workflows/metricgym-ci.yml"]
+
+defaults:
+  run:
+    working-directory: metricgym
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: metricgym/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests (engine)
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: E2E (demo-mode smoke)
+        run: npm run test:e2e
+        env:
+          CI: "true"

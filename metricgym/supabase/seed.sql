@@ -1,0 +1,11 @@
+-- Optional dev seed for a Supabase project.
+-- Demo mode (no env vars) seeds IndexedDB client-side instead — see
+-- lib/data/seed.ts. This file only prepares a profile row for the first
+-- authenticated user; rows sync up from the client via the outbox.
+--
+-- Usage: run after creating a user via the Supabase dashboard.
+-- Replace :user_id accordingly.
+
+-- insert into profiles (id, display_name, units, locale)
+-- values (':user_id', 'Demo Athlet', 'kg', 'de')
+-- on conflict (id) do nothing;
