@@ -49,9 +49,9 @@
   .opt:hover{background:var(--s2);}
   .opt.sel{border-color:rgba(200,255,46,.6); background:rgba(200,255,46,.1); color:var(--volt);}
   .opt .sub{display:block; font-size:12px; color:var(--t2); font-weight:400; margin-top:2px;}
-  .grid5{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
-  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .grid5{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;}
+  .grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
   .cell{
     padding:13px 2px; text-align:center; background:var(--s1); border:1px solid var(--border);
     border-radius:12px; color:var(--t1); font-size:17px; font-weight:600; cursor:pointer;
@@ -221,8 +221,8 @@
     background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:12px; text-align:center;
   }
   .statuscard.done{border-color:rgba(200,255,46,.4);}
-  .statusdots{display:flex; justify-content:center; gap:7px; margin-top:8px;}
-  .statusdots button{width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border); background:var(--s2); cursor:pointer;}
+  .statusdots{display:flex; justify-content:center; gap:4px; margin-top:8px;}
+  .statusdots button{width:12px; height:12px; min-width:12px; padding:0; border-radius:50%; border:1.5px solid var(--border); background:var(--s2); cursor:pointer;}
   .statusdots button.on{background:var(--volt); border-color:var(--volt);}
   .iconbtn{background:none; border:none; color:var(--t2); font-size:18px; cursor:pointer; min-width:44px; min-height:44px;}
   .conf{font-size:10px; color:var(--t3); font-family:"JetBrains Mono",monospace;}
@@ -329,6 +329,88 @@ function forecast12w(series){
   return pts;
 }
 
+// ---------- Volumen-Toleranz je Muskelgruppe (MEV–MRV, Israetel et al., 2017) ----------
+const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Beine","Wadenheben":"Beine","Kreuzheben":"Beine","Rumänisches Kreuzheben":"Beine","Bankdrücken":"Brust","Schrägbankdrücken":"Brust","Schulterdrücken":"Schultern","Seitheben":"Schultern","Face Pull":"Schultern","Klimmzug":"Rücken","Langhantelrudern":"Rücken","Kabelrudern":"Rücken","Trizepsdrücken":"Arme","Plank":"Core"};
+const VOL_BANDS={Beine:[10,20],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Arme:[6,18],Core:[4,16]};
+function weeklyMuscleSets(weeksBack){
+  const from=Date.now()-(weeksBack+1)*7*dayMs, to=Date.now()-weeksBack*7*dayMs;
+  const out={};
+  for(const [name,sets] of Object.entries(S.liftLog)){
+    const m=MUSCLE_OF[name]; if(!m)continue;
+    const n=sets.filter(s=>s.t>=from&&s.t<to).length;
+    if(n)out[m]=(out[m]||0)+n;
+  }
+  return out;
+}
+// ---------- Diet-Adherence-Score (±10 % kcal, ≥90 % Protein) — min 3 Tage ----------
+function dietAdherence(nDays){
+  if(!S.profile)return null;
+  const tg=S.profile.tg.train;
+  const days=Object.entries(S.nutritionLog)
+    .filter(([d,l])=>(l.meals||[]).length>0&&Date.now()-new Date(d).getTime()<nDays*dayMs);
+  if(days.length<3)return null;
+  let hit=0;
+  for(const [,l] of days){
+    const s=l.meals.reduce((x,m)=>({k:x.k+m.k,p:x.p+m.p}),{k:0,p:0});
+    if(Math.abs(s.k-tg.kcal)/tg.kcal<=0.1&&s.p>=tg.p*0.9)hit++;
+  }
+  return {pct:Math.round(hit/days.length*100),n:days.length,conf:Math.min(90,40+days.length*7)};
+}
+// ---------- Adaptation Velocity (%/Monat e1RM vs. Trainingsalter) — min 5 Punkte ----------
+function adaptationVelocity(name){
+  const s=e1Series(name); if(s.length<5)return null;
+  const span=(s[s.length-1].t-s[0].t)/dayMs; if(span<14)return null;
+  const pctPerMonth=Math.round(((s[s.length-1].v-s[0].v)/s[0].v)/(span/30)*1000)/10;
+  const exp=S.profile?S.profile.a.exp:"intermediate";
+  const fast={beginner:6,novice:4,intermediate:2.5,advanced:1.5}[exp]||2.5;
+  const cls=pctPerMonth>=fast?"schnell":pctPerMonth>=fast*0.4?"normal":pctPerMonth>0.3?"langsam":"stagnierend";
+  return {pctPerMonth,cls,conf:Math.min(85,40+s.length*4)};
+}
+// ---------- Verletzungs-Risiko & Alternativen ----------
+const INJURY_LABEL={knee:"Knie",back:"Rücken / LWS",shoulder:"Schulter"};
+const INJURY_RISK={knee:["Kniebeuge","Ausfallschritte","Beinbeuger"],back:["Kreuzheben","Rumänisches Kreuzheben","Langhantelrudern"],shoulder:["Schulterdrücken","Bankdrücken","Schrägbankdrücken","Seitheben"]};
+const INJURY_ALT={"Kniebeuge":"Beinpresse oder Box-Squat (reduzierte Tiefe)","Ausfallschritte":"Step-ups auf niedrige Box","Beinbeuger":"Exzentrik leicht, ROM begrenzen","Kreuzheben":"Hip Thrust oder Rack-Pull","Rumänisches Kreuzheben":"Beinbeuger-Maschine","Langhantelrudern":"Brustgestütztes Rudern","Schulterdrücken":"Landmine-Press","Bankdrücken":"Kurzhantel-Drücken, neutraler Griff","Schrägbankdrücken":"Maschinen-Drücken","Seitheben":"Kabel-Seitheben mit reduzierter ROM"};
+function injuryWarn(exName){
+  const inj=(S.profile&&S.profile.a.injuries)||[];
+  for(const k of inj){ if((INJURY_RISK[k]||[]).includes(exName)) return INJURY_LABEL[k]; }
+  return null;
+}
+// ---------- Sättigungs-Heuristik (Holt et al., 1995) ----------
+function satiety(m){
+  if(!m.k||m.k<30)return null;
+  const pShare=m.p*4/m.k, dens=m.g>0?m.k/m.g:2;
+  if(pShare>=0.3)return{lbl:"Sättigend",cls:"volt"};
+  if(dens>=3&&pShare<0.15)return{lbl:"Schnell wieder hungrig",cls:"warn"};
+  return null;
+}
+// ---------- Mikronährstoffe: Top-10-Lebensmittel [VitD µg, B12 µg, Eisen mg, Magnesium mg] je Basisportion ----------
+const MICRO={"Hähnchenbrust":[0.2,0.4,0.7,29],"Lachs":[16,3.2,0.5,27],"Ei (1 Stück)":[1.1,0.5,1.1,7],"Haferflocken":[0,0,4.2,130],"Reis (weiß, gekocht)":[0,0,0.2,12],"Magerquark":[0.1,0.9,0.2,11],"Skyr":[0.1,0.7,0.1,11],"Rindfleisch (mager)":[0.1,2.5,2.1,21],"Spinat":[0,0,2.7,79],"Linsen (gekocht)":[0,0,3.3,36]};
+const MICRO_REF=[20,4,12,350]; // Tagesreferenz (DGE)
+const MICRO_NAMES=["Vitamin D","B12","Eisen","Magnesium"];
+// ---------- Status-Voice-Parser (Keyword-Heuristik, Fallback: Tap-Karten) ----------
+function parseStatus(txt){
+  const t=txt.toLowerCase(); const r={};
+  if(/sehr gut geschlafen|top geschlafen|ausgeschlafen/.test(t))r.sleep=5;
+  else if(/gut geschlafen/.test(t))r.sleep=4;
+  else if(/mittel.*geschlafen|ok geschlafen/.test(t))r.sleep=3;
+  else if(/schlecht geschlafen|wenig geschlafen|kaum geschlafen/.test(t))r.sleep=2;
+  else if(/sehr schlecht geschlafen|durchgemacht/.test(t))r.sleep=1;
+  if(/voller energie|sehr fit|energiegeladen/.test(t))r.energy=5;
+  else if(/\bfit\b|gut erholt|erholt/.test(t))r.energy=4;
+  else if(/mittelmäßig|geht so/.test(t))r.energy=3;
+  else if(/müde|schlapp|erschöpft/.test(t))r.energy=2;
+  if(/sehr gestresst|extrem.*stress/.test(t))r.stress=5;
+  else if(/viel stress|gestresst|stress hoch/.test(t))r.stress=4;
+  else if(/normaler stress|etwas stress/.test(t))r.stress=3;
+  else if(/wenig stress/.test(t))r.stress=2;
+  else if(/kein stress|entspannt|ruhig/.test(t))r.stress=1;
+  if(/starker kater|alles tut weh|sehr starker kater/.test(t))r.sore=4;
+  else if(/mittlerer kater/.test(t))r.sore=3;
+  else if(/leichter kater|etwas kater|bisschen kater/.test(t))r.sore=2;
+  else if(/kein kater|keine schmerzen/.test(t))r.sore=1;
+  return r;
+}
+
 // ---------- Auth ----------
 async function hashPw(pw){
   try{
@@ -402,6 +484,10 @@ S.a=S.a||{height:181,weight:82,sleep:7,goals:[]};
 S.users=S.users||[]; S.liftLog=S.liftLog||{}; S.nutritionLog=S.nutritionLog||{};
 S.readinessHistory=S.readinessHistory||[]; S.trainingHistory=S.trainingHistory||[];
 S.weightLog=S.weightLog||[]; S.chat=S.chat||[]; S.currentWeek=S.currentWeek||1;
+// Additive Migration (Titan): neue Felder mit Defaults, alte Profile laden weiter
+S.lastRecapWeek=S.lastRecapWeek??null;
+S.a.injuries=S.a.injuries||[];
+if(S.profile&&S.profile.a&&!S.profile.a.injuries)S.profile.a.injuries=[];
 if(S.checkinDate&&S.checkinDate!==todayKey()){S.checkin=null;S.checkinDate=null;}
 
 // ---------- Session-Typen (User owns schedule) ----------
@@ -525,7 +611,28 @@ function buildInsights(){
     const adh=Math.min(100,Math.round(th7.length/Math.max(1,plannedPerWeek)*100));
     if(adh<70) out.push({t:`Adhärenz-Risiko: nur ${adh} % der geplanten Sessions diese Woche. Kürzere Sessions schlagen ausgefallene.`,conf:80,risk:true});
   }
-  return out.slice(0,4);
+  // Volumen-Toleranz: 2 Wochen in Folge außerhalb MEV–MRV (min 4 Sessions Daten)
+  if(S.trainingHistory.length>=4){
+    const w0=weeklyMuscleSets(0), w1=weeklyMuscleSets(1);
+    for(const [m,band] of Object.entries(VOL_BANDS)){
+      const a0=w0[m]||0, a1=w1[m]||0;
+      if(a0>band[1]&&a1>band[1]) out.push({t:`${m}: seit 2 Wochen über MRV (${a0} Sätze/Woche, Korridor ${band[0]}–${band[1]}) — Übertrainings-Risiko steigt (Israetel et al., 2017).`,conf:70,risk:true});
+      else if(a0>0&&a1>0&&a0<band[0]&&a1<band[0]) out.push({t:`${m}: seit 2 Wochen unter MEV (${a0} Sätze/Woche) — für Wachstum mindestens ${band[0]} Sätze (Israetel et al., 2017).`,conf:65});
+    }
+  }
+  // Diet-Adherence-Score (min 3 Tage — sonst kein Output)
+  const da=dietAdherence(14);
+  if(da) out.push({t:`Ernährungs-Adhärenz: ${da.pct} % der letzten ${da.n} Tage im Zielkorridor (±10 % kcal, ≥90 % Protein).`,conf:da.conf});
+  // Adaptation Velocity (stärkster Lift mit ≥5 Datenpunkten)
+  for(const lift of ["Kniebeuge","Bankdrücken","Kreuzheben"]){
+    const av=adaptationVelocity(lift);
+    if(av){
+      const expl={schnell:"über dem Erwartungswert deines Trainingsalters — Bedingungen stimmen",normal:"im Erwartungsbereich — Progression läuft sauber",langsam:"unter Erwartung — prüfe Schlaf, Protein und Progressionsschema",stagnierend:"Plateau — Deload oder Variationswechsel angezeigt (Schoenfeld, 2017)"}[av.cls];
+      out.push({t:`${lift}: ${av.pctPerMonth>=0?"+":""}${nf.format(av.pctPerMonth)} %/Monat e1RM — Adaption „${av.cls}": ${expl}.`,conf:av.conf});
+      break;
+    }
+  }
+  return out.slice(0,5);
 }
 
 // ---------- Voice/NLP: Training ----------
@@ -734,6 +841,27 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
       appbarEl=document.getElementById("appbar"), fabEl=document.getElementById("fab");
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
+// ---------- ⓘ-Erklärungen: WARUM kommt die Engine zu diesem Wert ----------
+const EXPLAIN={
+  bmr:{t:"Grundumsatz",b:"Berechnet nach Mifflin-St Jeor (bzw. Katch-McArdle, wenn Körperfett bekannt) aus Geschlecht, Alter, Größe und Gewicht. Mit aktuellem Gewicht im Home-Tab bleibt der Wert präzise (Mifflin et al., 1990)."},
+  tdee:{t:"Gesamtumsatz",b:"Grundumsatz × Alltagsaktivität plus Trainingsenergie deiner geplanten Sessions — Training wird separat gerechnet, nicht doppelt im Aktivitätsfaktor. Mehr geloggte Sessions schärfen den Wert."},
+  kcalTarget:{t:"Kalorienziel",b:"Aus deinem TDEE und der gewichteten Zielkombination abgeleitet, mit Sicherheitsuntergrenze (nie unter Grundumsatz). Bei Aufbau + Abbau greift das Recomp-Protokoll: ±50 kcal um den TDEE (Helms et al., 2014)."},
+  protein:{t:"Proteinziel",b:"2,2 g/kg Magermasse (bzw. 1,8 g/kg bei unbekanntem Körperfett) — maximiert die Muskelproteinsynthese und schützt Muskulatur im Defizit (Morton et al., 2018)."},
+  status:{t:"Status-Score",b:"Gewichtete Summe aus Schlaf (30 %), Energie (25 %), Muskelkater (25 %) und Stress (20 %). Er steuert die Tagesempfehlung — je mehr Tage du checkst, desto besser erkennt die Engine deine Erholungsmuster."},
+  trajectory:{t:"Prognose-Konfidenz",b:"Die Prognose ist eine gedämpfte Trendlinie deiner geloggten e1RM-Werte (Cap +15 %/12 Wochen). Konfidenz wächst mit jedem Datenpunkt — ab ~12 Sessions wird sie deutlich stabiler."},
+  satiety:{t:"Sättigungs-Hinweis",b:"Heuristik aus Proteinanteil und Energiedichte: proteinreiche Mahlzeiten mit moderater Dichte sättigen länger; energiedichte, proteinarme machen schneller wieder hungrig (Holt et al., 1995)."},
+  micro:{t:"Mikronährstoff-Hinweise",b:"Geschätzt nur aus tatsächlich geloggten Lebensmitteln mit hinterlegten Werten (Top 10) — kein vollständiges Mikronährstoff-Tracking, sondern eine Richtungsanzeige gegen DGE-Referenzen."},
+};
+A.explain=(k)=>{const e=EXPLAIN[k]; if(e)modal(`<p class="ct">${e.t}</p><p class="sm t2" style="line-height:1.6">${e.b}</p>`);};
+function infoBtn(k){return `<button class="iconbtn" style="min-width:30px;min-height:24px;font-size:12px" onclick="A.explain('${k}')" aria-label="Erklärung">ⓘ</button>`;}
+// Progression-Begründung aus echten letzten Sätzen (nicht generisch)
+function recWhy(name){
+  const h=liftHistory(name); if(!h.length)return null;
+  const last=h[h.length-1];
+  const inc=(last.rpe??8)<=8;
+  return `Letzte Session: ${fmtKg(last.w)} × ${last.reps} @ RPE ${last.rpe??8} → ${inc?"+2,5 kg, da Reps-Reserve vorhanden war":"Gewicht halten, da RPE über 8 lag"} (Helms et al., 2016).${S.currentWeek===4?" Deload-Woche: zusätzlich −10 % Last.":""}`;
+}
+A.recWhy=(n)=>{const w=recWhy(n); if(w)modal(`<p class="ct">Warum diese Empfehlung?</p><p class="sm t2" style="line-height:1.6">${w}</p>`);};
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
@@ -824,6 +952,7 @@ function renderFab(){
     S.chat.push({r:"ai",t:ctx.answers[q]||"Dazu habe ich noch keine Daten — logge weiter, dann wird meine Antwort konkret."});
     save(); renderFab();
   };
+  A.coachVoice=()=>speech((txt)=>{const inp=document.getElementById("coach-in"); if(inp){inp.value=txt; A.coachSend();}},"co-mic");
   A.coachSend=()=>{
     const inp=document.getElementById("coach-in");
     if(!inp||!inp.value.trim())return;
@@ -846,6 +975,7 @@ function renderFab(){
       ${S.chat.slice(-6).map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${m.t}</div>`).join("")||'<p class="xs t2">Der Coach kennt deinen aktuellen Screen-Kontext.</p>'}</div>
     <div class="chips mb8">${ctx.chips.map(c=>`<button class="chip" onclick="A.coachAsk('${c.replace(/'/g,"\\'")}')">${c}</button>`).join("")}</div>
     <div class="row">
+      <button id="co-mic" class="btn" style="width:48px;min-width:48px" onclick="A.coachVoice()" aria-label="Sprechen">🎤</button>
       <input type="text" id="coach-in" placeholder="Frag deinen Coach …" style="flex:1;border-radius:999px" onkeydown="if(event.key==='Enter')A.coachSend()">
       <button class="btn volt" style="width:48px;min-width:48px" onclick="A.coachSend()" aria-label="Senden">➤</button></div>
   </div></div>`;
@@ -1000,6 +1130,8 @@ const STEPS=[
    opts:[["muscle_gain","Muskelaufbau",""],["fat_loss","Fettabbau",""],["strength","Maximalkraft",""],["general","Allgemeine Fitness",""],["endurance","Ausdauer",""],["mobility","Mobility",""]]},
   {id:"exp",q:"Trainingserfahrung",type:"single",key:"exp",
    opts:[["beginner","Unter 1 Jahr"],["novice","1–2 Jahre"],["intermediate","2–4 Jahre"],["advanced","Über 4 Jahre"]]},
+  {id:"injury",q:"Verletzungen oder Einschränkungen?",hint:"Optional — riskante Übungen werden im Plan markiert und Alternativen vorgeschlagen.",type:"multi",key:"injuries",max:3,skip:true,
+   opts:[["knee","Knie",""],["back","Rücken / LWS",""],["shoulder","Schulter",""]]},
   {id:"days",q:"Trainingstage pro Woche",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
   {id:"act",q:"Alltag ohne Training",type:"single",key:"act",
    opts:[["sedentary","Sitzend"],["light","Etwas Bewegung"],["moderate","Regelmäßig auf den Beinen"],["active","Aktiver Beruf"],["very_active","Schwere Arbeit"]]},
@@ -1035,7 +1167,8 @@ function renderOnboarding(){
     root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>
       ${st.opts.map(([v,l])=>`<button class="opt ${sel.includes(v)?"sel":""}" onclick="A.multi('${st.key}','${v}',${st.max})">
         ${sel.includes(v)?`<span class="metric xs" style="margin-right:6px">${sel.indexOf(v)+1}.</span>`:""}${l}</button>`).join("")}
-      <button class="btn volt mt8" onclick="A.next()" ${sel.length===0?"disabled":""}>Weiter${sel.length?` (${sel.length})`:""}</button></div>`;
+      <button class="btn volt mt8" onclick="A.next()" ${sel.length===0&&!st.skip?"disabled":""}>Weiter${sel.length?` (${sel.length})`:""}</button>
+      ${st.skip?`<button class="btn ghost" onclick="A.next()">Überspringen</button>`:""}</div>`;
   }
   else if(st.type==="dial"){
     const v=S.a[st.key]??st.def; S.a[st.key]=v;
@@ -1083,16 +1216,16 @@ function renderReveal(){
     ${tg.conflicts.map(c=>`<div class="warncard" role="alert"><b>Hinweis:</b> ${c.msg}<br><i style="color:var(--t2)">${c.bio}</i></div>`).join("")}
     <div class="card">
       <div class="grid2 mb16">
-        <div><p class="xs t2">Grundumsatz</p><p class="metric" style="font-size:24px;font-weight:600">${fmtKcal(p.bmr)}</p></div>
-        <div><p class="xs t2">Gesamtumsatz</p><p class="metric" style="font-size:24px;font-weight:600">${fmtKcal(p.td.avg)}</p></div>
-        <div><p class="xs t2">Ziel · Trainingstag</p><p class="metric volt-txt" style="font-size:24px;font-weight:600">${fmtKcal(tg.train.kcal)}</p></div>
+        <div><p class="xs t2">Grundumsatz ${infoBtn("bmr")}</p><p class="metric" style="font-size:24px;font-weight:600">${fmtKcal(p.bmr)}</p></div>
+        <div><p class="xs t2">Gesamtumsatz ${infoBtn("tdee")}</p><p class="metric" style="font-size:24px;font-weight:600">${fmtKcal(p.td.avg)}</p></div>
+        <div><p class="xs t2">Ziel · Trainingstag ${infoBtn("kcalTarget")}</p><p class="metric volt-txt" style="font-size:24px;font-weight:600">${fmtKcal(tg.train.kcal)}</p></div>
         <div><p class="xs t2">Ziel · Ruhetag</p><p class="metric" style="font-size:24px;font-weight:600">${fmtKcal(tg.rest.kcal)}</p></div>
       </div>
       ${tg.warn.length?`<p class="sm danger-txt mb16" role="alert" style="border:1px solid rgba(255,77,77,.3);background:rgba(255,77,77,.1);border-radius:12px;padding:12px">Ziel auf Sicherheitsuntergrenze angehoben.</p>`:""}
       <div class="grid2 mb8" style="grid-template-columns:repeat(3,1fr)">
         ${[["Protein",tg.train.p],["Carbs",tg.train.c],["Fett",tg.train.f]].map(([l,v])=>`
           <div style="background:var(--s2);border-radius:12px;padding:10px;text-align:center">
-          <p class="metric" style="font-size:17px;font-weight:600">${nfi.format(v)} g</p><p class="xs t2">${l}</p></div>`).join("")}
+          <p class="metric" style="font-size:17px;font-weight:600">${nfi.format(v)} g</p><p class="xs t2">${l}${l==="Protein"?" "+infoBtn("protein"):""}</p></div>`).join("")}
       </div>
     </div>
     <button class="btn volt" onclick="A.startApp()">Los geht es — Wochenplan festlegen</button>
@@ -1135,23 +1268,63 @@ function renderHome(){
   const sch=schedule();
   const ins=buildInsights();
   const wToday=S.weightLog.some(w=>new Date(w.t).toISOString().slice(0,10)===todayKey());
+  // Status-Streak: konsekutive Tage mit Check (echte Daten, keine Fake-Mechanik)
+  const streak=(()=>{let n=0;for(let d=0;;d++){
+    const key=new Date(Date.now()-d*dayMs).toISOString().slice(0,10);
+    if(S.readinessHistory.some(r=>r.date===key))n++; else break;
+  } return n;})();
+  // Vorzeitiger Deload-Vorschlag bei Übertrainings-Signal (User entscheidet)
+  const overtrain=ins.find(i=>i.risk&&/Übertrain/.test(i.t));
+  A.earlyDeload=()=>{S.currentWeek=4;save();render();toast("Deload aktiviert — Woche-4-Protokoll (−40 % Volumen, −10 % Last)");};
+  A.statusVoice=()=>speech((txt)=>{
+    const r=parseStatus(txt);
+    if(!Object.keys(r).length){toast("Nichts erkannt — z. B. 'gut geschlafen, leichter Kater, kein Stress'");return;}
+    ci={...ci,...r}; renderHome(); toast("Erkannt — prüfe die Karten und speichere");
+  },"st-mic");
+  // Wöchentlicher Recap beim Wochenwechsel (nur mit echten Vorwochen-Daten)
+  const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);})();
+  if(S.lastRecapWeek==null){S.lastRecapWeek=wkKey;save();}
+  else if(S.lastRecapWeek!==wkKey){
+    S.lastRecapWeek=wkKey;save();
+    const from=new Date(wkKey).getTime()-7*dayMs,to=new Date(wkKey).getTime();
+    const setsW=S.trainingHistory.filter(t=>{const x=new Date(t.date).getTime();return x>=from&&x<to;}).reduce((s,t)=>s+t.sets,0);
+    const rW=S.readinessHistory.filter(x=>{const t=new Date(x.date).getTime();return t>=from&&t<to;});
+    const avgRW=rW.length?Math.round(rW.reduce((s,x)=>s+x.score,0)/rW.length):null;
+    const daW=dietAdherence(7);
+    if(setsW>0||avgRW!=null||daW){
+      setTimeout(()=>modal(`<p class="ct">📅 Wochen-Recap</p>
+        <ul class="list mb8">
+          <li><span>Sätze gesamt</span><span class="metric">${setsW}</span></li>
+          <li><span>Ernährungs-Adhärenz</span><span class="metric">${daW?daW.pct+" %":"—"}</span></li>
+          <li><span>Ø Status</span><span class="metric">${avgRW!=null?avgRW+"/100":"—"}</span></li>
+        </ul>
+        ${ins.length?`<p class="sm t2" style="line-height:1.6">${ins[0].t}</p>`:""}`),80);
+    }
+  }
   root.innerHTML=`
     <div class="card fade" style="background:linear-gradient(135deg,var(--s1),rgba(200,255,46,.05))">
       <p class="xs t2" style="text-transform:uppercase">${dfLong.format(new Date())}</p>
       <h2 style="font-size:20px">${greet()}, ${userName()} 👋</h2>
-      <p class="sm t2">${(p.tg.goals||[]).map(g=>GOAL_LABEL[g]).join(" + ")}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
+      <p class="sm t2">${(p.tg.goals||[]).map(g=>GOAL_LABEL[g]).join(" + ")}${S.devMode?' · <span class="volt-txt">Dev</span>':""}${streak>=2?` · <span class="volt-txt">🔥 ${streak} Tage Status-Streak</span>`:""}</p>
     </div>
 
-    <!-- Dein Status heute: 4 Karten, je 1 Tap -->
-    <p class="ct">Dein Status heute</p>
+    ${overtrain&&S.currentWeek!==4?`<div class="warncard"><b>Deine Intensität läuft heiß:</b> ${overtrain.t}<br>
+      <button class="btn mt8" onclick="A.earlyDeload()">Vorzeitigen Deload starten</button></div>`:""}
+
+    <!-- Dein Status heute: 4 Karten, je 1 Tap (oder per Sprache) -->
+    <p class="ct">Dein Status heute ${infoBtn("status")}</p>
     ${S.checkin?`<div class="card row" style="justify-content:flex-start;gap:18px">${ringSVG(S.checkin.score,S.checkin.tier,110)}
       <div style="flex:1"><p class="sm">${S.checkin.score>=80?"Voll belastbar — geh heute an die obere Range.":S.checkin.score>=60?"Solide — trainiere wie geplant.":S.checkin.score>=40?"Gedrosselt — RPE 7 als Deckel.":"Erholung hat heute Vorrang."}</p></div></div>`
     :`<div class="grid4 mb8">${STATUS_CARDS.map(([k,e,l])=>`
         <div class="statuscard ${ci[k]?"done":""}">
           <p style="font-size:19px">${e}</p><p class="xs t2 mt8">${l}</p>
-          <div class="statusdots">${[1,2,3,4,5].map(n=>`<button class="${ci[k]>=n?"on":""}" onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5" style="width:14px;height:14px;min-width:14px;padding:0"></button>`).join("")}</div>
+          <div class="statusdots">${[1,2,3,4,5].map(n=>`<button class="${ci[k]>=n?"on":""}" onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5"></button>`).join("")}</div>
         </div>`).join("")}</div>
-      <button class="btn volt mb16" onclick="A.stSave()">Status speichern</button>`}
+      <div class="row mb8">
+        <button id="st-mic" class="btn" style="width:50px;min-width:50px" onclick="A.statusVoice()" aria-label="Status per Sprache">🎤</button>
+        <button class="btn volt" style="flex:1" onclick="A.stSave()">Status speichern</button>
+      </div>
+      <p class="xs t2 mb16" style="text-align:center">Oder sprich: „Gut geschlafen, leichter Kater, kein Stress"</p>`}
 
     <!-- Session-Karte -->
     <div class="card" style="border-color:rgba(200,255,46,.3)">
@@ -1199,8 +1372,10 @@ function renderTrain(){
   A.startType=(t)=>{S.tab="player";S.playerType=t;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
   A.exInfo=(name)=>{
     const inf=EXINFO[name]||{prim:"—",sek:"—",cues:[]};
+    const warn=injuryWarn(name);
     modal(`<p class="ct">${name}</p>
       <ul class="list mb8"><li><span>Primär</span><span>${inf.prim}</span></li><li><span>Sekundär</span><span>${inf.sek}</span></li></ul>
+      ${warn?`<div class="warncard"><b>⚠ ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
       <p class="ct" style="margin-top:10px">Technik</p>
       <p class="sm t2" style="line-height:1.8">${inf.cues.map(c=>"· "+c).join("<br>")}</p>`);
   };
@@ -1256,12 +1431,15 @@ function renderTrain(){
         <div class="row mb8"><p class="ct" style="margin:0">${s.emoji} ${s.label}</p>
           <span class="metric xs t2">${s.ex.length} Übungen</span></div>
         ${s.ex.map(e=>{
-          const r=recommend(e[0]), best=bestE1(e[0]);
+          const r=recommend(e[0]), best=bestE1(e[0]), warn=injuryWarn(e[0]);
           return `<div style="border-top:1px solid var(--border);padding:9px 0">
             <div class="row mb4"><p class="sm" style="font-weight:600">${e[0]}
+              ${warn?`<button class="iconbtn" style="min-width:30px;min-height:24px;font-size:13px;color:var(--warn)" onclick="A.exInfo('${e[0]}')" aria-label="Warnung ${warn}">⚠</button>`:""}
               <button class="iconbtn" style="min-width:32px;min-height:24px;font-size:13px" onclick="A.exInfo('${e[0]}')" aria-label="Info">ⓘ</button></p>
               <span class="metric xs t2">${isDeload?Math.max(1,Math.round(e[1]*.6)):e[1]} × ${e[2]}</span></div>
-            ${r?`<p class="metric xs volt-txt">Empfohlen: ${fmtKg(r.w)} × ${r.reps}</p>`:`<p class="xs t2">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>`}
+            ${r?`<p class="metric xs volt-txt">Empfohlen: ${fmtKg(r.w)} × ${r.reps}
+              <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${e[0]}')" aria-label="Warum?">ⓘ</button></p>`
+            :`<p class="xs t2">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>`}
             ${best>0?`<p class="xs t2">Rekord: <span class="metric">${fmtKg(best)}</span> e1RM</p>`:""}
           </div>`;}).join("")}
         <button class="btn ${t===todayType()?"volt":""} mt8" onclick="A.startType('${t}')">Starten</button>
@@ -1326,7 +1504,8 @@ function renderPlayer(){
     <div class="card">
       <div class="row mb4"><h2 style="font-size:19px">${name}</h2>
         <button class="iconbtn" onclick="A.exInfo('${name}')" aria-label="Info">ⓘ</button></div>
-      ${rec?`<p class="sm volt-txt metric mb8">Engine: ${fmtKg(rec.w)} × ${rec.reps}</p>`
+      ${rec?`<p class="sm volt-txt metric mb8">Engine: ${fmtKg(rec.w)} × ${rec.reps}
+        <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
         :`<p class="xs t2 mb8">Erste Session — wähle dein Startgewicht selbst.</p>`}
       <div class="row mb12"><p class="ct" style="margin:0">Sätze</p>
         <div class="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:targetSets},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
@@ -1401,10 +1580,11 @@ function renderAnalytics(){
   // Kraft-Trajectory
   if(lifts.length){
     const top=lifts.sort((x,y)=>e1Series(y).length-e1Series(x).length).slice(0,2);
-    html+=`<div class="card"><p class="ct">Kraft-Trajectory</p>${top.map(n=>{
+    html+=`<div class="card"><p class="ct">Kraft-Trajectory ${infoBtn("trajectory")}</p>${top.map(n=>{
       const s=e1Series(n), fc=forecast12w(s);
       return `<p class="sm mb8" style="font-weight:500">${n}</p>${lineChart(s,fc)}
-        ${fc?`<p class="sm volt-txt metric mt8 mb16">Prognose: ${fmtKg(fc[2].v)} bis ${fmtD(new Date(s[s.length-1].t+84*dayMs))} <span class="conf">· Konfidenz ${Math.min(85,40+s.length*4)} %</span></p>`:""}`;
+        ${fc?`<p class="sm volt-txt metric mt8">Prognose: ${fmtKg(fc[2].v)} bis ${fmtD(new Date(s[s.length-1].t+84*dayMs))} <span class="conf">· Konfidenz ${Math.min(85,40+s.length*4)} %</span></p>`:""}
+        <p class="xs t2 mt8 mb16">Konfidenz steigt mit jeder Session: aktuell ${s.length} Datenpunkte — ab 12 wird die Prognose deutlich stabiler.</p>`;
     }).join("")}</div>`;
   } else html+=gateCard("Kraft-Trajectory","3","0","Sessions je Übung");
 
@@ -1415,12 +1595,16 @@ function renderAnalytics(){
       return S.trainingHistory.filter(t=>{const x=new Date(t.date).getTime();return x>=from&&x<to;}).reduce((s,t)=>s+t.sets,0);
     });
     const maxW=Math.max(...wks,1);
+    const volWhy=S.currentWeek===4
+      ?"Grund: geplanter Deload (Woche 4 von 4) — Volumen bewusst reduziert, kein Trainingsausfall."
+      :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Sessions prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
     html+=`<div class="card"><p class="ct">Wochenvolumen · Sätze</p>
       <div style="display:flex;align-items:flex-end;gap:10px;height:90px;padding:0 8px">
         ${wks.map((v,i)=>`<div style="flex:1;text-align:center">
           <div style="height:${Math.max(3,v/maxW*76)}px;background:${i===3?"var(--volt)":"var(--t3)"};border-radius:4px 4px 0 0;opacity:.85"></div>
           <p class="xs t2" style="margin-top:4px">W${i+1}</p><p class="metric xs">${v}</p></div>`).join("")}
-      </div></div>`;
+      </div>
+      <p class="xs t2 mt8">${volWhy}</p></div>`;
   } else html+=gateCard("Wochenvolumen","3",S.trainingHistory.length,"Sessions");
 
   // RPE
@@ -1494,6 +1678,8 @@ function renderAnalytics(){
       </div>
       <div class="row mt8"><span class="sm t2">Protein-Adhärenz</span>
         <span class="metric ${protDays/protTracked>=.7?"volt-txt":"warn-txt"}">${protDays}/${protTracked} Tage</span></div>
+      ${(()=>{const da7=dietAdherence(7);return da7?`<div class="row mt8"><span class="sm t2">Adhärenz-Score (±10 % kcal, ≥90 % P)</span>
+        <span class="metric ${da7.pct>=70?"volt-txt":"warn-txt"}">${da7.pct} % <span class="conf">· ${da7.conf} %</span></span></div>`:"";})()}
       <div class="row mt8" style="justify-content:flex-start;gap:16px">
         ${donutSVG([{v:macroSum.p*4,col:"var(--volt)"},{v:macroSum.c*4,col:"var(--info)"},{v:macroSum.f*9,col:"var(--t3)"}],90)}
         <div class="sm t2" style="line-height:1.9">
@@ -1501,6 +1687,32 @@ function renderAnalytics(){
           <span style="color:var(--info)">●</span> Carbs ${nfi.format(macroSum.c*4)} kcal<br>
           <span style="color:var(--t3)">●</span> Fett ${nfi.format(macroSum.f*9)} kcal</div></div></div>`;
   } else html+=gateCard("Ernährungs-Analytics","3",nutriDays.length,"Tage geloggt");
+
+  // Mikronährstoff-Hinweise: NUR aus tatsächlich geloggten Top-10-Lebensmitteln
+  if(nutriDays.length>=3){
+    const sums=[0,0,0,0]; let hits=0;
+    for(const [d,l] of Object.entries(S.nutritionLog)){
+      if(Date.now()-new Date(d).getTime()>=7*dayMs)continue;
+      for(const m of (l.meals||[])){
+        const key=Object.keys(MICRO).find(k=>m.n.startsWith(k));
+        if(!key)continue;
+        const base=(FOODS.find(x=>x[0]===key)||[,100])[1];
+        const mult=(m.g||base)/base;
+        MICRO[key].forEach((v,i)=>{sums[i]+=v*mult;}); hits++;
+      }
+    }
+    if(hits>0){
+      html+=`<div class="card"><p class="ct">Mikronährstoff-Hinweise · 7 Tage ${infoBtn("micro")}</p>
+        ${MICRO_NAMES.map((nme,i)=>{const pc=Math.min(100,Math.round(sums[i]/(MICRO_REF[i]*7)*100));
+          return `<div class="barrow"><span class="blbl">${nme}</span>
+            <div class="btrack"><div class="bfill" style="width:${pc}%;background:${pc>=70?"var(--volt)":pc>=40?"var(--info)":"var(--warn)"}"></div></div>
+            <span class="bval metric">${pc} %</span></div>`;}).join("")}
+        <p class="xs t2 mt8">Geschätzt aus ${hits} geloggten Einträgen mit hinterlegten Werten — Richtungsanzeige, kein vollständiges Tracking.</p></div>`;
+    } else {
+      html+=`<div class="card"><p class="ct">Mikronährstoff-Hinweise ${infoBtn("micro")}</p>
+        <p class="sm t2">Noch keine Lebensmittel mit hinterlegten Mikronährwerten geloggt (z. B. Lachs, Eier, Haferflocken, Spinat).</p></div>`;
+    }
+  } else html+=gateCard("Mikronährstoff-Hinweise","3",nutriDays.length,"Tage geloggt");
 
   // Insights
   html+=ins.length?`<div class="card" style="border-color:rgba(200,255,46,.3)"><p class="ct">🧠 Engine-Insights</p>
@@ -1568,22 +1780,35 @@ function renderNutrition(){
   };
   A.cancelItems=()=>{pendingItems=null;renderNutrition();};
   A.quick=(i)=>{const e=addFood(FOODS[i],null);toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);renderNutrition();};
+  // MOCK: Foto-Erkennung — wählt deterministisch (Dateigröße) ein Lebensmittel aus FOODS.
+  // TODO Real: Vision-API (z. B. Claude/GPT-4V) für echte Lebensmittel-Erkennung + Mengenschätzung.
+  A.photoPick=(el)=>{
+    const f=el.files&&el.files[0]; if(!f)return;
+    const idx=f.size%FOODS.length;
+    pendingItems=[{raw:"Foto",food:FOODS[idx],gram:FOODS[idx][1],conf:0.5,photo:true}];
+    el.value=""; renderNutrition();
+  };
+  A.explainSat=()=>A.explain("satiety");
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
         <button class="btn ${dayType==="rest"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('rest')">Ruhetag</button></div>
-      <div class="grid4">${miniRing("Kalorien",sum.k,tg.kcal,"kcal")}${miniRing("Protein",sum.p,tg.p,"g")}${miniRing("Carbs",sum.c,tg.c,"g")}${miniRing("Fett",sum.f,tg.f,"g")}</div></div>
+      <div class="grid4">${miniRing("Kalorien",sum.k,tg.kcal,"kcal")}${miniRing("Protein",sum.p,tg.p,"g")}${miniRing("Carbs",sum.c,tg.c,"g")}${miniRing("Fett",sum.f,tg.f,"g")}</div>
+      <p class="xs t2 mt8" style="text-align:center">Ziele aus deinem Profil ${infoBtn("kcalTarget")} ${infoBtn("protein")}</p></div>
 
     <!-- Voice-First Logging -->
     <div class="card" style="border-color:rgba(200,255,46,.3)">
-      <p class="ct">🎙 Sprich deine Mahlzeit</p>
+      <p class="ct">🎙 Sprich oder fotografiere deine Mahlzeit</p>
       <div class="row mb8">
         <button id="vf-mic" class="btn" style="width:50px;min-width:50px" onclick="A.voiceFood()" aria-label="Spracheingabe">🎤</button>
         <input type="text" id="vf-in" placeholder="'500 g Hähnchen und 300 g Reis'" style="flex:1" onkeydown="if(event.key==='Enter')A.parseFood()">
+        <button class="btn" style="width:50px;min-width:50px" onclick="document.getElementById('vf-file').click()" aria-label="Foto aufnehmen">📷</button>
         <button class="btn volt" style="width:50px;min-width:50px" onclick="A.parseFood()" aria-label="Parsen">➤</button></div>
+      <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?`<div class="warncard" style="border-color:rgba(200,255,46,.4);background:rgba(200,255,46,.06)">
+        ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
         ${pendingItems.map(it=>it.food?`
           <div class="row mb4"><span class="sm">${it.food[0]} · <span class="metric">${it.gram} g</span></span>
           <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${Math.round(it.conf*100)} %</span></span></div>`
@@ -1617,9 +1842,11 @@ function renderNutrition(){
       </div></div>
 
     <div class="card"><p class="ct">Heute geloggt</p>
-      ${log.meals.length?`<ul class="list">${log.meals.map((m,i)=>`<li><span>${m.n}</span>
+      ${log.meals.length?`<ul class="list">${log.meals.map((m,i)=>{
+        const sat=satiety(m);
+        return `<li><span>${m.n}${sat?` <button class="badge ${sat.cls}" style="cursor:pointer;border:none;font-size:9.5px;padding:2px 7px" onclick="A.explainSat()">${sat.lbl}</button>`:""}</span>
         <span style="display:flex;gap:10px;align-items:center"><span class="metric">${nfi.format(m.k)} kcal</span>
-        <button class="iconbtn" style="min-width:32px;min-height:32px;font-size:13px" onclick="A.delMeal(${i})" aria-label="Löschen">✕</button></span></li>`).join("")}</ul>`
+        <button class="iconbtn" style="min-width:32px;min-height:32px;font-size:13px" onclick="A.delMeal(${i})" aria-label="Löschen">✕</button></span></li>`;}).join("")}</ul>`
       :`<p class="sm t2">Noch nichts geloggt. Sprich, such oder tipp deine Mahlzeit.</p>`}</div>
 
     <div class="card"><p class="ct">Quickliste</p>
@@ -1633,9 +1860,40 @@ function renderNutrition(){
 // =====================================================================
 // PROFIL
 // =====================================================================
+let EP=null;
 function renderProfile(){
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
   A.logout=()=>{S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
+  A.editProfile=()=>{EP={weight:p.a.weight,goals:[...(p.tg.goals||[])]};A.epRender();};
+  A.epGoal=(g)=>{
+    EP.goals=EP.goals.includes(g)?EP.goals.filter(x=>x!==g):(EP.goals.length<3?[...EP.goals,g]:EP.goals);
+    A.epRender();
+  };
+  A.epRender=()=>{
+    modal(`<p class="ct">Profil bearbeiten</p>
+      <div class="field"><label for="ep-w">Aktuelles Gewicht (kg)</label>
+        <input type="number" id="ep-w" inputmode="decimal" value="${EP.weight}" min="30" max="250" step="0.1"></div>
+      <p class="xs t2 mb8">Ziele (max. 3, erstes = primär)</p>
+      <div class="chips mb8">${Object.entries(GOAL_LABEL).map(([g,l])=>`
+        <button class="chip ${EP.goals.includes(g)?"sel":""}" onclick="A.epGoal('${g}')">${EP.goals.includes(g)?(EP.goals.indexOf(g)+1)+". ":""}${l}</button>`).join("")}</div>
+      <button class="btn volt" onclick="A.epSave()">Speichern & Ziele neu berechnen</button>`);
+    const inp=document.getElementById("ep-w");
+    if(inp)inp.oninput=()=>{EP.weight=parseFloat(inp.value)||EP.weight;};
+  };
+  A.epSave=()=>{
+    if(!EP)return;
+    const w=Math.round((EP.weight||p.a.weight)*10)/10;
+    if(w<30||w>250){toast("Gewicht zwischen 30 und 250 kg");return;}
+    p.a.weight=w;
+    if(EP.goals.length)p.a.goals=EP.goals;
+    p.bmr=bmrCalc(p.a);
+    p.td=tdeeCalc(p.bmr,p.a.act||"light",p.a.weight,p.a.len||60,p.a.days||4);
+    p.tg=multiTargets(p.a,p.bmr,p.td);
+    S.weightLog=S.weightLog.filter(x=>new Date(x.t).toISOString().slice(0,10)!==todayKey());
+    S.weightLog.push({t:Date.now(),v:w});
+    EP=null; overlay.innerHTML=""; save(); render();
+    toast("Profil aktualisiert — Ziele neu berechnet");
+  };
   A.exportData=()=>{
     try{
       const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
@@ -1664,9 +1922,10 @@ function renderProfile(){
     ${p?`<div class="card"><p class="ct">Ziele</p>
       <div class="chips">${(p.tg.goals||[]).map((g,i)=>`<span class="badge ${i===0?"volt":"mute"}">${GOAL_LABEL[g]}</span>`).join("")}</div>
       <div class="grid2 mt16">
-        <div><p class="xs t2">Kalorienziel (Training)</p><p class="metric sm">${fmtKcal(p.tg.train.kcal)}</p></div>
-        <div><p class="xs t2">Proteinziel</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
-      </div></div>`:""}
+        <div><p class="xs t2">Kalorienziel (Training) ${infoBtn("kcalTarget")}</p><p class="metric sm">${fmtKcal(p.tg.train.kcal)}</p></div>
+        <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
+      </div>
+      <button class="btn mt16" onclick="A.editProfile()">Profil bearbeiten</button></div>`:""}
     <div class="card"><p class="ct">Daten</p>
       <button class="btn mb8" onclick="A.exportData()">Daten exportieren (JSON)</button>
       <button class="btn" style="border-color:rgba(255,77,77,.35);color:var(--danger)" onclick="A.wipe()">Konto & Daten löschen</button>
