@@ -28,9 +28,9 @@ export function formatGrams(g: number): string {
   return `${intFmt.format(g)} g`;
 }
 
-/** "12.04." */
+/** "12.04." — Intl already emits the trailing dot for de-DE. */
 export function formatShortDate(date: Date | string): string {
-  return `${shortDateFmt.format(typeof date === "string" ? new Date(date) : date)}.`;
+  return shortDateFmt.format(typeof date === "string" ? new Date(date) : date);
 }
 
 /** "12. April" */
