@@ -24,9 +24,11 @@ VALUE-METRIC-ANALYSE
 BEWUSSTE ABWEICHUNG (Clinical-Validation-Veto): Verletzungs-Warnungen +
 Übungsalternativen bleiben in ALLEN Tiers frei — Sicherheitsfeatures hinter
 einer Paywall wären ein Haftungs- und Ethikrisiko.
-PREISE: Platzhalter (€X,XX) — finale Preispunkte MÜSSEN per A/B-Test validiert
-werden (Van-Westendorp + Conjoint empfohlen). Richtwert: Pro ≈ 1,5–2× übliche
-Habit-Tracker (Adaptation-Engine als Differenzierung), Elite ≈ 2× Pro.
+PREISE (v5): Pro €9,99/Monat bzw. €79,99/Jahr · Elite €19,99/Monat bzw.
+€159,99/Jahr (Jahres-Abo ≈ −33 %, kommuniziert als "Spare €40/€80").
+Logik: Pro ankert im Premium-Fitness-Segment (Whoop/Oura-Nachbarschaft,
+Adaptation-Engine als Differenzierung), Elite = 2× Pro für Power-User.
+Finale Preispunkte vor Launch per A/B-Test feinjustieren (Van Westendorp).
 INVESTOR-LENS: Expansion-Pfad ist organisch — Free-Nutzer treffen die
 Multi-Goal- und Insight-Gates genau dann, wenn sie mehr Tiefe WOLLEN (nach
 erlebtem Wert, nicht davor). Free bleibt ein vollständiges Produkt (Plan,
@@ -86,7 +88,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .hint{font-size:13px; color:var(--t2); margin-bottom:16px; line-height:1.55;}
 
   /* ===== Liquid Glass (HELL): Basis für alle erhöhten Elemente ===== */
-  .card,.acc,.tier-card,.lockcard,.warncard,.qcard,.modal,.sheet,.menu-sheet{
+  /* FIX (v5/6A): .menu-sheet aus der 60%-Glass-Gruppe entfernt — eigene,
+     deckendere Definition unten (glass-bg-strong + blur 32px), sonst scheint
+     der Seiteninhalt durchs offene Menü. */
+  .card,.acc,.tier-card,.lockcard,.warncard,.qcard,.modal,.sheet{
     position:relative;
     background:var(--glass-bg);
     -webkit-backdrop-filter:blur(24px) saturate(180%);
@@ -182,7 +187,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .icon-btn:active{transform:scale(.94);}
   .menu-backdrop{position:fixed; inset:0; z-index:44; background:rgba(26,26,26,.18);}
   .menu-sheet{position:fixed; top:54px; left:12px; right:12px; z-index:46; max-width:406px; margin:0 auto;
-    border-radius:22px; padding:10px;}
+    border-radius:22px; padding:10px;
+    background:linear-gradient(rgba(247,245,241,.35),rgba(247,245,241,.35)), var(--glass-bg-strong);
+    -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%);
+    border:1px solid rgba(255,255,255,.78);
+    box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 12px 34px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.9);}
   .menu-item{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:13px 16px; background:none; border:none; color:var(--t1); font-size:15px; font-weight:600; font-family:inherit; border-radius:14px; cursor:pointer; min-height:48px;}
   .menu-item:active{background:var(--s2);}
   .menu-divider{height:1px; background:var(--hairline); margin:8px 4px;}
@@ -308,6 +317,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     color:var(--t1); font-size:15px; font-family:var(--font-display); resize:none; line-height:1.5;}
   .quick-log{position:relative;}
   .quicklog-submit{position:absolute; bottom:10px; right:10px; width:auto; min-height:38px; min-width:44px; padding:0 18px; border-radius:999px; font-size:13px;}
+  .quicklog-mic{position:absolute; bottom:10px; left:10px; width:44px; min-width:44px; min-height:38px; padding:0; border-radius:999px;}
   .exrow{display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; padding:13px 4px; background:none; border:none; border-top:1px solid var(--hairline); color:var(--t1); font-family:inherit; font-size:14px; cursor:pointer; min-height:50px; text-align:left;}
   .exrow .exn{font-weight:600; display:flex; align-items:center; gap:6px;}
   .acc{border-radius:18px; margin-bottom:10px;}
@@ -439,6 +449,23 @@ const fmtKg=(v)=>nf.format(v)+" kg", fmtKcal=(v)=>nfi.format(v)+" kcal", fmtD=(d
 const todayKey=()=>new Date().toISOString().slice(0,10);
 const dayMs=864e5;
 
+/* ---------- Sprach-Ebene (v5/Phase 2) ----------
+   Zentrale Klartext-Labels: Die UI spricht die Sprache des Nutzers,
+   Fachbegriffe erscheinen nur als Zusatz "(Fachbegriff: X)" in den
+   ⓘ-Erklärungen. Interne Funktions-/Variablennamen bleiben unverändert. */
+const LABELS={
+  meso:"Trainingsblock",            // Fachbegriff: Mesozyklus
+  deload:"Erholungswoche",          // Fachbegriff: Deload
+  e1rm:"geschätzte Maximalkraft",   // Fachbegriff: e1RM
+  rpe:"Anstrengung",                // Fachbegriff: RPE
+  volume:"Trainingsbelastung",      // Fachbegriff: Volumen (MEV–MRV)
+  velocity:"Dein Fortschrittstempo",// Fachbegriff: Adaptation Velocity
+  adherence:"Ernährungs-Treue",     // Fachbegriff: Diet Adherence
+  hypertrophy:"Muskelaufbau",       // Fachbegriff: Hypertrophie
+  micros:"Vitamine & Mineralstoffe",// Fachbegriff: Mikronährstoffe
+  satiety:"Sättigungs-Check",       // Fachbegriff: Satiety
+};
+
 // ---------- Storage ----------
 const KEY="metricgym-v4";
 const MEM={};
@@ -513,7 +540,8 @@ function forecast12w(series){
 }
 
 // ---------- Volumen-Toleranz je Muskelgruppe (MEV–MRV, Israetel et al., 2017) ----------
-const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Beine","Wadenheben":"Beine","Kreuzheben":"Beine","Rumänisches Kreuzheben":"Beine","Bankdrücken":"Brust","Schrägbankdrücken":"Brust","Schulterdrücken":"Schultern","Seitheben":"Schultern","Face Pull":"Schultern","Klimmzug":"Rücken","Langhantelrudern":"Rücken","Kabelrudern":"Rücken","Trizepsdrücken":"Arme","Plank":"Core"};
+const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Beine","Wadenheben":"Beine","Kreuzheben":"Beine","Rumänisches Kreuzheben":"Beine","Bankdrücken":"Brust","Schrägbankdrücken":"Brust","Schulterdrücken":"Schultern","Seitheben":"Schultern","Face Pull":"Schultern","Klimmzug":"Rücken","Langhantelrudern":"Rücken","Kabelrudern":"Rücken","Trizepsdrücken":"Arme","Plank":"Core",
+  "Liegestütze":"Brust","KH-Bankdrücken":"Brust","KH-Fliegende":"Brust","KH-Schulterdrücken":"Schultern","Pike Push-ups":"Schultern","Band Pull-Apart":"Schultern","Reverse Flys":"Schultern","Latzug":"Rücken","Einarmiges KH-Rudern":"Rücken","Rudern am Tisch":"Rücken","Superman":"Rücken","Enge Liegestütze":"Arme","Bizeps-Curls":"Arme","Goblet Squat":"Beine","Kniebeuge (Körpergewicht)":"Beine","Beinpresse":"Beine","KH-Rumänisches Kreuzheben":"Beine","Bulgarian Split Squat":"Beine","Hip Thrust":"Beine"};
 const VOL_BANDS={Beine:[10,20],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Arme:[6,18],Core:[4,16]};
 function weeklyMuscleSets(weeksBack){
   const from=Date.now()-(weeksBack+1)*7*dayMs, to=Date.now()-weeksBack*7*dayMs;
@@ -679,19 +707,37 @@ S.dismissedBanners=S.dismissedBanners||[];
 S.viewMode=S.viewMode||{train:"list",nutrition:"list"};
 S.soreMode=S.soreMode||{};
 S.plan=S.plan||null;
+// Additive Migration (v5): Feature-Übersicht, Plan-Präzision, Schedule-Begründung,
+// Übungs-Overrides (Long-Press-Tausch), Health-Import (Ruhepuls)
+S.seenFeatures=S.seenFeatures??false;
+S.precisionShown=S.precisionShown??false;
+S.scheduleRationale=S.scheduleRationale??null;
+S.exOverrides=S.exOverrides||{};
+S.rhrLog=S.rhrLog||[];
+S.billing=S.billing||"monthly";
 if(S.checkinDate&&S.checkinDate!==todayKey()){S.checkin=null;S.checkinDate=null;}
 
 // ---------- Tier-System (Good-Better-Better) ----------
 const TIER_LABEL={free:"START",pro:"PERFORMANCE",elite:"ELITE"};
 const TIER_RANK={free:0,pro:1,elite:2};
-// Platzhalter-Preise — finale Preispunkte per A/B-Test validieren (Van Westendorp).
-const TIER_PRICE={free:"€0",pro:"€X,XX",elite:"€XX,XX"};
+/* v5/Phase 5: konkrete Preispunkte (monatlich/jährlich, Jahres-Abo ≈ −33 %).
+   Anker: Pro = 9,99 — Premium-Fitness-Apps (Whoop/Oura-Segment) stützen den
+   Preis, die Adaptation Engine differenziert. Vor Launch per A/B-Test
+   (Van Westendorp) feinjustieren; Demo: kein echtes Payment. */
+const TIER_PRICE={free:{monthly:0,yearly:0},pro:{monthly:9.99,yearly:79.99},elite:{monthly:19.99,yearly:159.99}};
+const eurFmt=new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtEUR=(v)=>v===0?"€0":"€"+eurFmt.format(v);
+const tierPriceLabel=(t,billing)=>{
+  const p=TIER_PRICE[t][billing||"monthly"];
+  return p===0?"€0":(billing==="yearly"?`${fmtEUR(p)} / Jahr`:`${fmtEUR(p)} / Monat`);
+};
+const yearlySaving=(t)=>Math.round(TIER_PRICE[t].monthly*12-TIER_PRICE[t].yearly);
 function tierAtLeast(t){ return TIER_RANK[S.tier]>=TIER_RANK[t]; }
 const TEASER_TEXT={
   multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
-  insights:{t:"Erweiterte Insights",b:"Adaptation Velocity, Ernährungs-Adhärenz und Volumen-Toleranz-Warnungen sind Teil von PERFORMANCE."},
-  micro:{t:"Versorgst du deinen Körper richtig?",b:"Die Mikronährstoff-Schätzung aus deinen geloggten Lebensmitteln ist Teil von PERFORMANCE."},
-  deload:{t:"Adaptiver Deload-Vorschlag",b:"Automatische Deload-Empfehlungen bei Übertrainings-Signalen sind Teil von PERFORMANCE."},
+  insights:{t:"Erweiterte Insights",b:"Dein Fortschrittstempo, Ernährungs-Treue und Warnungen zur Trainingsbelastung sind Teil von PERFORMANCE."},
+  micro:{t:"Versorgst du deinen Körper richtig?",b:"Die Schätzung deiner Vitamine & Mineralstoffe aus geloggten Lebensmitteln ist Teil von PERFORMANCE."},
+  deload:{t:"Automatische Erholungswochen",b:"Erkennt Übertrainings-Signale und schlägt dir rechtzeitig eine Erholungswoche vor — Teil von PERFORMANCE."},
   trajectory:{t:"Multi-Lift-Trajectory",b:"Kraftprognosen für alle getrackten Übungen sind Teil von PERFORMANCE."},
   recap:{t:"Vollständiger Wochen-Recap",b:"Der komplette Recap mit Adhärenz und Status-Schnitt ist Teil von PERFORMANCE."},
   snapshots:{t:"Profil-Snapshots",b:"Gespeicherte Profil-Stände zum Vorher/Nachher-Vergleich sind Teil von ELITE."},
@@ -714,40 +760,81 @@ function showUpgradeTeaser(key){
    mechanische Spannung. Pläne sind Empfehlungen mit Begründung —
    niemals erfundene Fortschrittsdaten.
    ===================================================================== */
+/* eq-Tags steuern die Equipment-Filterung des Plan-Generators (v5/Phase 1):
+   machine · cable · barbell · dumbbell · body · band · bar (Klimmzugstange).
+   bench:true = braucht eine Flachbank. */
 const EXDB={
-  "Bankdrücken":{m:"Brust",compound:true,tempo:"3-1-1-0",rir:"1–2",alt:"Kurzhantel-Drücken (schulterfreundlicher Winkel)",
+  "Bankdrücken":{m:"Brust",compound:true,eq:"barbell",bench:true,tempo:"3-1-1-0",rir:"1–2",alt:"Kurzhantel-Drücken (schulterfreundlicher Winkel)",
     why:"Höchste Pec-Aktivierung unter schweren Lasten; langsame Exzentrik maximiert mechanische Spannung (Schoenfeld, 2017)."},
-  "Schrägbankdrücken":{m:"Brust",compound:true,tempo:"3-1-1-0",rir:"1–2",alt:"Maschinen-Drücken",
+  "Schrägbankdrücken":{m:"Brust",compound:true,eq:"barbell",bench:true,tempo:"3-1-1-0",rir:"1–2",alt:"Maschinen-Drücken",
     why:"Betont die obere Brust durch stärkere Schulterflexion (Rodríguez-Ridao, 2020)."},
-  "Schulterdrücken":{m:"Schultern",compound:true,tempo:"2-0-1-0",rir:"1–2",alt:"Landmine-Press",
+  "Schulterdrücken":{m:"Schultern",compound:true,eq:"barbell",tempo:"2-0-1-0",rir:"1–2",alt:"Landmine-Press",
     why:"Vertikales Drücken belastet die vordere und mittlere Schulter unter freier Stabilisierung."},
-  "Seitheben":{m:"Schultern",compound:false,tempo:"2-0-1-1",rir:"0–1",lengthened:true,alt:"Kabel-Seitheben",
-    why:"Lengthened Partials in der Dehnposition zeigen stärkeres Seitschulter-Wachstum (Wolf et al., 2024)."},
-  "Trizepsdrücken":{m:"Arme",compound:false,tempo:"2-0-1-0",rir:"0–1",alt:"Französisch-Drücken liegend",
+  "Seitheben":{m:"Schultern",compound:false,eq:"dumbbell",tempo:"2-0-1-1",rir:"0–1",lengthened:true,alt:"Kabel-Seitheben",
+    why:"Teilwiederholungen in der Dehnposition zeigen stärkeres Seitschulter-Wachstum (Wolf et al., 2024)."},
+  "Trizepsdrücken":{m:"Arme",compound:false,eq:"cable",tempo:"2-0-1-0",rir:"0–1",alt:"Französisch-Drücken liegend",
     why:"Isolation nahe am Muskelversagen — bei Einsatzmuskeln mit geringer systemischer Ermüdung sicher (Robinson, 2024)."},
-  "Klimmzug":{m:"Rücken",compound:true,tempo:"2-0-1-1",rir:"1–2",alt:"Latzug (gleicher Zugwinkel, skalierbar)",
+  "Klimmzug":{m:"Rücken",compound:true,eq:"bar",tempo:"2-0-1-1",rir:"1–2",alt:"Latzug (gleicher Zugwinkel, skalierbar)",
     why:"Vertikaler Zug mit voller Streckung — größte Lat-Dehnung unter Last."},
-  "Langhantelrudern":{m:"Rücken",compound:true,tempo:"2-1-1-0",rir:"1–2",alt:"Brustgestütztes Rudern",
+  "Latzug":{m:"Rücken",compound:true,eq:"machine",tempo:"2-0-1-1",rir:"1–2",alt:"Klimmzug",
+    why:"Gleicher Zugwinkel wie der Klimmzug — über den Gewichtsblock fein dosierbar."},
+  "Langhantelrudern":{m:"Rücken",compound:true,eq:"barbell",tempo:"2-1-1-0",rir:"1–2",alt:"Brustgestütztes Rudern",
     why:"Horizontaler Zug für mittleren Rücken; Brustabstützung als Alternative entlastet die LWS."},
-  "Kabelrudern":{m:"Rücken",compound:true,tempo:"2-0-1-1",rir:"1–2",alt:"Einarmiges KH-Rudern",
+  "Kabelrudern":{m:"Rücken",compound:true,eq:"cable",tempo:"2-0-1-1",rir:"1–2",alt:"Einarmiges KH-Rudern",
     why:"Konstante Kabelspannung über die volle Bewegung — gute Ergänzung zu freien Zügen."},
-  "Face Pull":{m:"Schultern",compound:false,tempo:"2-0-1-1",rir:"0–1",alt:"Band Pull-Apart",
+  "Einarmiges KH-Rudern":{m:"Rücken",compound:true,eq:"dumbbell",tempo:"2-1-1-0",rir:"1–2",alt:"Rudern am Tisch",
+    why:"Einseitiger Zug mit Abstützung — entlastet die Lendenwirbelsäule und gleicht Seiten aus."},
+  "Rudern am Tisch":{m:"Rücken",compound:true,eq:"body",tempo:"2-0-1-1",rir:"1–2",alt:"Band-Rudern",
+    why:"Horizontaler Zug mit Körpergewicht — an jeder stabilen Tischkante machbar."},
+  "Face Pull":{m:"Schultern",compound:false,eq:"cable",tempo:"2-0-1-1",rir:"0–1",alt:"Band Pull-Apart",
     why:"Außenrotatoren und hintere Schulter — Schultergesundheit bei viel Drückvolumen."},
-  "Kniebeuge":{m:"Beine",compound:true,tempo:"3-1-1-0",rir:"1–2",alt:"Beinpresse (geringere axiale Last)",
+  "Band Pull-Apart":{m:"Schultern",compound:false,eq:"band",tempo:"2-0-1-1",rir:"0–1",alt:"Reverse Flys",
+    why:"Hintere Schulter und Außenrotatoren — der Gegenpol zu allem Drücken, überall machbar."},
+  "Reverse Flys":{m:"Schultern",compound:false,eq:"dumbbell",tempo:"2-0-1-1",rir:"0–1",alt:"Band Pull-Apart",
+    why:"Hintere Schulter — hält das Schultergelenk bei viel Drückvolumen gesund."},
+  "Liegestütze":{m:"Brust",compound:true,eq:"body",tempo:"2-0-1-0",rir:"1–2",alt:"Erhöhte Liegestütze (leichter)",
+    why:"Horizontales Drücken ganz ohne Gerät — über Fußposition und Tempo beliebig skalierbar."},
+  "KH-Bankdrücken":{m:"Brust",compound:true,eq:"dumbbell",bench:true,tempo:"3-1-1-0",rir:"1–2",alt:"Liegestütze",
+    why:"Größere Bewegungsamplitude als die Langhantel und schulterfreundlicher — jede Seite arbeitet ehrlich allein."},
+  "KH-Fliegende":{m:"Brust",compound:false,eq:"dumbbell",bench:true,tempo:"3-1-1-0",rir:"0–1",lengthened:true,alt:"Liegestütze (breiter Griff)",
+    why:"Dehnung unter Last in der Endposition — gezielter Brustreiz (Wolf et al., 2024)."},
+  "KH-Schulterdrücken":{m:"Schultern",compound:true,eq:"dumbbell",tempo:"2-0-1-0",rir:"1–2",alt:"Pike Push-ups",
+    why:"Vertikales Drücken mit freier Schulterrotation — gelenkschonender als die feste Stange."},
+  "Pike Push-ups":{m:"Schultern",compound:true,eq:"body",tempo:"2-0-1-0",rir:"1–2",alt:"Liegestütze",
+    why:"Schulterdominantes Drücken nur mit Körpergewicht — je höher die Hüfte, desto schwerer."},
+  "Enge Liegestütze":{m:"Arme",compound:false,eq:"body",tempo:"2-0-1-0",rir:"0–1",alt:"Trizepsdrücken am Band",
+    why:"Enge Handposition verlagert die Last gezielt auf den Trizeps."},
+  "Bizeps-Curls":{m:"Arme",compound:false,eq:"dumbbell",tempo:"2-0-1-0",rir:"0–1",alt:"Band-Curls",
+    why:"Direkte Armarbeit — Grundübungen allein reizen den Bizeps selten maximal."},
+  "Superman":{m:"Rücken",compound:false,eq:"body",tempo:"2-1-1-1",rir:"0–1",alt:"Hüftbeugen mit Band",
+    why:"Rückenstrecker ohne Gerät — stabilisiert die Körpermitte für alles andere."},
+  "Kniebeuge":{m:"Beine",compound:true,eq:"barbell",tempo:"3-1-1-0",rir:"1–2",alt:"Beinpresse (geringere axiale Last)",
     why:"Größter Gesamtreiz für die untere Körperhälfte; tiefe Hocke = Quadrizeps in Dehnung (Kubo, 2019)."},
-  "Rumänisches Kreuzheben":{m:"Beine",compound:true,tempo:"3-1-1-0",rir:"1–2",alt:"Beinbeuger-Maschine",
+  "Goblet Squat":{m:"Beine",compound:true,eq:"dumbbell",tempo:"3-1-1-0",rir:"1–2",alt:"Kniebeuge (Körpergewicht)",
+    why:"Beugemuster mit Frontlast — die Kurzhantel vor der Brust erzwingt einen aufrechten Oberkörper."},
+  "Kniebeuge (Körpergewicht)":{m:"Beine",compound:true,eq:"body",tempo:"3-1-1-0",rir:"0–1",alt:"Ausfallschritte",
+    why:"Das Grundmuster ohne Last — über Tempo, Pausen und Tiefe skalierbar."},
+  "Beinpresse":{m:"Beine",compound:true,eq:"machine",tempo:"3-1-1-0",rir:"1–2",alt:"Goblet Squat",
+    why:"Hohe Beinlast ohne Wirbelsäulen-Belastung — die ideale Ergänzung zur Kniebeuge."},
+  "Rumänisches Kreuzheben":{m:"Beine",compound:true,eq:"barbell",tempo:"3-1-1-0",rir:"1–2",alt:"Beinbeuger-Maschine",
     why:"Hüft-Hinge lädt die hintere Kette in der Dehnposition — Schlüsselreiz für die Beinbeuger."},
-  "Kreuzheben":{m:"Beine",compound:true,tempo:"2-1-1-0",rir:"2",alt:"Rack-Pull / Hip Thrust",
-    why:"Systemisch schwerster Reiz; bewusst 2 RIR, da Technikverfall nahe Failure das Risiko erhöht."},
-  "Ausfallschritte":{m:"Beine",compound:true,tempo:"2-0-1-0",rir:"1–2",alt:"Step-ups (niedrige Box)",
+  "KH-Rumänisches Kreuzheben":{m:"Beine",compound:true,eq:"dumbbell",tempo:"3-1-1-0",rir:"1–2",alt:"Hip Thrust",
+    why:"Hüft-Hinge mit Kurzhanteln — lädt die hintere Kette in der Dehnung, überall machbar."},
+  "Kreuzheben":{m:"Beine",compound:true,eq:"barbell",tempo:"2-1-1-0",rir:"2",alt:"Rack-Pull / Hip Thrust",
+    why:"Systemisch schwerster Reiz; bewusst 2 Wiederholungen Reserve, da Technikverfall nahe am Limit das Risiko erhöht."},
+  "Ausfallschritte":{m:"Beine",compound:true,eq:"body",tempo:"2-0-1-0",rir:"1–2",alt:"Step-ups (niedrige Box)",
     why:"Unilateral: gleicht Dysbalancen aus und fordert Hüftstabilität."},
-  "Beinbeuger":{m:"Beine",compound:false,tempo:"2-0-1-1",rir:"0–1",lengthened:true,alt:"Nordic Curl (exzentrisch leicht)",
-    why:"Isolation der Beinbeuger; betonte Dehnphase steigert Hypertrophie (Maeo, 2021)."},
-  "Wadenheben":{m:"Beine",compound:false,tempo:"2-1-1-1",rir:"0–1",lengthened:true,alt:"Sitzendes Wadenheben",
+  "Bulgarian Split Squat":{m:"Beine",compound:true,eq:"body",tempo:"3-1-1-0",rir:"1–2",alt:"Ausfallschritte",
+    why:"Einbeinig mit großer Tiefe — starker Reiz für Quadrizeps und Gluteus mit minimalem Material."},
+  "Hip Thrust":{m:"Beine",compound:true,eq:"body",tempo:"2-1-1-1",rir:"1–2",alt:"Glute Bridge",
+    why:"Maximale Gluteus-Spannung in der Streckung — und dabei ausgesprochen rückenfreundlich."},
+  "Beinbeuger":{m:"Beine",compound:false,eq:"machine",tempo:"2-0-1-1",rir:"0–1",lengthened:true,alt:"Nordic Curl (exzentrisch leicht)",
+    why:"Isolation der Beinbeuger; betonte Dehnphase steigert den Muskelaufbau (Maeo, 2021)."},
+  "Wadenheben":{m:"Beine",compound:false,eq:"body",tempo:"2-1-1-1",rir:"0–1",lengthened:true,alt:"Sitzendes Wadenheben",
     why:"Pause in der Dehnung unten nimmt den Sehnen-Rebound raus — der Muskel arbeitet."},
-  "Plank":{m:"Core",compound:false,tempo:"halten",rir:"–",alt:"Dead Bug",
+  "Plank":{m:"Core",compound:false,eq:"body",tempo:"halten",rir:"–",alt:"Dead Bug",
     why:"Anti-Extension stabilisiert die Wirbelsäule unter den schweren Grundübungen."},
-  "Zone-2 Cardio":{m:"Herz",compound:false,tempo:"locker",rir:"–",alt:"Radfahren / zügiges Gehen",
+  "Zone-2 Cardio":{m:"Herz",compound:false,eq:"body",tempo:"locker",rir:"–",alt:"Radfahren / zügiges Gehen",
     why:"Aerobe Basis bei niedriger Ermüdung — unterstützt Erholung statt sie zu kosten (Seiler, 2010)."},
 };
 const WARMUP_DEFAULT=[
@@ -769,29 +856,168 @@ const TYPE_META={
   cardio:{label:"Cardio",icon:"cardio",art:"linear-gradient(135deg,#E3ECE6,#D2E0D7)"},
   rest:{label:"Erholung",icon:"rest",art:"linear-gradient(135deg,#EFEDE8,#E5E2DA)"},
 };
+/* ---------- Equipment-Profile (v5/Phase 1) ---------- */
+const EQ_ALLOWED={
+  gym_full:["machine","cable","barbell","dumbbell","body","band","bar"],
+  gym_basic:["barbell","dumbbell","body","band","bar"],
+  home_full:["dumbbell","body","band"],
+  home_min:["dumbbell","body","band"],
+  bodyweight:["body","band"],
+};
+const EQ_BENCH={gym_full:true,gym_basic:true,home_full:true,home_min:false,bodyweight:false};
+const EQ_LABEL={gym_full:"Gym (voll ausgestattet)",gym_basic:"Gym ohne Maschinen",home_full:"Homegym",home_min:"Minimal-Setup",bodyweight:"Nur Körpergewicht"};
+/* Session-Vorlagen: Slots mit Kandidaten in Präferenz-Reihenfolge.
+   Der Generator nimmt pro Slot den ersten Kandidaten, der zum Equipment
+   passt und noch nicht in der Session vorkommt. */
+const SESSION_SLOTS={
+  push:[["Bankdrücken","KH-Bankdrücken","Liegestütze"],
+        ["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
+        ["Schrägbankdrücken","KH-Bankdrücken","Liegestütze"],
+        ["Seitheben","Band Pull-Apart","Pike Push-ups"],
+        ["KH-Fliegende","Liegestütze"],
+        ["Trizepsdrücken","Enge Liegestütze"],
+        ["Face Pull","Band Pull-Apart","Reverse Flys"]],
+  pull:[["Klimmzug","Latzug","Rudern am Tisch"],
+        ["Langhantelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
+        ["Latzug","Klimmzug","Einarmiges KH-Rudern"],
+        ["Kabelrudern","Einarmiges KH-Rudern","Superman"],
+        ["Face Pull","Band Pull-Apart","Reverse Flys"],
+        ["Bizeps-Curls","Band Pull-Apart"],
+        ["Superman","Reverse Flys"]],
+  legs:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
+        ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
+        ["Beinpresse","Bulgarian Split Squat","Ausfallschritte"],
+        ["Beinbeuger","KH-Rumänisches Kreuzheben","Hip Thrust"],
+        ["Ausfallschritte","Bulgarian Split Squat"],
+        ["Wadenheben"],
+        ["Hip Thrust","Goblet Squat"]],
+  upper:[["Bankdrücken","KH-Bankdrücken","Liegestütze"],
+         ["Langhantelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
+         ["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
+         ["Klimmzug","Latzug","Rudern am Tisch"],
+         ["Seitheben","Band Pull-Apart","Reverse Flys"],
+         ["Bizeps-Curls","Band Pull-Apart"],
+         ["Trizepsdrücken","Enge Liegestütze"]],
+  lower:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
+         ["Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
+         ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Bulgarian Split Squat"],
+         ["Beinbeuger","Hip Thrust","Bulgarian Split Squat"],
+         ["Ausfallschritte","Bulgarian Split Squat"],
+         ["Wadenheben"],
+         ["Hip Thrust","Goblet Squat"]],
+};
+const DAY_MUSCLES={push:["Brust","Schultern","Arme"],pull:["Rücken","Arme"],legs:["Beine","Core"],upper:["Brust","Rücken","Schultern","Arme"],lower:["Beine","Core"]};
+/* Fokus-Bonus: eine Extra-Übung für den gewählten Schwerpunkt, früh platziert. */
+const FOCUS_EX={
+  Brust:["KH-Fliegende","Liegestütze"],
+  "Rücken":["Kabelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
+  Schultern:["Seitheben","Band Pull-Apart"],
+  Arme:["Bizeps-Curls","Enge Liegestütze"],
+  Beine:["Bulgarian Split Squat","Ausfallschritte"],
+  Core:["Plank"],
+};
+/* Satz-Schema je Erfahrung: c = Haupt-Grundübungen, a = weitere Mehrgelenks-
+   übungen, i = Isolation (Robinson 2024: Isolation näher ans Versagen). */
+const SETS_BY_EXP={
+  beginner:{c:2,a:2,i:2,count:5},
+  novice:{c:3,a:2,i:2,count:6},
+  intermediate:{c:3,a:3,i:2,count:6},
+  advanced:{c:4,a:3,i:3,count:7},
+};
 function generateTrainingPlan(profile){
-  const a=(profile&&profile.a)||{}; 
-  const exp=a.exp||"novice", goals=a.goals||["muscle_gain"], len=a.len||60;
-  // Volumen je Erfahrung: Sätze pro Übung (Wochenkappe 5–10/Muskel via Übungsauswahl)
-  const setsMain=exp==="beginner"?2:3, setsIso=exp==="advanced"?3:2;
-  const short=len<=45; // kurze Sessions: Isolation kürzen
+  const a=(profile&&profile.a)||{};
+  const exp=a.exp||"novice", goals=a.goals||["muscle_gain"];
+  const equipment=EQ_ALLOWED[a.equipment]?a.equipment:"gym_full";
+  const allowed=EQ_ALLOWED[equipment], hasBench=EQ_BENCH[equipment];
+  const focus=(a.focus||[]).filter(m=>FOCUS_EX[m]);
+  const scheme=SETS_BY_EXP[exp]||SETS_BY_EXP.novice;
   const strength=goals[0]==="strength";
   const repC=strength?"3–5":"5–8", restC=strength?210:165;
+  const fits=(n)=>{const d=EXDB[n]; return d&&allowed.includes(d.eq)&&(!d.bench||hasBench);};
   const mk=(n,sets,reps,rest)=>{const d=EXDB[n]||{};return {n,sets,reps,rest,tempo:d.tempo||"2-0-1-0",rir:d.rir||"1–2",m:d.m||"—",why:d.why||"",alt:d.alt||null,lengthened:!!d.lengthened};};
-  const day=(key,main,abs)=>({key,...TYPE_META[key],
-    warmup:WARMUP_DEFAULT, cooldown:COOLDOWN_DEFAULT,
-    main:main.map(([n,st,rp,rs])=>mk(n,st,rp,rs)),
-    abs:(abs&&!short)?ABS_BLOCK.map(([n,st,rp,rs])=>mk(n,st,rp,rs)):[]});
-  const plan={
-    push:day("push",[["Bankdrücken",setsMain,repC,restC],["Schulterdrücken",setsMain,"5–8",165],["Schrägbankdrücken",short?0:setsIso,"8–12",90],["Seitheben",setsIso,"12–20",60],["Trizepsdrücken",short?0:setsIso,"10–15",60]].filter(x=>x[1]>0)),
-    pull:day("pull",[["Klimmzug",setsMain,"5–10",restC],["Langhantelrudern",setsMain,"6–10",165],["Kabelrudern",short?0:setsIso,"8–12",90],["Face Pull",setsIso,"12–20",60]].filter(x=>x[1]>0)),
-    legs:day("legs",[["Kniebeuge",setsMain,repC,restC],["Rumänisches Kreuzheben",setsMain,"6–10",165],["Ausfallschritte",short?0:setsIso,"10–12",90],["Beinbeuger",setsIso,"10–15",60],["Wadenheben",setsIso,"12–20",60]].filter(x=>x[1]>0),true),
-    upper:day("upper",[["Bankdrücken",setsMain,repC,restC],["Langhantelrudern",setsMain,"6–10",165],["Schulterdrücken",short?0:setsIso,"6–10",120],["Klimmzug",setsIso,"6–10",120],["Seitheben",short?0:setsIso,"12–20",60]].filter(x=>x[1]>0)),
-    lower:day("lower",[["Kniebeuge",setsMain,repC,restC],["Kreuzheben",exp==="beginner"?2:setsMain,"3–6",210],["Beinbeuger",setsIso,"10–15",60],["Wadenheben",setsIso,"12–20",60]].filter(x=>x[1]>0),true),
-    cardio:day("cardio",[["Zone-2 Cardio",1,"30–40 Min",0]]),
-    rest:{key:"rest",...TYPE_META.rest,warmup:[],cooldown:[],main:[],abs:[]},
+  // Slot-Auswahl: Equipment-Filter + Dedupe, dann Sätze/Reps nach Rolle
+  const buildMain=(key)=>{
+    const chosen=[];
+    for(const slot of SESSION_SLOTS[key]){
+      if(chosen.length>=scheme.count)break;
+      const n=slot.find(x=>fits(x)&&!chosen.includes(x));
+      if(n)chosen.push(n);
+    }
+    // Fokus-Bonus: Extra-Übung früh einsortieren (Position 3, nach den Haupt-Grundübungen)
+    for(const fm of focus){
+      if(!(DAY_MUSCLES[key]||[]).includes(fm))continue;
+      const bonus=(FOCUS_EX[fm]||[]).find(x=>fits(x)&&!chosen.includes(x));
+      if(bonus){chosen.splice(Math.min(2,chosen.length),0,bonus);break;}
+    }
+    return chosen.map((n,i)=>{
+      const d=EXDB[n]||{};
+      if(d.compound&&i<2)return mk(n,scheme.c,repC,restC);
+      if(d.compound)return mk(n,scheme.a,"6–10",120);
+      return mk(n,scheme.i,d.lengthened?"12–20":"10–15",60);
+    });
   };
-  return plan;
+  const day=(key,main,abs)=>{
+    const absEx=abs?ABS_BLOCK.map(([n,st,rp,rs])=>mk(n,st,rp,rs)):[];
+    // Session-Dauer wird BERECHNET, nicht abgefragt: Aufwärmen + Sätze×(Arbeit+Pause) + Cool-down
+    const setMin=main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+absEx.reduce((s,e)=>s+e.sets*1.5,0);
+    const est=Math.round((8+setMin+5)/5)*5;
+    return {key,...TYPE_META[key],warmup:WARMUP_DEFAULT,cooldown:COOLDOWN_DEFAULT,main,abs:absEx,est};
+  };
+  return {
+    push:day("push",buildMain("push")),
+    pull:day("pull",buildMain("pull")),
+    legs:day("legs",buildMain("legs"),true),
+    upper:day("upper",buildMain("upper")),
+    lower:day("lower",buildMain("lower"),true),
+    cardio:{...day("cardio",[mk("Zone-2 Cardio",1,"30–40 Min",0)]),est:35},
+    rest:{key:"rest",...TYPE_META.rest,warmup:[],cooldown:[],main:[],abs:[],est:0},
+  };
+}
+/* ---------- Optimaler Wochenplan (v5/Phase 1): Vorschlag + Begründung ----------
+   Split nach Tagen + Erholungsprofil, Platzierung nach Wochen-Präferenz,
+   Cardio auf einem Ruhetag. Der Nutzer behält die volle Kontrolle (User owns schedule). */
+function generateOptimalSchedule(a){
+  a=a||{};
+  const days=Math.min(6,Math.max(2,a.days||4));
+  const rec=a.recovery_profile||"average", pref=a.schedule_pref||"consistent";
+  const SPLITS={
+    2:["upper","lower"],
+    3:rec==="slow"?["upper","lower","upper"]:["push","pull","legs"],
+    4:["upper","lower","upper","lower"],
+    5:rec==="slow"?["upper","lower","push","pull","legs"]:["push","pull","legs","upper","lower"],
+    6:rec==="slow"?["push","pull","legs","upper","lower","cardio"]:["push","pull","legs","push","pull","legs"],
+  };
+  const POS={
+    consistent:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,4,5],6:[0,1,2,3,4,5]},
+    weekday_strong:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4],6:[0,1,2,3,4,5]},
+    weekend_strong:{2:[5,6],3:[2,5,6],4:[1,3,5,6],5:[1,3,4,5,6],6:[0,1,3,4,5,6]},
+  };
+  const types=SPLITS[days], pos=(POS[pref]||POS.consistent)[days];
+  const sch=["rest","rest","rest","rest","rest","rest","rest"];
+  types.forEach((t,i)=>{sch[pos[i]]=t;});
+  if(days<=4){
+    const restIdx=sch.map((t,i)=>t==="rest"?i:null).filter(x=>x!=null);
+    if(restIdx.length>=2)sch[restIdx[Math.floor(restIdx.length/2)]]="cardio";
+  }
+  const splitTxt={
+    2:"2 kompakte Einheiten (Ober-/Unterkörper) — maximaler Effekt pro Training.",
+    3:rec==="slow"?"3 Einheiten im Ober-/Unterkörper-Wechsel — voller Reiz, viel Luft zur Erholung.":"3 Einheiten als Push / Pull / Beine — klare Trennung, jede Muskelgruppe erholt sich komplett.",
+    4:"4 Einheiten im Ober-/Unterkörper-Wechsel — jede Muskelgruppe wird 2× pro Woche trainiert: der Sweet Spot für Muskelaufbau.",
+    5:"5 Einheiten — Push / Pull / Beine plus Oberkörper / Unterkörper: hohe Frequenz, klug verteilt.",
+    6:rec==="slow"?"6 Einheiten mit eingebautem Cardio-Tag — Frequenz hoch, Belastung dosiert.":"6 Einheiten — doppelter Push/Pull/Beine-Durchlauf für maximale Trainingsfrequenz.",
+  }[days];
+  const recTxt={
+    fast:"Du erholst dich schnell — deine Einheiten dürfen dicht beieinander liegen.",
+    average:"Zwischen harten Einheiten für dieselben Muskeln liegen mindestens 48 Stunden.",
+    slow:"Du brauchst länger zur Erholung — der Plan lässt deinen Muskeln bewusst mehr Luft.",
+  }[rec];
+  const prefTxt={
+    weekday_strong:"Alles liegt unter der Woche — dein Wochenende bleibt frei.",
+    weekend_strong:"Das Wochenende trägt die Hauptlast — so passt der Plan in deinen Alltag.",
+    consistent:"Gleichmäßig über die Woche verteilt: konstanter Rhythmus, konstanter Fortschritt.",
+  }[pref];
+  const cardioTxt=sch.includes("cardio")?" Der lockere Cardio-Tag liegt auf einem Ruhetag — er fördert deine Erholung, statt sie zu kosten.":"";
+  return {schedule:sch,rationale:`${splitTxt} ${recTxt} ${prefTxt}${cardioTxt}`};
 }
 function activePlan(){
   if(!S.plan&&S.profile){S.plan=generateTrainingPlan(S.profile);save();}
@@ -802,26 +1028,92 @@ function activePlan(){
 function sessionDef(key){
   const plan=activePlan(); const d=plan[key]||plan.rest;
   const sore=!!S.soreMode[key];
-  const main=d.main.map(e=>{
+  const ov=(S.exOverrides&&S.exOverrides[key])||{};
+  const main=d.main.map((e,i)=>{
+    // Nutzer-Tausch (Long-Press) hat Vorrang: Übung ersetzt, Sätze/Pausen bleiben
+    if(ov[i]&&EXDB[ov[i]]){
+      const nd=EXDB[ov[i]];
+      return {...e,n:ov[i],tempo:nd.tempo||e.tempo,rir:nd.rir||e.rir,m:nd.m||e.m,
+        why:nd.why||"",alt:nd.alt||null,lengthened:!!nd.lengthened,userSwap:true,orig:e.n};
+    }
     if(sore&&e.alt)return {...e,n:e.alt.split(" (")[0],swapped:true,orig:e.n};
     return e;
   });
   const allEx=[...main,...(d.abs||[])];
   return {...d,main,ex:allEx.map(e=>[e.n,e.sets,e.reps,e.rest])};
 }
+/* Long-Press auf eine Übung (v5-Erweiterung): Alternativen-Menü, nach Effizienz
+   sortiert — z. B. wenn ein Gerät belegt oder nicht vorhanden ist. */
+function openSwapSheet(key,idx){
+  const cur=sessionDef(key).main[idx]; if(!cur)return;
+  const curM=(EXDB[cur.orig||cur.n]||EXDB[cur.n]||{}).m||cur.m;
+  const a=(S.profile&&S.profile.a)||{};
+  const allowed=EQ_ALLOWED[a.equipment]||EQ_ALLOWED.gym_full;
+  const hasBench=EQ_BENCH[a.equipment]??true;
+  const inSession=new Set(sessionDef(key).main.map(e=>e.n));
+  const alts=Object.entries(EXDB)
+    .filter(([n,d])=>d.m===curM&&n!==cur.n&&!inSession.has(n)&&n!=="Zone-2 Cardio")
+    .map(([n,d])=>{
+      const fits=allowed.includes(d.eq)&&(!d.bench||hasBench);
+      // Effizienz-Ranking: Mehrgelenksübungen > Isolation mit Dehnungsreiz > Isolation;
+      // Übungen, die zum Equipment passen, immer zuerst.
+      const eff=(fits?10:0)+(d.compound?3:(d.lengthened?2:1));
+      return {n,d,fits,eff};
+    })
+    .sort((x,y)=>y.eff-x.eff);
+  A.swapTo=(n)=>{
+    S.exOverrides[key]=S.exOverrides[key]||{};
+    S.exOverrides[key][idx]=n;
+    save(); overlay.innerHTML=""; render();
+    toast(`✓ ${n} eingewechselt`);
+  };
+  A.swapReset=()=>{
+    if(S.exOverrides[key])delete S.exOverrides[key][idx];
+    save(); overlay.innerHTML=""; render();
+    toast("Original-Übung wiederhergestellt");
+  };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="display-m mb4">${cur.n} tauschen</p>
+    <p class="sm t2 mb12" style="line-height:1.6">Gerät belegt oder nicht da? Alternativen für <b style="color:var(--t1)">${curM}</b>, sortiert nach Effizienz — Sätze und Pausen bleiben gleich.</p>
+    ${alts.length?alts.map(x=>`<button class="opt" onclick="A.swapTo('${x.n}')">
+      <span style="display:flex;justify-content:space-between;align-items:center;gap:8px">${x.n}
+        <span class="statchip" style="margin:0">${x.d.compound?"Sehr effizient":x.d.lengthened?"Effizient":"Gezielt"}</span></span>
+      <span class="sub">${x.d.compound?"Mehrgelenksübung — viel Reiz pro Satz":x.d.lengthened?"Isolation mit Dehnungsreiz":"Gezielte Isolation"}${x.fits?"":" · braucht anderes Equipment"}</span>
+    </button>`).join(""):'<p class="sm t2 mb8">Keine passende Alternative in der Übungsdatenbank.</p>'}
+    ${cur.userSwap?`<button class="btn mt8" onclick="A.swapReset()">${icon("undo",15)} Zurück zur Original-Übung (${cur.orig})</button>`:""}
+  </div></div>`;
+}
+let lpTimer=null, lpFired=false;
+// (A.lp*-Handler werden nach window.A={} in der Shell registriert.)
 const TYPES=new Proxy({},{get:(_,k)=>typeof k==="string"&&k!=="then"?sessionDef(k):undefined,
   ownKeys:()=>TYPE_KEYS,getOwnPropertyDescriptor:()=>({enumerable:true,configurable:true})});
 const TYPE_KEYS=["push","pull","legs","upper","lower","cardio","rest"];
+/* Muskelgruppen-Verteilung einer Session: Satz-Anteil je Muskelgruppe in % —
+   berechnet aus dem echten Plan des Tages, nichts erfunden. */
+function muscleSplit(key){
+  const d=sessionDef(key);
+  const tot=[...d.main,...(d.abs||[])].reduce((s,e)=>s+e.sets,0)||1;
+  const map={};
+  const addEx=(e,fallback)=>{
+    const m=(EXDB[e.orig||e.n]||{}).m||MUSCLE_OF[e.n]||fallback;
+    map[m]=(map[m]||0)+e.sets;
+  };
+  d.main.forEach(e=>addEx(e,"Ganzkörper"));
+  (d.abs||[]).forEach(e=>addEx(e,"Core"));
+  return Object.entries(map).map(([m,s])=>({m,pct:Math.round(s/tot*100)})).sort((x,y)=>y.pct-x.pct);
+}
+function muscleSplitBars(key){
+  const parts=muscleSplit(key);
+  if(!parts.length)return "";
+  return `<div class="mb12"><p class="xs t2 mb4" style="font-weight:600">Diese Session trainiert</p>
+    ${parts.map(p=>`<div class="barrow"><span class="blbl">${p.m}</span>
+      <div class="btrack"><div class="bfill" style="width:${p.pct}%;background:var(--accent);opacity:.75"></div></div>
+      <span class="bval metric">${p.pct} %</span></div>`).join("")}</div>`;
+}
 const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];
 function suggestSchedule(days){
-  const presets={
-    2:["upper","rest","rest","lower","rest","rest","rest"],
-    3:["push","rest","pull","rest","legs","rest","rest"],
-    4:["upper","lower","rest","upper","lower","rest","rest"],
-    5:["push","pull","legs","rest","upper","lower","rest"],
-    6:["push","pull","legs","push","pull","legs","rest"],
-  };
-  return (presets[days]||presets[4]).slice();
+  // Kompat-Wrapper: nutzt die Optimal-Schedule-Engine mit dem aktuellen Profil.
+  return generateOptimalSchedule({...(S.profile?S.profile.a:{}),days}).schedule;
 }
 function schedule(){ return S.schedule||["rest","rest","rest","rest","rest","rest","rest"]; }
 function todayType(){ const dow=(new Date().getDay()+6)%7; return schedule()[dow]; }
@@ -850,8 +1142,29 @@ const EXINFO={
   "Ausfallschritte":{prim:"Quadrizeps",sek:"Gluteus",cues:["Langer Schritt","Oberkörper aufrecht","Knie stabil"]},
   "Face Pull":{prim:"Hintere Schulter",sek:"Rotatoren",cues:["Zug zur Stirn","Ellbogen hoch","Außenrotation am Ende"]},
   "Zone-2 Cardio":{prim:"Herz-Kreislauf",sek:"—",cues:["Nasenatmung möglich","Puls 60–70 % max","Gleichmäßiges Tempo"]},
+  "Liegestütze":{prim:"Pectoralis major",sek:"Schulter, Trizeps, Core",cues:["Körper als Linie","Hände unter den Schultern","Brust bis fast zum Boden"]},
+  "KH-Bankdrücken":{prim:"Pectoralis major",sek:"Schulter, Trizeps",cues:["Hanteln über der Brust","Tiefe Dehnung zulassen","Ellbogen ~45° zum Körper"]},
+  "KH-Fliegende":{prim:"Pectoralis major",sek:"—",cues:["Leichte Ellbogenbeugung halten","Weite Dehnung, kein Schwung","Bogen statt Drücken"]},
+  "KH-Schulterdrücken":{prim:"Schulter",sek:"Trizeps, Core",cues:["Handflächen leicht eingedreht","Kein Hohlkreuz","Volle Streckung oben"]},
+  "Pike Push-ups":{prim:"Schulter",sek:"Trizeps",cues:["Hüfte hoch wie ein V","Kopf Richtung Boden","Je höher die Füße, desto schwerer"]},
+  "Enge Liegestütze":{prim:"Trizeps",sek:"Brust",cues:["Hände schulterbreit oder enger","Ellbogen am Körper","Langsam absenken"]},
+  "Band Pull-Apart":{prim:"Hintere Schulter",sek:"Rotatoren",cues:["Arme gestreckt","Band zur Brust auseinanderziehen","Schulterblätter zusammen"]},
+  "Reverse Flys":{prim:"Hintere Schulter",sek:"Mittlerer Rücken",cues:["Oberkörper vorgebeugt","Ellbogen leicht gebeugt","Kein Schwung"]},
+  "Latzug":{prim:"Latissimus",sek:"Bizeps",cues:["Brust zur Stange","Schulterblätter zuerst runter","Langsame Rückführung"]},
+  "Einarmiges KH-Rudern":{prim:"Latissimus",sek:"Bizeps, hintere Schulter",cues:["Rücken gerade abstützen","Zug zur Hüfte","Schulterblatt aktiv bewegen"]},
+  "Rudern am Tisch":{prim:"Mittlerer Rücken",sek:"Bizeps, Core",cues:["Körper als Linie","Brust zur Kante ziehen","Je flacher, desto schwerer"]},
+  "Bizeps-Curls":{prim:"Bizeps",sek:"Unterarme",cues:["Ellbogen am Körper fixiert","Kein Schwung aus der Hüfte","Langsam absenken"]},
+  "Superman":{prim:"Rückenstrecker",sek:"Gluteus",cues:["Arme und Beine gleichzeitig heben","Oben kurz halten","Blick zum Boden"]},
+  "Goblet Squat":{prim:"Quadrizeps",sek:"Gluteus, Core",cues:["Hantel vor der Brust","Ellbogen innen an den Knien","Aufrecht bleiben"]},
+  "Kniebeuge (Körpergewicht)":{prim:"Quadrizeps",sek:"Gluteus",cues:["Volle Tiefe anstreben","Langsames Tempo als Last","Knie folgen den Zehen"]},
+  "Beinpresse":{prim:"Quadrizeps",sek:"Gluteus",cues:["Unterer Rücken bleibt am Polster","Knie nicht durchstrecken","Volle kontrollierte Tiefe"]},
+  "KH-Rumänisches Kreuzheben":{prim:"Beinbeuger",sek:"Gluteus",cues:["Hüfte nach hinten","Hanteln nah am Bein","Dehnung spüren, dann hoch"]},
+  "Bulgarian Split Squat":{prim:"Quadrizeps",sek:"Gluteus",cues:["Hinterer Fuß erhöht","Gewicht auf dem vorderen Bein","Aufrechter Oberkörper"]},
+  "Hip Thrust":{prim:"Gluteus",sek:"Beinbeuger",cues:["Schultern auf Bank/Kante","Oben voll strecken und halten","Kinn leicht zur Brust"]},
 };
-const ALL_EXERCISES=[...new Set(Object.values(TYPES).flatMap(t=>t.ex.map(e=>e[0])))];
+// Alle Übungen aus der Datenbank (nicht nur die des aktiven Plans) — so erkennt
+// das Voice-Logging auch Übungen, die der Nutzer außerplanmäßig macht.
+const ALL_EXERCISES=[...new Set([...Object.keys(EXDB),"Dead Bug"])];
 
 // ---------- Datenzugriff (NUR echte Nutzerdaten — niemals erfunden) ----------
 function liftHistory(name){ return S.liftLog[name]||[]; }
@@ -914,32 +1227,32 @@ function buildInsights(){
   const rpes=th14.map(t=>t.avgRpe).filter(Boolean);
   if(rpes.length>=4){
     const avg=rpes.reduce((a,b)=>a+b,0)/rpes.length;
-    if(avg>8.6) out.push({t:`Übertrainings-Risiko erhöht: Ø RPE ${nf.format(Math.round(avg*10)/10)} über 14 Tage. Empfehlung: 1 Satz pro Übung streichen.`,conf:75,risk:true});
+    if(avg>8.6) out.push({t:`Übertrainings-Risiko erhöht: deine Anstrengung lag im Schnitt bei ${nf.format(Math.round(avg*10)/10)}/10 über 14 Tage. Empfehlung: 1 Satz pro Übung streichen.`,conf:75,risk:true});
   }
   // Risk: Adhärenz
   const plannedPerWeek=schedule().filter(t=>t!=="rest").length||p.a.days;
   if(S.trainingHistory.length>=4){
     const adh=Math.min(100,Math.round(th7.length/Math.max(1,plannedPerWeek)*100));
-    if(adh<70) out.push({t:`Adhärenz-Risiko: nur ${adh} % der geplanten Sessions diese Woche. Kürzere Sessions schlagen ausgefallene.`,conf:80,risk:true});
+    if(adh<70) out.push({t:`Dranbleiber-Check: nur ${adh} % deiner geplanten Trainings diese Woche. Kürzere Sessions schlagen ausgefallene.`,conf:80,risk:true});
   }
   // Volumen-Toleranz: 2 Wochen in Folge außerhalb MEV–MRV (min 4 Sessions Daten)
   if(S.trainingHistory.length>=4){
     const w0=weeklyMuscleSets(0), w1=weeklyMuscleSets(1);
     for(const [m,band] of Object.entries(VOL_BANDS)){
       const a0=w0[m]||0, a1=w1[m]||0;
-      if(a0>band[1]&&a1>band[1]) out.push({t:`${m}: seit 2 Wochen über MRV (${a0} Sätze/Woche, Korridor ${band[0]}–${band[1]}) — Übertrainings-Risiko steigt (Israetel et al., 2017).`,conf:70,risk:true});
-      else if(a0>0&&a1>0&&a0<band[0]&&a1<band[0]) out.push({t:`${m}: seit 2 Wochen unter MEV (${a0} Sätze/Woche) — für Wachstum mindestens ${band[0]} Sätze (Israetel et al., 2017).`,conf:65});
+      if(a0>band[1]&&a1>band[1]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen über deinem belastbaren Maximum (${a0} Sätze/Woche, optimal sind ${band[0]}–${band[1]}) — deine Erholung kommt nicht hinterher (Fachbegriff: MRV).`,conf:70,risk:true});
+      else if(a0>0&&a1>0&&a0<band[0]&&a1<band[0]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen zu niedrig für spürbares Wachstum (${a0} Sätze/Woche) — peile mindestens ${band[0]} Sätze an (Fachbegriff: MEV).`,conf:65});
     }
   }
   // Diet-Adherence-Score (min 3 Tage — sonst kein Output)
   const da=dietAdherence(14);
-  if(da) out.push({t:`Ernährungs-Adhärenz: ${da.pct} % der letzten ${da.n} Tage im Zielkorridor (±10 % kcal, ≥90 % Protein).`,conf:da.conf});
+  if(da) out.push({t:`${LABELS.adherence}: ${da.pct} % der letzten ${da.n} Tage im Zielbereich (±10 % Kalorien, mindestens 90 % Protein).`,conf:da.conf});
   // Adaptation Velocity (stärkster Lift mit ≥5 Datenpunkten)
   for(const lift of ["Kniebeuge","Bankdrücken","Kreuzheben"]){
     const av=adaptationVelocity(lift);
     if(av){
-      const expl={schnell:"über dem Erwartungswert deines Trainingsalters — Bedingungen stimmen",normal:"im Erwartungsbereich — Progression läuft sauber",langsam:"unter Erwartung — prüfe Schlaf, Protein und Progressionsschema",stagnierend:"Plateau — Deload oder Variationswechsel angezeigt (Schoenfeld, 2017)"}[av.cls];
-      out.push({t:`${lift}: ${av.pctPerMonth>=0?"+":""}${nf.format(av.pctPerMonth)} %/Monat e1RM — Adaption „${av.cls}": ${expl}.`,conf:av.conf});
+      const expl={schnell:"über dem Erwartungswert deines Trainingsalters — deine Bedingungen stimmen",normal:"im Erwartungsbereich — die Progression läuft sauber",langsam:"unter Erwartung — prüfe Schlaf, Protein und Steigerungsschema",stagnierend:`Plateau — ${LABELS.deload} oder Übungswechsel angezeigt (Schoenfeld, 2017)`}[av.cls];
+      out.push({t:`${LABELS.velocity} bei ${lift}: ${av.pctPerMonth>=0?"+":""}${nf.format(av.pctPerMonth)} % Maximalkraft pro Monat — „${av.cls}": ${expl}.`,conf:av.conf});
       break;
     }
   }
@@ -1015,22 +1328,50 @@ const FOODS=[
   ["Proteinriegel (1 Riegel)",60,214,20,21,7],["Müsli",50,180,5,32,3.5],["Granola",50,230,5,30,9],
   ["Pizza Margherita (1 Stück)",100,250,11,33,8],["Döner (1 Stück)",350,650,35,55,30],["Burger (1 Stück)",250,560,28,42,30],
 ];
+/* Levenshtein-Distanz für Tippfehler-tolerante Lebensmittel-Erkennung:
+   "hänchen", "harferflocken" oder "qark" werden trotzdem verstanden. */
+function lev(a,b){
+  if(a===b)return 0;
+  const m=a.length,n=b.length;
+  if(!m||!n)return Math.max(m,n);
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur;
+  }
+  return prev[n];
+}
+/* Liefert {f, dist}: dist 0 = exakter Treffer, >0 = Tippfehler-Korrektur. */
 function matchFood(segment){
-  const tokens=segment.replace(/[^a-zäöüß0-9\s]/g," ").split(/\s+/).filter(t=>t.length>=2&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm"].includes(t));
-  const found=FOODS.map(f=>{
-    const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=2);
-    const hit=words.some(w=>tokens.some(t=>t.startsWith(w)||w.startsWith(t)));
-    return hit?{f,len:f[0].length}:null;
-  }).filter(Boolean).sort((a,b)=>a.len-b.len);
-  return found.length?found[0].f:null;
+  const tokens=segment.toLowerCase().replace(/[^a-zäöüß0-9\s]/g," ").split(/\s+/)
+    .filter(t=>t.length>=3&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute"].includes(t));
+  let best=null;
+  for(const f of FOODS){
+    const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=3);
+    for(const w of words)for(const t of tokens){
+      let dist=null;
+      if(t===w||t.startsWith(w)||w.startsWith(t))dist=0;
+      else{
+        const tol=Math.max(1,Math.floor(t.length/4));
+        // Volles Wort UND Wort-Präfix vergleichen: "hänchen" trifft so auch "hähnchenbrust"
+        const d=Math.min(lev(t,w),lev(t,w.slice(0,Math.min(w.length,t.length+tol))));
+        if(d<=tol)dist=d;
+      }
+      if(dist!=null&&(!best||dist<best.dist||(dist===best.dist&&f[0].length<best.f[0].length)))
+        best={f,dist};
+    }
+  }
+  return best;
 }
 function parseNutrition(input){
   // Multi-Item: "500g hähnchen und 300g reis, 2 tomaten"
-  const segments=input.trim().toLowerCase().split(/\s*(?:,|und|\+|danach)\s*/).filter(Boolean);
+  const segments=input.trim().toLowerCase().split(/\s*(?:,|\bund\b|\+|danach)\s*/).filter(Boolean);
   const items=[];
   for(const seg of segments){
-    const food=matchFood(seg);
-    if(!food){items.push({raw:seg,food:null});continue;}
+    const hit=matchFood(seg);
+    if(!hit){items.push({raw:seg,food:null});continue;}
+    const food=hit.f;
     const gramMatch=seg.match(/(\d+)\s*(g|gramm)\b/);
     const countMatch=seg.match(/(\d+)\s*(stück|stk|x)\b/)||seg.match(/^(\d+)\s+/);
     const wordCount={ein:1,eine:1,einen:1,zwei:2,drei:3,vier:4,fünf:5}[seg.split(/\s+/)[0]];
@@ -1038,7 +1379,8 @@ function parseNutrition(input){
     const count=countMatch?parseInt(countMatch[1]):(wordCount||null);
     const g=gram??(count?food[1]*count:food[1]);
     let conf=0.55; if(gram||count)conf+=0.3; if(seg.includes(food[0].toLowerCase().split(" ")[0]))conf+=0.1;
-    items.push({raw:seg,food,gram:g,conf:Math.min(0.97,conf)});
+    conf-=hit.dist*0.08; // Tippfehler-Korrektur: ehrlich niedrigere Konfidenz
+    items.push({raw:seg,food,gram:g,fuzzy:hit.dist>0,conf:Math.max(0.4,Math.min(0.97,conf))});
   }
   return items;
 }
@@ -1094,8 +1436,14 @@ function lineChart(series, fc){
     const lo=[...fpts].reverse().map((p,i)=>{const j=fpts.length-1-i;return `L${X(p.t).toFixed(1)},${Y(p.v*(1-0.018*j)).toFixed(1)}`;}).join(" ");
     band=`<path d="${up} ${lo} Z" fill="var(--volt)" opacity=".08"/>`;
   }
+  // FIX (v5/6B): bei wenigen Datenpunkten/kurzer Zeitspanne erzeugten die 4
+  // festen Ticks identische bzw. überlappende Datums-Labels — Duplikate filtern.
+  let lastTick="";
   const ticks=[0,.33,.66,1].map((f)=>{const t=tMin+f*(tMax-tMin);
-    return `<text x="${X(t)}" y="${H-2}" fill="var(--t3)" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">${fmtD(new Date(t))}</text>`;}).join("");
+    const lbl=fmtD(new Date(t));
+    if(lbl===lastTick)return "";
+    lastTick=lbl;
+    return `<text x="${X(t)}" y="${H-2}" fill="var(--t3)" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">${lbl}</text>`;}).join("");
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;aspect-ratio:16/10;display:block" aria-hidden="true">
     ${band}<path d="${line}" fill="none" stroke="var(--volt)" stroke-width="2"/>
     ${dash?`<path d="${dash}" fill="none" stroke="var(--volt)" stroke-width="1.5" stroke-dasharray="5 4"/>`:""}${ticks}</svg>`;
@@ -1155,15 +1503,23 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
 // ---------- ⓘ-Erklärungen: WARUM kommt die Engine zu diesem Wert ----------
+/* v5/Phase 2: Erklärungen in Klartext — erste Zeile für jeden verständlich,
+   zweite Zeile nennt den Fachbegriff für alle, die tiefer einsteigen wollen. */
 const EXPLAIN={
-  bmr:{t:"Grundumsatz",b:"Berechnet nach Mifflin-St Jeor (bzw. Katch-McArdle, wenn Körperfett bekannt) aus Geschlecht, Alter, Größe und Gewicht. Mit aktuellem Gewicht im Home-Tab bleibt der Wert präzise (Mifflin et al., 1990)."},
-  tdee:{t:"Gesamtumsatz",b:"Grundumsatz × Alltagsaktivität plus Trainingsenergie deiner geplanten Sessions — Training wird separat gerechnet, nicht doppelt im Aktivitätsfaktor. Mehr geloggte Sessions schärfen den Wert."},
-  kcalTarget:{t:"Kalorienziel",b:"Aus deinem TDEE und der gewichteten Zielkombination abgeleitet, mit Sicherheitsuntergrenze (nie unter Grundumsatz). Bei Aufbau + Abbau greift das Recomp-Protokoll: ±50 kcal um den TDEE (Helms et al., 2014)."},
-  protein:{t:"Proteinziel",b:"2,2 g/kg Magermasse (bzw. 1,8 g/kg bei unbekanntem Körperfett) — maximiert die Muskelproteinsynthese und schützt Muskulatur im Defizit (Morton et al., 2018)."},
-  status:{t:"Status-Score",b:"Gewichtete Summe aus Schlaf (30 %), Energie (25 %), Muskelkater (25 %) und Stress (20 %). Er steuert die Tagesempfehlung — je mehr Tage du checkst, desto besser erkennt die Engine deine Erholungsmuster."},
-  trajectory:{t:"Prognose-Konfidenz",b:"Die Prognose ist eine gedämpfte Trendlinie deiner geloggten e1RM-Werte (Cap +15 %/12 Wochen). Konfidenz wächst mit jedem Datenpunkt — ab ~12 Sessions wird sie deutlich stabiler."},
-  satiety:{t:"Sättigungs-Hinweis",b:"Heuristik aus Proteinanteil und Energiedichte: proteinreiche Mahlzeiten mit moderater Dichte sättigen länger; energiedichte, proteinarme machen schneller wieder hungrig (Holt et al., 1995)."},
-  micro:{t:"Versorgst du deinen Körper richtig?",b:"Geschätzt nur aus tatsächlich geloggten Lebensmitteln mit hinterlegten Werten (Top 10) — kein vollständiges Mikronährstoff-Tracking, sondern eine Richtungsanzeige gegen DGE-Referenzen."},
+  bmr:{t:"Grundumsatz",b:"So viele Kalorien verbraucht dein Körper in völliger Ruhe — allein fürs Atmen, Denken und Warmbleiben. Berechnet aus Geschlecht, Alter, Größe und Gewicht; mit aktuellem Gewicht im Profil bleibt der Wert präzise.<br><br><span class='xs t2'>(Fachbegriff: BMR nach Mifflin-St Jeor bzw. Katch-McArdle, 1990)</span>"},
+  tdee:{t:"Gesamtumsatz",b:"Dein kompletter Tagesverbrauch: Grundumsatz plus Alltag plus Training. Dein Training wird separat gerechnet und nicht doppelt gezählt — mehr geloggte Sessions schärfen den Wert.<br><br><span class='xs t2'>(Fachbegriff: TDEE — Total Daily Energy Expenditure)</span>"},
+  kcalTarget:{t:"Kalorienziel",b:"Dein persönliches Tagesziel, abgeleitet aus deinem Verbrauch und deinen Zielen — mit Sicherheitsuntergrenze, nie unter dem Grundumsatz. Bei Aufbau + Abbau gleichzeitig hält dich die Engine nah am Verbrauch (±50 kcal).<br><br><span class='xs t2'>(Fachbegriff: Recomp-Protokoll, Helms et al., 2014)</span>"},
+  protein:{t:"Proteinziel",b:"So viel Eiweiß braucht dein Körper täglich, um Muskeln aufzubauen und im Defizit zu schützen: 2,2 g pro kg Magermasse (bzw. 1,8 g/kg, wenn dein Körperfett unbekannt ist).<br><br><span class='xs t2'>(Fachbegriff: Muskelproteinsynthese, Morton et al., 2018)</span>"},
+  status:{t:"Status-Score",b:"Eine Zahl, die sagt, wie belastbar du heute bist — aus Schlaf (30 %), Energie (25 %), Muskelkater (25 %) und Stress (20 %). Je mehr Tage du checkst, desto besser erkennt die Engine deine Erholungsmuster.<br><br><span class='xs t2'>(Fachbegriff: Readiness-Score)</span>"},
+  trajectory:{t:"Deine Kraft-Prognose",b:"Die Linie zeigt, wohin sich deine Kraft entwickelt, wenn du so weitermachst — eine vorsichtig gedämpfte Trendlinie deiner echten Trainingsdaten (max. +15 % in 12 Wochen). Jede Session macht die Prognose treffsicherer; ab ~12 Sessions wird sie deutlich stabiler.<br><br><span class='xs t2'>(Fachbegriff: e1RM-Forecast — geschätztes 1-Wiederholungs-Maximum)</span>"},
+  satiety:{t:"Sättigungs-Check",b:"Zeigt dir, wie lange eine Mahlzeit satt macht: viel Eiweiß bei moderater Energiedichte hält lange vor — energiedichte, eiweißarme Mahlzeiten machen schnell wieder hungrig.<br><br><span class='xs t2'>(Fachbegriff: Sättigungsindex, Holt et al., 1995)</span>"},
+  micro:{t:"Versorgst du deinen Körper richtig?",b:"Eine Richtungsanzeige für Vitamine & Mineralstoffe (Vitamin D, B12, Eisen, Magnesium) — geschätzt nur aus Lebensmitteln, die du wirklich geloggt hast. Kein vollständiges Tracking, kein Raten.<br><br><span class='xs t2'>(Fachbegriff: Mikronährstoffe, Referenzwerte der DGE)</span>"},
+  e1rm:{t:"Geschätzte Maximalkraft",b:"Was du vermutlich für genau 1 Wiederholung schaffen würdest — berechnet aus Gewicht, Wiederholungen und Anstrengung deiner echten Sätze. So sind Sessions mit 5 oder 10 Wiederholungen direkt vergleichbar.<br><br><span class='xs t2'>(Fachbegriff: e1RM — estimated 1-Repetition-Maximum)</span>"},
+  rpe:{t:"Anstrengung",b:"Wie hart ein Satz wirklich war, auf einer Skala bis 10: bei 8 hättest du noch 1–2 saubere Wiederholungen geschafft, bei 10 keine mehr. Die Engine steuert damit deine Gewichtssteigerungen.<br><br><span class='xs t2'>(Fachbegriff: RPE — Rating of Perceived Exertion)</span>"},
+  volumeBand:{t:"Trainingsbelastung",b:"Wie viele harte Sätze pro Muskel und Woche sinnvoll sind: zu wenig = kaum Wachstumsreiz, zu viel = Erholung kommt nicht hinterher. Die Ampel zeigt dir, ob du im grünen Bereich liegst.<br><br><span class='xs t2'>(Fachbegriff: MEV–MRV-Korridor, Israetel et al., 2017)</span>"},
+  velocity:{t:"Dein Fortschrittstempo",b:"Wie schnell deine Kraft im Verhältnis zu deiner Trainingserfahrung wächst — Anfänger steigern sich naturgemäß schneller als Fortgeschrittene. So weißt du, ob deine Bedingungen (Schlaf, Protein, Plan) stimmen.<br><br><span class='xs t2'>(Fachbegriff: Adaptation Velocity)</span>"},
+  adherence:{t:"Ernährungs-Treue",b:"Wie oft du in den letzten Tagen dein Kalorien- und Proteinziel getroffen hast (±10 % Kalorien, mindestens 90 % Protein). Konstanz schlägt Perfektion.<br><br><span class='xs t2'>(Fachbegriff: Diet Adherence)</span>"},
+  deload:{t:"Erholungswoche",b:"Jede vierte Woche trainierst du bewusst leichter (−40 % Sätze, −10 % Gewicht). Das ist kein Rückschritt: In dieser Woche setzt dein Körper die Reize der harten Wochen in Muskeln und Kraft um.<br><br><span class='xs t2'>(Fachbegriff: Deload, Israetel et al., 2017)</span>"},
 };
 A.explain=(k)=>{const e=EXPLAIN[k]; if(e)modal(`<p class="ct">${e.t}</p><p class="sm t2" style="line-height:1.6">${e.b}</p>`);};
 function infoBtn(k){return `<button class="iconbtn" style="min-width:30px;min-height:24px;font-size:12px" onclick="A.explain('${k}')" aria-label="Erklärung">ⓘ</button>`;}
@@ -1172,15 +1528,17 @@ function recWhy(name){
   const h=liftHistory(name); if(!h.length)return null;
   const last=h[h.length-1];
   const inc=(last.rpe??8)<=8;
-  return `Letzte Session: ${fmtKg(last.w)} × ${last.reps} @ RPE ${last.rpe??8} → ${inc?"+2,5 kg, da Reps-Reserve vorhanden war":"Gewicht halten, da RPE über 8 lag"} (Helms et al., 2016).${S.currentWeek===4?" Deload-Woche: zusätzlich −10 % Last.":""}`;
+  return `Letzte Session: ${fmtKg(last.w)} × ${last.reps} bei Anstrengung ${last.rpe??8}/10 → ${inc?"+2,5 kg, da du noch Wiederholungen in Reserve hattest":"Gewicht halten, da die Anstrengung über 8 lag"} (Helms et al., 2016).${S.currentWeek===4?` ${LABELS.deload}: zusätzlich −10 % Gewicht.`:""}`;
 }
 A.recWhy=(n)=>{const w=recWhy(n); if(w)modal(`<p class="ct">Warum diese Empfehlung?</p><p class="sm t2" style="line-height:1.6">${w}</p>`);};
 // MOCK: Tier-Wechsel lokal in S.tier — TODO Real: Stripe Checkout / In-App-Purchase
 // + Webhook-basierte Tier-Synchronisation mit Backend-User-Record.
 A.upgrade=(t)=>{
+  const b=S.billing||"monthly";
   modal(`<p class="ct">Upgrade auf ${TIER_LABEL[t]}</p>
     <p class="sm t2 mb8">Demo-Modus: Kein echtes Zahlungssystem angebunden.</p>
-    <p class="metric" style="font-size:28px">${TIER_PRICE[t]} <span class="xs t2">/ Monat</span></p>
+    <p class="metric" style="font-size:28px">${tierPriceLabel(t,b)}</p>
+    ${b==="yearly"?`<p class="xs volt-txt mt8">Du sparst ${fmtEUR(yearlySaving(t))} gegenüber monatlicher Zahlung.</p>`:""}
     <p class="xs t2 mt8">Jederzeit kündbar. Keine versteckten Kosten.</p>
     <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Demo-Upgrade aktivieren</button>`);
 };
@@ -1202,7 +1560,7 @@ A.dismissBanner=(id)=>{ if(!S.dismissedBanners.includes(id))S.dismissedBanners.p
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
-const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Fortschritt",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne"};
+const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Fortschritt",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",features:"So funktioniert's"};
 let menuOpen=false;
 
 function render(){
@@ -1246,6 +1604,7 @@ function renderAppbar(){
   ${menuOpen?`<div class="menu-backdrop" onclick="A.openMenu()"></div>
   <div class="menu-sheet fade">
     <button class="menu-item" onclick="A.menuGo('pricing')">${icon("star",17)} Plan ${S.tier==="free"?"entdecken":"verwalten"} <span class="badge ${S.tier==="free"?"mute":"volt"}" style="margin-left:auto">${TIER_LABEL[S.tier]}</span></button>
+    <button class="menu-item" onclick="A.menuGo('features')">${icon("sparkle",17)} So funktioniert METRICGYM</button>
     <button class="menu-item" onclick="A.profileTab()">${icon("settings",17)} Einstellungen</button>
     <div class="menu-divider"></div>
     <button class="menu-item" onclick="A.logoutMenu()" style="color:var(--t2)">${icon("undo",17)} Abmelden</button>
@@ -1281,7 +1640,7 @@ function coachContext(){
     const next=nextTrainingType();
     return {chips:["Wie steigere ich meine Bank?","Was trainiere ich heute?","Wie lange Pause zwischen Sätzen?"],
       answers:{
-        "Wie steigere ich meine Bank?":bestE1("Bankdrücken")>0?`Dein Bank-e1RM liegt bei ${fmtKg(bestE1("Bankdrücken"))}. Bleib bei 5–8 Reps, +2,5 kg sobald alle Sätze bei RPE ≤ 8 sitzen. Stagniert es 3 Sessions: ein Deload, dann Schrägbank als Variation.`:"Logge zuerst 2–3 Bank-Sessions, dann kann ich deine Progression konkret steuern.",
+        "Wie steigere ich meine Bank?":bestE1("Bankdrücken")>0?`Deine geschätzte Maximalkraft beim Bankdrücken liegt bei ${fmtKg(bestE1("Bankdrücken"))}. Bleib bei 5–8 Wiederholungen, +2,5 kg sobald alle Sätze locker sitzen (Anstrengung ≤ 8). Stagniert es 3 Sessions: eine Erholungswoche, dann Schrägbank als Variation.`:"Logge zuerst 2–3 Bank-Sessions, dann kann ich deine Progression konkret steuern.",
         "Was trainiere ich heute?":todayType()==="rest"?`Heute ist Erholung geplant${next?` — nächste Session: ${TYPES[next].label}`:""}. Spazieren, Mobility, Schlaf.`:`Heute steht ${TYPES[todayType()].label} an: ${TYPES[todayType()].ex.length} Übungen. Starte im Training-Tab.`,
         "Wie lange Pause zwischen Sätzen?":"Grundübungen 2,5–3 Min, Isolation 60–90 s. Längere Pausen = mehr Volumen-Qualität (Grgic et al., 2018).",
       }};
@@ -1350,7 +1709,29 @@ function renderApp(){
   else if(S.tab==="nutrition") renderNutrition();
   else if(S.tab==="profile") renderProfile();
   else if(S.tab==="pricing") renderPricing();
+  else if(S.tab==="features") renderFeatureOverview();
   else renderHome();
+}
+
+// =====================================================================
+// FEATURE-ÜBERSICHT (v5/Phase 3) — nach dem Onboarding & über das Menü
+// =====================================================================
+function renderFeatureOverview(){
+  A.featDone=()=>{S.tab="home";save();render();};
+  const feats=[
+    ["dumbbell","Ein Plan, der wirklich deiner ist","Übungen nach deinem Equipment, Extra-Volumen für deine Fokus-Muskeln, Wochentage nach deinem Alltag — berechnet, nicht von der Stange."],
+    ["brain","Ein Plan, der mitdenkt","Gewichtsempfehlungen aus deinen letzten Sessions, automatische Erholungswochen, schonende Alternativen bei Muskelkater."],
+    ["chart","Fortschritt, den du verstehst","Kraft-Prognosen, Trainingsbelastung und Erholung — mit Konfidenz-Angabe und nur aus echten Daten. Wir erfinden nichts."],
+    ["utensils","Ernährung in 10 Sekunden","Tippen oder sprechen: „200 g Hähnchen und Reis“ — die Engine erkennt Lebensmittel auch mit Tippfehlern und rechnet Kalorien und Protein aus."],
+    ["message","Ein Coach im Kontext","Der Coach kennt deine Daten und den Bereich, in dem du gerade bist — und antwortet konkret statt generisch."],
+  ];
+  root.innerHTML=`
+    <div class="heroband fade"><h2>Was METRICGYM für dich tut</h2>
+      <p class="sm t2" style="max-width:300px;margin:8px auto 0">Kein Tracker. Eine Engine, die versteht, warum dein Fortschritt passiert.</p></div>
+    ${feats.map(([ic,t,b])=>`<div class="card" style="display:flex;gap:14px;align-items:flex-start">
+      <span class="icon-circle">${icon(ic,20)}</span>
+      <div><p style="font-weight:700;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>`).join("")}
+    <button class="btn volt" onclick="A.featDone()">Los geht's</button>`;
 }
 
 // ---------- Universelles Quick-Log-Feld (Text ODER iOS-Tastatur-Diktat) ----------
@@ -1363,13 +1744,20 @@ function banner(id,iconName,html){
     <p>${html}</p>
     <button class="bx" onclick="A.dismissBanner('${id}')" aria-label="Hinweis schließen">${icon("x",15)}</button></div>`;
 }
+A.qlMic=(handler)=>speech((txt)=>{
+  const el=document.getElementById("quicklog-in");
+  if(el)el.value=(el.value.trim()?el.value.trim()+" ":"")+txt;
+  const fn=handler.split(".").reduce((o,k)=>o&&o[k],window);
+  if(typeof fn==="function")fn();
+},"ql-mic");
 function quickLogField(placeholder,handler){
   return `<div class="quick-log">
     <textarea id="quicklog-in" class="quicklog-field" rows="2" placeholder="${placeholder}"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();${handler}();}"></textarea>
+    <button class="btn quicklog-mic" id="ql-mic" onclick="A.qlMic('${handler}')" aria-label="Einsprechen">${icon("mic",16)}</button>
     <button class="btn volt quicklog-submit" onclick="${handler}()">Analysieren</button>
   </div>
-  <p class="xs t2 mt8" style="text-align:center">Tippen — oder das Mikrofon auf deiner Tastatur nutzen</p>`;
+  <p class="xs t2 mt8" style="text-align:center">Tippen oder einsprechen — Tippfehler versteht die Engine trotzdem</p>`;
 }
 
 // =====================================================================
@@ -1380,23 +1768,52 @@ function renderAuth(){
   if(S.screen==="login") return renderLogin();
   A.toRegister=()=>{S.screen="register";save();render();};
   A.toLogin=()=>{S.screen="login";save();render();};
+  // Developer-Modus (v5/Phase 7): zwei Wege — leeres Profil direkt ins Menü
+  // ODER Onboarding mit vorausgefüllten Demo-Werten. Demo-Historie wird nicht
+  // mehr automatisch geladen, sondern optional im Profil (Dev-only).
   A.devMode=()=>{
-    // Developer-Modus: Demo-Konto + komplette Demo-Historie, Onboarding übersprungen.
+    modal(`<p class="ct">${icon("settings",14)} Developer-Modus</p>
+      <p class="sm t2 mb16">Wie willst du die App ansehen?</p>
+      <button class="btn volt mb8" onclick="A.devModeMenu()">Direkt ins Menü — leeres Profil</button>
+      <button class="btn" onclick="A.devModeIntro()">Onboarding mit Demo-Werten durchspielen</button>
+      <p class="xs t2 mt8">Die 10-Wochen-Demo-Historie kannst du jederzeit im Profil laden (nur im Dev-Modus sichtbar).</p>`);
+  };
+  const devUser=()=>{
     if(!S.users.some(u=>u.email==="dev@metricgym.app"))
       S.users.push({username:"Dev",email:"dev@metricgym.app",pwHash:"dev"});
     S.currentUser=S.users.findIndex(u=>u.email==="dev@metricgym.app");
     S.devMode=true; S.tier="pro"; // Dev-Demo zeigt den Anker-Tier
-    const a={sex:"male",age:29,height:181,weight:82,bodyFat:15,goals:["muscle_gain","fat_loss"],exp:"intermediate",days:4,len:60,act:"light",sleep:7,stress:2};
+    // Garantiert leerer Start — synthetische Daten nur über den expliziten Toggle im Profil.
+    S.liftLog={}; S.weightLog=[]; S.readinessHistory=[]; S.trainingHistory=[];
+    S.nutritionLog={}; S.chat=[]; S.checkin=null; S.checkinDate=null;
+  };
+  A.devModeMenu=()=>{
+    overlay.innerHTML="";
+    devUser();
+    const a={sex:"male",age:29,height:181,weight:82,bodyFat:15,goals:["muscle_gain"],exp:"intermediate",injuries:[],days:4,act:"light",sleep:7,
+      equipment:"gym_full",focus:[],schedule_pref:"consistent",recovery_profile:"average"};
+    const plan=generateTrainingPlan({a});
+    const ests=["push","pull","legs","upper","lower"].map(k=>plan[k].est).filter(Boolean);
+    a.len=ests.length?Math.round(ests.reduce((s,x)=>s+x,0)/ests.length):60;
     const bmr=bmrCalc(a), td=tdeeCalc(bmr,a.act,a.weight,a.len,a.days);
     S.profile={a,bmr,td,tg:multiTargets(a,bmr,td)};
-    S.plan=generateTrainingPlan(S.profile);
-    const seed=buildDevSeed();
-    S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
-    S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog;
-    S.schedule=suggestSchedule(4);
-    S.screen="app"; S.tab="home";
+    S.plan=plan;
+    const opt=generateOptimalSchedule(a);
+    S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+    S.weightLog=[{t:Date.now(),v:a.weight}];
+    S.screen="app"; S.tab="home"; S.seenFeatures=true;
     save(); render();
-    toast("Developer-Modus: Demo-Konto mit 10 Wochen Historie generiert");
+    toast("Developer-Modus: leeres Profil — Demo-Daten bei Bedarf im Profil laden");
+  };
+  A.devModeIntro=()=>{
+    overlay.innerHTML="";
+    devUser();
+    S.a={sex:"male",age:29,height:181,weight:82,bodyFat:15,goals:["muscle_gain","strength"],exp:"intermediate",injuries:[],days:4,
+      equipment:"gym_full",focus:["Brust"],schedule_pref:"consistent",recovery_profile:"average",act:"light",sleep:7};
+    S.profile=null; S.plan=null; S.schedule=null; S.scheduleSuggestion=null;
+    S.screen="onboarding"; S.step=0;
+    save(); render();
+    toast("Developer-Modus: Onboarding mit vorausgefüllten Demo-Werten");
   };
   root.innerHTML=`<div class="center fade">
     <div>
@@ -1514,7 +1931,15 @@ const STEPS=[
    opts:[["beginner","Unter 1 Jahr"],["novice","1–2 Jahre"],["intermediate","2–4 Jahre"],["advanced","Über 4 Jahre"]]},
   {id:"injury",q:"Verletzungen oder Einschränkungen?",hint:"Optional — riskante Übungen werden im Plan markiert und Alternativen vorgeschlagen.",type:"multi",key:"injuries",max:3,skip:true,
    opts:[["knee","Knie",""],["back","Rücken / LWS",""],["shoulder","Schulter",""]]},
-  {id:"days",q:"Trainingstage pro Woche",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
+  {id:"days",q:"Trainingstage pro Woche",hint:"Nur die Tage — die ideale Dauer und Aufteilung jeder Einheit berechnet die Engine für dich.",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
+  {id:"equipment",q:"Wo trainierst du?",hint:"Dein Plan enthält nur Übungen, die du wirklich machen kannst.",type:"single",key:"equipment",
+   opts:[["gym_full","Gym — voll ausgestattet","Maschinen, Kabelzüge, Freihanteln"],["gym_basic","Gym ohne Maschinen","Langhantel, Kurzhanteln, Rack, Bank"],["home_full","Homegym","Kurzhanteln, Bank, Bänder"],["home_min","Zuhause — minimal","Kurzhanteln oder Bänder, keine Bank"],["bodyweight","Nur Körpergewicht","Kein Equipment nötig"]]},
+  {id:"focus",q:"Worauf willst du besonderen Fokus legen?",hint:"Optional, max. 2 — diese Bereiche bekommen eine Extra-Übung, früh in der Session platziert.",type:"multi",key:"focus",max:2,skip:true,
+   opts:[["Brust","Brust",""],["Rücken","Rücken",""],["Schultern","Schultern",""],["Arme","Arme",""],["Beine","Beine",""],["Core","Core",""]]},
+  {id:"schedule_pref",q:"Wann trainierst du am liebsten?",hint:"Danach richtet sich, auf welche Wochentage dein Plan die Einheiten legt.",type:"single",key:"schedule_pref",
+   opts:[["weekday_strong","Unter der Woche","Wochenende bleibt frei"],["weekend_strong","Eher am Wochenende","Sa/So tragen die Hauptlast"],["consistent","Gleichmäßig verteilt","Konstanter Rhythmus"]]},
+  {id:"recovery",q:"Wie schnell erholst du dich?",hint:"Steuert, wie dicht deine Einheiten liegen dürfen.",type:"single",key:"recovery_profile",
+   opts:[["fast","Schnell","Muskelkater ist nach 1 Tag weg"],["average","Normal","1–2 Tage"],["slow","Eher langsam","Oft 2–3 Tage Muskelkater"]]},
   {id:"act",q:"Alltag ohne Training",type:"single",key:"act",
    opts:[["sedentary","Sitzend"],["light","Etwas Bewegung"],["moderate","Regelmäßig auf den Beinen"],["active","Aktiver Beruf"],["very_active","Schwere Arbeit"]]},
   {id:"medical",type:"medical"},
@@ -1543,7 +1968,7 @@ function renderOnboarding(){
   };
   if(st.type==="single"){
     root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>
-      ${st.opts.map(([v,l])=>`<button class="opt ${S.a[st.key]===v?"sel":""}" onclick="A.pick('${st.key}',${typeof v==="string"?`'${v}'`:v})">${l}</button>`).join("")}
+      ${st.opts.map(([v,l,sub])=>`<button class="opt ${S.a[st.key]===v?"sel":""}" onclick="A.pick('${st.key}',${typeof v==="string"?`'${v}'`:v})">${l}${sub?`<span class="sub">${sub}</span>`:""}</button>`).join("")}
       ${st.skip?`<button class="btn ghost" onclick="A.next()">Überspringen</button>`:""}</div>`;
   }
   else if(st.type==="multi"){
@@ -1562,7 +1987,7 @@ function renderOnboarding(){
       <div class="mt16"><button class="btn volt" onclick="A.next()">Weiter</button></div></div>`;
   }
   else if(st.type==="cells"){
-    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint"></p>
+    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>
       <div class="grid5">
       ${st.opts.map(v=>`<button class="cell ${S.a[st.key]===v?"sel":""}" onclick="A.pick('${st.key}',${v})">${v}</button>`).join("")}</div>
       <p class="hint mt8" style="text-align:center">${st.unit}</p></div>`;
@@ -1578,12 +2003,19 @@ function renderOnboarding(){
   else if(st.type==="reveal"){
     root.innerHTML=`<div class="center"><div class="spin"></div><p class="sm t2">Engine berechnet …</p></div>`;
     setTimeout(()=>{
-      const a={...S.a,days:S.a.days||4,len:60,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
+      const a={...S.a,days:S.a.days||4,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
       if(!a.goals||!a.goals.length)a.goals=["muscle_gain"];
+      a.equipment=a.equipment||"gym_full"; a.focus=a.focus||[];
+      a.schedule_pref=a.schedule_pref||"consistent"; a.recovery_profile=a.recovery_profile||"average";
+      // Session-Dauer wird BERECHNET (aus dem generierten Plan), nicht abgefragt.
+      const plan=generateTrainingPlan({a});
+      const ests=["push","pull","legs","upper","lower"].map(k=>plan[k].est).filter(Boolean);
+      a.len=ests.length?Math.round(ests.reduce((s,x)=>s+x,0)/ests.length):60;
       const bmr=bmrCalc(a), td=tdeeCalc(bmr,a.act,a.weight,a.len,a.days);
       S.profile={a,bmr,td,tg:multiTargets(a,bmr,td)};
-      S.plan=generateTrainingPlan(S.profile);
-      S.scheduleSuggestion=suggestSchedule(a.days);
+      S.plan=plan;
+      const opt=generateOptimalSchedule(a);
+      S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
       S.weightLog=[{t:Date.now(),v:a.weight}];
       save(); renderReveal();
     },1300);
@@ -1592,7 +2024,13 @@ function renderOnboarding(){
 
 function renderReveal(){
   const p=S.profile, tg=p.tg;
-  A.startApp=()=>{S.screen="app";S.tab="home";save();render();};
+  // Nach dem Onboarding einmalig die Feature-Übersicht zeigen (v5/Phase 3).
+  // Der vorgeschlagene Wochenplan wird übernommen — bleibt aber frei editierbar.
+  A.startApp=()=>{
+    if(!S.schedule&&S.scheduleSuggestion)S.schedule=S.scheduleSuggestion.slice();
+    S.screen="app";S.tab=S.seenFeatures?"home":"features";S.seenFeatures=true;save();render();
+  };
+  const sug=S.scheduleSuggestion||[];
   root.innerHTML=`<div class="fade">
     <h2 class="mb16">Dein Performance-Profil</h2>
     <div class="row mb8" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
@@ -1613,7 +2051,18 @@ function renderReveal(){
           <p class="metric" style="font-size:17px;font-weight:600">${nfi.format(v)} g</p><p class="xs t2">${l}${l==="Protein"?" "+infoBtn("protein"):""}</p></div>`).join("")}
       </div>
     </div>
-    <button class="btn volt" onclick="A.startApp()">Los geht es — Wochenplan festlegen</button>
+    <div class="card"><p class="ct">${icon("calendar",14)} Dein optimaler Wochenplan</p>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center;margin-bottom:10px">
+        ${WD.map((d,i)=>{const t=sug[i]||"rest";return `<div>
+          <p class="xs" style="color:var(--t3)">${d}</p>
+          <p style="font-size:15px;margin:4px 0">${t==="rest"?"·":`<span style="display:inline-flex">${icon(TYPE_META[t].icon,14)}</span>`}</p>
+          <p style="font-size:8px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPE_META[t].label}</p>
+        </div>`;}).join("")}
+      </div>
+      <p class="sm t2 mb8" style="line-height:1.6">${S.scheduleRationale||""}</p>
+      <p class="xs t2">Jede Einheit dauert ≈ <span class="metric">${p.a.len} Min</span> — berechnet aus deinem Plan, nicht geschätzt. Du kannst jeden Tag jederzeit selbst umlegen.</p>
+    </div>
+    <button class="btn volt" onclick="A.startApp()">Los geht es</button>
     <p class="xs t2 mt8" style="text-align:center">Dein Trainingsplan gehört dir: Du legst die Wochentage selbst fest.</p></div>`;
 }
 
@@ -1621,6 +2070,34 @@ function renderReveal(){
 // HOME — Redesign: 1 Hero-Ring, gestaffelte Sections (Oura/Whoop-Pattern)
 // =====================================================================
 let ci={sleep:0,energy:0,stress:0,sore:0};
+let recapData=null;
+/* v5/Phase 4: teilbarer Wochenrückblick als PNG (Canvas, 1080×1350 — Story-Format) */
+function shareRecapPNG(r){
+  try{
+    const c=document.createElement("canvas"); c.width=1080; c.height=1350;
+    const x=c.getContext("2d");
+    x.fillStyle="#F7F5F1"; x.fillRect(0,0,1080,1350);
+    x.fillStyle="#1A1A1A";
+    // Logo: 3 aufsteigende Balken (wie logoSVG) + Wortmarke
+    [[80,104,36],[100,86,54],[120,68,72]].forEach(([bx,by,bh])=>{
+      if(x.roundRect){x.beginPath();x.roundRect(bx,by,14,bh,7);x.fill();}else{x.fillRect(bx,by,14,bh);}
+    });
+    x.font="800 60px 'Inter Tight',system-ui"; x.fillText("METRICGYM",156,140);
+    x.fillStyle="#6E6A62"; x.font="600 40px 'Inter Tight',system-ui"; x.fillText("Mein Wochenrückblick",80,215);
+    x.fillStyle="#1A1A1A"; x.font="900 220px 'Inter Tight',system-ui"; x.fillText(String(r.sets),80,520);
+    x.fillStyle="#6E6A62"; x.font="600 44px 'Inter Tight',system-ui"; x.fillText("Sätze diese Woche",80,590);
+    let y=760;
+    if(r.avgR!=null){x.fillStyle="#1A1A1A";x.font="900 110px 'Inter Tight',system-ui";x.fillText(r.avgR+" / 100",80,y);
+      x.fillStyle="#6E6A62";x.font="600 40px 'Inter Tight',system-ui";x.fillText("Ø Status",80,y+58); y+=230;}
+    if(r.da!=null){x.fillStyle="#E8633A";x.font="900 110px 'Inter Tight',system-ui";x.fillText(r.da+" %",80,y);
+      x.fillStyle="#6E6A62";x.font="600 40px 'Inter Tight',system-ui";x.fillText("Ernährungs-Treue",80,y+58);}
+    x.fillStyle="#A39E93"; x.font="500 30px 'Inter Tight',system-ui";
+    x.fillText("Versteh, warum dein Fortschritt passiert.",80,1270);
+    const a=document.createElement("a");
+    a.href=c.toDataURL("image/png"); a.download=`metricgym-woche-${todayKey()}.png`; a.click();
+    toast("Wochenrückblick als Bild gespeichert");
+  }catch{ toast("Bild-Export fehlgeschlagen"); }
+}
 const STATUS_CARDS=[
   ["sleep","moon","Schlaf"],["energy","zap","Energie"],["stress","brain","Stress"],["sore","activity","Muskelkater"],
 ];
@@ -1660,19 +2137,28 @@ function renderHome(){
     S.tab="player";S.playerType=tType;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
   A.q=(t)=>{S.tab=t;save();render();};
   A.openStatus=()=>openStatusSheet();
-  A.earlyDeload=()=>{S.currentWeek=4;save();render();toast("Deload aktiviert — Woche-4-Protokoll");};
+  A.howItWorks=()=>modal(`<p class="ct">${icon("brain",14)} So funktioniert METRICGYM</p>
+    ${[["1. Du loggst — kurz und ehrlich","Training, Mahlzeiten und dein Tages-Status. Per Tippen, Sprechen oder Foto — keine 10 Sekunden."],
+       ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt werden aus deinen echten Daten berechnet. Hier wird nichts erfunden."],
+       ["3. Dein Plan passt sich an","Gewichte, Sätze und Erholungswochen ändern sich automatisch — dein Plan wird mit jeder Session präziser."]]
+      .map(([t,b])=>`<p class="sm mb4" style="font-weight:700">${t}</p><p class="sm t2 mb12" style="line-height:1.6">${b}</p>`).join("")}
+    <button class="btn ghost" style="min-height:36px" onclick="overlay.innerHTML='';S.tab='features';save();render();">Alle Funktionen ansehen</button>`);
+  A.earlyDeload=()=>{S.currentWeek=4;save();render();toast("Erholungswoche aktiviert — du trainierst jetzt bewusst leichter");};
   A.openRecap=()=>{
     const r=S.recapReady; if(!r)return;
+    recapData={sets:r.sets,da:S.tier!=="free"?r.da:null,avgR:S.tier!=="free"?r.avgR:null};
     modal(`<p class="ct">${icon("calendar",14)} Dein Wochenrückblick</p>
       <ul class="list mb8">
         <li><span>Sätze gesamt</span><span class="metric">${r.sets}</span></li>
-        <li><span>Ernährungs-Adhärenz</span><span class="metric">${S.tier!=="free"?(r.da!=null?r.da+" %":"—"):`${icon("lock",13)} PERFORMANCE`}</span></li>
+        <li><span>${LABELS.adherence}</span><span class="metric">${S.tier!=="free"?(r.da!=null?r.da+" %":"—"):`${icon("lock",13)} PERFORMANCE`}</span></li>
         <li><span>Ø Status</span><span class="metric">${S.tier!=="free"?(r.avgR!=null?r.avgR+"/100":"—"):`${icon("lock",13)} PERFORMANCE`}</span></li>
       </ul>
       ${S.tier!=="free"&&r.ins?`<p class="sm t2" style="line-height:1.6">${r.ins}</p>`:""}
+      <button class="btn mt8" onclick="A.shareRecap()">${icon("camera",15)} Als Bild speichern</button>
       ${S.tier==="free"?`<button class="btn mt8" onclick="overlay.innerHTML='';A.showTeaser('recap')">Vollständigen Recap freischalten</button>`:""}`);
     S.recapReady=null; save();
   };
+  A.shareRecap=()=>{ if(recapData)shareRecapPNG(recapData); };
   const ins=buildInsights();
   const dow=(new Date().getDay()+6)%7, sch=schedule();
   const streak=(()=>{let n=0;for(let d=0;;d++){
@@ -1718,17 +2204,33 @@ function renderHome(){
       <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
 
     ${overtrain&&S.currentWeek!==4?(S.tier!=="free"
-      ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">Vorzeitigen Deload starten</button></div>`
-      :`<div class="lockcard"><p class="sm">${icon("lock",13)} Übertrainings-Signal erkannt — adaptiver Deload-Vorschlag ist Teil von PERFORMANCE.</p>
+      ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">${LABELS.deload} vorziehen</button></div>`
+      :`<div class="lockcard"><p class="sm">${icon("lock",13)} Übertrainings-Signal erkannt — der automatische Erholungswochen-Vorschlag ist Teil von PERFORMANCE.</p>
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
     :""}
+
+    ${renderSection("Dein Plan denkt mit",(()=>{
+      // USP-Karte (v5/Phase 3): echte Anpassung zeigen, wenn vorhanden — sonst erklären, was kommt.
+      const adaptions=[];
+      if(S.currentWeek===4)adaptions.push(`Diese Woche ist deine ${LABELS.deload} — der Plan hat Sätze und Gewichte automatisch reduziert.`);
+      if(Object.values(S.soreMode).some(Boolean))adaptions.push("Wegen Muskelkater hat dein Plan schonende Alternativen eingewechselt.");
+      if(overtrain)adaptions.push("Deine Intensität läuft heiß — der Plan schlägt dir eine Erholungswoche vor.");
+      if(!adaptions.length&&Object.values(S.liftLog).some(x=>x.length>0))adaptions.push("Deine Gewichtsempfehlungen kommen aus deinen letzten Sessions — kein Tabellenwert, dein echter Verlauf.");
+      const precision=Math.min(10,S.trainingHistory.length);
+      return `<div class="card">
+        <p class="sm mb8" style="line-height:1.6">${adaptions.length?adaptions[0]:"Dein Plan ist kein starres PDF: Er passt Gewichte, Sätze und Erholung an das an, was du wirklich loggst."}</p>
+        <div class="row mb4"><span class="xs t2">Plan-Präzision</span><span class="metric xs">${precision} / 10</span></div>
+        <div class="progress mb8" style="height:6px"><div style="width:${precision*10}%"></div></div>
+        <p class="xs t2 mb8">${precision>=10?"Dein Plan kennt dich — Empfehlungen laufen jetzt auf voller Präzision.":`Noch ${10-precision} ${10-precision===1?"Session":"Sessions"}, bis dein Plan dich vollständig kennt.`}</p>
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.howItWorks()">${icon("info",14)} So funktioniert's</button>
+      </div>`;})())}
 
     ${renderSection("Heute",
       tType==="rest"
       ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — dein Körper baut jetzt auf, was du trainiert hast.</p></div>`
       :`<div class="card"><div class="row mb8">
           <div><p class="display-m">${icon(tSession.icon,18)} ${tSession.label}</p>
-          <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${p.a.len||60} Min</p></div></div>
+          <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${tSession.est||p.a.len||60} Min</p></div></div>
           <button class="btn volt mt8" onclick="A.start()">${icon("play",15)} Training beginnen</button></div>`)}
 
     ${renderSection("Diese Woche",
@@ -1775,11 +2277,11 @@ function openScheduleSheet(){
         <div class="chips" style="flex:1">${TYPE_KEYS.map(t=>`
           <button class="chip ${sch[i]===t?"sel":""}" style="padding:6px 10px;min-height:34px;font-size:11.5px" onclick="A.assign(${i},'${t}')">${TYPES[t].label}</button>`).join("")}</div>
       </div>`).join("")}
-      <p class="label mt16">Mesozyklus</p>
+      <p class="label mt16">${LABELS.meso} ${infoBtn("deload")}</p>
       <div class="grid4 mb8">${[1,2,3,4].map(w=>`
         <button class="cell ${S.currentWeek===w?"sel":""} ${w===4?"dash":""}" onclick="A.week(${w})" aria-label="Woche ${w}">
-          ${w}${w===4?'<div class="xs" style="color:var(--info);font-family:var(--font-display)">Deload</div>':""}</button>`).join("")}</div>
-      <p class="xs t2">Woche 4 = Deload: −40 % Volumen, −10 % Last (Israetel et al., 2017).</p>
+          ${w}${w===4?'<div class="xs" style="color:var(--info);font-family:var(--font-display)">Erholung</div>':""}</button>`).join("")}</div>
+      <p class="xs t2">Woche 4 = ${LABELS.deload}: bewusst leichter trainieren (−40 % Sätze, −10 % Gewicht), damit dein Körper die Reize umsetzt.</p>
       <button class="btn volt mt16" onclick="A.sheetDone()">Fertig</button>
     </div></div>`;
 }
@@ -1791,9 +2293,9 @@ function exDetailModal(name){
   modal(`<p class="display-m mb8">${name}</p>
     ${rec?`<p class="metric sm volt-txt mb8">Empfohlen: ${fmtKg(rec.w)} × ${rec.reps}</p>`:""}
     ${why?`<p class="sm t2 mb8" style="line-height:1.6">${why}</p>`:'<p class="sm t2 mb8">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>'}
-    ${best>0?`<p class="xs t2 mb8">Deine Bestleistung: <span class="metric">${fmtKg(best)}</span> e1RM</p>`:""}
+    ${best>0?`<p class="xs t2 mb8">Deine ${LABELS.e1rm}: <span class="metric">${fmtKg(best)}</span> ${infoBtn("e1rm")}</p>`:""}
     ${d.why?`<div class="whybox"><b style="color:var(--t1)">Warum diese Übung:</b> ${d.why}</div>`:""}
-    ${(d.tempo||d.rir)?`<p class="mt8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">RIR ${d.rir}</span>`:""}${d.lengthened?'<span class="statchip">Lengthened Partials</span>':""}</p>`:""}
+    ${(d.tempo||d.rir)?`<p class="mt8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}${d.lengthened?'<span class="statchip">Volle Dehnung betonen</span>':""}</p>`:""}
     ${d.alt?`<p class="xs t2 mt8">Bei Muskelkater/Beschwerden: <b style="color:var(--t1)">${d.alt}</b></p>`:""}
     ${warn?`<div class="warncard"><b>${icon("alert",13)} ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
     <p class="label" style="margin-top:14px">Technik</p>
@@ -1803,6 +2305,11 @@ function exDetailModal(name){
 // Global: Player & alle Screens nutzen dieselbe Übungs-Detailansicht.
 A.exInfo=(n)=>exDetailModal(n);
 A.exDetail=(n)=>exDetailModal(n);
+// Long-Press-Tausch: gedrückt halten öffnet das Alternativen-Menü, kurzer Tap die Details.
+A.lpStart=(key,idx)=>{ lpFired=false; clearTimeout(lpTimer); lpTimer=setTimeout(()=>{lpFired=true; openSwapSheet(key,idx);},500); };
+A.lpEnd=()=>clearTimeout(lpTimer);
+A.lpTap=(n)=>{ if(lpFired){lpFired=false;return;} exDetailModal(n); };
+A.swapMenu=(key,idx)=>openSwapSheet(key,idx);
 function renderTrain(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   const isDeload=S.currentWeek===4;
@@ -1822,14 +2329,19 @@ function renderTrain(){
   const others=[...new Set(sch.filter(t=>t!=="rest"&&t!==focusType))];
   A.soreToggle=(t)=>{S.soreMode[t]=!S.soreMode[t];save();renderTrain();
     toast(S.soreMode[t]?"Schonende Alternativen aktiv — gute Entscheidung bei Muskelkater":"Standard-Übungen wieder aktiv");};
-  const exLine=(e)=>{
+  const exLine=(e,key,idx)=>{
     const name=e.n, warn=injuryWarn(name), r=recommend(name);
-    return `<button class="exrow" onclick="A.exDetail('${name}')" aria-label="Details zu ${name}">
+    const swappable=key!=null&&idx!=null;
+    const press=swappable?`onclick="A.lpTap('${name}')" onpointerdown="A.lpStart('${key}',${idx})" onpointerup="A.lpEnd()" onpointercancel="A.lpEnd()" onpointerleave="A.lpEnd()" oncontextmenu="event.preventDefault()"`:`onclick="A.exDetail('${name}')"`;
+    return `<button class="exrow" ${press} aria-label="Details zu ${name} — gedrückt halten zum Tauschen">
       <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
-        <span style="display:flex;align-items:center;gap:6px">${warn?`<span style="color:var(--warn);display:inline-flex">${icon("alert",13)}</span>`:""}${name}${e.swapped?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Alternative</span>':""}</span>
-        <span><span class="statchip">${isDeload?Math.max(1,Math.round(e.sets*.6)):e.sets} × ${e.reps}</span><span class="statchip">RIR ${e.rir}</span><span class="statchip">Tempo ${e.tempo}</span>${e.lengthened?'<span class="statchip">Lengthened</span>':""}</span>
+        <span style="display:flex;align-items:center;gap:6px">${warn?`<span style="color:var(--warn);display:inline-flex">${icon("alert",13)}</span>`:""}${name}${e.swapped?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Alternative</span>':""}${e.userSwap?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Getauscht</span>':""}</span>
+        <span><span class="statchip">${isDeload?Math.max(1,Math.round(e.sets*.6)):e.sets} × ${e.reps}</span><span class="statchip">${e.rir} in Reserve</span><span class="statchip">Tempo ${e.tempo}</span>${e.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</span>
       </span>
-      <span class="metric xs t2" style="flex-shrink:0">${r?fmtKg(r.w):""}</span>
+      <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+        <span class="metric xs t2">${r?fmtKg(r.w):""}</span>
+        ${swappable?`<span class="iconbtn" style="min-width:36px;min-height:36px" role="button" aria-label="${name} tauschen" onclick="event.stopPropagation();A.swapMenu('${key}',${idx})" onpointerdown="event.stopPropagation()">${icon("undo",14)}</span>`:""}
+      </span>
     </button>`;
   };
   const phaseAcc=(title,items)=>items&&items.length?`<details class="acc" style="background:rgba(255,255,255,.55)"><summary style="font-size:13px;padding:12px 14px">${title}<span class="chev">${icon("chevron",15)}</span></summary>
@@ -1838,7 +2350,7 @@ function renderTrain(){
     ${banner("train","dumbbell","<b>Dein wissenschaftlich fundierter Trainingsplan</b> — individuell auf deine Ziele, dein Level und deine Zeit abgestimmt.")}
     ${renderSection("Deine Woche",
       `<div class="card">
-        <div class="row mb12"><span class="xs t2">${isDeload?"Deload-Woche aktiv":"Woche "+S.currentWeek+" von 4"}</span>
+        <div class="row mb12"><span class="xs t2">${isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4"}</span>
           <button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button></div>
         <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
           ${sch.map((t,i)=>`<div>
@@ -1853,9 +2365,11 @@ function renderTrain(){
       `<div class="card">
         <div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(TYPES[focusType].icon,18)} ${TYPES[focusType].label}</p>
           <button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button></div>
-        <p class="sm t2 mt8 mb8">${TYPES[focusType].main.length} Übungen · ≈ ${S.profile.a.len||60} Min · individuell für deine Ziele</p>
+        <p class="sm t2 mt8 mb8">${TYPES[focusType].main.length} Übungen · ≈ ${TYPES[focusType].est||S.profile.a.len||60} Min · individuell für deine Ziele und dein Equipment</p>
+        ${muscleSplitBars(focusType)}
         ${phaseAcc("Aufwärmen — so startest du sicher",TYPES[focusType].warmup)}
-        ${TYPES[focusType].main.map(e=>exLine(e)).join("")}
+        ${TYPES[focusType].main.map((e,i)=>exLine(e,focusType,i)).join("")}
+        <p class="xs t2 mt8">Tipp: Übung gedrückt halten, um sie zu tauschen — z. B. wenn ein Gerät belegt ist.</p>
         ${TYPES[focusType].abs&&TYPES[focusType].abs.length?`<p class="label" style="margin-top:12px">Core-Finisher</p>${TYPES[focusType].abs.map(e=>exLine(e)).join("")}`:""}
         ${phaseAcc("Cool-down — Erholung beginnt jetzt",TYPES[focusType].cooldown)}
         <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
@@ -1881,7 +2395,8 @@ function renderTrain(){
         :others.map(t=>`<details class="acc"><summary>
             <span style="display:flex;align-items:center;gap:8px">${icon(TYPES[t].icon,15)} ${TYPES[t].label} · ${sch.map((x,i)=>x===t?WD[i]:null).filter(Boolean).join(", ")}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
           <div class="accbody">
-            ${TYPES[t].main.map(e=>exLine(e)).join("")}
+            ${muscleSplitBars(t)}
+            ${TYPES[t].main.map((e,i)=>exLine(e,t,i)).join("")}
             <button class="btn mt8" onclick="A.startType('${t}')">Loslegen</button>
           </div></details>`).join("")))
     :""}
@@ -1926,6 +2441,13 @@ function renderPlayer(){
     else S.trainingHistory.push({date:todayKey(),type,sets:S.logged.length,volume:vol,
       avgRpe:rpes.length?Math.round(rpes.reduce((a,b)=>a+b,0)/rpes.length*10)/10:8});
     S.tab="summary"; S.restEnd=null; save(); render();
+    // v5/Phase 4: der 10/10-Moment — Plan-Präzision voll, einmalig feiern
+    if(!S.precisionShown&&S.trainingHistory.length>=10){
+      S.precisionShown=true; save();
+      modal(`<p class="ct">${icon("sparkle",14)} Dein Plan kennt dich jetzt</p>
+        <p class="metric" style="font-size:34px;font-weight:700">10 / 10</p>
+        <p class="sm t2 mt8" style="line-height:1.6">10 geloggte Sessions: Deine Empfehlungen, Prognosen und Warnungen laufen ab jetzt auf voller Präzision — alles aus deinen echten Daten.</p>`);
+    }
   };
   let restHtml="";
   if(S.restEnd&&S.restEnd>Date.now()){
@@ -1941,12 +2463,12 @@ function renderPlayer(){
   const progressPct=((S.exIdx)/day.ex.length+((logged.length/targetSets)/day.ex.length))*100;
   root.innerHTML=`
     <div class="progress mb8" aria-label="Fortschritt"><div style="width:${Math.min(100,progressPct)}%"></div></div>
-    <p class="ring-lbl mb8">${day.label} · Übung ${S.exIdx+1}/${day.ex.length}${S.currentWeek===4?" · Deload":""}</p>
+    <p class="ring-lbl mb8">${day.label} · Übung ${S.exIdx+1}/${day.ex.length}${S.currentWeek===4?" · "+LABELS.deload:""}</p>
     <div class="pills">${day.ex.map((e,i)=>`<button class="pill ${i===S.exIdx?"active":""}" onclick="A.jump(${i})">${e[0].length>16?e[0].slice(0,15)+"…":e[0]}</button>`).join("")}</div>
     <div class="card">
       <div class="row mb4"><h2 style="font-size:19px">${name}</h2>
         <button class="iconbtn" onclick="A.exInfo('${name}')" aria-label="Info">ⓘ</button></div>
-      ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">RIR ${d.rir}</span>`:""}</p>`:"";})()}
+      ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}</p>`:"";})()}
       ${rec?`<p class="sm volt-txt metric mb8">Empfehlung: ${fmtKg(rec.w)} × ${rec.reps}
         <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
         :`<p class="xs t2 mb8">Erste Session — wähle dein Startgewicht selbst.</p>`}
@@ -1956,8 +2478,8 @@ function renderPlayer(){
         <div class="stepper"><button onclick="A.step('w',-1)" aria-label="Gewicht verringern">−</button><span class="val metric">${fmtKg(pw)}</span><button onclick="A.step('w',1)" aria-label="Gewicht erhöhen">+</button></div></div>
       <div class="row mb8"><span class="sm t2">Reps</span>
         <div class="stepper"><button onclick="A.step('r',-1)" aria-label="Reps verringern">−</button><span class="val metric">${pr}</span><button onclick="A.step('r',1)" aria-label="Reps erhöhen">+</button></div></div>
-      <div class="row mb8"><span class="sm t2">RPE</span>
-        <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="RPE ${v}">${v}</button>`).join("")}</div></div>
+      <div class="row mb8"><span class="sm t2">${LABELS.rpe} ${infoBtn("rpe")}</span>
+        <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
       <p class="xs t2 mb8" style="text-align:right">${RPE_DESC[prpe]}</p>
       <button class="btn volt" onclick="A.log()">Set loggen</button>
       ${logged.length?`<ul class="list mt16" style="border-top:1px solid var(--border);padding-top:10px">
@@ -1982,7 +2504,7 @@ function renderSummary(){
         <p class="ring-lbl mb8">NEUER REKORD</p>
         <p style="font-size:20px;font-weight:600;margin-bottom:8px">${S.prToday.n}</p>
         <p class="metric volt-txt" style="font-size:44px;font-weight:700;line-height:1">${fmtKg(S.prToday.e1)}</p>
-        <p class="metric volt-txt sm mt8">+${nf.format(S.prToday.delta)} kg e1RM</p>
+        <p class="metric volt-txt sm mt8">+${nf.format(S.prToday.delta)} kg ${LABELS.e1rm} ${infoBtn("e1rm")}</p>
         <p class="mt16" style="font-weight:700;letter-spacing:2px">METRIC<span class="volt-txt">GYM</span></p>
       </div></div>`
     :`<p class="sm t2 mb16">Solide Arbeit. Die Engine hat deine Progression aktualisiert.</p>`}
@@ -1993,10 +2515,14 @@ function renderSummary(){
 // ANALYTICS — niemals erfundene Werte, Daten-Gates pro Modul
 // =====================================================================
 function gateCard(title,need,have,unit,ctaLabel,ctaTab){
+  // FIX (v5/6B): need kam teils als String ("3"/"5") an — hart auf Number, sonst
+  // rechnet `need-have` per Typkoersion zwar, aber `have/need` ist fragil.
+  need=Number(need); have=Number(have);
+  // FIX (v5/6B): Zähler "x / y" umbrach bei langen Titeln neben der Progressbar — nowrap.
   return `<div class="card"><p class="ct">${title}</p>
     <p class="sm t2 mb8">Noch ${Math.max(0,need-have)} ${unit} bis zu deiner persönlichen Auswertung — leg jetzt los.</p>
-    <div class="row mb8"><div class="progress" style="height:8px"><div style="width:${Math.min(100,have/need*100)}%"></div></div>
-    <span class="metric xs t2">${have} / ${need}</span></div>
+    <div class="row mb8"><div class="progress" style="height:8px;min-width:0"><div style="width:${Math.min(100,have/need*100)}%"></div></div>
+    <span class="metric xs t2" style="white-space:nowrap;flex-shrink:0">${have} / ${need}</span></div>
     ${ctaLabel?`<button class="btn" style="min-height:42px;font-size:13px" onclick="S.tab='${ctaTab||"train"}';save();render();">${ctaLabel}</button>`:""}</div>`;
 }
 function renderAnalytics(){
@@ -2061,7 +2587,7 @@ function renderAnalytics(){
     });
     const maxW=Math.max(...wks,1);
     const volWhy=S.currentWeek===4
-      ?"Grund: geplanter Deload (Woche 4 von 4) — Volumen bewusst reduziert, kein Trainingsausfall."
+      ?`Grund: geplante ${LABELS.deload} (Woche 4 von 4) — bewusst weniger Sätze, kein Trainingsausfall.`
       :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Sessions prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
     html+=`<div class="card"><p class="ct">Dein Trainingsvolumen diese Woche</p>
       <div style="display:flex;align-items:flex-end;gap:10px;height:90px;padding:0 8px">
@@ -2119,7 +2645,9 @@ function renderAnalytics(){
           <div style="height:${Math.max(3,x.score/100*76)}px;background:${x.score>=60?"var(--volt)":x.score>=40?"var(--info)":"var(--danger)"};border-radius:2px;opacity:.85"></div></div>`).join("")}
       </div>
       <div class="row mt8"><span class="sm t2">Schlaf-Defizit (vs. 8 h)</span>
-        <span class="metric ${debt>6?"danger-txt":debt>3?"warn-txt":"volt-txt"}">${nf.format(debt)} h</span></div></div>`;
+        <span class="metric ${debt>6?"danger-txt":debt>3?"warn-txt":"volt-txt"}">${nf.format(debt)} h</span></div>
+      ${S.rhrLog.length>=5?(()=>{const l7=S.rhrLog.slice(-7);const avg=Math.round(l7.reduce((s,x)=>s+x.v,0)/l7.length);
+        return `<div class="row mt8"><span class="sm t2">Ruhepuls (Health-Import)</span><span class="metric">${avg} bpm</span></div>`;})():""}</div>`;
   } else html+=gateCard("Recovery","5",S.readinessHistory.length,"Status-Checks");
 
   // Ernährung
@@ -2141,9 +2669,9 @@ function renderAnalytics(){
           <div style="height:${Math.max(2,x.k/kcalMax*80)}px;background:${x.k>0&&Math.abs(x.k-p.tg.train.kcal)/p.tg.train.kcal<=.1?"var(--volt)":"var(--t3)"};border-radius:3px 3px 0 0;opacity:.85"></div>
           <p class="xs t2" style="margin-top:3px">${x.d.slice(8)}</p></div>`).join("")}
       </div>
-      <div class="row mt8"><span class="sm t2">Protein-Adhärenz</span>
+      <div class="row mt8"><span class="sm t2">Protein-Treue</span>
         <span class="metric ${protDays/protTracked>=.7?"volt-txt":"warn-txt"}">${protDays}/${protTracked} Tage</span></div>
-      ${(()=>{const da7=dietAdherence(7);return da7?`<div class="row mt8"><span class="sm t2">Adhärenz-Score (±10 % kcal, ≥90 % P)</span>
+      ${(()=>{const da7=dietAdherence(7);return da7?`<div class="row mt8"><span class="sm t2">${LABELS.adherence} ${infoBtn("adherence")}</span>
         <span class="metric ${da7.pct>=70?"volt-txt":"warn-txt"}">${da7.pct} % <span class="conf">· ${da7.conf} %</span></span></div>`:"";})()}
       <div class="row mt8" style="justify-content:flex-start;gap:16px">
         ${donutSVG([{v:macroSum.p*4,col:"var(--volt)"},{v:macroSum.c*4,col:"var(--info)"},{v:macroSum.f*9,col:"var(--t3)"}],90)}
@@ -2187,7 +2715,7 @@ function renderAnalytics(){
   const insCap=S.tier==="free"?1:(S.tier==="elite"?8:5);
   const visIns=ins.slice(0,insCap);
   const hiddenIns=ins.slice(insCap);
-  const hiddenCats=[...new Set(hiddenIns.map(i=>/%\/Monat/.test(i.t)?"Adaptation Velocity":/Adhärenz/.test(i.t)?"Ernährungs-Adhärenz":/(MEV|MRV)/.test(i.t)?"Volumen-Toleranz":/Übertrain/.test(i.t)?"Übertrainings-Risiko":"Trend-Analyse"))];
+  const hiddenCats=[...new Set(hiddenIns.map(i=>/Fortschrittstempo/.test(i.t)?LABELS.velocity:/Ernährungs-Treue/.test(i.t)?LABELS.adherence:/Trainingsbelastung/.test(i.t)?LABELS.volume:/Übertrain/.test(i.t)?"Übertrainings-Risiko":"Trend-Analyse"))];
   html+=visIns.length?`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p>
     ${visIns.map(i=>`<div class="${i.risk?"warncard":"msg ai"}" style="max-width:100%;margin-bottom:8px">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")}
     ${hiddenIns.length?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${hiddenIns.length} weitere ${hiddenIns.length===1?"Insight":"Insights"} verfügbar — ${hiddenCats.slice(0,3).join(", ")}.</p>
@@ -2226,7 +2754,7 @@ function renderNutrition(){
     const name=document.getElementById("food-name").value.trim();
     const gram=parseInt(document.getElementById("food-gram").value)||null;
     if(!name){toast("Lebensmittel eingeben");return;}
-    const exact=FOODS.find(f=>f[0].toLowerCase()===name.toLowerCase())||FOODS.find(f=>f[0].toLowerCase().includes(name.toLowerCase()));
+    const exact=FOODS.find(f=>f[0].toLowerCase()===name.toLowerCase())||FOODS.find(f=>f[0].toLowerCase().includes(name.toLowerCase()))||((matchFood(name)||{}).f);
     if(exact){ const e=addFood(exact,gram); toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`); renderNutrition(); }
     else { pendingManual={name,gram:gram||100}; renderNutrition(); }
   };
@@ -2265,7 +2793,7 @@ function renderNutrition(){
   A.explainSat=()=>A.explain("satiety");
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
-    ${banner("nutrition","utensils","<b>Behalte deine Makros im Blick</b> und erreiche dein Ziel schneller — loggen dauert keine 10 Sekunden.")}
+    ${banner("nutrition","utensils","<b>Loggen in 10 Sekunden:</b> tippen oder einsprechen — die Engine erkennt Lebensmittel auch mit Tippfehlern und rechnet Kalorien und Protein automatisch aus.")}
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
@@ -2282,9 +2810,9 @@ function renderNutrition(){
       ${pendingItems?`<div class="warncard" style="border-color:rgba(200,255,46,.4);background:rgba(200,255,46,.06)">
         ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
         ${pendingItems.map(it=>it.food?`
-          <div class="row mb4"><span class="sm">${it.food[0]} · <span class="metric">${it.gram} g</span></span>
+          <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${it.raw.trim()}" erkannt als</span> `:""}${it.food[0]} · <span class="metric">${it.gram} g</span></span>
           <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${Math.round(it.conf*100)} %</span></span></div>`
-          :`<p class="xs danger-txt mb4">„${it.raw}" nicht erkannt</p>`).join("")}
+          :`<p class="xs danger-txt mb4">„${it.raw}" nicht erkannt — tipp es unten bei „Suche & manuell" ein</p>`).join("")}
         <div class="grid2 mt8"><button class="btn" onclick="A.cancelItems()">Verwerfen</button>
         <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div></div>`:""}
     </div>
@@ -2344,13 +2872,17 @@ function renderNutrition(){
 function renderPricing(){
   const feats={
     free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Voice-/Foto-Logging unlimitiert","Status-Check + Streak","1 Engine-Insight pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
-    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Velocity, Adhärenz, Volumen-Toleranz)","Trajectory + 12-Wochen-Prognose für alle Übungen","Versorgst du deinen Körper richtig?","Adaptiver Deload-Vorschlag","Vollständiger Wochen-Recap"],
+    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Versorgst du deinen Körper richtig?","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
     elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Insights inkl. Kombi-Analysen","Early Access auf neue Engine-Module"],
   };
+  const b=S.billing||"monthly";
+  A.billing=(x)=>{S.billing=x;save();render();};
   const card=(t,featured)=>`<div class="tier-card ${featured?"featured":""}">
     ${featured?'<span class="badge volt" style="position:absolute;top:-11px;left:20px">Empfohlen</span>':""}
-    <div class="row mb8"><p class="display-m">${TIER_LABEL[t]}</p>
-      <p class="metric" style="font-size:20px">${TIER_PRICE[t]}<span class="xs t2">${t!=="free"?" / Monat":""}</span></p></div>
+    <div class="row mb8" style="align-items:flex-start"><p class="display-m">${TIER_LABEL[t]}</p>
+      <div style="text-align:right"><p class="metric" style="font-size:20px;white-space:nowrap">${tierPriceLabel(t,b)}</p>
+      ${t!=="free"&&b==="yearly"?`<p class="xs volt-txt">Spare ${fmtEUR(yearlySaving(t))}</p>`:""}
+      ${t!=="free"&&b==="yearly"?`<p class="xs t2">≈ ${fmtEUR(Math.round(TIER_PRICE[t].yearly/12*100)/100)} / Monat</p>`:""}</div></div>
     ${S.tier===t?'<p class="xs volt-txt mb8">✓ Dein aktueller Plan</p>':""}
     ${feats[t].map(f=>`<div class="tier-feat"><span>${f.startsWith("Alles aus")?"":"✓"}</span><span style="${f.startsWith("Alles aus")?"color:var(--t2);font-weight:600":""}">${f}</span></div>`).join("")}
     ${S.tier!==t?`<button class="btn ${featured?"volt":""} mt16" onclick="${TIER_RANK[t]>TIER_RANK[S.tier]?`A.upgrade('${t}')`:`A.confirmUpgrade('${t}')`}">${TIER_RANK[t]>TIER_RANK[S.tier]?"Upgrade":"Zurückstufen"}</button>`:""}
@@ -2358,10 +2890,79 @@ function renderPricing(){
   root.innerHTML=`
     <div class="heroband"><h2>Finde deinen Plan</h2>
       <p class="sm t2" style="max-width:300px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Upgrades schalten die Tiefe der Adaptation Engine frei.</p></div>
+    <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
+      <button class="btn ${b==="monthly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('monthly')">Monatlich</button>
+      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="margin-left:6px">−33 %</span></button></div>
     ${card("free",false)}
     ${card("pro",true)}
     ${card("elite",false)}
-    <p class="xs t2" style="text-align:center;line-height:1.7">Demo: kein echtes Zahlungssystem. Preise sind Platzhalter und werden vor Launch per A/B-Test validiert.<br>Jederzeit kündbar · Downgrade genauso einfach wie Upgrade · Datenexport in jedem Plan.</p>`;
+    <p class="xs t2" style="text-align:center;line-height:1.7">Demo: kein echtes Zahlungssystem — Preispunkte werden vor Launch per A/B-Test feinjustiert.<br>Jederzeit kündbar · Downgrade genauso einfach wie Upgrade · Datenexport in jedem Plan.</p>`;
+}
+
+/* =====================================================================
+   HEALTH-IMPORT (v5/Phase 8A) — Datei-Import statt unmöglicher Live-Sync.
+   Ehrlichkeit: HealthKit/Google Fit sind aus einer Browser-App heraus nicht
+   live erreichbar. Wir lesen die exportierte Datei lokal — Gewicht →
+   Gewichtsverlauf, Schlafdauer → vorhandene Status-Einträge (nichts wird
+   erfunden), Ruhepuls → Erholungs-Übersicht.
+   ===================================================================== */
+function parseAppleHealthExport(xml){
+  const out={weight:[],sleepH:{},rhr:[]};
+  const tags=xml.match(/<Record\b[^>]*>/g)||[];
+  for(const tag of tags){
+    const attr=(n)=>{const m=tag.match(new RegExp(n+'="([^"]*)"'));return m?m[1]:null;};
+    const type=attr("type"); if(!type)continue;
+    if(type==="HKQuantityTypeIdentifierBodyMass"){
+      const v=parseFloat(attr("value")), unit=attr("unit")||"kg", t=Date.parse(attr("startDate")||"");
+      if(isFinite(v)&&isFinite(t)) out.weight.push({t,v:/lb/i.test(unit)?Math.round(v*0.45359*10)/10:v});
+    } else if(type==="HKCategoryTypeIdentifierSleepAnalysis"){
+      const s=Date.parse(attr("startDate")||""), e=Date.parse(attr("endDate")||""), val=attr("value")||"";
+      if(isFinite(s)&&isFinite(e)&&e>s&&!/InBed/i.test(val)){
+        const d=new Date(s).toISOString().slice(0,10);
+        out.sleepH[d]=(out.sleepH[d]||0)+(e-s)/36e5;
+      }
+    } else if(type==="HKQuantityTypeIdentifierRestingHeartRate"){
+      const v=parseFloat(attr("value")), t=Date.parse(attr("startDate")||"");
+      if(isFinite(v)&&isFinite(t)) out.rhr.push({t,v:Math.round(v)});
+    }
+  }
+  return out;
+}
+function importHealthData(text,fname){
+  const counts={weight:0,sleep:0,rhr:0};
+  const mergeWeight=(arr)=>{
+    for(const w of arr){
+      if(!isFinite(w.t)||!isFinite(w.v)||w.v<20||w.v>400)continue;
+      const day=new Date(w.t).toISOString().slice(0,10);
+      if(!S.weightLog.some(x=>new Date(x.t).toISOString().slice(0,10)===day)){
+        S.weightLog.push({t:w.t,v:Math.round(w.v*10)/10}); counts.weight++;
+      }
+    }
+    S.weightLog.sort((a,b)=>a.t-b.t);
+  };
+  const t=text.trim();
+  if(t.startsWith("<")||/\.xml$/i.test(fname)){
+    const p=parseAppleHealthExport(t);
+    mergeWeight(p.weight);
+    // Schlaf nur in VORHANDENE Status-Einträge mergen — Energie/Stress/Kater werden nie erfunden.
+    for(const [d,h] of Object.entries(p.sleepH)){
+      const ex=S.readinessHistory.find(r=>r.date===d);
+      if(ex){ex.sleepH=Math.round(Math.min(14,h)*10)/10; counts.sleep++;}
+    }
+    for(const r of p.rhr){ if(!S.rhrLog.some(x=>x.t===r.t)){S.rhrLog.push(r); counts.rhr++;} }
+    S.rhrLog.sort((a,b)=>a.t-b.t);
+    return counts;
+  }
+  try{
+    const j=JSON.parse(t);
+    const arr=Array.isArray(j)?j:(Array.isArray(j.weight)?j.weight:[]);
+    mergeWeight(arr.map(x=>({t:typeof x.t==="number"?x.t:Date.parse(x.date||x.t||""),v:parseFloat(String(x.weight??x.v??"").toString().replace(",","."))})));
+    return counts;
+  }catch{}
+  const rows=t.split(/\r?\n/).map(l=>l.split(/[;,]/)).filter(r=>r.length>=2);
+  const ws=rows.map(r=>({t:Date.parse(r[0]),v:parseFloat(String(r[1]).replace(",","."))})).filter(x=>isFinite(x.t)&&isFinite(x.v));
+  if(ws.length){ mergeWeight(ws); return counts; }
+  return null;
 }
 
 let EP=null;
@@ -2395,6 +2996,7 @@ function renderProfile(){
     p.td=tdeeCalc(p.bmr,p.a.act||"light",p.a.weight,p.a.len||60,p.a.days||4);
     p.tg=multiTargets(p.a,p.bmr,p.td);
     S.plan=generateTrainingPlan(p); // Plan an neue Ziele anpassen
+    S.exOverrides={}; // Übungs-Täusche gehören zum alten Plan
     S.weightLog=S.weightLog.filter(x=>new Date(x.t).toISOString().slice(0,10)!==todayKey());
     S.weightLog.push({t:Date.now(),v:w});
     EP=null; overlay.innerHTML=""; save(); render();
@@ -2413,6 +3015,37 @@ function renderProfile(){
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
     save(); render(); toast("✓ Snapshot gespeichert");
   };
+  A.healthFile=(el)=>{
+    const f=el.files&&el.files[0]; if(!f)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      el.value="";
+      let res=null;
+      try{ res=importHealthData(String(reader.result||""),f.name); }catch{ res=null; }
+      if(!res){ toast("Format nicht erkannt — export.xml, CSV (datum,gewicht) oder JSON"); return; }
+      save(); render();
+      modal(`<p class="ct">${icon("check",14)} Import abgeschlossen</p>
+        <ul class="list mb8">
+          <li><span>Gewichts-Einträge</span><span class="metric">${res.weight}</span></li>
+          <li><span>Schlaf-Daten (zu Status-Tagen)</span><span class="metric">${res.sleep}</span></li>
+          <li><span>Ruhepuls-Werte</span><span class="metric">${res.rhr}</span></li>
+        </ul>
+        <p class="xs t2" style="line-height:1.6">Schlafdaten ergänzen nur Tage, an denen du selbst einen Status-Check gemacht hast — die Engine erfindet keine fehlenden Werte.</p>`);
+    };
+    reader.onerror=()=>toast("Datei konnte nicht gelesen werden");
+    reader.readAsText(f);
+  };
+  A.loadDemoData=()=>{
+    const seed=buildDevSeed();
+    S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
+    S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog;
+    save(); render(); toast("Demo-Daten geladen: 10 Wochen synthetische Historie (Dev)");
+  };
+  A.clearDemoData=()=>{
+    S.liftLog={}; S.readinessHistory=[]; S.trainingHistory=[]; S.nutritionLog={};
+    S.weightLog=p?[{t:Date.now(),v:p.a.weight}]:[]; S.checkin=null; S.checkinDate=null;
+    save(); render(); toast("Historie geleert — leerer Start");
+  };
   A.wipe=()=>{
     modal(`<p class="ct">Alle Daten löschen?</p><p class="sm t2 mb8">Unwiderruflich — Konto, Profil, gesamte Historie.</p>
       <button class="btn" style="border-color:rgba(255,77,77,.4);color:var(--danger)" onclick="A.wipeConfirm()">Endgültig löschen</button>`);
@@ -2420,9 +3053,12 @@ function renderProfile(){
   A.wipeConfirm=()=>{
     try{localStorage.removeItem(KEY);}catch{}
     S={screen:"landing",users:[],currentUser:null,loginAttempts:0,lockoutUntil:null,devMode:false,step:0,
-       a:{height:181,weight:82,sleep:7,goals:[]},profile:null,tab:"home",currentWeek:1,checkin:null,checkinDate:null,
-       schedule:null,scheduleSuggestion:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
-       liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[]};
+       a:{height:181,weight:82,sleep:7,goals:[],injuries:[]},profile:null,tab:"home",currentWeek:1,checkin:null,checkinDate:null,
+       schedule:null,scheduleSuggestion:null,scheduleRationale:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
+       liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
+       tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
+       viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,exOverrides:{},rhrLog:[],
+       seenFeatures:false,precisionShown:false,billing:"monthly"};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
   root.innerHTML=`
@@ -2436,7 +3072,7 @@ function renderProfile(){
 
     <div class="card"><div class="row">
       <div><p class="ct" style="margin-bottom:4px">Dein Plan</p>
-        <p class="sm">${TIER_LABEL[S.tier]} · <span class="metric">${TIER_PRICE[S.tier]}</span>${S.tier!=="free"?'<span class="xs t2"> / Monat (Demo)</span>':""}</p></div>
+        <p class="sm">${TIER_LABEL[S.tier]} · <span class="metric">${tierPriceLabel(S.tier,S.billing)}</span>${S.tier!=="free"?'<span class="xs t2"> (Demo)</span>':""}</p></div>
       <button class="btn ${S.tier==="free"?"volt":""}" style="width:auto;padding:0 18px" onclick="${S.tier==="free"?"A.tab('pricing')":"A.manageTier()"}">${S.tier==="free"?"Plan upgraden":"Plan verwalten"}</button>
     </div></div>
     ${p?`<div class="card"><p class="ct">Ziele</p>
@@ -2457,6 +3093,20 @@ function renderProfile(){
       :`<div class="lockcard" style="margin-top:0"><p class="sm">${icon("lock",13)} Historische Profil-Stände zum Vorher/Nachher-Vergleich — Teil von ELITE.</p>
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('snapshots')">Mehr erfahren</button></div>`}
     </div>
+
+    <div class="card"><p class="ct">Health-Daten importieren</p>
+      <p class="xs t2 mb8" style="line-height:1.6">Apple-Health-Export (<span class="metric">export.xml</span>), CSV (<span class="metric">datum,gewicht</span>) oder JSON. Übernommen werden: Gewicht → Verlauf · Schlafdauer → deine Status-Tage · Ruhepuls → Erholung.</p>
+      <button class="btn mb8" onclick="document.getElementById('health-file').click()">${icon("plus",15)} Datei wählen (.xml / .csv / .json)</button>
+      <input type="file" id="health-file" accept=".xml,.csv,.json,text/xml,application/json,text/csv" style="display:none" onchange="A.healthFile(this)">
+      ${S.rhrLog.length?(()=>{const l7=S.rhrLog.slice(-7);const avg=Math.round(l7.reduce((s,x)=>s+x.v,0)/l7.length);
+        return `<p class="xs t2 mb8">${S.rhrLog.length} Ruhepuls-Werte importiert · Ø zuletzt <span class="metric">${avg} bpm</span></p>`;})():""}
+      <p class="xs t2" style="line-height:1.6"><b style="color:var(--t1)">Ehrlich gesagt:</b> Eine Live-Synchronisation mit HealthKit oder Google Fit ist aus einer Browser-App technisch nicht möglich. Der Import liest deine exportierte Datei — komplett lokal, nichts verlässt dein Gerät.</p></div>
+
+    ${S.devMode?`<div class="card"><p class="ct">Dev: Demo-Daten</p>
+      <p class="xs t2 mb8">Synthetische 10-Wochen-Historie zum Testen aller Analytics-Module. Nur im Developer-Modus sichtbar — echte Konten starten immer leer.</p>
+      <div class="grid2">
+        <button class="btn" onclick="A.loadDemoData()">Demo-Daten laden</button>
+        <button class="btn" onclick="A.clearDemoData()">Historie leeren</button></div></div>`:""}
 
     <div class="card"><p class="ct">Daten</p>
       <!-- DSGVO: Export & Löschung sind in JEDEM Tier verfügbar — niemals gated. -->
