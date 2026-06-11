@@ -6,28 +6,68 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0A0A0B">
 <title>METRICGYM</title>
+<!--
+═══════════════════════════════════════════════════════════════════════
+PRICING & PACKAGING — DOKUMENTATION (McKinsey-Methodik, Good-Better-Better)
+═══════════════════════════════════════════════════════════════════════
+VALUE-METRIC-ANALYSE
+| Metric                  | Free-Limit            | Paid-Wert                  | Begründung |
+|-------------------------|-----------------------|----------------------------|------------|
+| Gleichzeitige Ziele     | 1                     | Pro/Elite: 3               | Multi-Goal-Gewichtung ist Engine-USP; 1 Ziel deckt den Grundnutzen voll ab |
+| Engine-Insights         | 1/Tag                 | Pro: 5 · Elite: 8          | Aha-Moment bleibt erhalten (1 Insight), Tiefe (Velocity/Adhärenz/MEV-MRV) ist Premium |
+| Adaptation-Funktionen   | —                     | Pro: Velocity, Adhärenz, Mikros, Deload-Trigger | Direkt an die Adaptation Engine (USP) gekoppelt |
+| Voice-/Foto-Logging     | unlimitiert           | unlimitiert                | Logging speist die Engine ALLER Tiers — Limitierung würde Datensammlung zerstören |
+| Kraft-Trajectory        | 1 Übung               | Pro: alle (Top 2 mobil)    | Erste Prognose = Aha-Moment; Multi-Lift-Vergleich = Tiefe |
+| Datenexport/Löschung    | unlimitiert           | unlimitiert                | DSGVO Art. 17/20 — NIEMALS gated (Compliance) |
+| Coach-Kontext           | Standard (6 Nachrichten Verlauf) | Elite: 20      | Marginalkosten-nahe Differenzierung für Power-User |
+| Wochenplan-Editor       | unlimitiert           | unlimitiert                | Kernnutzen — "User owns schedule" gilt für alle |
+BEWUSSTE ABWEICHUNG (Clinical-Validation-Veto): Verletzungs-Warnungen +
+Übungsalternativen bleiben in ALLEN Tiers frei — Sicherheitsfeatures hinter
+einer Paywall wären ein Haftungs- und Ethikrisiko.
+PREISE: Platzhalter (€X,XX) — finale Preispunkte MÜSSEN per A/B-Test validiert
+werden (Van-Westendorp + Conjoint empfohlen). Richtwert: Pro ≈ 1,5–2× übliche
+Habit-Tracker (Adaptation-Engine als Differenzierung), Elite ≈ 2× Pro.
+INVESTOR-LENS: Expansion-Pfad ist organisch — Free-Nutzer treffen die
+Multi-Goal- und Insight-Gates genau dann, wenn sie mehr Tiefe WOLLEN (nach
+erlebtem Wert, nicht davor). Free bleibt ein vollständiges Produkt (Plan,
+Logging, Status, 1 Insight) → Churn-Risiko "kaputtes Gratisprodukt" niedrig.
+Pro/Elite sind strikt an die Adaptation Engine gekoppelt, nicht beliebig.
+MOCK: Kein echtes Payment — S.tier wird lokal umgeschaltet (Demo/Sales).
+TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
+═══════════════════════════════════════════════════════════════════════
+-->
 <style>
+  /* Premium-Typografie: Manrope (UI) + DM Mono (nur Zahlen). Fallback system-ui offline. */
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
   :root{
-    --bg:#0A0A0B; --s1:#121214; --s2:#1A1A1E; --border:#26262B;
-    --volt:#C8FF2E; --info:#5B8CFF; --danger:#FF4D4D; --warn:#FFB02E;
+    --bg:#0A0A0B; --s1:#121214; --s2:#1A1A1E; --s3:#232328; --border:#26262B;
+    --hairline:rgba(255,255,255,.06);
+    --volt:#C8FF2E; --accent:var(--volt); --accent-soft:rgba(200,255,46,.08);
+    --info:#5B8CFF; --danger:#FF4D4D; --warn:#FFB02E;
     --t1:#F5F5F4; --t2:#9C9CA6; --t3:#6E6E78;
+    --font-display:'Manrope',system-ui,sans-serif;
+    --font-mono:'DM Mono',ui-monospace,monospace;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{background:var(--bg); color-scheme:dark;}
   body{
     background:var(--bg); color:var(--t1);
-    font-family:Inter,system-ui,sans-serif;
+    font-family:var(--font-display);
     font-variant-numeric:tabular-nums;
     -webkit-font-smoothing:antialiased;
   }
-  .metric{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums;}
+  .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
   .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:68px 16px 104px;}
   .wrap.noshell{padding-top:16px;}
-  h1{font-size:17px; font-weight:600;}
-  h2{font-size:23px; font-weight:600; line-height:1.3; margin-bottom:4px;}
-  .hint{font-size:13px; color:var(--t2); margin-bottom:16px;}
-  .card{background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px;}
-  .ct{font-size:11px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--t2); margin-bottom:12px;}
+  h1{font-size:17px; font-weight:700;}
+  h2{font-size:26px; font-weight:700; letter-spacing:-0.01em; line-height:1.2; margin-bottom:4px;}
+  .display-m{font-size:19px; font-weight:600; line-height:1.3;}
+  .label{font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); display:block; margin:0 0 var(--sp-3) var(--sp-1);}
+  .section{margin-bottom:var(--sp-7);}
+  .hint{font-size:13px; color:var(--t2); margin-bottom:16px; line-height:1.5;}
+  .card{background:var(--s1); border:1px solid var(--hairline); border-radius:20px; padding:var(--sp-5); margin-bottom:var(--sp-4);}
+  .ct{font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); margin-bottom:12px;}
   .btn{
     display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
     min-height:48px; border-radius:999px; border:1px solid var(--border);
@@ -225,7 +265,39 @@
   .statusdots button{width:12px; height:12px; min-width:12px; padding:0; border-radius:50%; border:1.5px solid var(--border); background:var(--s2); cursor:pointer;}
   .statusdots button.on{background:var(--volt); border-color:var(--volt);}
   .iconbtn{background:none; border:none; color:var(--t2); font-size:18px; cursor:pointer; min-width:44px; min-height:44px;}
-  .conf{font-size:10px; color:var(--t3); font-family:"JetBrains Mono",monospace;}
+  .conf{font-size:10px; color:var(--t3); font-family:var(--font-mono);}
+  /* ---- Redesign 2.0: Shell, Menü, Quick-Log, Pricing, Sheets ---- */
+  .logo-btn{display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; padding:8px 4px; color:var(--t1); min-height:44px;}
+  .logo-text{font-family:var(--font-display); font-size:15px; font-weight:800; letter-spacing:.06em;}
+  .icon-btn{width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center; background:var(--s2); border:none; border-radius:50%; font-size:15px; cursor:pointer; color:var(--t1);}
+  .menu-backdrop{position:fixed; inset:0; z-index:44; background:rgba(0,0,0,.45);}
+  .menu-sheet{position:fixed; top:52px; left:0; right:0; z-index:46; max-width:430px; margin:0 auto; background:var(--s1); border-radius:0 0 24px 24px; box-shadow:0 16px 40px rgba(0,0,0,.5); padding:10px;}
+  .menu-item{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:14px 16px; background:none; border:none; color:var(--t1); font-size:15px; font-family:inherit; border-radius:14px; cursor:pointer; min-height:48px;}
+  .menu-item:active{background:var(--s2);}
+  .menu-divider{height:1px; background:var(--hairline); margin:8px 4px;}
+  .quicklog-field{
+    width:100%; min-height:64px; padding:14px 16px 48px; box-sizing:border-box;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:16px;
+    color:var(--t1); font-size:15px; font-family:var(--font-display); resize:none; line-height:1.45;
+  }
+  .quick-log{position:relative;}
+  .quicklog-submit{position:absolute; bottom:10px; right:10px; width:auto; min-height:38px; min-width:44px; padding:0 18px; border-radius:999px; font-size:13px;}
+  .exrow{display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; padding:13px 4px; background:none; border:none; border-top:1px solid var(--hairline); color:var(--t1); font-family:inherit; font-size:14px; cursor:pointer; min-height:48px; text-align:left;}
+  .exrow .exn{font-weight:600; display:flex; align-items:center; gap:6px;}
+  .acc{border:1px solid var(--hairline); border-radius:16px; margin-bottom:10px; background:var(--s1);}
+  .acc summary{list-style:none; display:flex; align-items:center; justify-content:space-between; padding:16px; cursor:pointer; min-height:48px; font-size:14px; font-weight:600;}
+  .acc summary::before{content:none;}
+  .acc summary::-webkit-details-marker{display:none;}
+  .acc[open] summary{border-bottom:1px solid var(--hairline);}
+  .acc .accbody{padding:4px 16px 16px;}
+  .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
+  .sheet{background:var(--s1); border-radius:24px 24px 0 0; padding:20px 20px calc(20px + env(safe-area-inset-bottom)); max-width:430px; width:100%; max-height:85dvh; overflow-y:auto;}
+  .tier-card{background:var(--s1); border:1px solid var(--hairline); border-radius:20px; padding:var(--sp-5); margin-bottom:var(--sp-4); position:relative;}
+  .tier-card.featured{border:2px solid var(--accent);}
+  .tier-feat{display:flex; gap:8px; font-size:13.5px; color:var(--t1); padding:5px 0; line-height:1.45;}
+  .tier-feat span:first-child{color:var(--volt); flex-shrink:0;}
+  .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; background:var(--s2); margin-top:10px;}
+  .heroband{padding:0 0 var(--sp-5); text-align:center;}
 </style>
 </head>
 <body>
@@ -488,7 +560,35 @@ S.weightLog=S.weightLog||[]; S.chat=S.chat||[]; S.currentWeek=S.currentWeek||1;
 S.lastRecapWeek=S.lastRecapWeek??null;
 S.a.injuries=S.a.injuries||[];
 if(S.profile&&S.profile.a&&!S.profile.a.injuries)S.profile.a.injuries=[];
+// Additive Migration (Pricing): Bestandsnutzer starten auf Free
+S.tier=S.tier||"free";
+S.snapshots=S.snapshots||[];
+S.recapReady=S.recapReady??null;
 if(S.checkinDate&&S.checkinDate!==todayKey()){S.checkin=null;S.checkinDate=null;}
+
+// ---------- Tier-System (Good-Better-Better) ----------
+const TIER_LABEL={free:"START",pro:"PERFORMANCE",elite:"ELITE"};
+const TIER_RANK={free:0,pro:1,elite:2};
+// Platzhalter-Preise — finale Preispunkte per A/B-Test validieren (Van Westendorp).
+const TIER_PRICE={free:"€0",pro:"€X,XX",elite:"€XX,XX"};
+function tierAtLeast(t){ return TIER_RANK[S.tier]>=TIER_RANK[t]; }
+const TEASER_TEXT={
+  multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
+  insights:{t:"Erweiterte Insights",b:"Adaptation Velocity, Ernährungs-Adhärenz und Volumen-Toleranz-Warnungen sind Teil von PERFORMANCE."},
+  micro:{t:"Mikronährstoff-Hinweise",b:"Die Mikronährstoff-Schätzung aus deinen geloggten Lebensmitteln ist Teil von PERFORMANCE."},
+  deload:{t:"Adaptiver Deload-Vorschlag",b:"Automatische Deload-Empfehlungen bei Übertrainings-Signalen sind Teil von PERFORMANCE."},
+  trajectory:{t:"Multi-Lift-Trajectory",b:"Kraftprognosen für alle getrackten Übungen sind Teil von PERFORMANCE."},
+  recap:{t:"Vollständiger Wochen-Recap",b:"Der komplette Recap mit Adhärenz und Status-Schnitt ist Teil von PERFORMANCE."},
+  snapshots:{t:"Profil-Snapshots",b:"Gespeicherte Profil-Stände zum Vorher/Nachher-Vergleich sind Teil von ELITE."},
+  coach_history:{t:"Erweiterter Coach-Verlauf",b:"20 statt 6 sichtbare Coach-Nachrichten sind Teil von ELITE."},
+};
+function showUpgradeTeaser(key){
+  const x=TEASER_TEXT[key]||{t:"Premium-Funktion",b:"Diese Funktion ist Teil eines höheren Plans."};
+  modal(`<p class="ct">🔒 ${x.t}</p>
+    <p class="sm t2 mb16" style="line-height:1.6">${x.b}</p>
+    <button class="btn volt" onclick="overlay.innerHTML='';S.tab='pricing';save();render();">Pläne ansehen</button>`);
+}
+// (Upgrade-/Downgrade-Handler werden nach window.A={} in der Shell registriert.)
 
 // ---------- Session-Typen (User owns schedule) ----------
 const TYPES={
@@ -632,7 +732,7 @@ function buildInsights(){
       break;
     }
   }
-  return out.slice(0,5);
+  return out.slice(0,8); // Anzeige-Limit pro Tier: Free 1 / Pro 5 / Elite 8
 }
 
 // ---------- Voice/NLP: Training ----------
@@ -813,11 +913,13 @@ function circleTimer(left,total,size=84){
 const overlay=document.getElementById("overlay");
 let toastTimer=null;
 function toast(msg){
+  // Eigene Ebene: darf offene Sheets/Modals im #overlay nicht zerstören.
   clearTimeout(toastTimer);
+  const old=document.getElementById("toastbox"); if(old)old.remove();
   const el=document.createElement("div");
-  el.className="toast"; el.setAttribute("role","alert"); el.textContent=msg;
-  overlay.innerHTML=""; overlay.appendChild(el);
-  toastTimer=setTimeout(()=>{overlay.innerHTML="";},2600);
+  el.className="toast"; el.id="toastbox"; el.setAttribute("role","alert"); el.textContent=msg;
+  document.body.appendChild(el);
+  toastTimer=setTimeout(()=>{el.remove();},2600);
 }
 function modal(html){
   overlay.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)A.closeModal()"><div class="modal fade">${html}
@@ -862,10 +964,33 @@ function recWhy(name){
   return `Letzte Session: ${fmtKg(last.w)} × ${last.reps} @ RPE ${last.rpe??8} → ${inc?"+2,5 kg, da Reps-Reserve vorhanden war":"Gewicht halten, da RPE über 8 lag"} (Helms et al., 2016).${S.currentWeek===4?" Deload-Woche: zusätzlich −10 % Last.":""}`;
 }
 A.recWhy=(n)=>{const w=recWhy(n); if(w)modal(`<p class="ct">Warum diese Empfehlung?</p><p class="sm t2" style="line-height:1.6">${w}</p>`);};
+// MOCK: Tier-Wechsel lokal in S.tier — TODO Real: Stripe Checkout / In-App-Purchase
+// + Webhook-basierte Tier-Synchronisation mit Backend-User-Record.
+A.upgrade=(t)=>{
+  modal(`<p class="ct">Upgrade auf ${TIER_LABEL[t]}</p>
+    <p class="sm t2 mb8">Demo-Modus: Kein echtes Zahlungssystem angebunden.</p>
+    <p class="metric" style="font-size:28px">${TIER_PRICE[t]} <span class="xs t2">/ Monat</span></p>
+    <p class="xs t2 mt8">Jederzeit kündbar. Keine versteckten Kosten.</p>
+    <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Demo-Upgrade aktivieren</button>`);
+};
+A.confirmUpgrade=(t)=>{
+  S.tier=t; save(); overlay.innerHTML=""; render();
+  toast(`✓ ${TIER_LABEL[t]} aktiviert (Demo)`);
+};
+A.manageTier=()=>{
+  const cur=S.tier;
+  modal(`<p class="ct">Plan verwalten</p>
+    <p class="sm t2 mb16">Du bist aktuell auf <b style="color:var(--t1)">${TIER_LABEL[cur]}</b>.</p>
+    ${cur!=="elite"?`<button class="btn volt mb8" onclick="A.confirmUpgrade('${cur==="free"?"pro":"elite"}')">Auf ${TIER_LABEL[cur==="free"?"pro":"elite"]} upgraden</button>`:""}
+    ${cur!=="free"?`<button class="btn mb8" onclick="A.confirmUpgrade('${cur==="elite"?"pro":"free"}')">Auf ${TIER_LABEL[cur==="elite"?"pro":"free"]} zurückstufen</button>
+    <p class="xs t2">Bei Rückstufung endet der Zugriff auf erweiterte Funktionen zum Ende des Abrechnungszeitraums (Demo: sofort). Deine Daten bleiben vollständig erhalten.</p>`:""}`);
+};
+A.showTeaser=(k)=>showUpgradeTeaser(k);
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
-const TAB_TITLES={home:"Home",today:"Heute",train:"Training",player:"Session",summary:"Session",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil"};
+const TAB_TITLES={home:"Home",today:"Heute",train:"Training",player:"Session",summary:"Session",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne"};
+let menuOpen=false;
 
 function render(){
   clearTimeout(timerInt);
@@ -882,27 +1007,47 @@ function render(){
 }
 
 function renderAppbar(){
-  A.profileTab=()=>{S.tab="profile";save();render();};
+  A.goHome=()=>{menuOpen=false;S.tab="home";save();render();};
+  A.openMenu=()=>{menuOpen=!menuOpen;renderAppbar();};
+  A.menuGo=(t)=>{menuOpen=false;S.tab=t;save();render();};
+  A.profileTab=()=>{menuOpen=false;S.tab="profile";save();render();};
   A.notif=()=>{
+    menuOpen=false;renderAppbar();
     const ins=buildInsights();
+    const visible=S.tier==="free"?ins.slice(0,1):ins.slice(0,S.tier==="elite"?8:5);
     modal(`<p class="ct">Benachrichtigungen</p>${
-      ins.length?ins.map(i=>`<div class="msg ai" style="max-width:100%">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")
+      visible.length?visible.map(i=>`<div class="msg ai" style="max-width:100%">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")
       :'<p class="sm t2">Noch keine Insights — sammle ein paar Tage Daten.</p>'}`);
   };
   appbarEl.innerHTML=`<header class="appbar"><div class="appbar-inner">
-    <span class="logo">METRIC<span class="volt-txt">GYM</span></span>
-    <span class="title">${TAB_TITLES[S.tab]||""}</span>
-    <button class="bell" onclick="A.notif()" aria-label="Benachrichtigungen">🔔</button>
-    <button class="avatar" onclick="A.profileTab()" aria-label="Profil">${userName().slice(0,1).toUpperCase()}</button>
-  </div></header>`;
+    <button class="logo-btn" onclick="A.goHome()" aria-label="Zur Startseite">
+      <span style="font-size:16px">⚡</span>
+      <span class="logo-text">METRIC<span class="volt-txt">GYM</span></span>
+    </button>
+    <div style="flex:1"></div>
+    <button class="icon-btn" onclick="A.notif()" aria-label="Benachrichtigungen" style="margin-right:8px">🔔</button>
+    <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">☰</button>
+  </div>
+  ${menuOpen?`<div class="menu-backdrop" onclick="A.openMenu()"></div>
+  <div class="menu-sheet fade">
+    <button class="menu-item" onclick="A.menuGo('home')">🏠 Home</button>
+    <button class="menu-item" onclick="A.menuGo('train')">🏋 Training</button>
+    <button class="menu-item" onclick="A.menuGo('nutrition')">🍽 Ernährung</button>
+    <button class="menu-item" onclick="A.menuGo('analytics')">📊 Analytics</button>
+    <div class="menu-divider"></div>
+    <button class="menu-item" onclick="A.profileTab()">👤 Profil & Einstellungen</button>
+    <button class="menu-item" onclick="A.menuGo('pricing')">⭐ Plan ${S.tier==="free"?"upgraden":"verwalten"} <span class="badge ${S.tier==="free"?"mute":"volt"}" style="margin-left:auto">${TIER_LABEL[S.tier]}</span></button>
+  </div>`:""}
+  </header>`;
 }
 
-const TABS=[["home","🏠","Home"],["train","🏋","Training"],["analytics","📊","Analytics"],["nutrition","🍽","Ernährung"],["profile","👤","Profil"]];
+// Reduzierte Tabbar: 3 tägliche Kernbereiche — alles Weitere über das ☰-Menü.
+const TABS=[["home","🏠","Home"],["train","🏋","Training"],["nutrition","🍽","Ernährung"]];
 function renderTabbar(){
-  A.tab=(t)=>{S.tab=t;save();render();};
+  A.tab=(t)=>{menuOpen=false;S.tab=t;save();render();};
   const active=["player","summary"].includes(S.tab)?"train":(S.tab==="today"?"home":S.tab);
-  tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner">
-    ${TABS.map(([id,ic,l],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${l}">
+  tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner" style="grid-template-columns:repeat(3,1fr)">
+    ${TABS.map(([id,ic,l])=>`<button class="tab ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${l}">
       <span class="ic" aria-hidden="true">${ic}</span>${l}</button>`).join("")}</div></nav>`;
 }
 
@@ -972,7 +1117,8 @@ function renderFab(){
     <div class="row mb8"><p class="ct" style="margin:0">💬 Coach · ${TAB_TITLES[S.tab]||"Kontext"}</p>
       <button class="btn ghost" style="width:auto" onclick="A.coach()" aria-label="Schließen">✕</button></div>
     <div id="coach-chat" style="max-height:200px;overflow-y:auto;margin-bottom:8px">
-      ${S.chat.slice(-6).map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${m.t}</div>`).join("")||'<p class="xs t2">Der Coach kennt deinen aktuellen Screen-Kontext.</p>'}</div>
+      ${S.chat.slice(S.tier==="elite"?-20:-6).map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${m.t}</div>`).join("")||'<p class="xs t2">Der Coach kennt deinen aktuellen Screen-Kontext.</p>'}
+      ${S.tier!=="elite"&&S.chat.length>6?`<button class="btn ghost" style="min-height:32px;font-size:11px" onclick="A.showTeaser('coach_history')">🔒 Älterer Verlauf (ELITE)</button>`:""}</div>
     <div class="chips mb8">${ctx.chips.map(c=>`<button class="chip" onclick="A.coachAsk('${c.replace(/'/g,"\\'")}')">${c}</button>`).join("")}</div>
     <div class="row">
       <button id="co-mic" class="btn" style="width:48px;min-width:48px" onclick="A.coachVoice()" aria-label="Sprechen">🎤</button>
@@ -991,7 +1137,20 @@ function renderApp(){
   else if(S.tab==="analytics") renderAnalytics();
   else if(S.tab==="nutrition") renderNutrition();
   else if(S.tab==="profile") renderProfile();
+  else if(S.tab==="pricing") renderPricing();
   else renderHome();
+}
+
+// ---------- Universelles Quick-Log-Feld (Text ODER iOS-Tastatur-Diktat) ----------
+// Ersetzt separate Mikro-Buttons: das native Mikro der iOS-/Android-Tastatur
+// füllt dasselbe Feld — kein eigener Speech-Recognition-State nötig.
+function quickLogField(placeholder,handler){
+  return `<div class="quick-log">
+    <textarea id="quicklog-in" class="quicklog-field" rows="2" placeholder="${placeholder}"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();${handler}();}"></textarea>
+    <button class="btn volt quicklog-submit" onclick="${handler}()">Analysieren</button>
+  </div>
+  <p class="xs t2 mt8" style="text-align:center">Tippen — oder 🎤 auf deiner Tastatur nutzen</p>`;
 }
 
 // =====================================================================
@@ -1007,7 +1166,7 @@ function renderAuth(){
     if(!S.users.some(u=>u.email==="dev@metricgym.app"))
       S.users.push({username:"Dev",email:"dev@metricgym.app",pwHash:"dev"});
     S.currentUser=S.users.findIndex(u=>u.email==="dev@metricgym.app");
-    S.devMode=true;
+    S.devMode=true; S.tier="pro"; // Dev-Demo zeigt den Anker-Tier
     const a={sex:"male",age:29,height:181,weight:82,bodyFat:15,goals:["muscle_gain","fat_loss"],exp:"intermediate",days:4,len:60,act:"light",sleep:7,stress:2};
     const bmr=bmrCalc(a), td=tdeeCalc(bmr,a.act,a.weight,a.len,a.days);
     S.profile={a,bmr,td,tg:multiTargets(a,bmr,td)};
@@ -1153,8 +1312,10 @@ function renderOnboarding(){
   A.dial=(k,v)=>{ S.a[k]=parseFloat(v); save(); const el=document.getElementById("dialv"); if(el)el.textContent=nf.format(S.a[k]); };
   A.multi=(k,v,max)=>{
     const cur=S.a[k]||[];
-    let next=cur.includes(v)?cur.filter(x=>x!==v):(cur.length<max?[...cur,v]:null);
-    if(next===null){toast(`Maximal ${max} Auswahlen`);return;}
+    const effMax=(k==="goals"&&S.tier==="free")?1:max;
+    if(k==="goals"&&S.tier==="free"&&cur.length>=1&&!cur.includes(v)){showUpgradeTeaser("multi_goal");return;}
+    let next=cur.includes(v)?cur.filter(x=>x!==v):(cur.length<effMax?[...cur,v]:null);
+    if(next===null){toast(`Maximal ${effMax} Auswahlen`);return;}
     S.a[k]=next; save(); render();
   };
   if(st.type==="single"){
@@ -1233,217 +1394,249 @@ function renderReveal(){
 }
 
 // =====================================================================
-// HOME (inkl. „Dein Status heute")
+// HOME — Redesign: 1 Hero-Ring, gestaffelte Sections (Oura/Whoop-Pattern)
 // =====================================================================
 let ci={sleep:0,energy:0,stress:0,sore:0};
 const STATUS_CARDS=[
   ["sleep","🌙","Schlaf"],["energy","⚡","Energie"],["stress","🧠","Stress"],["sore","💪","Muskelkater"],
 ];
+function renderSection(label,content){return `<div class="section"><span class="label">${label}</span>${content}</div>`;}
+function openStatusSheet(){
+  A.st=(k,v)=>{ci[k]=v;openStatusSheet();};
+  A.statusParse=()=>{
+    const el=document.getElementById("quicklog-in");
+    if(!el||!el.value.trim())return;
+    const r=parseStatus(el.value);
+    if(!Object.keys(r).length){toast("Nichts erkannt — z. B. 'gut geschlafen, leichter Kater'");return;}
+    ci={...ci,...r}; openStatusSheet();
+  };
+  A.stSave=()=>{
+    if(!ci.sleep||!ci.energy||!ci.stress||!ci.sore){toast("Bitte alle vier Werte setzen");return;}
+    const r=statusScore(ci.sleep,ci.energy,ci.stress,ci.sore);
+    S.checkin=r; S.checkinDate=todayKey();
+    S.readinessHistory=S.readinessHistory.filter(x=>x.date!==todayKey());
+    S.readinessHistory.push({date:todayKey(),score:r.score,tier:r.tier,sleep:ci.sleep,energy:ci.energy,stress:ci.stress,sore:ci.sore,sleepH:4+ci.sleep});
+    overlay.innerHTML=""; save(); render();
+  };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
+    <div class="sheet fade">
+      <p class="display-m mb16">Wie geht es dir heute?</p>
+      ${STATUS_CARDS.map(([k,e,l])=>`<div class="row mb12">
+        <span class="sm" style="width:120px">${e} ${l}</span>
+        <div class="scale">${[1,2,3,4,5].map(n=>`<button class="${ci[k]===n?"sel":""}" onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5" style="min-width:40px;width:40px;height:40px">${n}</button>`).join("")}</div>
+      </div>`).join("")}
+      <div class="mt16">${quickLogField("Oder beschreib es: 'gut geschlafen, leichter Kater, kein Stress'","A.statusParse")}</div>
+      <button class="btn volt mt16" onclick="A.stSave()">Status speichern</button>
+    </div></div>`;
+}
 function renderHome(){
   const p=S.profile;
   const tType=todayType(), tSession=TYPES[tType];
   A.start=()=>{ if(tType==="rest"){toast("Heute ist Erholung geplant — Plan im Training-Tab ändern");return;}
     S.tab="player";S.playerType=tType;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
   A.q=(t)=>{S.tab=t;save();render();};
-  A.st=(k,v)=>{ci[k]=v;renderHome();};
-  A.stSave=()=>{
-    if(!ci.sleep||!ci.energy||!ci.stress||!ci.sore){toast("Alle vier Karten antippen");return;}
-    const r=statusScore(ci.sleep,ci.energy,ci.stress,ci.sore);
-    S.checkin=r; S.checkinDate=todayKey();
-    S.readinessHistory=S.readinessHistory.filter(x=>x.date!==todayKey());
-    S.readinessHistory.push({date:todayKey(),score:r.score,tier:r.tier,sleep:ci.sleep,energy:ci.energy,stress:ci.stress,sore:ci.sore,sleepH:4+ci.sleep});
-    save();render();
+  A.openStatus=()=>openStatusSheet();
+  A.earlyDeload=()=>{S.currentWeek=4;save();render();toast("Deload aktiviert — Woche-4-Protokoll");};
+  A.openRecap=()=>{
+    const r=S.recapReady; if(!r)return;
+    modal(`<p class="ct">📅 Wochen-Recap</p>
+      <ul class="list mb8">
+        <li><span>Sätze gesamt</span><span class="metric">${r.sets}</span></li>
+        <li><span>Ernährungs-Adhärenz</span><span class="metric">${S.tier!=="free"?(r.da!=null?r.da+" %":"—"):"🔒 PERFORMANCE"}</span></li>
+        <li><span>Ø Status</span><span class="metric">${S.tier!=="free"?(r.avgR!=null?r.avgR+"/100":"—"):"🔒 PERFORMANCE"}</span></li>
+      </ul>
+      ${S.tier!=="free"&&r.ins?`<p class="sm t2" style="line-height:1.6">${r.ins}</p>`:""}
+      ${S.tier==="free"?`<button class="btn mt8" onclick="overlay.innerHTML='';A.showTeaser('recap')">Vollständigen Recap freischalten</button>`:""}`);
+    S.recapReady=null; save();
   };
-  A.weightAdd=()=>{
-    const v=parseFloat((document.getElementById("w-in")||{}).value);
-    if(!v||v<30||v>250){toast("Gewicht zwischen 30 und 250 kg");return;}
-    S.weightLog=S.weightLog.filter(w=>new Date(w.t).toISOString().slice(0,10)!==todayKey());
-    S.weightLog.push({t:Date.now(),v:Math.round(v*10)/10});
-    save();render();toast("Gewicht gespeichert");
-  };
-  const dp=dataProgress();
-  const log=nlogToday(), sum=log.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p,c:s.c+m.c,f:s.f+m.f}),{k:0,p:0,c:0,f:0});
-  const tg=p.tg.train;
-  const dow=(new Date().getDay()+6)%7;
-  const sch=schedule();
   const ins=buildInsights();
-  const wToday=S.weightLog.some(w=>new Date(w.t).toISOString().slice(0,10)===todayKey());
-  // Status-Streak: konsekutive Tage mit Check (echte Daten, keine Fake-Mechanik)
+  const dow=(new Date().getDay()+6)%7, sch=schedule();
   const streak=(()=>{let n=0;for(let d=0;;d++){
     const key=new Date(Date.now()-d*dayMs).toISOString().slice(0,10);
     if(S.readinessHistory.some(r=>r.date===key))n++; else break;
   } return n;})();
-  // Vorzeitiger Deload-Vorschlag bei Übertrainings-Signal (User entscheidet)
   const overtrain=ins.find(i=>i.risk&&/Übertrain/.test(i.t));
-  A.earlyDeload=()=>{S.currentWeek=4;save();render();toast("Deload aktiviert — Woche-4-Protokoll (−40 % Volumen, −10 % Last)");};
-  A.statusVoice=()=>speech((txt)=>{
-    const r=parseStatus(txt);
-    if(!Object.keys(r).length){toast("Nichts erkannt — z. B. 'gut geschlafen, leichter Kater, kein Stress'");return;}
-    ci={...ci,...r}; renderHome(); toast("Erkannt — prüfe die Karten und speichere");
-  },"st-mic");
-  // Wöchentlicher Recap beim Wochenwechsel (nur mit echten Vorwochen-Daten)
+  // Wochen-Recap: beim Wochenwechsel als Banner vormerken (kein Auto-Modal)
   const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);})();
   if(S.lastRecapWeek==null){S.lastRecapWeek=wkKey;save();}
   else if(S.lastRecapWeek!==wkKey){
-    S.lastRecapWeek=wkKey;save();
+    S.lastRecapWeek=wkKey;
     const from=new Date(wkKey).getTime()-7*dayMs,to=new Date(wkKey).getTime();
     const setsW=S.trainingHistory.filter(t=>{const x=new Date(t.date).getTime();return x>=from&&x<to;}).reduce((s,t)=>s+t.sets,0);
     const rW=S.readinessHistory.filter(x=>{const t=new Date(x.date).getTime();return t>=from&&t<to;});
-    const avgRW=rW.length?Math.round(rW.reduce((s,x)=>s+x.score,0)/rW.length):null;
+    const avgR=rW.length?Math.round(rW.reduce((s,x)=>s+x.score,0)/rW.length):null;
     const daW=dietAdherence(7);
-    if(setsW>0||avgRW!=null||daW){
-      setTimeout(()=>modal(`<p class="ct">📅 Wochen-Recap</p>
-        <ul class="list mb8">
-          <li><span>Sätze gesamt</span><span class="metric">${setsW}</span></li>
-          <li><span>Ernährungs-Adhärenz</span><span class="metric">${daW?daW.pct+" %":"—"}</span></li>
-          <li><span>Ø Status</span><span class="metric">${avgRW!=null?avgRW+"/100":"—"}</span></li>
-        </ul>
-        ${ins.length?`<p class="sm t2" style="line-height:1.6">${ins[0].t}</p>`:""}`),80);
-    }
+    if(setsW>0||avgR!=null||daW) S.recapReady={sets:setsW,avgR,da:daW?daW.pct:null,ins:ins.length?ins[0].t:null};
+    save();
   }
+  const log=nlogToday(), sum=log.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p}),{k:0,p:0});
+  const tg=p.tg.train;
+  const r=S.checkin;
+  const visIns=S.tier==="free"?ins.slice(0,1):ins.slice(0,S.tier==="elite"?8:5);
+
   root.innerHTML=`
-    <div class="card fade" style="background:linear-gradient(135deg,var(--s1),rgba(200,255,46,.05))">
-      <p class="xs t2" style="text-transform:uppercase">${dfLong.format(new Date())}</p>
-      <h2 style="font-size:20px">${greet()}, ${userName()} 👋</h2>
-      <p class="sm t2">${(p.tg.goals||[]).map(g=>GOAL_LABEL[g]).join(" + ")}${S.devMode?' · <span class="volt-txt">Dev</span>':""}${streak>=2?` · <span class="volt-txt">🔥 ${streak} Tage Status-Streak</span>`:""}</p>
-    </div>
-
-    ${overtrain&&S.currentWeek!==4?`<div class="warncard"><b>Deine Intensität läuft heiß:</b> ${overtrain.t}<br>
-      <button class="btn mt8" onclick="A.earlyDeload()">Vorzeitigen Deload starten</button></div>`:""}
-
-    <!-- Dein Status heute: 4 Karten, je 1 Tap (oder per Sprache) -->
-    <p class="ct">Dein Status heute ${infoBtn("status")}</p>
-    ${S.checkin?`<div class="card row" style="justify-content:flex-start;gap:18px">${ringSVG(S.checkin.score,S.checkin.tier,110)}
-      <div style="flex:1"><p class="sm">${S.checkin.score>=80?"Voll belastbar — geh heute an die obere Range.":S.checkin.score>=60?"Solide — trainiere wie geplant.":S.checkin.score>=40?"Gedrosselt — RPE 7 als Deckel.":"Erholung hat heute Vorrang."}</p></div></div>`
-    :`<div class="grid4 mb8">${STATUS_CARDS.map(([k,e,l])=>`
-        <div class="statuscard ${ci[k]?"done":""}">
-          <p style="font-size:19px">${e}</p><p class="xs t2 mt8">${l}</p>
-          <div class="statusdots">${[1,2,3,4,5].map(n=>`<button class="${ci[k]>=n?"on":""}" onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5"></button>`).join("")}</div>
-        </div>`).join("")}</div>
-      <div class="row mb8">
-        <button id="st-mic" class="btn" style="width:50px;min-width:50px" onclick="A.statusVoice()" aria-label="Status per Sprache">🎤</button>
-        <button class="btn volt" style="flex:1" onclick="A.stSave()">Status speichern</button>
+    <div class="heroband fade">
+      <h2>${greet()}, ${userName()}</h2>
+      <p class="sm" style="color:var(--t3)">${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}${streak>=2?` · 🔥 ${streak} Tage`:""}</p>
+      <div style="display:flex;justify-content:center;margin-top:var(--sp-5)">
+        ${r?`<button style="background:none;border:none;cursor:pointer" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,160)}</button>`
+          :`<button style="background:none;border:none;cursor:pointer" onclick="A.openStatus()" aria-label="Status-Check starten">
+              <div style="width:160px;height:160px;border-radius:50%;border:8px solid var(--s2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+                <span style="font-size:26px">＋</span><span class="xs t2">Status-Check<br>10 Sekunden</span>
+              </div></button>`}
       </div>
-      <p class="xs t2 mb16" style="text-align:center">Oder sprich: „Gut geschlafen, leichter Kater, kein Stress"</p>`}
-
-    <!-- Session-Karte -->
-    <div class="card" style="border-color:rgba(200,255,46,.3)">
-      <div class="row mb8"><p class="ct" style="margin:0">Heute</p><span class="badge ${tType==="rest"?"mute":"volt"}">${tSession.emoji} ${tSession.label}</span></div>
-      ${tType==="rest"?`<p class="sm t2">Erholungstag. Regeneration ist Teil des Plans.</p>`
-      :`<div class="sm t2 mb8" style="line-height:1.7">${tSession.ex.slice(0,3).map(e=>{
-          const r=recommend(e[0]);
-          return `${e[0]} · <span class="metric">${e[1]}×${e[2]}</span>${r?` · <span class="metric volt-txt">${fmtKg(r.w)}</span>`:""}`;
-        }).join("<br>")}</div>
-        <button class="btn volt" onclick="A.start()">▶ Session starten</button>`}
+      <p class="sm mt16" style="max-width:280px;margin-left:auto;margin-right:auto">${r?(r.score>=80?"Voll belastbar — geh heute an die obere Range.":r.score>=60?"Solide — trainiere wie geplant.":r.score>=40?"Gedrosselt — RPE 7 als Deckel.":"Erholung hat heute Vorrang."):"Tipp auf den Ring für deinen Tages-Check."}</p>
+      ${infoBtn("status")}
     </div>
 
-    <!-- Woche -->
-    <div class="weekstrip">${sch.map((t,i)=>`
-      <button class="wday ${i===dow?"today":""} ${t==="rest"?"rest":""}" onclick="A.q('train')" aria-label="${WD[i]}: ${TYPES[t].label}">
-        <div class="d">${WD[i]}</div><div class="e">${TYPES[t].emoji}</div><div class="l">${TYPES[t].label}</div>
-      </button>`).join("")}</div>
+    ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
+      <span class="sm">📅 Dein Wochen-Recap ist da</span><span class="t2">→</span></button>`:""}
 
-    <!-- KPI Quick Cards -->
-    <div class="hscroll mb16">
-      <button class="qcard" onclick="A.q('nutrition')"><p style="font-size:18px">🍽</p><p class="sm mt8" style="font-weight:600">Kalorien</p><p class="metric xs ${sum.k>0?"volt-txt":"t2"}">${nfi.format(sum.k)} / ${nfi.format(tg.kcal)}</p></button>
-      <button class="qcard" onclick="A.q('nutrition')"><p style="font-size:18px">🥩</p><p class="sm mt8" style="font-weight:600">Protein</p><p class="metric xs ${sum.p>0?"volt-txt":"t2"}">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</p></button>
-      <button class="qcard" onclick="A.q('analytics')"><p style="font-size:18px">📊</p><p class="sm mt8" style="font-weight:600">Analytics</p><p class="xs t2">${dp.training+dp.nutrition+dp.status>=12?"Bereit":"Sammelt Daten"}</p></button>
-      <div class="qcard" style="cursor:default"><p style="font-size:18px">⚖️</p><p class="sm mt8" style="font-weight:600">Gewicht</p>
-        ${wToday?`<p class="metric xs volt-txt">${fmtKg(S.weightLog[S.weightLog.length-1].v)} ✓</p>`
-        :`<div class="row mt8"><input type="number" id="w-in" placeholder="kg" inputmode="decimal" style="min-height:34px;padding:0 8px;font-size:13px">
-          <button class="btn volt" style="width:34px;min-width:34px;min-height:34px" onclick="A.weightAdd()" aria-label="Gewicht speichern">✓</button></div>`}</div>
-    </div>
+    ${overtrain&&S.currentWeek!==4?(S.tier!=="free"
+      ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">Vorzeitigen Deload starten</button></div>`
+      :`<div class="lockcard"><p class="sm">🔒 Übertrainings-Signal erkannt — adaptiver Deload-Vorschlag ist Teil von PERFORMANCE.</p>
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
+    :""}
 
-    <!-- Insight -->
-    ${ins.length?`<div class="card" style="border-color:rgba(200,255,46,.25)"><p class="ct">🧠 Insight</p>
-      <p class="sm" style="line-height:1.6">${ins[0].t}</p><p class="conf mt8">Konfidenz ${ins[0].conf} %</p></div>`
-    :`<div class="card"><p class="ct">🧠 Insight</p><p class="sm t2">Noch nicht genug Daten. Die Engine meldet sich, sobald Muster erkennbar sind — keine erfundenen Zahlen.</p></div>`}`;
+    ${renderSection("Heute",
+      tType==="rest"
+      ?`<div class="card"><p class="sm t2">🟢 Erholungstag. Regeneration ist Teil des Plans.</p></div>`
+      :`<div class="card"><div class="row mb8">
+          <div><p class="display-m">${tSession.emoji} ${tSession.label}-Tag</p>
+          <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${p.a.len||60} Min</p></div></div>
+          <button class="btn volt mt8" onclick="A.start()">▶ Session starten</button></div>`)}
+
+    ${renderSection("Diese Woche",
+      `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('train')" aria-label="Zur Trainingswoche">
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
+          ${sch.map((t,i)=>`<div>
+            <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
+            <p style="font-size:16px;margin:4px 0">${t==="rest"?"·":TYPES[t].emoji}</p>
+            <p style="font-size:8.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
+          </div>`).join("")}
+        </div></button>`)}
+
+    ${renderSection("Ernährung heute",
+      `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="A.q('nutrition')" aria-label="Zur Ernährung">
+        <div class="row mb8"><span class="metric" style="font-size:18px">${nfi.format(sum.k)} / ${nfi.format(tg.kcal)} kcal</span>
+          <span class="metric xs t2">${Math.round(Math.min(100,sum.k/tg.kcal*100))} %</span></div>
+        <div class="progress" style="height:8px;margin-bottom:10px"><div style="width:${Math.min(100,sum.k/tg.kcal*100)}%"></div></div>
+        <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</span> Protein</p>
+      </button>`)}
+
+    ${renderSection("Analytics",
+      `<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('analytics')" aria-label="Zu Analytics">
+        <span class="sm">${visIns.length?`🧠 ${visIns.length===1?"1 neuer Insight":visIns.length+" Insights"} verfügbar${S.tier==="free"&&ins.length>1?` · 🔒 ${ins.length-1} weitere in PERFORMANCE`:""}`:"📊 Sammelt Daten — keine erfundenen Werte"}</span>
+        <span class="t2">→</span></button>`)}
+  `;
 }
 
 // =====================================================================
 // TRAINING (User owns schedule + Voice-Log)
 // =====================================================================
 let voicePreview=null;
-function renderTrain(){
+function openScheduleSheet(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
-  A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; save(); renderTrain(); };
-  A.applySuggestion=()=>{ S.schedule=(S.scheduleSuggestion||suggestSchedule(S.profile.a.days)).slice(); save(); renderTrain(); toast("KI-Vorschlag übernommen — weiterhin frei anpassbar"); };
-  A.week=(w)=>{S.currentWeek=w;save();renderTrain();};
-  A.startType=(t)=>{S.tab="player";S.playerType=t;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
-  A.exInfo=(name)=>{
-    const inf=EXINFO[name]||{prim:"—",sek:"—",cues:[]};
-    const warn=injuryWarn(name);
-    modal(`<p class="ct">${name}</p>
-      <ul class="list mb8"><li><span>Primär</span><span>${inf.prim}</span></li><li><span>Sekundär</span><span>${inf.sek}</span></li></ul>
-      ${warn?`<div class="warncard"><b>⚠ ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
-      <p class="ct" style="margin-top:10px">Technik</p>
-      <p class="sm t2" style="line-height:1.8">${inf.cues.map(c=>"· "+c).join("<br>")}</p>`);
-  };
-  A.voiceLog=()=>speech((txt)=>{ const el=document.getElementById("vt-in"); if(el)el.value=txt; A.parseVoice(); },"vt-mic");
-  A.parseVoice=()=>{
-    const el=document.getElementById("vt-in");
-    if(!el||!el.value.trim())return;
-    voicePreview=parseWorkout(el.value);
-    if(!voicePreview)toast("Übung nicht erkannt — z. B. 'Bankdrücken 100 kg 3x8'");
-    renderTrain();
-  };
-  A.voiceApprove=()=>{ if(!voicePreview)return; logParsedWorkout(voicePreview); toast(`✓ ${voicePreview.name}: ${voicePreview.sets}×${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}`); voicePreview=null; renderTrain(); };
-  A.voiceCancel=()=>{voicePreview=null;renderTrain();};
-  const isDeload=S.currentWeek===4;
-  const hasSchedule=!!S.schedule;
-  root.innerHTML=`
-    ${!hasSchedule&&S.scheduleSuggestion?`<div class="warncard"><b>Dein Plan, deine Woche:</b> Lege fest, an welchen Tagen du was trainierst. Die KI macht nur Vorschläge — sie überschreibt nie deine Entscheidung.
-      <button class="btn mt8" onclick="A.applySuggestion()">KI-Vorschlag übernehmen (${S.profile.a.days} Tage)</button></div>`:""}
-
-    <!-- Voice-First Logging -->
-    <div class="card" style="border-color:rgba(200,255,46,.3)">
-      <p class="ct">🎙 Schnell loggen</p>
-      <div class="row mb8">
-        <button id="vt-mic" class="btn" style="width:50px;min-width:50px" onclick="A.voiceLog()" aria-label="Spracheingabe">🎤</button>
-        <input type="text" id="vt-in" placeholder="'Bankdrücken 100 kg 3x8'" style="flex:1" onkeydown="if(event.key==='Enter')A.parseVoice()">
-        <button class="btn volt" style="width:50px;min-width:50px" onclick="A.parseVoice()" aria-label="Parsen">➤</button></div>
-      ${voicePreview?`<div class="warncard" style="border-color:rgba(200,255,46,.4);background:rgba(200,255,46,.06)">
-        <p class="sm"><b style="color:var(--volt)">${voicePreview.name}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
-        <p class="conf mt8">Konfidenz ${Math.round(voicePreview.conf*100)} %</p>
-        <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
-        <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
-    </div>
-
-    <!-- Wochenplan-Editor -->
-    <div class="card"><p class="ct">Wochenplan ${hasSchedule?"":"· noch nicht festgelegt"}</p>
+  A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; save(); openScheduleSheet(); };
+  A.applySuggestion=()=>{ S.schedule=(S.scheduleSuggestion||suggestSchedule(S.profile.a.days)).slice(); save(); openScheduleSheet(); toast("KI-Vorschlag übernommen — frei anpassbar"); };
+  A.week=(w)=>{S.currentWeek=w;save();openScheduleSheet();};
+  A.sheetDone=()=>{overlay.innerHTML="";render();};
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.sheetDone()">
+    <div class="sheet fade">
+      <p class="display-m mb16">Wochenplan bearbeiten</p>
+      ${!S.schedule&&S.scheduleSuggestion?`<button class="btn mb16" onclick="A.applySuggestion()">⚡ KI-Vorschlag übernehmen (${S.profile.a.days} Tage)</button>`:""}
       ${WD.map((d,i)=>`<div class="row mb8" style="align-items:flex-start">
         <span class="sm ${i===dow?"volt-txt":"t2"}" style="width:30px;font-weight:${i===dow?"700":"400"}">${d}</span>
         <div class="chips" style="flex:1">${TYPE_KEYS.map(t=>`
           <button class="chip ${sch[i]===t?"sel":""}" style="padding:6px 10px;min-height:34px;font-size:11.5px" onclick="A.assign(${i},'${t}')">${TYPES[t].emoji} ${TYPES[t].label}</button>`).join("")}</div>
       </div>`).join("")}
-    </div>
+      <p class="label mt16">Mesozyklus</p>
+      <div class="grid4 mb8">${[1,2,3,4].map(w=>`
+        <button class="cell ${S.currentWeek===w?"sel":""} ${w===4?"dash":""}" onclick="A.week(${w})" aria-label="Woche ${w}">
+          ${w}${w===4?'<div class="xs" style="color:var(--info);font-family:var(--font-display)">Deload</div>':""}</button>`).join("")}</div>
+      <p class="xs t2">Woche 4 = Deload: −40 % Volumen, −10 % Last (Israetel et al., 2017).</p>
+      <button class="btn volt mt16" onclick="A.sheetDone()">Fertig</button>
+    </div></div>`;
+}
+function exDetailModal(name){
+  const inf=EXINFO[name]||{prim:"—",sek:"—",cues:[]};
+  const warn=injuryWarn(name);
+  const why=recWhy(name), rec=recommend(name), best=bestE1(name);
+  modal(`<p class="display-m mb8">${name}</p>
+    ${rec?`<p class="metric sm volt-txt mb8">Empfohlen: ${fmtKg(rec.w)} × ${rec.reps}</p>`:""}
+    ${why?`<p class="sm t2 mb8" style="line-height:1.6">${why}</p>`:'<p class="sm t2 mb8">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>'}
+    ${best>0?`<p class="xs t2 mb8">Rekord: <span class="metric">${fmtKg(best)}</span> e1RM</p>`:""}
+    ${warn?`<div class="warncard"><b>⚠ ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
+    <p class="label" style="margin-top:14px">Technik</p>
+    <p class="sm t2" style="line-height:1.8">${inf.cues.map(c=>"· "+c).join("<br>")}</p>
+    <ul class="list mt8"><li><span>Primär</span><span>${inf.prim}</span></li><li><span>Sekundär</span><span>${inf.sek}</span></li></ul>`);
+}
+// Global: Player & alle Screens nutzen dieselbe Übungs-Detailansicht.
+A.exInfo=(n)=>exDetailModal(n);
+A.exDetail=(n)=>exDetailModal(n);
+function renderTrain(){
+  const sch=schedule(), dow=(new Date().getDay()+6)%7;
+  const isDeload=S.currentWeek===4;
+  A.editSchedule=()=>openScheduleSheet();
+  A.startType=(t)=>{S.tab="player";S.playerType=t;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
+  A.trainParse=()=>{
+    const el=document.getElementById("quicklog-in");
+    if(!el||!el.value.trim())return;
+    voicePreview=parseWorkout(el.value);
+    if(!voicePreview){toast("Nicht erkannt — z. B. 'Bankdrücken 90 kg 3x8'");return;}
+    renderTrain();
+  };
+  A.voiceApprove=()=>{ if(!voicePreview)return; logParsedWorkout(voicePreview); toast(`✓ ${voicePreview.name}: ${voicePreview.sets}×${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}`); voicePreview=null; renderTrain(); };
+  A.voiceCancel=()=>{voicePreview=null;renderTrain();};
+  // Fokus-Session: heute, sonst nächster Trainingstag
+  const focusType=(sch[dow]!=="rest")?sch[dow]:nextTrainingType();
+  const others=[...new Set(sch.filter(t=>t!=="rest"&&t!==focusType))];
+  const exLine=(name,sets,reps)=>{
+    const r=recommend(name), warn=injuryWarn(name);
+    return `<button class="exrow" onclick="A.exDetail('${name}')" aria-label="Details zu ${name}">
+      <span class="exn">${warn?'<span style="color:var(--warn)">⚠</span>':""}${name}</span>
+      <span class="metric xs t2" style="flex-shrink:0">${isDeload?Math.max(1,Math.round(sets*.6)):sets}×${reps}${r?` · ${fmtKg(r.w)}`:""}</span>
+    </button>`;
+  };
+  root.innerHTML=`
+    ${renderSection("Deine Woche",
+      `<div class="card">
+        <div class="row mb12"><span class="xs t2">${isDeload?"Deload-Woche aktiv":"Woche "+S.currentWeek+" von 4"}</span>
+          <button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">Bearbeiten ✎</button></div>
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
+          ${sch.map((t,i)=>`<div>
+            <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
+            <p style="font-size:16px;margin:4px 0">${t==="rest"?"·":TYPES[t].emoji}</p>
+            <p style="font-size:8.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
+          </div>`).join("")}
+        </div>
+      </div>`)}
 
-    <!-- Wochenzyklus -->
-    <div class="grid4 mb8">${[1,2,3,4].map(w=>`
-      <button class="cell ${S.currentWeek===w?"sel":""} ${w===4?"dash":""}" onclick="A.week(${w})" aria-label="Woche ${w}">
-        ${w}${w===4?'<div class="xs" style="color:var(--info);font-family:Inter">Deload</div>':""}</button>`).join("")}</div>
-    ${isDeload?`<div class="warncard mb16"><b>Deload:</b> Volumen −40 %, Last −10 % — geplante Entlastung (Israetel et al., 2017).</div>`:""}
+    ${focusType?renderSection(sch[dow]!=="rest"?"Heutige Session":"Nächste Session",
+      `<div class="card">
+        <p class="display-m">${TYPES[focusType].emoji} ${TYPES[focusType].label}-Tag</p>
+        <p class="sm t2 mt8 mb8">${TYPES[focusType].ex.length} Übungen · ≈ ${S.profile.a.len||60} Min · RPE-Ziel 8</p>
+        ${TYPES[focusType].ex.map(e=>exLine(e[0],e[1],e[2])).join("")}
+        <button class="btn volt mt16" onclick="A.startType('${focusType}')">▶ Session starten</button>
+        <div class="mt16">${quickLogField("Schnell loggen: 'Bankdrücken 90 kg 3x8'","A.trainParse")}</div>
+        ${voicePreview?`<div class="warncard mt8" style="border-color:rgba(200,255,46,.4);background:var(--accent-soft)">
+          <p class="sm"><b style="color:var(--volt)">${voicePreview.name}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
+          <p class="conf mt8">Konfidenz ${Math.round(voicePreview.conf*100)} %</p>
+          <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
+          <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
+      </div>`)
+    :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Noch keine Trainingstage festgelegt.</p>
+      <button class="btn volt" onclick="A.editSchedule()">Wochenplan festlegen</button></div>`)}
 
-    <!-- Sessions -->
-    ${[...new Set(sch.filter(t=>t!=="rest"))].map(t=>{
-      const s=TYPES[t];
-      return `<div class="card">
-        <div class="row mb8"><p class="ct" style="margin:0">${s.emoji} ${s.label}</p>
-          <span class="metric xs t2">${s.ex.length} Übungen</span></div>
-        ${s.ex.map(e=>{
-          const r=recommend(e[0]), best=bestE1(e[0]), warn=injuryWarn(e[0]);
-          return `<div style="border-top:1px solid var(--border);padding:9px 0">
-            <div class="row mb4"><p class="sm" style="font-weight:600">${e[0]}
-              ${warn?`<button class="iconbtn" style="min-width:30px;min-height:24px;font-size:13px;color:var(--warn)" onclick="A.exInfo('${e[0]}')" aria-label="Warnung ${warn}">⚠</button>`:""}
-              <button class="iconbtn" style="min-width:32px;min-height:24px;font-size:13px" onclick="A.exInfo('${e[0]}')" aria-label="Info">ⓘ</button></p>
-              <span class="metric xs t2">${isDeload?Math.max(1,Math.round(e[1]*.6)):e[1]} × ${e[2]}</span></div>
-            ${r?`<p class="metric xs volt-txt">Empfohlen: ${fmtKg(r.w)} × ${r.reps}
-              <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${e[0]}')" aria-label="Warum?">ⓘ</button></p>`
-            :`<p class="xs t2">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>`}
-            ${best>0?`<p class="xs t2">Rekord: <span class="metric">${fmtKg(best)}</span> e1RM</p>`:""}
-          </div>`;}).join("")}
-        <button class="btn ${t===todayType()?"volt":""} mt8" onclick="A.startType('${t}')">Starten</button>
-      </div>`;}).join("")||'<div class="card"><p class="sm t2">Noch keine Trainingstage im Wochenplan. Weise oben Tage zu.</p></div>'}`;
+    ${others.length?renderSection("Weitere Sessions diese Woche",
+      others.map(t=>`<details class="acc"><summary>
+          <span>${TYPES[t].emoji} ${TYPES[t].label}-Tag · ${sch.map((x,i)=>x===t?WD[i]:null).filter(Boolean).join(", ")}</span><span class="t2">▾</span></summary>
+        <div class="accbody">
+          ${TYPES[t].ex.map(e=>exLine(e[0],e[1],e[2])).join("")}
+          <button class="btn mt8" onclick="A.startType('${t}')">Starten</button>
+        </div></details>`).join(""))
+    :""}
+  `;
 }
 
 // =====================================================================
@@ -1557,6 +1750,21 @@ function gateCard(title,need,have,unit){
 }
 function renderAnalytics(){
   const p=S.profile, a=p.a;
+  // Ganzseitiger Empty-State bei NULL Daten — unmissverständlich, nichts erfunden.
+  const hasAnyData=S.trainingHistory.length>0
+    ||Object.values(S.nutritionLog).some(l=>(l.meals||[]).length>0)
+    ||S.readinessHistory.length>0
+    ||Object.values(S.liftLog).some(x=>x.length>0);
+  if(!hasAnyData){
+    A.q=(t)=>{S.tab=t;save();render();};
+    root.innerHTML=`<div class="center" style="min-height:70dvh">
+      <p style="font-size:40px">📊</p>
+      <p class="display-m">Noch keine Daten vorhanden</p>
+      <p class="sm t2" style="max-width:290px;line-height:1.7">Analytics entstehen aus deinen echten Trainings- und Ernährungsdaten. Hier wird <b style="color:var(--t1)">nichts erfunden</b>.<br><br>Sobald du dein erstes Training loggst, erscheinen hier deine ersten Auswertungen.</p>
+      <button class="btn volt" style="max-width:280px" onclick="A.q('train')">Erstes Training starten →</button>
+    </div>`;
+    return;
+  }
   const dp=dataProgress();
   const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length>=3);
   const allSets=Object.values(S.liftLog).flat();
@@ -1577,15 +1785,20 @@ function renderAnalytics(){
       <div><p class="ct" style="margin-bottom:4px">Status</p><p class="xs t2">Aktueller Erholungszustand.</p></div></div>`
     :gateCard("Status","1","0","Check-ins")}`;
 
-  // Kraft-Trajectory
+  // Kraft-Trajectory — Free: 1 Übung, Pro/Elite: alle (Top 2 mobil)
   if(lifts.length){
-    const top=lifts.sort((x,y)=>e1Series(y).length-e1Series(x).length).slice(0,2);
+    const maxLifts=S.tier==="free"?1:2;
+    const sorted=lifts.sort((x,y)=>e1Series(y).length-e1Series(x).length);
+    const top=sorted.slice(0,maxLifts);
+    const lockedLifts=S.tier==="free"?sorted.length-top.length:0;
     html+=`<div class="card"><p class="ct">Kraft-Trajectory ${infoBtn("trajectory")}</p>${top.map(n=>{
       const s=e1Series(n), fc=forecast12w(s);
       return `<p class="sm mb8" style="font-weight:500">${n}</p>${lineChart(s,fc)}
         ${fc?`<p class="sm volt-txt metric mt8">Prognose: ${fmtKg(fc[2].v)} bis ${fmtD(new Date(s[s.length-1].t+84*dayMs))} <span class="conf">· Konfidenz ${Math.min(85,40+s.length*4)} %</span></p>`:""}
         <p class="xs t2 mt8 mb16">Konfidenz steigt mit jeder Session: aktuell ${s.length} Datenpunkte — ab 12 wird die Prognose deutlich stabiler.</p>`;
-    }).join("")}</div>`;
+    }).join("")}
+    ${lockedLifts>0?`<div class="lockcard"><p class="sm">🔒 ${lockedLifts} weitere ${lockedLifts===1?"Übung":"Übungen"} mit Prognose (z. B. ${sorted[1]}) — Teil von PERFORMANCE.</p>
+      <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('trajectory')">Freischalten</button></div>`:""}</div>`;
   } else html+=gateCard("Kraft-Trajectory","3","0","Sessions je Übung");
 
   // Volumen
@@ -1688,8 +1901,12 @@ function renderAnalytics(){
           <span style="color:var(--t3)">●</span> Fett ${nfi.format(macroSum.f*9)} kcal</div></div></div>`;
   } else html+=gateCard("Ernährungs-Analytics","3",nutriDays.length,"Tage geloggt");
 
-  // Mikronährstoff-Hinweise: NUR aus tatsächlich geloggten Top-10-Lebensmitteln
-  if(nutriDays.length>=3){
+  // Mikronährstoff-Hinweise: NUR aus tatsächlich geloggten Top-10-Lebensmitteln (PERFORMANCE)
+  if(S.tier==="free"){
+    html+=`<div class="card"><p class="ct">Mikronährstoff-Hinweise</p>
+      <div class="lockcard" style="margin-top:0"><p class="sm">🔒 Vitamin-D-, B12-, Eisen- und Magnesium-Schätzung aus deinen Logs — Teil von PERFORMANCE.</p>
+      <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('micro')">Freischalten</button></div></div>`;
+  } else if(nutriDays.length>=3){
     const sums=[0,0,0,0]; let hits=0;
     for(const [d,l] of Object.entries(S.nutritionLog)){
       if(Date.now()-new Date(d).getTime()>=7*dayMs)continue;
@@ -1714,9 +1931,15 @@ function renderAnalytics(){
     }
   } else html+=gateCard("Mikronährstoff-Hinweise","3",nutriDays.length,"Tage geloggt");
 
-  // Insights
-  html+=ins.length?`<div class="card" style="border-color:rgba(200,255,46,.3)"><p class="ct">🧠 Engine-Insights</p>
-    ${ins.map(i=>`<div class="${i.risk?"warncard":"msg ai"}" style="max-width:100%;margin-bottom:8px">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")}</div>`
+  // Insights — Tier-Slicing: Free 1 / Pro 5 / Elite 8, Lock-Card nennt Kategorien
+  const insCap=S.tier==="free"?1:(S.tier==="elite"?8:5);
+  const visIns=ins.slice(0,insCap);
+  const hiddenIns=ins.slice(insCap);
+  const hiddenCats=[...new Set(hiddenIns.map(i=>/%\/Monat/.test(i.t)?"Adaptation Velocity":/Adhärenz/.test(i.t)?"Ernährungs-Adhärenz":/(MEV|MRV)/.test(i.t)?"Volumen-Toleranz":/Übertrain/.test(i.t)?"Übertrainings-Risiko":"Trend-Analyse"))];
+  html+=visIns.length?`<div class="card"><p class="ct">🧠 Engine-Insights</p>
+    ${visIns.map(i=>`<div class="${i.risk?"warncard":"msg ai"}" style="max-width:100%;margin-bottom:8px">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")}
+    ${hiddenIns.length?`<div class="lockcard"><p class="sm">🔒 ${hiddenIns.length} weitere ${hiddenIns.length===1?"Insight":"Insights"} verfügbar — ${hiddenCats.slice(0,3).join(", ")}.</p>
+      <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">${TIER_LABEL[S.tier==="free"?"pro":"elite"]} freischalten</button></div>`:""}</div>`
   :`<div class="card"><p class="ct">🧠 Engine-Insights</p><p class="sm t2">Die Engine erklärt deinen Fortschritt, sobald Muster statistisch belastbar sind — keine erfundenen Zahlen.</p></div>`;
 
   root.innerHTML=html;
@@ -1765,9 +1988,8 @@ function renderNutrition(){
     pendingManual=null; save(); renderNutrition();
   };
   A.manualCancel=()=>{pendingManual=null;renderNutrition();};
-  A.voiceFood=()=>speech((txt)=>{ const el=document.getElementById("vf-in"); if(el)el.value=txt; A.parseFood(); },"vf-mic");
   A.parseFood=()=>{
-    const el=document.getElementById("vf-in");
+    const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
     const items=parseNutrition(el.value);
     if(!items.some(i=>i.food)){toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");return;}
@@ -1798,14 +2020,11 @@ function renderNutrition(){
       <div class="grid4">${miniRing("Kalorien",sum.k,tg.kcal,"kcal")}${miniRing("Protein",sum.p,tg.p,"g")}${miniRing("Carbs",sum.c,tg.c,"g")}${miniRing("Fett",sum.f,tg.f,"g")}</div>
       <p class="xs t2 mt8" style="text-align:center">Ziele aus deinem Profil ${infoBtn("kcalTarget")} ${infoBtn("protein")}</p></div>
 
-    <!-- Voice-First Logging -->
-    <div class="card" style="border-color:rgba(200,255,46,.3)">
-      <p class="ct">🎙 Sprich oder fotografiere deine Mahlzeit</p>
-      <div class="row mb8">
-        <button id="vf-mic" class="btn" style="width:50px;min-width:50px" onclick="A.voiceFood()" aria-label="Spracheingabe">🎤</button>
-        <input type="text" id="vf-in" placeholder="'500 g Hähnchen und 300 g Reis'" style="flex:1" onkeydown="if(event.key==='Enter')A.parseFood()">
-        <button class="btn" style="width:50px;min-width:50px" onclick="document.getElementById('vf-file').click()" aria-label="Foto aufnehmen">📷</button>
-        <button class="btn volt" style="width:50px;min-width:50px" onclick="A.parseFood()" aria-label="Parsen">➤</button></div>
+    <!-- Quick-Log: EIN Feld (Text + Tastatur-Diktat) + Foto -->
+    <div class="card">
+      <p class="ct">Mahlzeit loggen</p>
+      ${quickLogField("'500 g Hähnchen und 300 g Reis, 2 Tomaten'","A.parseFood")}
+      <button class="btn mt8" onclick="document.getElementById('vf-file').click()">📷 Foto aufnehmen (Demo)</button>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?`<div class="warncard" style="border-color:rgba(200,255,46,.4);background:rgba(200,255,46,.06)">
         ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
@@ -1860,12 +2079,39 @@ function renderNutrition(){
 // =====================================================================
 // PROFIL
 // =====================================================================
+// =====================================================================
+// PRICING — Good-Better-Better, Pro als Anker (Decoy-Reihenfolge)
+// =====================================================================
+function renderPricing(){
+  const feats={
+    free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Voice-/Foto-Logging unlimitiert","Status-Check + Streak","1 Engine-Insight pro Tag","Kraft-Trajectory (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
+    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Velocity, Adhärenz, Volumen-Toleranz)","Trajectory + 12-Wochen-Prognose für alle Übungen","Mikronährstoff-Hinweise","Adaptiver Deload-Vorschlag","Vollständiger Wochen-Recap"],
+    elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Insights inkl. Kombi-Analysen","Early Access auf neue Engine-Module"],
+  };
+  const card=(t,featured)=>`<div class="tier-card ${featured?"featured":""}">
+    ${featured?'<span class="badge volt" style="position:absolute;top:-11px;left:20px">Empfohlen</span>':""}
+    <div class="row mb8"><p class="display-m">${TIER_LABEL[t]}</p>
+      <p class="metric" style="font-size:20px">${TIER_PRICE[t]}<span class="xs t2">${t!=="free"?" / Monat":""}</span></p></div>
+    ${S.tier===t?'<p class="xs volt-txt mb8">✓ Dein aktueller Plan</p>':""}
+    ${feats[t].map(f=>`<div class="tier-feat"><span>${f.startsWith("Alles aus")?"":"✓"}</span><span style="${f.startsWith("Alles aus")?"color:var(--t2);font-weight:600":""}">${f}</span></div>`).join("")}
+    ${S.tier!==t?`<button class="btn ${featured?"volt":""} mt16" onclick="${TIER_RANK[t]>TIER_RANK[S.tier]?`A.upgrade('${t}')`:`A.confirmUpgrade('${t}')`}">${TIER_RANK[t]>TIER_RANK[S.tier]?"Upgrade":"Zurückstufen"}</button>`:""}
+  </div>`;
+  root.innerHTML=`
+    <div class="heroband"><h2>Wähle deinen Plan</h2>
+      <p class="sm t2" style="max-width:300px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Upgrades schalten die Tiefe der Adaptation Engine frei.</p></div>
+    ${card("free",false)}
+    ${card("pro",true)}
+    ${card("elite",false)}
+    <p class="xs t2" style="text-align:center;line-height:1.7">Demo: kein echtes Zahlungssystem. Preise sind Platzhalter und werden vor Launch per A/B-Test validiert.<br>Jederzeit kündbar · Downgrade genauso einfach wie Upgrade · Datenexport in jedem Plan.</p>`;
+}
+
 let EP=null;
 function renderProfile(){
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
   A.logout=()=>{S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
   A.editProfile=()=>{EP={weight:p.a.weight,goals:[...(p.tg.goals||[])]};A.epRender();};
   A.epGoal=(g)=>{
+    if(S.tier==="free"&&EP.goals.length>=1&&!EP.goals.includes(g)){overlay.innerHTML="";showUpgradeTeaser("multi_goal");return;}
     EP.goals=EP.goals.includes(g)?EP.goals.filter(x=>x!==g):(EP.goals.length<3?[...EP.goals,g]:EP.goals);
     A.epRender();
   };
@@ -1902,6 +2148,11 @@ function renderProfile(){
       URL.revokeObjectURL(url);
     }catch{ toast("Export fehlgeschlagen"); }
   };
+  A.saveSnapshot=()=>{
+    if(S.tier!=="elite"){showUpgradeTeaser("snapshots");return;}
+    S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
+    save(); render(); toast("✓ Snapshot gespeichert");
+  };
   A.wipe=()=>{
     modal(`<p class="ct">Alle Daten löschen?</p><p class="sm t2 mb8">Unwiderruflich — Konto, Profil, gesamte Historie.</p>
       <button class="btn" style="border-color:rgba(255,77,77,.4);color:var(--danger)" onclick="A.wipeConfirm()">Endgültig löschen</button>`);
@@ -1917,8 +2168,16 @@ function renderProfile(){
   root.innerHTML=`
     <div class="card row" style="justify-content:flex-start;gap:14px">
       <div class="avatar" style="width:52px;height:52px;font-size:20px">${u.username.slice(0,1).toUpperCase()}</div>
-      <div><p style="font-weight:600">${u.username} ${S.devMode?'<span class="badge volt" style="margin-left:6px">Dev</span>':""}</p>
+      <div><p style="font-weight:600">${u.username}
+        <span class="badge ${S.tier==="free"?"mute":"volt"}" style="margin-left:6px">${TIER_LABEL[S.tier]}</span>
+        ${S.devMode?'<span class="badge info" style="margin-left:4px">Dev</span>':""}</p>
       <p class="xs t2">${u.email}</p></div></div>
+
+    <div class="card"><div class="row">
+      <div><p class="ct" style="margin-bottom:4px">Dein Plan</p>
+        <p class="sm">${TIER_LABEL[S.tier]} · <span class="metric">${TIER_PRICE[S.tier]}</span>${S.tier!=="free"?'<span class="xs t2"> / Monat (Demo)</span>':""}</p></div>
+      <button class="btn ${S.tier==="free"?"volt":""}" style="width:auto;padding:0 18px" onclick="${S.tier==="free"?"A.tab('pricing')":"A.manageTier()"}">${S.tier==="free"?"Plan upgraden":"Plan verwalten"}</button>
+    </div></div>
     ${p?`<div class="card"><p class="ct">Ziele</p>
       <div class="chips">${(p.tg.goals||[]).map((g,i)=>`<span class="badge ${i===0?"volt":"mute"}">${GOAL_LABEL[g]}</span>`).join("")}</div>
       <div class="grid2 mt16">
@@ -1926,7 +2185,20 @@ function renderProfile(){
         <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
       </div>
       <button class="btn mt16" onclick="A.editProfile()">Profil bearbeiten</button></div>`:""}
+    <div class="card"><p class="ct">Profil-Snapshots</p>
+      ${S.tier==="elite"?`
+        ${S.snapshots.length?`<ul class="list mb8">${S.snapshots.slice(-4).map(sn=>`<li>
+          <span class="xs t2">${fmtD(new Date(sn.date))}</span>
+          <span class="metric xs">${fmtKg(sn.weight)} · ${nfi.format(sn.kcal)} kcal · ${sn.goals.map(g=>GOAL_LABEL[g]).join("+")}</span></li>`).join("")}</ul>
+          ${p&&S.snapshots.length?`<p class="xs t2 mb8">Δ seit ${fmtD(new Date(S.snapshots[0].date))}: <span class="metric ${p.a.weight-S.snapshots[0].weight>=0?"volt-txt":"t2"}">${p.a.weight-S.snapshots[0].weight>=0?"+":""}${nf.format(Math.round((p.a.weight-S.snapshots[0].weight)*10)/10)} kg</span></p>`:""}`
+        :'<p class="sm t2 mb8">Noch keine Snapshots — speichere deinen aktuellen Stand für spätere Vergleiche.</p>'}
+        <button class="btn" onclick="A.saveSnapshot()">Snapshot jetzt speichern</button>`
+      :`<div class="lockcard" style="margin-top:0"><p class="sm">🔒 Historische Profil-Stände zum Vorher/Nachher-Vergleich — Teil von ELITE.</p>
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('snapshots')">Mehr erfahren</button></div>`}
+    </div>
+
     <div class="card"><p class="ct">Daten</p>
+      <!-- DSGVO: Export & Löschung sind in JEDEM Tier verfügbar — niemals gated. -->
       <button class="btn mb8" onclick="A.exportData()">Daten exportieren (JSON)</button>
       <button class="btn" style="border-color:rgba(255,77,77,.35);color:var(--danger)" onclick="A.wipe()">Konto & Daten löschen</button>
       <p class="xs t2 mt8">DSGVO Art. 17 / 20 · Alle Daten liegen lokal auf diesem Gerät.</p></div>
