@@ -1342,7 +1342,17 @@ function lev(a,b){
   }
   return prev[n];
 }
-/* Liefert {f, dist}: dist 0 = exakter Treffer, >0 = Tippfehler-Korrektur. */
+/* Phonetische Normalisierung (deutsch): gleich klingende Schreibweisen werden
+   identisch — "skier"→"skir" und "skyr"→"skir" treffen sich so trotz
+   2 Buchstaben Unterschied. */
+function phon(s){
+  return s.toLowerCase()
+    .replace(/ß/g,"ss").replace(/ie/g,"i").replace(/y/g,"i")
+    .replace(/ph/g,"f").replace(/th/g,"t").replace(/ck/g,"k")
+    .replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u")
+    .replace(/(.)\1+/g,"$1");
+}
+/* Liefert {f, dist}: dist 0 = exakter Treffer, >0 = Tippfehler-/Hörfehler-Korrektur. */
 function matchFood(segment){
   const tokens=segment.toLowerCase().replace(/[^a-zäöüß0-9\s]/g," ").split(/\s+/)
     .filter(t=>t.length>=3&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute"].includes(t));
@@ -1353,9 +1363,16 @@ function matchFood(segment){
       let dist=null;
       if(t===w||t.startsWith(w)||w.startsWith(t))dist=0;
       else{
-        const tol=Math.max(1,Math.floor(t.length/4));
-        // Volles Wort UND Wort-Präfix vergleichen: "hänchen" trifft so auch "hähnchenbrust"
-        const d=Math.min(lev(t,w),lev(t,w.slice(0,Math.min(w.length,t.length+tol))));
+        const tol=Math.max(1,Math.ceil(t.length/4));
+        const pt=phon(t), pw=phon(w);
+        // Wörtlich + phonetisch, jeweils volles Wort, Wort-Präfix UND Wort-Suffix:
+        // "hänchen" trifft "hähnchenbrust", "qark" trifft "magerquark".
+        const cut=Math.min(w.length,t.length+tol), pcut=Math.min(pw.length,pt.length+tol);
+        const d=Math.min(
+          lev(t,w),
+          lev(t,w.slice(0,cut)), lev(t,w.slice(-cut)),
+          lev(pt,pw)+0.5,
+          lev(pt,pw.slice(0,pcut))+0.5, lev(pt,pw.slice(-pcut))+0.5);
         if(d<=tol)dist=d;
       }
       if(dist!=null&&(!best||dist<best.dist||(dist===best.dist&&f[0].length<best.f[0].length)))
@@ -2740,7 +2757,9 @@ function renderNutrition(){
     const q=el.value.trim().toLowerCase(), ac=document.getElementById("food-autocomplete");
     if(!ac)return;
     if(q.length<2){ac.style.display="none";ac.innerHTML="";return;}
-    const matches=FOODS.filter(f=>f[0].toLowerCase().includes(q)).slice(0,5);
+    let matches=FOODS.filter(f=>f[0].toLowerCase().includes(q)).slice(0,5);
+    // Kein wörtlicher Treffer? Tippfehler-/phonetische Erkennung als Fallback ("skier" → Skyr).
+    if(!matches.length){ const hit=matchFood(q); if(hit)matches=[hit.f]; }
     if(!matches.length){ac.style.display="none";return;}
     ac.style.display="block";
     ac.innerHTML=matches.map((f)=>`<button class="ac-item" onclick="A.acPick(${FOODS.indexOf(f)})">${f[0]} <span class="xs t2">· ${nfi.format(f[2])} kcal / ${f[1]} g</span></button>`).join("");
