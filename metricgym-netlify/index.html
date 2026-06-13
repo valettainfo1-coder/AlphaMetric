@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F7F5F1">
 <title>METRICGYM — Versteh, warum dein Fortschritt passiert</title>
-<meta name="description" content="METRICGYM: adaptiver Trainingsplan, Analytics die WARUM erklären, Ernährung in 10 Sekunden. Keine erfundenen Werte — alles aus deinen echten Daten.">
+<meta name="description" content="METRICGYM: adaptiver Trainingsplan, Analytics die das WARUM erklären, Ernährung in 10 Sekunden. Jede Empfehlung beruht auf deinen echten Daten.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%231A1A1A'/%3E%3Crect x='15' y='34' width='7' height='16' rx='3.5' fill='%23fff'/%3E%3Crect x='28.5' y='26' width='7' height='24' rx='3.5' fill='%23fff'/%3E%3Crect x='42' y='16' width='7' height='34' rx='3.5' fill='%23fff'/%3E%3Cpath d='M15 28l9-7 7 4.5 14-11' stroke='%23E8633A' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='45' cy='14.5' r='3.4' fill='%23E8633A'/%3E%3C/svg%3E">
 <!--
 ═══════════════════════════════════════════════════════════════════════
@@ -356,13 +356,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
   /* Value Banner: Soft-Paper-Karte mit Icon-Kreis */
-  .banner{display:flex; gap:12px; align-items:flex-start; border-radius:18px; padding:14px 16px; margin-bottom:var(--sp-4);
+  .banner{display:flex; gap:12px; align-items:center; border-radius:18px; padding:14px 14px 14px 16px; margin-bottom:var(--sp-4);
     background:rgba(255,255,255,.66); border:1px solid rgba(255,255,255,.65);
     box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05), inset 0 1px 0 rgba(255,255,255,.8);}
   .banner .bicon{width:38px; height:38px; min-width:38px; border-radius:50%; background:var(--s3); display:flex; align-items:center; justify-content:center; color:var(--t1);}
-  .banner p{font-size:12.5px; line-height:1.55; color:var(--t2);}
+  .banner p{font-size:12.5px; line-height:1.5; color:var(--t2); flex:1; min-width:0;}
   .banner b{color:var(--t1); font-weight:700;}
-  .banner .bx{margin-left:auto; min-width:34px; min-height:34px; background:none; border:none; color:var(--t3); cursor:pointer;}
+  .banner .bx{flex-shrink:0; min-width:30px; min-height:30px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:var(--t3); cursor:pointer;}
   /* Grid-/Listen-Toggle + Kacheln (Magazin-Stil) */
   .viewtoggle{display:flex; gap:4px; background:rgba(255,255,255,.72); border:1px solid var(--hairline); border-radius:999px; padding:3px;}
   .viewtoggle button{width:38px; height:32px; border:none; border-radius:999px; background:none; color:var(--t3); cursor:pointer; display:flex; align-items:center; justify-content:center;}
@@ -1876,21 +1876,21 @@ function renderFeatureOverview(){
       "Aus deinen Antworten baut die Engine einen Plan aus 6–9 Übungen pro Einheit — gefiltert nach deinem Equipment, mit Extra-Volumen für deine Fokus-Muskeln und auf deine Wochentage gelegt.",
       ["Equipment-Filter: nur Übungen, die du wirklich machen kannst","Satz-Zahl nach Trainingserfahrung (Pelland 2025: 5–10 Sätze/Muskel)","Session-Dauer wird berechnet, nicht geschätzt"]],
     ["brain","Ein Plan, der mitdenkt",
-      "Dein Plan ist kein PDF. Er reagiert auf das, was du loggst — Woche für Woche, Satz für Satz.",
+      "Dein Plan wächst mit dir. Er reagiert auf das, was du loggst — Woche für Woche, Satz für Satz.",
       ["Gewichts-Empfehlung aus deinen letzten Sätzen (RIR-gesteuert)","Automatische Erholungswoche bei Übertrainings-Signalen","Schonende Alternativen bei Muskelkater, per Long-Press tauschbar"]],
     ["chart","Analytics, die WARUM erklären",
-      "Das Herzstück: jede Eingabe wird zu einer Auswertung. Kein Wert wird erfunden — fehlt die Datenbasis, sagt die App das ehrlich.",
+      "Das Herzstück: jede Eingabe wird zu einer Auswertung. Jeder Wert beruht auf deinen echten Daten — und sobald die Basis reicht, zeigt die App dir deine Einblicke.",
       ["Kraft-Prognose mit Konfidenzband (e1RM-Trend, 12 Wochen)","Muskelbalance & Belastungs-Ampel je Muskelgruppe","Erholungs-Trend, Körperkomposition, Ernährungs-Treue","Jede Aussage trägt ihre Konfidenz in %"]],
     ["utensils","Ernährung in 10 Sekunden",
       "Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Rechtschreibfehler.",
       ["„200g hähnchen und 150g reis“ wird automatisch zerlegt","Tipp- & Hörfehler werden korrigiert (häncxen → Hähnchen)","Kalorien, Protein, Sättigung pro Mahlzeit"]],
     ["message","Ein Coach im Kontext",
-      "Der Coach kennt deine Daten und den Bereich, in dem du gerade bist — und antwortet konkret statt generisch.",
+      "Der Coach kennt deine Daten und den Bereich, in dem du gerade bist — und antwortet konkret auf deine Situation.",
       ["Im Training: Progressions-Tipps zu deinen Lifts","In der Ernährung: was dir heute noch fehlt","In Analytics: erklärt deinen Trend"]],
   ];
   root.innerHTML=`
     <div class="heroband fade"><h2>Was METRICGYM für dich tut</h2>
-      <p class="sm t2" style="max-width:320px;margin:8px auto 0">Kein weiterer Tracker. Eine Engine, die aus deinen Eingaben versteht, <b style="color:var(--t1)">warum</b> dein Fortschritt passiert — und was du als Nächstes tun solltest.</p></div>
+      <p class="sm t2" style="max-width:320px;margin:8px auto 0">Eine Engine, die aus deinen Eingaben versteht, <b style="color:var(--t1)">warum</b> dein Fortschritt passiert — und dir zeigt, was als Nächstes dran ist.</p></div>
     ${feats.map(([ic,t,b,bullets])=>`<div class="card">
       <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px">
         <span class="icon-circle">${icon(ic,20)}</span>
@@ -2033,35 +2033,35 @@ function renderLanding(){
       <div style="display:flex;justify-content:center;margin-bottom:20px">${logoMark(78)}</div>
       <p class="lp-eyebrow">Performance Intelligence</p>
       <h1 class="lp-h">Versteh, <span class="volt-txt">warum</span><br>dein Fortschritt passiert.</h1>
-      <p class="lp-lead" style="max-width:340px;margin:0 auto 22px">Andere Apps zählen, was du tust. METRICGYM erklärt, <b style="color:var(--t1)">warum</b> es wirkt — und sagt dir, was als Nächstes dran ist. Training, Ernährung und Erholung in einer Engine.</p>
+      <p class="lp-lead" style="max-width:340px;margin:0 auto 22px">METRICGYM erklärt dir, <b style="color:var(--t1)">warum</b> dein Training wirkt — und zeigt dir, was als Nächstes dran ist. Training, Ernährung und Erholung in einer Engine.</p>
       <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
-      <button class="btn mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.devMode()">${icon("play",15)} Live-Demo ohne Anmeldung</button>
-      <p class="xs t2">Kostenloser Plan dauerhaft · keine Kreditkarte · Daten bleiben auf deinem Gerät</p>
+      <button class="btn mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.devMode()">${icon("play",15)} Live-Demo ansehen</button>
+      <p class="xs t2">Dauerhaft kostenloser Plan · in 2 Minuten startklar · Daten bleiben auf deinem Gerät</p>
     </section>
 
     <!-- CLAIMS / REASONS TO BELIEVE -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-claimgrid">
-        <div class="lp-claim"><p class="n volt-txt">0</p><p class="l">erfundene Werte — jede Zahl kommt aus deinen echten Daten</p></div>
+        <div class="lp-claim"><p class="n volt-txt">100<span style="font-size:18px">%</span></p><p class="l">deine Daten — jede Empfehlung beruht auf deinen echten Werten</p></div>
         <div class="lp-claim"><p class="n">40+</p><p class="l">Studien als Fundament der Engine (Schoenfeld, Israetel, Helms …)</p></div>
         <div class="lp-claim"><p class="n">6</p><p class="l">Analyse-Module: Kraft, Belastung, Intensität, Körper, Erholung, Ernährung</p></div>
-        <div class="lp-claim"><p class="n">100<span style="font-size:18px">%</span></p><p class="l">lokal & DSGVO — kein Tracking, kein Verkauf deiner Daten</p></div>
+        <div class="lp-claim"><p class="n">10<span style="font-size:18px">s</span></p><p class="l">loggen pro Eintrag — tippen oder einsprechen</p></div>
       </div>
     </section>
 
-    <!-- PROBLEM → LÖSUNG -->
+    <!-- WARUM -->
     <section class="lp-sec" style="padding-top:0">
-      <p class="lp-eyebrow">Der Unterschied</p>
-      <h2 class="lp-h2">Tracking sagt dir, dass.<br>Wir sagen dir, warum.</h2>
-      <p class="lp-lead mb16">„Bankdrücken stagniert" ist eine Zahl. <b style="color:var(--t1)">„Bankdrücken stagniert — wahrscheinlichste Ursache: niedrige Erholungswerte, Konfidenz 70 %"</b> ist eine Entscheidung. Genau das liefert die Engine.</p>
+      <p class="lp-eyebrow">Dein Vorteil</p>
+      <h2 class="lp-h2">Jede Zahl wird zu einer Entscheidung.</h2>
+      <p class="lp-lead mb16">Du siehst nicht nur, dass deine Bank stagniert — du erfährst die wahrscheinlichste Ursache und was du heute dagegen tun kannst. <b style="color:var(--t1)">Klare Antworten, mit Konfidenz hinterlegt.</b></p>
     </section>
 
     <!-- 3 SÄULEN -->
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">Was die App kann</p>
       <h2 class="lp-h2 mb16">Drei Systeme, eine Engine</h2>
-      ${[["dumbbell","Adaptiver Trainingsplan","Generiert aus deinem Equipment, deinem Level und deinen Zielen. Passt Gewichte, Sätze und Erholungswochen automatisch an das an, was du loggst."],
-         ["chart","Analytics, die erklären","Kraft-Prognosen mit Konfidenzband, Muskelbalance-Ampel, Erholungs- und Ernährungs-Trends — jede Aussage mit Konfidenz, nichts erfunden."],
+      ${[["dumbbell","Adaptiver Trainingsplan","Entsteht aus deinem Equipment, deinem Level und deinen Zielen. Passt Gewichte, Sätze und Erholungswochen automatisch an das an, was du loggst."],
+         ["chart","Analytics, die erklären","Kraft-Prognosen mit Konfidenzband, Muskelbalance-Ampel, Erholungs- und Ernährungs-Trends — jede Aussage mit Konfidenz hinterlegt."],
          ["utensils","Ernährung in 10 Sekunden","Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Tippfehler („häncxen“ → Hähnchen) und rechnet Kalorien & Protein."]]
         .map(([ic,t,b])=>`<div class="lp-pillar"><span class="ic">${icon(ic,22)}</span>
           <div><p style="font-weight:700;font-size:16px;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>`).join("")}
@@ -2088,7 +2088,7 @@ function renderLanding(){
             <div style="text-align:center"><p class="metric" style="font-size:16px">${pr.muscle}</p><p class="xs t2">Muskelaufbau-Tendenz</p></div>
           </div>
         </div>
-        <p class="xs t2 mt8" style="line-height:1.5">Projektion auf Basis veröffentlichter Trainingsstudien — kein garantiertes Einzelergebnis. Deine echten Zahlen trackt die App ab Tag 1.</p>
+        <p class="xs t2 mt8" style="line-height:1.5">Eine realistische Orientierung auf Basis veröffentlichter Trainingsstudien. Ab Tag 1 begleiten dich deine echten Zahlen.</p>
         <button class="btn volt mt16" onclick="A.toRegister()">Diesen Plan kostenlos bekommen</button>
       </div>
     </section>
@@ -2097,7 +2097,7 @@ function renderLanding(){
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">In 3 Schritten</p>
       <h2 class="lp-h2 mb16">Vom Log zur Entscheidung</h2>
-      ${[["Du loggst — kurz und ehrlich","Training, Mahlzeiten, Tages-Status. Per Tippen, Sprechen oder Foto. Keine 10 Sekunden."],
+      ${[["Du loggst — kurz und ehrlich","Training, Mahlzeiten, Tages-Status. Per Tippen, Sprechen oder Foto. In 10 Sekunden erledigt."],
          ["Die Engine rechnet","Belastung, Erholung, Fortschritt — berechnet aus deinen echten Daten, mit Konfidenz pro Aussage."],
          ["Dein Plan passt sich an","Gewichte, Sätze, Erholungswochen ändern sich automatisch. Mit jeder Session präziser."]]
         .map(([t,b],i)=>`<div class="lp-step"><span class="num">${i+1}</span>
@@ -2108,7 +2108,7 @@ function renderLanding(){
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-dark">
         <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Warum du uns glauben kannst</p>
-        <p class="lp-quote mb16">Jede Empfehlung steht auf Peer-Review-Forschung — nicht auf Bauchgefühl.</p>
+        <p class="lp-quote mb16">Jede Empfehlung steht auf Peer-Review-Forschung.</p>
         ${[["Progressive Überladung & Volumen","Schoenfeld 2017 · Pelland 2025"],
            ["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
            ["RIR-gesteuerte Progression","Helms 2016 · Robinson 2024"],
@@ -2121,12 +2121,12 @@ function renderLanding(){
     <!-- FINAL CTA -->
     <section class="lp-sec" style="text-align:center">
       <div style="display:flex;justify-content:center;margin-bottom:16px">${logoMark(60)}</div>
-      <h2 class="lp-h2">Hör auf zu raten.<br>Fang an zu verstehen.</h2>
+      <h2 class="lp-h2">Trainier mit Klarheit.<br>Versteh deinen Körper.</h2>
       <p class="lp-lead mb16" style="max-width:320px;margin-left:auto;margin-right:auto">Der kostenlose Plan ist ein vollständiges Produkt — Trainingsplan, Logging, Status und dein erster Insight inklusive.</p>
       <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
       <button class="btn ghost" style="max-width:320px;margin:0 auto" onclick="A.devMode()">${icon("settings",15)} Erst die Demo ansehen</button>
       <div class="row" style="gap:14px;justify-content:center;margin-top:20px">
-        <span class="xs t2">Kein Abo nötig</span><span class="xs" style="color:var(--t3)">·</span>
+        <span class="xs t2">Dauerhaft kostenlos</span><span class="xs" style="color:var(--t3)">·</span>
         <span class="xs t2">Daten lokal</span><span class="xs" style="color:var(--t3)">·</span>
         <span class="xs t2">DSGVO</span>
       </div>
@@ -2235,7 +2235,7 @@ const STEPS=[
    opts:[["knee","Knie",""],["back","Rücken / LWS",""],["shoulder","Schulter",""]]},
   {id:"days",q:"Trainingstage pro Woche",hint:"Nur die Tage — die ideale Dauer und Aufteilung jeder Einheit berechnet die Engine für dich.",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
   {id:"equipment",q:"Wo trainierst du?",hint:"Dein Plan enthält nur Übungen, die du wirklich machen kannst.",type:"single",key:"equipment",
-   opts:[["gym_full","Gym — voll ausgestattet","Maschinen, Kabelzüge, Freihanteln"],["gym_basic","Gym ohne Maschinen","Langhantel, Kurzhanteln, Rack, Bank"],["home_full","Homegym","Kurzhanteln, Bank, Bänder"],["home_min","Zuhause — minimal","Kurzhanteln oder Bänder, keine Bank"],["bodyweight","Nur Körpergewicht","Kein Equipment nötig"]]},
+   opts:[["gym_full","Gym — voll ausgestattet","Maschinen, Kabelzüge, Freihanteln"],["gym_basic","Gym ohne Maschinen","Langhantel, Kurzhanteln, Rack, Bank"],["home_full","Homegym","Kurzhanteln, Bank, Bänder"],["home_min","Zuhause — minimal","Kurzhanteln oder Bänder, ohne Bank"],["bodyweight","Nur Körpergewicht","Kein Equipment nötig"]]},
   {id:"focus",q:"Worauf willst du besonderen Fokus legen?",hint:"Optional, max. 2 — diese Bereiche bekommen eine Extra-Übung, früh in der Session platziert.",type:"multi",key:"focus",max:2,skip:true,
    opts:[["Brust","Brust",""],["Rücken","Rücken",""],["Schultern","Schultern",""],["Arme","Arme",""],["Beine","Beine",""],["Core","Core",""]]},
   {id:"schedule_pref",q:"Wann trainierst du am liebsten?",hint:"Danach richtet sich, auf welche Wochentage dein Plan die Einheiten legt.",type:"single",key:"schedule_pref",
@@ -2353,19 +2353,29 @@ function renderReveal(){
           <p class="metric" style="font-size:17px;font-weight:600">${nfi.format(v)} g</p><p class="xs t2">${l}${l==="Protein"?" "+infoBtn("protein"):""}</p></div>`).join("")}
       </div>
     </div>
-    <div class="card"><p class="ct">${icon("calendar",14)} Dein optimaler Wochenplan</p>
-      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center;margin-bottom:10px">
-        ${WD.map((d,i)=>{const t=sug[i]||"rest";return `<div>
+    ${(()=>{
+      const trainCount=sug.filter(t=>t!=="rest").length;
+      const set=new Set(sug);
+      const splitName=set.has("push")?"Push · Pull · Beine":(set.has("upper")||set.has("lower"))?"Ober- & Unterkörper":"Ganzkörper";
+      const freq=trainCount>=4?"2× pro Muskelgruppe":"voller Reiz je Einheit";
+      return `<div class="card"><p class="ct">${icon("calendar",14)} Dein Wochenplan</p>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center;margin-bottom:14px">
+        ${WD.map((d,i)=>{const t=sug[i]||"rest";const tr=t!=="rest";return `<div style="background:${tr?"var(--s2)":"none"};border-radius:10px;padding:6px 0">
           <p class="xs" style="color:var(--t3)">${d}</p>
-          <p style="font-size:15px;margin:4px 0">${t==="rest"?"·":`<span style="display:inline-flex">${icon(TYPE_META[t].icon,14)}</span>`}</p>
-          <p style="font-size:8px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPE_META[t].label}</p>
+          <p style="font-size:15px;margin:4px 0">${tr?`<span style="display:inline-flex">${icon(TYPE_META[t].icon,14)}</span>`:'<span style="color:var(--t3)">·</span>'}</p>
+          <p style="font-size:8px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${tr?TYPE_META[t].label:"frei"}</p>
         </div>`;}).join("")}
       </div>
-      <p class="sm t2 mb8" style="line-height:1.6">${S.scheduleRationale||""}</p>
-      <p class="xs t2">Jede Einheit dauert ≈ <span class="metric">${p.a.len} Min</span> — berechnet aus deinem Plan, nicht geschätzt. Du kannst jeden Tag jederzeit selbst umlegen.</p>
-    </div>
+      <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px">
+        ${[[trainCount,"Einheiten/Woche"],[p.a.len+" Min","pro Einheit"],[splitName,"Aufteilung"]].map(([v,l])=>`
+          <div style="background:var(--s2);border-radius:12px;padding:12px 6px;text-align:center">
+            <p class="metric" style="font-size:15px;font-weight:700;line-height:1.2">${v}</p>
+            <p class="xs t2" style="margin-top:3px">${l}</p></div>`).join("")}
+      </div>
+      <p class="sm t2 mt12" style="line-height:1.55">Trifft jede Muskelgruppe ${freq} und gibt deiner Erholung den Raum, den sie braucht. Tage jederzeit frei verschiebbar.</p>
+    </div>`;})()}
     <button class="btn volt" onclick="A.startApp()">Los geht es</button>
-    <p class="xs t2 mt8" style="text-align:center">Dein Trainingsplan gehört dir: Du legst die Wochentage selbst fest.</p></div>`;
+    <p class="xs t2 mt8" style="text-align:center">Du behältst die Kontrolle: Wochentage jederzeit selbst festlegen.</p></div>`;
 }
 
 // =====================================================================
@@ -2479,7 +2489,7 @@ function renderHome(){
   A.openStatus=()=>openStatusSheet();
   A.howItWorks=()=>modal(`<p class="ct">${icon("brain",14)} So funktioniert METRICGYM</p>
     ${[["1. Du loggst — kurz und ehrlich","Training, Mahlzeiten und dein Tages-Status. Per Tippen, Sprechen oder Foto — keine 10 Sekunden."],
-       ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt werden aus deinen echten Daten berechnet. Hier wird nichts erfunden."],
+       ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt — berechnet aus deinen echten Daten, mit Konfidenz pro Aussage."],
        ["3. Dein Plan passt sich an","Gewichte, Sätze und Erholungswochen ändern sich automatisch — dein Plan wird mit jeder Session präziser."]]
       .map(([t,b])=>`<p class="sm mb4" style="font-weight:700">${t}</p><p class="sm t2 mb12" style="line-height:1.6">${b}</p>`).join("")}
     <button class="btn ghost" style="min-height:36px" onclick="overlay.innerHTML='';S.tab='features';save();render();">Alle Funktionen ansehen</button>`);
@@ -2525,7 +2535,7 @@ function renderHome(){
   const visIns=S.tier==="free"?ins.slice(0,1):ins.slice(0,S.tier==="elite"?8:5);
 
   root.innerHTML=`
-    ${banner("home","activity","<b>Dein Tag auf einen Blick.</b> Ein 10-Sekunden-Check sagt dir, wie hart du heute trainieren solltest.")}
+    ${banner("home","activity","<b>Starte deinen Tag.</b> Ein kurzer Check zeigt dir, wie viel heute in dir steckt.")}
     <div class="heroband fade">
       <h2>${greet()}, ${userName()}</h2>
       <p class="sm" style="color:var(--t3)">${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}${streak>=2?` · <span style="display:inline-flex;vertical-align:-2px;color:var(--hl)">${icon("flame",13)}</span> ${streak} Tage dabei`:""}</p>
@@ -2560,7 +2570,7 @@ function renderHome(){
       if(!adaptions.length&&Object.values(S.liftLog).some(x=>x.length>0))adaptions.push("Deine Gewichtsempfehlungen kommen aus deinen letzten Sessions — kein Tabellenwert, dein echter Verlauf.");
       const precision=Math.min(10,S.trainingHistory.length);
       return `<div class="card">
-        <p class="sm mb8" style="line-height:1.6">${adaptions.length?adaptions[0]:"Dein Plan ist kein starres PDF: Er passt Gewichte, Sätze und Erholung an das an, was du wirklich loggst."}</p>
+        <p class="sm mb8" style="line-height:1.6">${adaptions.length?adaptions[0]:"Dein Plan passt Gewichte, Sätze und Erholung an das an, was du loggst — er wächst mit dir."}</p>
         <div class="row mb4"><span class="xs t2">Plan-Präzision</span><span class="metric xs">${precision} / 10</span></div>
         <div class="progress mb8" style="height:6px"><div style="width:${precision*10}%"></div></div>
         <p class="xs t2 mb8">${precision>=10?"Dein Plan kennt dich — Empfehlungen laufen jetzt auf voller Präzision.":`Noch ${10-precision} ${10-precision===1?"Session":"Sessions"}, bis dein Plan dich vollständig kennt.`}</p>
@@ -2595,7 +2605,7 @@ function renderHome(){
 
     ${renderSection("Analytics",
       `<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('analytics')" aria-label="Zu Analytics">
-        <span class="sm">${visIns.length?`${visIns.length===1?"1 neuer Insight":visIns.length+" Insights"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt Daten — hier wird nichts erfunden"}</span>
+        <span class="sm">${visIns.length?`${visIns.length===1?"1 neuer Insight":visIns.length+" Insights"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt deine ersten Daten"}</span>
         <span class="t2">→</span></button>`)}
   `;
 }
@@ -2656,18 +2666,29 @@ A.swapMenu=(key,idx)=>openSwapSheet(key,idx);
    sich antippen und komplett ansehen — nichts ist „gesperrt". */
 function openSessionPreview(typeKey){
   const d=sessionDef(typeKey);
-  if(!d.main||!d.main.length){ if(typeKey==="cardio"){/*ok*/}else{toast("Ruhetag — keine Übungen");return;} }
+  const isCardio=parseTypeKey(typeKey).base==="cardio";
+  if(!isCardio&&(!d.main||!d.main.length)){toast("Ruhetag — heute erholst du dich");return;}
   A.previewStart=(t)=>{overlay.innerHTML="";A.startType(t);};
-  const exHtml=(d.main||[]).map(e=>`<div class="exrow" style="border-top:1px solid var(--hairline);cursor:default">
-      <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
-        <span>${e.n}</span>
-        <span><span class="statchip">${e.sets} × ${e.reps}</span><span class="statchip">${e.rir} in Reserve</span></span>
-      </span></div>`).join("");
+  let body;
+  if(isCardio){
+    body=`<p class="sm t2 mb12">≈ ${d.est||35} Min · ruhiges Tempo</p>
+      <div style="background:var(--s2);border-radius:16px;padding:18px;text-align:center">
+        <p style="font-weight:700;font-size:16px;margin-bottom:4px">Zone-2 Cardio</p>
+        <p class="sm t2" style="line-height:1.6">30–40 Min im lockeren Tempo, bei dem du noch sprechen kannst. Stärkt dein Herz-Kreislauf-System und unterstützt deine Erholung.</p>
+      </div>`;
+  } else {
+    const exHtml=(d.main||[]).map(e=>`<div class="exrow" style="border-top:1px solid var(--hairline);cursor:default">
+        <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span>${e.n}</span>
+          <span><span class="statchip">${e.sets} × ${e.reps}</span>${e.rir&&e.rir!=="–"?`<span class="statchip">${e.rir} in Reserve</span>`:""}</span>
+        </span></div>`).join("");
+    body=`<p class="sm t2 mb12">${d.main.length} Übungen · ≈ ${d.est||60} Min</p>
+      <div class="mb12">${muscleSplitBars(typeKey)}</div>
+      <p class="label" style="margin-bottom:8px">Übungen</p>${exHtml}`;
+  }
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
     <p class="display-m mb4" style="display:flex;align-items:center;gap:8px">${icon(d.icon,18)} ${d.label}</p>
-    <p class="sm t2 mb12">${d.main?d.main.length:0} Übungen · ≈ ${d.est||60} Min</p>
-    ${muscleSplitBars(typeKey)}
-    ${exHtml||'<p class="sm t2">Lockeres Zone-2-Cardio, 30–40 Min.</p>'}
+    ${body}
     <button class="btn volt mt16" onclick="A.previewStart('${typeKey}')">${icon("play",15)} Diese Einheit starten</button>
   </div></div>`;
 }
@@ -2703,7 +2724,7 @@ function renderTrain(){
     return `<button class="exrow" ${press} aria-label="Details zu ${name} — gedrückt halten zum Tauschen">
       <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
         <span style="display:flex;align-items:center;gap:6px">${warn?`<span style="color:var(--warn);display:inline-flex">${icon("alert",13)}</span>`:""}${name}${e.swapped?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Alternative</span>':""}${e.userSwap?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Getauscht</span>':""}</span>
-        <span><span class="statchip">${isDeload?Math.max(1,Math.round(e.sets*.6)):e.sets} × ${e.reps}</span><span class="statchip">${e.rir} in Reserve</span><span class="statchip">Tempo ${e.tempo}</span>${e.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</span>
+        <span><span class="statchip">${isDeload?Math.max(1,Math.round(e.sets*.6)):e.sets} × ${e.reps}</span>${e.rir&&e.rir!=="–"?`<span class="statchip">${e.rir} in Reserve</span>`:""}${e.tempo&&e.tempo!=="locker"&&e.tempo!=="halten"?`<span class="statchip">Tempo ${e.tempo}</span>`:""}${e.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</span>
       </span>
       <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
         <span class="metric xs t2">${r?fmtKg(r.w):""}</span>
@@ -2731,7 +2752,7 @@ function renderTrain(){
         ${isNext?'<span style="font-size:8px;letter-spacing:.06em">NÄCHSTE</span>':""}</button>`;}).join("")}
   </div>`;
   root.innerHTML=`
-    ${banner("train","dumbbell","<b>Dein wissenschaftlich fundierter Trainingsplan</b> — individuell auf deine Ziele, dein Level und deine Zeit abgestimmt.")}
+    ${banner("train","dumbbell","<b>Dein Plan, dein Tempo.</b> Abgestimmt auf deine Ziele, dein Level und dein Equipment.")}
     ${renderSection("Dein Plan",
       `<div class="card">
         <div class="lp-seg mb12">
@@ -2744,25 +2765,39 @@ function renderTrain(){
       </div>`)}
 
     ${focusType?renderSection(rotMode?"Deine nächste Einheit":(sch[dow]!=="rest"?"Dein Training heute":"Dein nächstes Training"),
-      `<div class="card">
-        <div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(TYPES[focusType].icon,18)} ${TYPES[focusType].label}</p>
-          <button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button></div>
-        <p class="sm t2 mt8 mb8">${TYPES[focusType].main.length} Übungen · ≈ ${TYPES[focusType].est||S.profile.a.len||60} Min · individuell für deine Ziele und dein Equipment</p>
-        ${muscleSplitBars(focusType)}
-        ${phaseAcc("Aufwärmen — so startest du sicher",TYPES[focusType].warmup)}
-        ${TYPES[focusType].main.map((e,i)=>exLine(e,focusType,i)).join("")}
-        <p class="xs t2 mt8">Tipp: Übung gedrückt halten, um sie zu tauschen — z. B. wenn ein Gerät belegt ist.</p>
-        ${TYPES[focusType].abs&&TYPES[focusType].abs.length?`<p class="label" style="margin-top:12px">Core-Finisher</p>${TYPES[focusType].abs.map(e=>exLine(e)).join("")}`:""}
-        ${phaseAcc("Cool-down — Erholung beginnt jetzt",TYPES[focusType].cooldown)}
-        <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
-        <div class="mt16">${quickLogField("Schnell loggen: 'Bankdrücken 90 kg 3x8'","A.trainParse")}</div>
-        ${voicePreview?`<div class="warncard mt8" style="border-color:rgba(200,255,46,.4);background:var(--accent-soft)">
-          <p class="sm"><b style="color:var(--volt)">${voicePreview.name}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
-          <p class="conf mt8">Konfidenz ${Math.round(voicePreview.conf*100)} %</p>
-          <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
-          <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
-      </div>`)
-    :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Noch keine Trainingstage festgelegt.</p>
+      (()=>{
+        const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
+        const head=`<div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(F.icon,18)} ${F.label}</p>
+          ${isCardio?"":`<button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button>`}</div>
+          <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · ruhiges Tempo":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>`;
+        if(isCardio){
+          return `<div class="card">${head}
+            <div style="background:var(--s2);border-radius:16px;padding:18px;text-align:center;margin:14px 0">
+              <p style="font-weight:700;font-size:16px;margin-bottom:4px">Zone-2 Cardio</p>
+              <p class="sm t2" style="line-height:1.6">30–40 Min im lockeren Tempo, bei dem du noch sprechen kannst. Stärkt dein Herz-Kreislauf-System und unterstützt deine Erholung.</p>
+            </div>
+            <button class="btn volt" onclick="A.startType('${focusType}')">${icon("play",15)} Einheit starten</button>
+          </div>`;
+        }
+        return `<div class="card">${head}
+          <div class="mt12 mb12">${muscleSplitBars(focusType)}</div>
+          <p class="label" style="margin-bottom:8px">Übungen</p>
+          ${F.main.map((e,i)=>exLine(e,focusType,i)).join("")}
+          <p class="xs t2 mt8">Übung gedrückt halten, um eine Alternative zu wählen.</p>
+          ${F.abs&&F.abs.length?`<p class="label" style="margin-top:16px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
+          ${phaseAcc("Aufwärmen",F.warmup)}
+          ${phaseAcc("Cool-down",F.cooldown)}
+          <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
+          <p class="label" style="margin:18px 0 8px">Schnell loggen</p>
+          ${quickLogField("z. B. 'Bankdrücken 90 kg 3x8'","A.trainParse")}
+          ${voicePreview?`<div class="card mt8" style="background:var(--s2)">
+            <p class="sm"><b>${voicePreview.name}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
+            <p class="conf mt8">Treffsicherheit ${Math.round(voicePreview.conf*100)} %</p>
+            <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
+            <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
+        </div>`;
+      })())
+    :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest, dann steht dein Plan bereit.</p>
       <button class="btn volt" onclick="A.editSchedule()">Wochenplan festlegen</button></div>`)}
 
     ${others.length?renderSection("Deine weiteren Einheiten",
@@ -2924,13 +2959,13 @@ function renderAnalytics(){
     root.innerHTML=`<div class="center" style="min-height:70dvh">
       <div style="color:var(--t3)">${icon("chart",44)}</div>
       <p class="display-m">Noch keine Daten vorhanden</p>
-      <p class="sm t2" style="max-width:290px;line-height:1.7">Analytics entstehen aus deinen echten Trainings- und Ernährungsdaten. Hier wird <b style="color:var(--t1)">nichts erfunden</b>.<br><br>Sobald du dein erstes Training loggst, erscheinen hier deine ersten Auswertungen.</p>
+      <p class="sm t2" style="max-width:290px;line-height:1.7">Deine Analytics entstehen aus deinen echten Trainings- und Ernährungsdaten. <b style="color:var(--t1)">Jede Auswertung beruht auf deinen Werten.</b><br><br>Sobald du dein erstes Training loggst, erscheinen hier deine ersten Einblicke.</p>
       <button class="btn volt" style="max-width:280px" onclick="A.q('train')">Jetzt dein erstes Training loggen</button>
     </div>`;
     return;
   }
   const dp=dataProgress();
-  let html0=banner("analytics","chart","<b>Verstehe nicht nur DASS du Fortschritte machst, sondern WARUM</b> — basierend auf deinen echten Trainingsdaten.");
+  let html0=banner("analytics","chart","<b>Versteh deinen Fortschritt.</b> Klare Einblicke aus deinen echten Daten.");
   const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length>=3);
   const allSets=Object.values(S.liftLog).flat();
   const ins=buildInsights();
@@ -2979,7 +3014,7 @@ function renderAnalytics(){
         <div class="barrow"><span class="blbl">${l}</span>
         <div class="btrack"><div class="bfill" style="width:${v/7*100}%;background:${v>=5?"var(--volt)":v>=3?"var(--info)":"var(--t3)"}"></div></div>
         <span class="bval metric">${v} / 7 Tage</span></div>`).join("")}
-      <p class="xs t2 mt8">Analytics erscheinen erst, wenn genug echte Daten da sind — wir erfinden nichts.</p></div>`:""}
+      <p class="xs t2 mt8">Deine Analytics schärfen sich mit jedem Tag, den du loggst.</p></div>`:""}
 
     ${today?`<div class="card row" style="justify-content:flex-start;gap:20px">${ringSVG(today.score,today.tier)}
       <div><p class="ct" style="margin-bottom:4px">Status</p><p class="xs t2">Aktueller Erholungszustand.</p></div></div>`
@@ -3013,7 +3048,7 @@ function renderAnalytics(){
         <span class="sm" style="font-weight:600">${r.n}</span>
         <span style="text-align:right"><span class="metric" style="font-size:16px">${fmtKg(r.v)}</span>
         <span class="xs t2" style="display:block">${fmtD(new Date(r.t))}</span></span></div>`).join("")}
-      <p class="xs t2 mt8">Geschätzte Maximalkraft — berechnet aus deinen echten Sätzen, nicht hochgerechnet aus Wunschdenken.</p></div>`;
+      <p class="xs t2 mt8">Geschätzte Maximalkraft — berechnet aus deinen echten Sätzen.</p></div>`;
   }
 
   // Volumen
@@ -3180,7 +3215,7 @@ function renderAnalytics(){
     ${visIns.map(i=>`<div class="${i.risk?"warncard":"msg ai"}" style="max-width:100%;margin-bottom:8px">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")}
     ${hiddenIns.length?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${hiddenIns.length} weitere ${hiddenIns.length===1?"Insight":"Insights"} verfügbar — ${hiddenCats.slice(0,3).join(", ")}.</p>
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">${TIER_LABEL[S.tier==="free"?"pro":"elite"]} freischalten</button></div>`:""}</div>`
-  :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Die Engine erklärt deinen Fortschritt, sobald Muster statistisch belastbar sind — keine erfundenen Zahlen.</p></div>`;
+  :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Sobald deine Daten ein belastbares Muster zeigen, erklärt dir die Engine deinen Fortschritt.</p></div>`;
 
   root.innerHTML=html;
 }
@@ -3255,7 +3290,7 @@ function renderNutrition(){
   A.explainSat=()=>A.explain("satiety");
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
-    ${banner("nutrition","utensils","<b>Loggen in 10 Sekunden:</b> tippen oder einsprechen — die Engine erkennt Lebensmittel auch mit Tippfehlern und rechnet Kalorien und Protein automatisch aus.")}
+    ${banner("nutrition","utensils","<b>Loggen in 10 Sekunden.</b> Tippen oder einsprechen — Kalorien und Protein rechnet die Engine für dich.")}
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
@@ -3493,7 +3528,7 @@ function renderProfile(){
           <li><span>Schlaf-Daten (zu Status-Tagen)</span><span class="metric">${res.sleep}</span></li>
           <li><span>Ruhepuls-Werte</span><span class="metric">${res.rhr}</span></li>
         </ul>
-        <p class="xs t2" style="line-height:1.6">Schlafdaten ergänzen nur Tage, an denen du selbst einen Status-Check gemacht hast — die Engine erfindet keine fehlenden Werte.</p>`);
+        <p class="xs t2" style="line-height:1.6">Schlafdaten ergänzen nur Tage, an denen du selbst einen Status-Check gemacht hast — so bleibt jeder Wert echt.</p>`);
     };
     reader.onerror=()=>toast("Datei konnte nicht gelesen werden");
     reader.readAsText(f);
@@ -3526,7 +3561,7 @@ function renderProfile(){
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
   root.innerHTML=`
-    ${banner("profile","user","<b>Dein Profil steuert die Engine.</b> Aktuelles Gewicht und Ziele halten alle Empfehlungen präzise.")}
+    ${banner("profile","user","<b>Dein Profil, deine Präzision.</b> Aktuelles Gewicht und Ziele schärfen jede Empfehlung.")}
     <div class="card row" style="justify-content:flex-start;gap:14px">
       <div class="avatar" style="width:52px;height:52px;font-size:20px">${u.username.slice(0,1).toUpperCase()}</div>
       <div><p style="font-weight:600">${u.username}
