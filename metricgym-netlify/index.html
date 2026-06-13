@@ -203,23 +203,41 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     padding:0 12px calc(10px + env(safe-area-inset-bottom));
     transform:none !important;
   }
+  /* Liquid-Glass v2: mehrschichtiges Glas — Verlauf + Blur + Specular-Highlight,
+     aktiver Tab bekommt eine eigene Glas-Pille. */
   .tabbar-inner{
-    pointer-events:auto; max-width:406px; margin:0 auto;
+    pointer-events:auto; max-width:406px; margin:0 auto; position:relative;
     display:grid; grid-template-columns:repeat(5,1fr);
-    background:rgba(255,255,255,.72);
-    -webkit-backdrop-filter:blur(28px) saturate(180%); backdrop-filter:blur(28px) saturate(180%);
-    border:1px solid rgba(255,255,255,.7);
+    background:linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.34));
+    -webkit-backdrop-filter:blur(32px) saturate(200%); backdrop-filter:blur(32px) saturate(200%);
+    border:1px solid rgba(255,255,255,.78);
     border-radius:999px; padding:6px 8px;
-    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 10px 30px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.85);
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 14px 38px rgba(0,0,0,.14),
+      inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.28);
+  }
+  .tabbar-inner::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:linear-gradient(115deg, rgba(255,255,255,.7), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 62%, rgba(255,255,255,.4));
+    opacity:.7;
   }
   .tab{
-    display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 0 5px;
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0 5px;
     background:none; border:none; color:var(--t3); font-size:9.5px; font-weight:700; cursor:pointer; font-family:inherit; min-height:48px;
     transition:color .25s var(--spring);
   }
-  .tab .ic{display:flex; align-items:center; justify-content:center; transition:transform .25s var(--spring);}
+  .tab .ic{
+    display:flex; align-items:center; justify-content:center;
+    width:46px; height:27px; border-radius:999px;
+    transition:all .3s var(--spring);
+  }
   .tab.active{color:var(--t1);}
-  .tab.active .ic{transform:translateY(-1px);}
+  .tab.active .ic{
+    transform:translateY(-1px);
+    background:linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.55));
+    border:1px solid rgba(255,255,255,.9);
+    box-shadow:0 2px 8px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.95);
+  }
+  .tab:active .ic{transform:scale(.92);}
   .tab.flag .ic{
     width:46px; height:46px; margin-top:-22px; border-radius:50%;
     background:var(--accent); color:#fff; border:3px solid var(--bg);
@@ -1268,6 +1286,19 @@ function parseWorkout(input){
     const words=exName.toLowerCase().split(/\s+/);
     if(words.some(w=>tokens.some(t=>t.length>=3&&(t.startsWith(w)||w.startsWith(t))))){ name=exName; conf+=0.3; break; }
   }
+  // Rechtschreib-Regel auch hier: "bankdrücen 90kg 3x8" wird verstanden
+  if(!name){
+    let best=null;
+    for(const exName of ALL_EXERCISES){
+      const words=exName.toLowerCase().replace(/\(.*\)/,"").split(/\s+/).filter(w=>w.length>=4);
+      for(const w of words)for(const t of tokens){
+        if(t.length<4)continue;
+        const d=fuzzyDist(t,w);
+        if(d!=null&&(!best||d<best.d))best={n:exName,d};
+      }
+    }
+    if(best){ name=best.n; conf+=0.2; }
+  }
   const wMatch=txt.match(/(\d+[.,]?\d*)\s*(kg|kilo)/);
   const weight=wMatch?parseFloat(wMatch[1].replace(",",".")):null;
   if(weight!=null)conf+=0.15;
@@ -1328,8 +1359,7 @@ const FOODS=[
   ["Proteinriegel (1 Riegel)",60,214,20,21,7],["Müsli",50,180,5,32,3.5],["Granola",50,230,5,30,9],
   ["Pizza Margherita (1 Stück)",100,250,11,33,8],["Döner (1 Stück)",350,650,35,55,30],["Burger (1 Stück)",250,560,28,42,30],
 ];
-/* Levenshtein-Distanz für Tippfehler-tolerante Lebensmittel-Erkennung:
-   "hänchen", "harferflocken" oder "qark" werden trotzdem verstanden. */
+/* Levenshtein-Distanz für Tippfehler-tolerante Erkennung. */
 function lev(a,b){
   if(a===b)return 0;
   const m=a.length,n=b.length;
@@ -1341,6 +1371,29 @@ function lev(a,b){
     prev=cur;
   }
   return prev[n];
+}
+/* GENERELLE RECHTSCHREIB-REGEL: beste Edit-Distanz von `needle` zu IRGENDEINER
+   Teilzeichenkette von `hay` (Sellers-Algorithmus). "häncxen" findet so
+   "hähnchen" mitten in "hähnchenbrust" — egal ob der Fehler vorn, mittig
+   oder hinten sitzt, ob Buchstaben fehlen, vertauscht oder falsch sind. */
+function levSub(needle,hay){
+  const m=needle.length,n=hay.length;
+  if(!m||!n)return Math.max(m,n);
+  let prev=new Array(n+1).fill(0); // freier Start in hay
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(needle[i-1]===hay[j-1]?0:1));
+    prev=cur;
+  }
+  return Math.min(...prev); // freies Ende
+}
+/* Kombinierte Wort-Ähnlichkeit: wörtlich + phonetisch, mit längenabhängiger
+   Toleranz. Gibt die Distanz zurück oder null, wenn zu unähnlich. */
+function fuzzyDist(t,w){
+  if(t===w||t.startsWith(w)||w.startsWith(t))return 0;
+  const tol=Math.max(1,Math.ceil(t.length/4)+(t.length>=8?1:0));
+  const d=Math.min(levSub(t,w),levSub(phon(t),phon(w))+0.5);
+  return d<=tol?d:null;
 }
 /* Phonetische Normalisierung (deutsch): gleich klingende Schreibweisen werden
    identisch — "skier"→"skir" und "skyr"→"skir" treffen sich so trotz
@@ -1360,21 +1413,7 @@ function matchFood(segment){
   for(const f of FOODS){
     const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=3);
     for(const w of words)for(const t of tokens){
-      let dist=null;
-      if(t===w||t.startsWith(w)||w.startsWith(t))dist=0;
-      else{
-        const tol=Math.max(1,Math.ceil(t.length/4));
-        const pt=phon(t), pw=phon(w);
-        // Wörtlich + phonetisch, jeweils volles Wort, Wort-Präfix UND Wort-Suffix:
-        // "hänchen" trifft "hähnchenbrust", "qark" trifft "magerquark".
-        const cut=Math.min(w.length,t.length+tol), pcut=Math.min(pw.length,pt.length+tol);
-        const d=Math.min(
-          lev(t,w),
-          lev(t,w.slice(0,cut)), lev(t,w.slice(-cut)),
-          lev(pt,pw)+0.5,
-          lev(pt,pw.slice(0,pcut))+0.5, lev(pt,pw.slice(-pcut))+0.5);
-        if(d<=tol)dist=d;
-      }
+      const dist=fuzzyDist(t,w);
       if(dist!=null&&(!best||dist<best.dist||(dist===best.dist&&f[0].length<best.f[0].length)))
         best={f,dist};
     }
@@ -1577,7 +1616,7 @@ A.dismissBanner=(id)=>{ if(!S.dismissedBanners.includes(id))S.dismissedBanners.p
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
-const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Fortschritt",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",features:"So funktioniert's"};
+const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",features:"So funktioniert's"};
 let menuOpen=false;
 
 function render(){
@@ -1630,7 +1669,7 @@ function renderAppbar(){
 }
 
 // 5 Tabs — Fortschritt (Analytics) zentriert und visuell erhöht (USP).
-const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Fortschritt"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
+const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
 function renderTabbar(){
   A.tab=(t)=>{menuOpen=false;S.tab=t;save();render();};
   const active=["player","summary"].includes(S.tab)?"train":(S.tab==="today"?"home":S.tab);
@@ -1735,20 +1774,41 @@ function renderApp(){
 // =====================================================================
 function renderFeatureOverview(){
   A.featDone=()=>{S.tab="home";save();render();};
+  // Detailliertes Intro: WIE die Engine arbeitet, WELCHE Analyse aus WELCHER
+  // Eingabe entsteht und WORAUF sie wissenschaftlich fußt.
   const feats=[
-    ["dumbbell","Ein Plan, der wirklich deiner ist","Übungen nach deinem Equipment, Extra-Volumen für deine Fokus-Muskeln, Wochentage nach deinem Alltag — berechnet, nicht von der Stange."],
-    ["brain","Ein Plan, der mitdenkt","Gewichtsempfehlungen aus deinen letzten Sessions, automatische Erholungswochen, schonende Alternativen bei Muskelkater."],
-    ["chart","Fortschritt, den du verstehst","Kraft-Prognosen, Trainingsbelastung und Erholung — mit Konfidenz-Angabe und nur aus echten Daten. Wir erfinden nichts."],
-    ["utensils","Ernährung in 10 Sekunden","Tippen oder sprechen: „200 g Hähnchen und Reis“ — die Engine erkennt Lebensmittel auch mit Tippfehlern und rechnet Kalorien und Protein aus."],
-    ["message","Ein Coach im Kontext","Der Coach kennt deine Daten und den Bereich, in dem du gerade bist — und antwortet konkret statt generisch."],
+    ["dumbbell","Ein Plan, der wirklich deiner ist",
+      "Aus deinen Antworten baut die Engine einen Plan aus 6–9 Übungen pro Einheit — gefiltert nach deinem Equipment, mit Extra-Volumen für deine Fokus-Muskeln und auf deine Wochentage gelegt.",
+      ["Equipment-Filter: nur Übungen, die du wirklich machen kannst","Satz-Zahl nach Trainingserfahrung (Pelland 2025: 5–10 Sätze/Muskel)","Session-Dauer wird berechnet, nicht geschätzt"]],
+    ["brain","Ein Plan, der mitdenkt",
+      "Dein Plan ist kein PDF. Er reagiert auf das, was du loggst — Woche für Woche, Satz für Satz.",
+      ["Gewichts-Empfehlung aus deinen letzten Sätzen (RIR-gesteuert)","Automatische Erholungswoche bei Übertrainings-Signalen","Schonende Alternativen bei Muskelkater, per Long-Press tauschbar"]],
+    ["chart","Analytics, die WARUM erklären",
+      "Das Herzstück: jede Eingabe wird zu einer Auswertung. Kein Wert wird erfunden — fehlt die Datenbasis, sagt die App das ehrlich.",
+      ["Kraft-Prognose mit Konfidenzband (e1RM-Trend, 12 Wochen)","Muskelbalance & Belastungs-Ampel je Muskelgruppe","Erholungs-Trend, Körperkomposition, Ernährungs-Treue","Jede Aussage trägt ihre Konfidenz in %"]],
+    ["utensils","Ernährung in 10 Sekunden",
+      "Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Rechtschreibfehler.",
+      ["„200g hähnchen und 150g reis“ wird automatisch zerlegt","Tipp- & Hörfehler werden korrigiert (häncxen → Hähnchen)","Kalorien, Protein, Sättigung pro Mahlzeit"]],
+    ["message","Ein Coach im Kontext",
+      "Der Coach kennt deine Daten und den Bereich, in dem du gerade bist — und antwortet konkret statt generisch.",
+      ["Im Training: Progressions-Tipps zu deinen Lifts","In der Ernährung: was dir heute noch fehlt","In Analytics: erklärt deinen Trend"]],
   ];
   root.innerHTML=`
     <div class="heroband fade"><h2>Was METRICGYM für dich tut</h2>
-      <p class="sm t2" style="max-width:300px;margin:8px auto 0">Kein Tracker. Eine Engine, die versteht, warum dein Fortschritt passiert.</p></div>
-    ${feats.map(([ic,t,b])=>`<div class="card" style="display:flex;gap:14px;align-items:flex-start">
-      <span class="icon-circle">${icon(ic,20)}</span>
-      <div><p style="font-weight:700;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>`).join("")}
-    <button class="btn volt" onclick="A.featDone()">Los geht's</button>`;
+      <p class="sm t2" style="max-width:320px;margin:8px auto 0">Kein weiterer Tracker. Eine Engine, die aus deinen Eingaben versteht, <b style="color:var(--t1)">warum</b> dein Fortschritt passiert — und was du als Nächstes tun solltest.</p></div>
+    ${feats.map(([ic,t,b,bullets])=>`<div class="card">
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px">
+        <span class="icon-circle">${icon(ic,20)}</span>
+        <div><p style="font-weight:700;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>
+      ${bullets.map(x=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0">
+        <span style="color:var(--hl);flex-shrink:0;display:inline-flex;margin-top:1px">${icon("check",14)}</span>
+        <span class="sm" style="line-height:1.5">${x}</span></div>`).join("")}
+    </div>`).join("")}
+    <div class="card" style="background:var(--accent);color:#fff;border:none">
+      <p style="font-weight:700;margin-bottom:6px;color:#fff">${icon("zap",15)} Der Deal ist einfach</p>
+      <p class="sm" style="line-height:1.6;color:rgba(255,255,255,.85)">Je vollständiger du deinen Tag einträgst, desto schärfer werden deine Analytics. Auf der Startseite findest du deine <b style="color:#fff">Daten-Routine</b> — eine Checkliste, die dir genau zeigt, was heute noch fehlt.</p>
+    </div>
+    <button class="btn volt" onclick="A.featDone()">Los geht's — Daten-Routine ansehen</button>`;
 }
 
 // ---------- Universelles Quick-Log-Feld (Text ODER iOS-Tastatur-Diktat) ----------
@@ -2147,6 +2207,44 @@ function openStatusSheet(){
       <button class="btn volt mt16" onclick="A.stSave()">Check abschließen</button>
     </div></div>`;
 }
+/* Daten-Routine (Roadmap): Was muss heute rein, damit die Analytics perfekt
+   werden? Erledigt-Status kommt aus echten Daten, jede Zeile ist tappbar. */
+function dailyChecklist(){
+  const today=todayKey(), tType=todayType();
+  const nlog=S.nutritionLog[today]||{};
+  const meals=(nlog.meals||[]).length, water=nlog.water||0;
+  const trainedToday=S.trainingHistory.some(t=>t.date===today);
+  const weighed7d=S.weightLog.some(w=>Date.now()-w.t<7*dayMs);
+  const restDay=tType==="rest";
+  const items=[
+    {icon:"moon",label:"Status-Check",sub:"10 Sek. — füttert Erholungs-Trend & Tagesempfehlung",done:!!S.checkin,act:"A.openStatus()"},
+    {icon:"dumbbell",label:restDay?"Ruhetag":"Training loggen",sub:restDay?"Heute nichts zu tun — Erholung zählt als Training":"Füttert Kraft-Prognose, Rekorde & Belastungs-Ampel",done:restDay||trainedToday,act:"A.q('train')"},
+    {icon:"utensils",label:"Alle Mahlzeiten loggen",sub:"Füttert Ernährungs-Treue & Nährstoff-Check",done:meals>=2,act:"A.q('nutrition')"},
+    {icon:"droplet",label:"Wasser tracken",sub:"Ziel 2,5 l — Teil deines Ernährungs-Bildes",done:water>=6,act:"A.q('nutrition')"},
+    {icon:"scale",label:"Wiegen",sub:"1× pro Woche reicht — füttert Körper-Trend & Kalorienziel",done:weighed7d,act:"A.q('profile')"},
+  ];
+  return {items,done:items.filter(i=>i.done).length};
+}
+function checklistCard(){
+  const {items,done}=dailyChecklist();
+  return `<div class="card">
+    <div class="row mb8"><p class="sm" style="font-weight:700">Deine Daten-Routine heute</p>
+      <span class="metric xs ${done===items.length?"volt-txt":"t2"}">${done} / ${items.length}</span></div>
+    <div class="progress mb12" style="height:6px"><div style="width:${done/items.length*100}%"></div></div>
+    ${items.map(i=>`<button class="exrow" style="border-top:1px solid var(--hairline)" onclick="${i.act}" aria-label="${i.label}">
+      <span style="display:flex;align-items:center;gap:12px;min-width:0">
+        <span style="width:26px;height:26px;min-width:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+          ${i.done?"background:var(--accent);color:#fff;border:none":"border:1.5px solid var(--t3);color:transparent"}">${icon("check",14)}</span>
+        <span style="min-width:0">
+          <span style="display:block;font-weight:600;${i.done?"color:var(--t3);text-decoration:line-through":""}">${i.label}</span>
+          <span class="xs t2" style="display:block;white-space:normal;line-height:1.4">${i.sub}</span>
+        </span>
+      </span>
+      <span style="color:var(--t3);display:inline-flex;flex-shrink:0">${i.done?icon("check",15):icon("chevronR",15)}</span>
+    </button>`).join("")}
+    <p class="xs t2 mt8">${done===items.length?"Alles drin — deine Analytics laufen heute auf voller Datenbasis.":"Alles zusammen unter 2 Minuten — jede Zeile füttert eine eigene Analyse im Analytics-Tab."}</p>
+  </div>`;
+}
 function renderHome(){
   const p=S.profile;
   const tType=todayType(), tSession=TYPES[tType];
@@ -2226,7 +2324,9 @@ function renderHome(){
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
     :""}
 
-    ${renderSection("Dein Plan denkt mit",(()=>{
+    ${renderSection("Heute eintragen",checklistCard())}
+
+    ${renderSection("Adaptives Training",(()=>{
       // USP-Karte (v5/Phase 3): echte Anpassung zeigen, wenn vorhanden — sonst erklären, was kommt.
       const adaptions=[];
       if(S.currentWeek===4)adaptions.push(`Diese Woche ist deine ${LABELS.deload} — der Plan hat Sätze und Gewichte automatisch reduziert.`);
@@ -2566,7 +2666,42 @@ function renderAnalytics(){
   const ins=buildInsights();
   const today=S.checkin||(S.readinessHistory.length?{score:S.readinessHistory[S.readinessHistory.length-1].score,tier:S.readinessHistory[S.readinessHistory.length-1].tier}:null);
 
+  // ---------- Analytics-Übersicht: ein Kopf-Dashboard, das den Zustand bündelt ----------
+  const nutriDaysAll=Object.keys(S.nutritionLog).filter(d=>(S.nutritionLog[d].meals||[]).length>0);
+  // 6 Analyse-Module: jeweils freigeschaltet, sobald genug echte Daten da sind
+  const modules=[
+    {n:"Kraft & Prognose",ok:lifts.length>0},
+    {n:LABELS.volume,ok:S.trainingHistory.length>=3},
+    {n:"Intensität",ok:allSets.length>=10},
+    {n:"Körper",ok:S.weightLog.length>=3},
+    {n:"Erholung",ok:S.readinessHistory.length>=5},
+    {n:"Ernährung",ok:nutriDaysAll.length>=3},
+  ];
+  const activeMods=modules.filter(m=>m.ok).length;
+  const completeness=Math.round((dp.training+dp.nutrition+dp.status)/21*100);
+  // Trainingskonstanz: Anteil geplanter Sessions, die in den letzten 14 Tagen wirklich stattfanden
+  const planned2w=(schedule().filter(t=>t!=="rest"&&t!=="cardio").length||p.a.days||4)*2;
+  const did2w=S.trainingHistory.filter(t=>Date.now()-new Date(t.date).getTime()<14*dayMs&&t.type!=="cardio"&&t.type!=="rest").length;
+  const consistency=Math.min(100,Math.round(did2w/Math.max(1,planned2w)*100));
+  const headline=ins.length?ins[0]:null;
+
   let html=html0+`
+    <div class="card" style="border-color:rgba(26,26,26,.1)">
+      <div class="row mb12"><p class="ct" style="margin:0">${icon("sparkle",14)} Deine Analytics auf einen Blick</p>
+        <span class="badge mute">${activeMods}/6 aktiv</span></div>
+      <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px">
+        ${[["Datenbasis",completeness+" %",completeness>=70?"volt-txt":completeness>=40?"":"t2"],
+           ["Konstanz",consistency+" %",consistency>=70?"volt-txt":consistency>=40?"warn-txt":"t2"],
+           ["Insights",String(ins.length),ins.length?"volt-txt":"t2"]].map(([l,v,c])=>`
+          <div style="background:var(--s2);border-radius:14px;padding:12px 8px;text-align:center">
+            <p class="hero-num ${c}" style="font-size:24px">${v}</p>
+            <p class="xs t2" style="margin-top:2px">${l}</p></div>`).join("")}
+      </div>
+      ${headline?`<div class="msg ai" style="max-width:100%;margin-top:12px;margin-bottom:0">${icon("zap",13)} <b>Wichtigste Erkenntnis:</b> ${headline.t}<div class="conf mt8">Konfidenz ${headline.conf} %</div></div>`
+        :`<p class="sm t2 mt12" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
+    </div>`;
+
+  html+=`
     <!-- Daten-Sammelstand: ehrlich, immer sichtbar bis voll -->
     ${(dp.training<7||dp.nutrition<7||dp.status<7)?`<div class="card" style="border-color:rgba(91,140,255,.35)">
       <p class="ct">${icon("activity",14)} Deine Daten wachsen — letzte 7 Tage</p>
@@ -2596,6 +2731,21 @@ function renderAnalytics(){
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('trajectory')">Freischalten</button></div>`:""}</div>`;
   } else html+=gateCard("Dein Kraftfortschritt",3,0,"Trainings je Übung","Training beginnen","train");
 
+  // Persönliche Rekorde — Top 3 geschätzte Maximalkraft mit Datum
+  const prs=Object.keys(S.liftLog).map(n=>{
+    const s=e1Series(n); if(!s.length)return null;
+    let b=s[0]; for(const q of s)if(q.v>b.v)b=q;
+    return b.v>0?{n,v:b.v,t:b.t}:null;
+  }).filter(Boolean).sort((x,y)=>y.v-x.v).slice(0,3);
+  if(prs.length){
+    html+=`<div class="card"><p class="ct">${icon("star",14)} Deine Rekorde ${infoBtn("e1rm")}</p>
+      ${prs.map((r,i)=>`<div class="row" style="padding:8px 0;${i?"border-top:1px solid var(--hairline)":""}">
+        <span class="sm" style="font-weight:600">${r.n}</span>
+        <span style="text-align:right"><span class="metric" style="font-size:16px">${fmtKg(r.v)}</span>
+        <span class="xs t2" style="display:block">${fmtD(new Date(r.t))}</span></span></div>`).join("")}
+      <p class="xs t2 mt8">Geschätzte Maximalkraft — berechnet aus deinen echten Sätzen, nicht hochgerechnet aus Wunschdenken.</p></div>`;
+  }
+
   // Volumen
   if(S.trainingHistory.length>=3){
     const wks=[...Array(4)].map((_,i)=>{
@@ -2614,6 +2764,29 @@ function renderAnalytics(){
       </div>
       <p class="xs t2 mt8">${volWhy}</p></div>`;
   } else html+=gateCard("Wochenvolumen","3",S.trainingHistory.length,"Sessions");
+
+  // Muskelbalance: Sätze je Muskelgruppe diese Woche vs. optimaler Korridor (MEV–MRV)
+  if(allSets.length>=10){
+    const w0=weeklyMuscleSets(0);
+    const groups=Object.keys(VOL_BANDS).filter(m=>w0[m]>0);
+    if(groups.length){
+      html+=`<div class="card"><p class="ct">${icon("activity",14)} Deine Muskelbalance · diese Woche ${infoBtn("volumeBand")}</p>
+        <p class="xs t2 mb12">Sätze je Muskelgruppe gegen den optimalen Korridor — zu wenig bremst Wachstum, zu viel deine Erholung.</p>
+        ${groups.map(m=>{
+          const v=w0[m]||0, [lo,hi]=VOL_BANDS[m];
+          const scale=Math.max(hi,v)*1.1;
+          const status=v<lo?["zu niedrig","var(--info)"]:v>hi?["zu hoch","var(--danger)"]:["optimal","var(--volt)"];
+          return `<div class="mb12"><div class="row mb4"><span class="sm" style="font-weight:600">${m}</span>
+            <span class="metric xs ${v<lo?"":v>hi?"danger-txt":"volt-txt"}">${v} Sätze · ${status[0]}</span></div>
+            <div style="position:relative;height:14px;background:var(--s3);border-radius:7px;overflow:hidden">
+              <div style="position:absolute;left:${lo/scale*100}%;width:${(hi-lo)/scale*100}%;top:0;bottom:0;background:rgba(232,99,58,.16)"></div>
+              <div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100,v/scale*100)}%;background:${status[1]};opacity:.8;border-radius:7px"></div>
+            </div>
+            <p class="xs t2" style="margin-top:3px">Optimal: ${lo}–${hi} Sätze/Woche</p></div>`;
+        }).join("")}
+      </div>`;
+    }
+  }
 
   // RPE
   if(allSets.length>=10){
