@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F7F5F1">
-<title>METRICGYM</title>
+<title>METRICGYM — Versteh, warum dein Fortschritt passiert</title>
+<meta name="description" content="METRICGYM: adaptiver Trainingsplan, Analytics die WARUM erklären, Ernährung in 10 Sekunden. Keine erfundenen Werte — alles aus deinen echten Daten.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%231A1A1A'/%3E%3Crect x='15' y='34' width='7' height='16' rx='3.5' fill='%23fff'/%3E%3Crect x='28.5' y='26' width='7' height='24' rx='3.5' fill='%23fff'/%3E%3Crect x='42' y='16' width='7' height='34' rx='3.5' fill='%23fff'/%3E%3Cpath d='M15 28l9-7 7 4.5 14-11' stroke='%23E8633A' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='45' cy='14.5' r='3.4' fill='%23E8633A'/%3E%3C/svg%3E">
 <!--
 ═══════════════════════════════════════════════════════════════════════
 PRICING & PACKAGING — DOKUMENTATION (McKinsey-Methodik, Good-Better-Better)
@@ -376,6 +378,36 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .whybox{background:var(--s2); border-radius:12px; padding:10px 12px; font-size:12px; line-height:1.55; color:var(--t2); margin-top:8px;}
   .avatar{width:52px;height:52px;border-radius:50%;background:var(--s3);color:var(--t1);font-weight:800;display:flex;align-items:center;justify-content:center;}
   .icon-circle{width:44px;height:44px;min-width:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--t1);}
+  /* ===== Landingpage (Marketing) ===== */
+  .lp{max-width:460px;margin:0 auto;padding:0 0 60px;}
+  .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;position:sticky;top:0;z-index:30;
+    background:rgba(247,245,241,.72);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);}
+  .lp-sec{padding:46px 20px;}
+  .lp-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--hl);margin-bottom:12px;}
+  .lp-h{font-size:34px;font-weight:900;letter-spacing:-.03em;line-height:1.08;margin-bottom:14px;}
+  .lp-h2{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:10px;}
+  .lp-lead{font-size:16px;line-height:1.6;color:var(--t2);}
+  .lp-hero{padding:30px 20px 40px;text-align:center;position:relative;overflow:hidden;}
+  .lp-hero::after{content:"";position:absolute;inset:-40% -20% auto -20%;height:70%;z-index:-1;
+    background:radial-gradient(60% 80% at 50% 0%,rgba(232,99,58,.12),transparent 70%);}
+  .lp-claimgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .lp-claim{background:var(--s1);border:1px solid var(--hairline);border-radius:16px;padding:16px 14px;text-align:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.04);}
+  .lp-claim .n{font-family:var(--font-hero);font-weight:900;font-size:30px;letter-spacing:-.02em;line-height:1;}
+  .lp-claim .l{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.35;}
+  .lp-pillar{display:flex;gap:14px;align-items:flex-start;padding:18px 0;border-top:1px solid var(--hairline);}
+  .lp-pillar .ic{width:46px;height:46px;min-width:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#fff;}
+  .lp-step{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;}
+  .lp-step .num{width:30px;height:30px;min-width:30px;border-radius:50%;background:var(--hl);color:#fff;font-weight:800;
+    display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .lp-quote{font-size:19px;font-weight:700;line-height:1.4;letter-spacing:-.01em;}
+  .lp-dark{background:var(--accent);color:#fff;border-radius:26px;margin:0 12px;padding:34px 24px;}
+  .lp-dark .lp-h2,.lp-dark .lp-quote{color:#fff;}
+  .lp-seg{display:flex;gap:4px;background:var(--s2);border:1px solid var(--border);border-radius:999px;padding:4px;}
+  .lp-seg button{flex:1;min-height:38px;border:none;border-radius:999px;background:none;color:var(--t2);font-weight:600;font-size:12.5px;
+    font-family:inherit;cursor:pointer;padding:0 6px;}
+  .lp-seg button.sel{background:var(--accent);color:#fff;}
 </style>
 </head>
 <body>
@@ -443,13 +475,32 @@ function icon(name,size){
   const d=ICONS[name]||ICONS.info;
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">${d}</svg>`;
 }
-/* Logo: 3 Balken (Fortschrittsgraph) + Wortmarke — eine Marke, kein Farbsplit */
+/* Logo-Wortmarke: 3 aufsteigende Balken (Fortschrittsgraph) mit Puls-Peak —
+   eine Marke, kein Farbsplit. */
 function logoSVG(h){
   h=h||24;
-  return `<svg width="${Math.round(h*0.9)}" height="${h}" viewBox="0 0 22 24" fill="none" aria-hidden="true">
-    <rect x="2" y="12" width="4.5" height="10" rx="2.25" fill="currentColor"/>
-    <rect x="8.75" y="6" width="4.5" height="16" rx="2.25" fill="currentColor"/>
-    <rect x="15.5" y="1" width="4.5" height="21" rx="2.25" fill="currentColor"/>
+  return `<svg width="${Math.round(h*0.92)}" height="${h}" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="2" y="13" width="4" height="9" rx="2" fill="currentColor"/>
+    <rect x="8.5" y="8" width="4" height="14" rx="2" fill="currentColor"/>
+    <rect x="15" y="2" width="4" height="20" rx="2" fill="currentColor"/>
+    <path d="M3 9.5l5-4 4 2.5 8-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+  </svg>`;
+}
+/* Logo-Marke (App-Icon-Stil): gerundetes Badge mit Balken + Puls-Linie.
+   Für Landing-Hero, Splash und als Favicon-Vorlage. accent: Hintergrund-Stil. */
+function logoMark(size,dark){
+  size=size||72;
+  const bg=dark?"#1A1A1A":"#FFFFFF", fg=dark?"#FFFFFF":"#1A1A1A", hl="#E8633A";
+  const id="lg"+Math.random().toString(36).slice(2,7);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="display:block">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${dark?"#262626":"#FFFFFF"}"/><stop offset="1" stop-color="${dark?"#141414":"#F0EDE7"}"/></linearGradient></defs>
+    <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#${id})" stroke="${dark?"rgba(255,255,255,.12)":"rgba(0,0,0,.08)"}"/>
+    <rect x="15" y="34" width="7" height="16" rx="3.5" fill="${fg}"/>
+    <rect x="28.5" y="26" width="7" height="24" rx="3.5" fill="${fg}"/>
+    <rect x="42" y="16" width="7" height="34" rx="3.5" fill="${fg}"/>
+    <path d="M15 28l9-7 7 4.5 14-11" stroke="${hl}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="45" cy="14.5" r="3.4" fill="${hl}"/>
   </svg>`;
 }
 /* =====================================================================
@@ -733,6 +784,11 @@ S.scheduleRationale=S.scheduleRationale??null;
 S.exOverrides=S.exOverrides||{};
 S.rhrLog=S.rhrLog||[];
 S.billing=S.billing||"monthly";
+// Flexibler Plan: A/B-Varianten + Rotations-Modus (nicht an Wochentage gekoppelt)
+S.planB=S.planB||null;
+S.planMode=S.planMode||"week"; // "week" = Wochentage · "rotation" = fortlaufend
+S.rotation=S.rotation||null;
+S.rotationPos=S.rotationPos||0;
 if(S.checkinDate&&S.checkinDate!==todayKey()){S.checkin=null;S.checkinDate=null;}
 
 // ---------- Tier-System (Good-Better-Better) ----------
@@ -942,8 +998,9 @@ const SETS_BY_EXP={
   intermediate:{c:3,a:3,i:2,count:6},
   advanced:{c:4,a:3,i:3,count:7},
 };
-function generateTrainingPlan(profile){
+function generateTrainingPlan(profile,variant){
   const a=(profile&&profile.a)||{};
+  const vB=variant==="B"; // Variante B: andere Übungsauswahl pro Slot → Abwechslung
   const exp=a.exp||"novice", goals=a.goals||["muscle_gain"];
   const equipment=EQ_ALLOWED[a.equipment]?a.equipment:"gym_full";
   const allowed=EQ_ALLOWED[equipment], hasBench=EQ_BENCH[equipment];
@@ -953,12 +1010,15 @@ function generateTrainingPlan(profile){
   const repC=strength?"3–5":"5–8", restC=strength?210:165;
   const fits=(n)=>{const d=EXDB[n]; return d&&allowed.includes(d.eq)&&(!d.bench||hasBench);};
   const mk=(n,sets,reps,rest)=>{const d=EXDB[n]||{};return {n,sets,reps,rest,tempo:d.tempo||"2-0-1-0",rir:d.rir||"1–2",m:d.m||"—",why:d.why||"",alt:d.alt||null,lengthened:!!d.lengthened};};
-  // Slot-Auswahl: Equipment-Filter + Dedupe, dann Sätze/Reps nach Rolle
+  // Slot-Auswahl: Equipment-Filter + Dedupe, dann Sätze/Reps nach Rolle.
+  // Variante B nimmt pro Slot — wo möglich — den ZWEITEN passenden Kandidaten,
+  // damit A- und B-Einheit sich in den Übungen unterscheiden.
   const buildMain=(key)=>{
     const chosen=[];
     for(const slot of SESSION_SLOTS[key]){
       if(chosen.length>=scheme.count)break;
-      const n=slot.find(x=>fits(x)&&!chosen.includes(x));
+      const fitting=slot.filter(x=>fits(x)&&!chosen.includes(x));
+      const n=vB&&fitting.length>1?fitting[1]:fitting[0];
       if(n)chosen.push(n);
     }
     // Fokus-Bonus: Extra-Übung früh einsortieren (Position 3, nach den Haupt-Grundübungen)
@@ -1037,14 +1097,48 @@ function generateOptimalSchedule(a){
   const cardioTxt=sch.includes("cardio")?" Der lockere Cardio-Tag liegt auf einem Ruhetag — er fördert deine Erholung, statt sie zu kosten.":"";
   return {schedule:sch,rationale:`${splitTxt} ${recTxt} ${prefTxt}${cardioTxt}`};
 }
+/* Fortlaufende Rotation (nicht an Wochentage gekoppelt): eine Sequenz von
+   Einheiten — du machst einfach die nächste, wann immer du im Gym bist.
+   A/B-Varianten sorgen für Übungsabwechslung bei wiederholten Typen. */
+function generateRotation(a){
+  a=a||{};
+  const days=Math.min(6,Math.max(2,a.days||4));
+  const rec=a.recovery_profile||"average";
+  const ROT={
+    2:["upperA","lowerA"],
+    3:rec==="slow"?["upperA","lowerA","upperB"]:["pushA","pullA","legs"],
+    4:["upperA","lowerA","upperB","lowerB"],
+    5:["pushA","pullA","legs","upperA","lowerA"],
+    6:rec==="slow"?["pushA","pullA","legsA","upperA","lowerA","cardio"]:["pushA","pullA","legsA","pushB","pullB","legsB"],
+  };
+  return (ROT[days]||ROT[4]).slice();
+}
+function activeRotation(){
+  if(!S.rotation&&S.profile){S.rotation=generateRotation(S.profile.a);save();}
+  return S.rotation||["upperA","lowerA","upperB","lowerB"];
+}
+// Die als Nächstes anstehende Einheit der Rotation (Pointer, wandert beim Abschluss weiter).
+function rotationNext(){ const r=activeRotation(); return r[(S.rotationPos||0)%r.length]; }
 function activePlan(){
   if(!S.plan&&S.profile){S.plan=generateTrainingPlan(S.profile);save();}
   return S.plan||generateTrainingPlan(null);
 }
-/* TYPES: dynamische Sicht auf den Plan (inkl. Soreness-Modus) —
+function activePlanB(){
+  if(!S.planB&&S.profile){S.planB=generateTrainingPlan(S.profile,"B");save();}
+  return S.planB||generateTrainingPlan(null,"B");
+}
+/* Variantenschlüssel zerlegen: "pushB" → {base:"push", variant:"B"}.
+   Basistypen (push/pull/legs/upper/lower/cardio/rest) enden nie auf A/B. */
+function parseTypeKey(key){
+  const m=/^(push|pull|legs|upper|lower)([AB])$/.exec(key||"");
+  return m?{base:m[1],variant:m[2]}:{base:key,variant:null};
+}
+/* TYPES: dynamische Sicht auf den Plan (inkl. Soreness-Modus, A/B-Varianten) —
    .ex bleibt als Kompat-Array für Player/Empfehlungen/Voice erhalten. */
 function sessionDef(key){
-  const plan=activePlan(); const d=plan[key]||plan.rest;
+  const {base,variant}=parseTypeKey(key);
+  const plan=variant==="B"?activePlanB():activePlan();
+  const d=plan[base]||plan.rest;
   const sore=!!S.soreMode[key];
   const ov=(S.exOverrides&&S.exOverrides[key])||{};
   const main=d.main.map((e,i)=>{
@@ -1058,7 +1152,8 @@ function sessionDef(key){
     return e;
   });
   const allEx=[...main,...(d.abs||[])];
-  return {...d,main,ex:allEx.map(e=>[e.n,e.sets,e.reps,e.rest])};
+  const label=d.label+(variant?` ${variant}`:"");
+  return {...d,key,base,variant,label,main,ex:allEx.map(e=>[e.n,e.sets,e.reps,e.rest])};
 }
 /* Long-Press auf eine Übung (v5-Erweiterung): Alternativen-Menü, nach Effizienz
    sortiert — z. B. wenn ein Gerät belegt oder nicht vorhanden ist. */
@@ -1892,21 +1987,151 @@ function renderAuth(){
     save(); render();
     toast("Developer-Modus: Onboarding mit vorausgefüllten Demo-Werten");
   };
-  root.innerHTML=`<div class="center fade">
-    <div>
-      <p style="font-size:34px;font-weight:700;letter-spacing:3px">METRIC<span class="volt-txt">GYM</span></p>
-      <p class="sm t2 mt8" style="max-width:290px">Versteh, warum dein Fortschritt passiert — nicht nur, dass er passiert.</p>
+  renderLanding();
+}
+/* Interaktiver Ziel-Rechner: ehrliche, studienbasierte Projektion (Bereiche,
+   klar als Projektion gekennzeichnet — keine versprochenen Einzelresultate). */
+const LP={goal:"muscle_gain",days:4,exp:"novice"};
+function landingProjection(){
+  // Kraftzuwachs auf Grundübungen über 12 Wochen, %-Bereich nach Trainingsalter
+  // (Größenordnung gem. Literatur: Anfänger steigern am schnellsten).
+  const base={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[LP.exp]||[12,22];
+  const dFac=Math.min(1,0.55+LP.days*0.11); // mehr Tage → näher ans obere Ende (mit Sättigung)
+  const lo=Math.round(base[0]*dFac), hi=Math.round(base[1]*dFac);
+  // Geschätzter Zeitaufwand/Woche aus Tagen × ~55 Min
+  const minWk=LP.days*55;
+  // Magermasse-Aufbau-Tendenz (qualitativ, nicht als kg versprochen)
+  const muscle={muscle_gain:"deutlich",recomp:"moderat",strength:"gering, dafür viel Kraft",fat_loss:"erhalten im Defizit",general:"solide",endurance:"gering",mobility:"gering"}[LP.goal]||"solide";
+  return {lo,hi,minWk,muscle};
+}
+function projChart(lo,hi){
+  // Sättigungskurve von 0 → Mittelwert über 12 Wochen, als Fläche
+  const mid=(lo+hi)/2, W=300,H=120,P=6, pts=[];
+  for(let w=0;w<=12;w++){const v=mid*(1-Math.exp(-w/4.5));pts.push([P+w/12*(W-2*P),H-P-v/(mid||1)*(H-2*P)]);}
+  const line=pts.map((p,i)=>`${i?"L":"M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area=`${line} L${W-P},${H-P} L${P},${H-P} Z`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;aspect-ratio:5/2;display:block">
+    <path d="${area}" fill="var(--hl)" opacity=".12"/>
+    <path d="${line}" fill="none" stroke="var(--hl)" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${pts[12][0]}" cy="${pts[12][1]}" r="4" fill="var(--hl)"/>
+    <text x="${P}" y="${H-1}" font-size="9" fill="var(--t3)" font-family="JetBrains Mono,monospace">Heute</text>
+    <text x="${W-P}" y="${H-1}" font-size="9" fill="var(--t3)" text-anchor="end" font-family="JetBrains Mono,monospace">Woche 12</text></svg>`;
+}
+function renderLanding(){
+  A.lpSet=(k,v)=>{LP[k]=(k==="days")?parseInt(v):v;renderLanding();};
+  const GL=[["muscle_gain","Muskelaufbau"],["strength","Maximalkraft"],["fat_loss","Fettabbau"],["recomp","Recomp"]];
+  const EL=[["beginner","Anfänger"],["novice","1–2 J."],["intermediate","2–4 J."],["advanced","4+ J."]];
+  const pr=landingProjection();
+  root.innerHTML=`<div class="lp fade">
+    <div class="lp-nav">
+      <span style="display:flex;align-items:center;gap:9px">${logoSVG(22)}<span class="logo-text" style="font-size:15px">METRICGYM</span></span>
+      <button class="btn ghost" style="width:auto;min-height:40px;padding:0 14px;font-size:13px" onclick="A.toLogin()">Anmelden</button>
     </div>
-    <div style="width:100%;max-width:300px">
-      <button class="btn volt mb8" onclick="A.toRegister()">Konto erstellen</button>
-      <button class="btn mb8" onclick="A.toLogin()">Anmelden</button>
-      <button class="btn ghost" onclick="A.devMode()">${icon("settings",15)} Demo-Modus mit Beispieldaten</button>
-    </div>
-    <div class="row" style="gap:14px;justify-content:center">
-      <span class="xs t2">Kein Abo</span><span class="xs" style="color:var(--t3)">·</span>
-      <span class="xs t2">Daten lokal</span><span class="xs" style="color:var(--t3)">·</span>
-      <span class="xs t2">DSGVO</span>
-    </div></div>`;
+
+    <!-- HERO -->
+    <section class="lp-hero">
+      <div style="display:flex;justify-content:center;margin-bottom:20px">${logoMark(78)}</div>
+      <p class="lp-eyebrow">Performance Intelligence</p>
+      <h1 class="lp-h">Versteh, <span class="volt-txt">warum</span><br>dein Fortschritt passiert.</h1>
+      <p class="lp-lead" style="max-width:340px;margin:0 auto 22px">Andere Apps zählen, was du tust. METRICGYM erklärt, <b style="color:var(--t1)">warum</b> es wirkt — und sagt dir, was als Nächstes dran ist. Training, Ernährung und Erholung in einer Engine.</p>
+      <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
+      <button class="btn mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.devMode()">${icon("play",15)} Live-Demo ohne Anmeldung</button>
+      <p class="xs t2">Kostenloser Plan dauerhaft · keine Kreditkarte · Daten bleiben auf deinem Gerät</p>
+    </section>
+
+    <!-- CLAIMS / REASONS TO BELIEVE -->
+    <section class="lp-sec" style="padding-top:0">
+      <div class="lp-claimgrid">
+        <div class="lp-claim"><p class="n volt-txt">0</p><p class="l">erfundene Werte — jede Zahl kommt aus deinen echten Daten</p></div>
+        <div class="lp-claim"><p class="n">40+</p><p class="l">Studien als Fundament der Engine (Schoenfeld, Israetel, Helms …)</p></div>
+        <div class="lp-claim"><p class="n">6</p><p class="l">Analyse-Module: Kraft, Belastung, Intensität, Körper, Erholung, Ernährung</p></div>
+        <div class="lp-claim"><p class="n">100<span style="font-size:18px">%</span></p><p class="l">lokal & DSGVO — kein Tracking, kein Verkauf deiner Daten</p></div>
+      </div>
+    </section>
+
+    <!-- PROBLEM → LÖSUNG -->
+    <section class="lp-sec" style="padding-top:0">
+      <p class="lp-eyebrow">Der Unterschied</p>
+      <h2 class="lp-h2">Tracking sagt dir, dass.<br>Wir sagen dir, warum.</h2>
+      <p class="lp-lead mb16">„Bankdrücken stagniert" ist eine Zahl. <b style="color:var(--t1)">„Bankdrücken stagniert — wahrscheinlichste Ursache: niedrige Erholungswerte, Konfidenz 70 %"</b> ist eine Entscheidung. Genau das liefert die Engine.</p>
+    </section>
+
+    <!-- 3 SÄULEN -->
+    <section class="lp-sec" style="padding-top:0">
+      <p class="lp-eyebrow">Was die App kann</p>
+      <h2 class="lp-h2 mb16">Drei Systeme, eine Engine</h2>
+      ${[["dumbbell","Adaptiver Trainingsplan","Generiert aus deinem Equipment, deinem Level und deinen Zielen. Passt Gewichte, Sätze und Erholungswochen automatisch an das an, was du loggst."],
+         ["chart","Analytics, die erklären","Kraft-Prognosen mit Konfidenzband, Muskelbalance-Ampel, Erholungs- und Ernährungs-Trends — jede Aussage mit Konfidenz, nichts erfunden."],
+         ["utensils","Ernährung in 10 Sekunden","Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Tippfehler („häncxen“ → Hähnchen) und rechnet Kalorien & Protein."]]
+        .map(([ic,t,b])=>`<div class="lp-pillar"><span class="ic">${icon(ic,22)}</span>
+          <div><p style="font-weight:700;font-size:16px;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>`).join("")}
+    </section>
+
+    <!-- INTERAKTIVER ZIEL-RECHNER -->
+    <section class="lp-sec" style="padding-top:0">
+      <div class="card" style="border-color:rgba(232,99,58,.3)">
+        <p class="lp-eyebrow" style="margin-bottom:8px">${icon("sparkle",13)} Dein Potenzial</p>
+        <h2 class="lp-h2" style="font-size:21px">Was ist für dich drin?</h2>
+        <p class="sm t2 mb16">Stell deinen Plan ein — wir zeigen dir eine realistische 12-Wochen-Projektion auf Basis der Trainingswissenschaft.</p>
+        <p class="xs t2 mb4" style="font-weight:700">Dein Ziel</p>
+        <div class="lp-seg mb12" style="flex-wrap:wrap">${GL.map(([v,l])=>`<button class="${LP.goal===v?"sel":""}" onclick="A.lpSet('goal','${v}')">${l}</button>`).join("")}</div>
+        <p class="xs t2 mb4" style="font-weight:700">Trainingstage pro Woche: <span class="volt-txt metric">${LP.days}</span></p>
+        <input type="range" min="2" max="6" step="1" value="${LP.days}" oninput="A.lpSet('days',this.value)" class="mb12" style="width:100%">
+        <p class="xs t2 mb4" style="font-weight:700">Deine Erfahrung</p>
+        <div class="lp-seg mb16">${EL.map(([v,l])=>`<button class="${LP.exp===v?"sel":""}" onclick="A.lpSet('exp','${v}')">${l}</button>`).join("")}</div>
+        <div style="background:var(--s2);border-radius:16px;padding:16px">
+          <div class="row mb8"><span class="sm t2">Kraftzuwachs auf Grundübungen</span>
+            <span class="hero-num volt-txt" style="font-size:24px">+${pr.lo}–${pr.hi} %</span></div>
+          ${projChart(pr.lo,pr.hi)}
+          <div class="grid2 mt12" style="gap:10px">
+            <div style="text-align:center"><p class="metric" style="font-size:16px">${pr.minWk} Min</p><p class="xs t2">Aufwand / Woche</p></div>
+            <div style="text-align:center"><p class="metric" style="font-size:16px">${pr.muscle}</p><p class="xs t2">Muskelaufbau-Tendenz</p></div>
+          </div>
+        </div>
+        <p class="xs t2 mt8" style="line-height:1.5">Projektion auf Basis veröffentlichter Trainingsstudien — kein garantiertes Einzelergebnis. Deine echten Zahlen trackt die App ab Tag 1.</p>
+        <button class="btn volt mt16" onclick="A.toRegister()">Diesen Plan kostenlos bekommen</button>
+      </div>
+    </section>
+
+    <!-- SO FUNKTIONIERT'S -->
+    <section class="lp-sec" style="padding-top:0">
+      <p class="lp-eyebrow">In 3 Schritten</p>
+      <h2 class="lp-h2 mb16">Vom Log zur Entscheidung</h2>
+      ${[["Du loggst — kurz und ehrlich","Training, Mahlzeiten, Tages-Status. Per Tippen, Sprechen oder Foto. Keine 10 Sekunden."],
+         ["Die Engine rechnet","Belastung, Erholung, Fortschritt — berechnet aus deinen echten Daten, mit Konfidenz pro Aussage."],
+         ["Dein Plan passt sich an","Gewichte, Sätze, Erholungswochen ändern sich automatisch. Mit jeder Session präziser."]]
+        .map(([t,b],i)=>`<div class="lp-step"><span class="num">${i+1}</span>
+          <div><p style="font-weight:700;margin-bottom:2px">${t}</p><p class="sm t2" style="line-height:1.55">${b}</p></div></div>`).join("")}
+    </section>
+
+    <!-- REASON TO BELIEVE: WISSENSCHAFT -->
+    <section class="lp-sec" style="padding-top:0">
+      <div class="lp-dark">
+        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Warum du uns glauben kannst</p>
+        <p class="lp-quote mb16">Jede Empfehlung steht auf Peer-Review-Forschung — nicht auf Bauchgefühl.</p>
+        ${[["Progressive Überladung & Volumen","Schoenfeld 2017 · Pelland 2025"],
+           ["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
+           ["RIR-gesteuerte Progression","Helms 2016 · Robinson 2024"],
+           ["Protein & Körperkomposition","Morton et al. 2018 · Helms 2014"]]
+          .map(([t,c])=>`<div class="row" style="padding:9px 0;border-top:1px solid rgba(255,255,255,.12)">
+            <span class="sm" style="color:#fff;font-weight:600">${t}</span><span class="xs" style="color:rgba(255,255,255,.55);text-align:right">${c}</span></div>`).join("")}
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="lp-sec" style="text-align:center">
+      <div style="display:flex;justify-content:center;margin-bottom:16px">${logoMark(60)}</div>
+      <h2 class="lp-h2">Hör auf zu raten.<br>Fang an zu verstehen.</h2>
+      <p class="lp-lead mb16" style="max-width:320px;margin-left:auto;margin-right:auto">Der kostenlose Plan ist ein vollständiges Produkt — Trainingsplan, Logging, Status und dein erster Insight inklusive.</p>
+      <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
+      <button class="btn ghost" style="max-width:320px;margin:0 auto" onclick="A.devMode()">${icon("settings",15)} Erst die Demo ansehen</button>
+      <div class="row" style="gap:14px;justify-content:center;margin-top:20px">
+        <span class="xs t2">Kein Abo nötig</span><span class="xs" style="color:var(--t3)">·</span>
+        <span class="xs t2">Daten lokal</span><span class="xs" style="color:var(--t3)">·</span>
+        <span class="xs t2">DSGVO</span>
+      </div>
+    </section>
+  </div>`;
 }
 
 function renderRegister(){
@@ -2427,11 +2652,33 @@ A.lpStart=(key,idx)=>{ lpFired=false; clearTimeout(lpTimer); lpTimer=setTimeout(
 A.lpEnd=()=>clearTimeout(lpTimer);
 A.lpTap=(n)=>{ if(lpFired){lpFired=false;return;} exDetailModal(n); };
 A.swapMenu=(key,idx)=>openSwapSheet(key,idx);
+/* Session-Vorschau: jede Einheit (auch zukünftige Tage / Rotations-Boxen) lässt
+   sich antippen und komplett ansehen — nichts ist „gesperrt". */
+function openSessionPreview(typeKey){
+  const d=sessionDef(typeKey);
+  if(!d.main||!d.main.length){ if(typeKey==="cardio"){/*ok*/}else{toast("Ruhetag — keine Übungen");return;} }
+  A.previewStart=(t)=>{overlay.innerHTML="";A.startType(t);};
+  const exHtml=(d.main||[]).map(e=>`<div class="exrow" style="border-top:1px solid var(--hairline);cursor:default">
+      <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
+        <span>${e.n}</span>
+        <span><span class="statchip">${e.sets} × ${e.reps}</span><span class="statchip">${e.rir} in Reserve</span></span>
+      </span></div>`).join("");
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="display-m mb4" style="display:flex;align-items:center;gap:8px">${icon(d.icon,18)} ${d.label}</p>
+    <p class="sm t2 mb12">${d.main?d.main.length:0} Übungen · ≈ ${d.est||60} Min</p>
+    ${muscleSplitBars(typeKey)}
+    ${exHtml||'<p class="sm t2">Lockeres Zone-2-Cardio, 30–40 Min.</p>'}
+    <button class="btn volt mt16" onclick="A.previewStart('${typeKey}')">${icon("play",15)} Diese Einheit starten</button>
+  </div></div>`;
+}
+A.previewSession=(t)=>openSessionPreview(t);
 function renderTrain(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   const isDeload=S.currentWeek===4;
+  const rotMode=S.planMode==="rotation";
   A.editSchedule=()=>openScheduleSheet();
   A.startType=(t)=>{S.tab="player";S.playerType=t;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
+  A.setPlanMode=(m)=>{S.planMode=m;if(m==="rotation"&&!S.rotation)S.rotation=generateRotation(S.profile.a);save();renderTrain();};
   A.trainParse=()=>{
     const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
@@ -2441,9 +2688,12 @@ function renderTrain(){
   };
   A.voiceApprove=()=>{ if(!voicePreview)return; logParsedWorkout(voicePreview); toast(`✓ ${voicePreview.name}: ${voicePreview.sets}×${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}`); voicePreview=null; renderTrain(); };
   A.voiceCancel=()=>{voicePreview=null;renderTrain();};
-  // Fokus-Session: heute, sonst nächster Trainingstag
-  const focusType=(sch[dow]!=="rest")?sch[dow]:nextTrainingType();
-  const others=[...new Set(sch.filter(t=>t!=="rest"&&t!==focusType))];
+  // Fokus-Session: im Rotations-Modus die nächste Einheit, sonst heute/nächster Tag
+  const focusType=rotMode?rotationNext():((sch[dow]!=="rest")?sch[dow]:nextTrainingType());
+  const rot=activeRotation();
+  const others=rotMode
+    ? rot.filter(t=>t!==focusType)
+    : [...new Set(sch.filter(t=>t!=="rest"&&t!==focusType))];
   A.soreToggle=(t)=>{S.soreMode[t]=!S.soreMode[t];save();renderTrain();
     toast(S.soreMode[t]?"Schonende Alternativen aktiv — gute Entscheidung bei Muskelkater":"Standard-Übungen wieder aktiv");};
   const exLine=(e,key,idx)=>{
@@ -2463,22 +2713,37 @@ function renderTrain(){
   };
   const phaseAcc=(title,items)=>items&&items.length?`<details class="acc" style="background:rgba(255,255,255,.55)"><summary style="font-size:13px;padding:12px 14px">${title}<span class="chev">${icon("chevron",15)}</span></summary>
     <div class="accbody">${items.map(w=>`<p class="sm" style="padding:5px 0;font-weight:600">${w.n}</p><p class="xs t2" style="line-height:1.5;margin-bottom:6px">${w.why}</p>`).join("")}</div></details>`:"";
+  // Wochen-Strip: jeder Trainingstag ist antippbar → Vorschau (nichts gesperrt)
+  const weekStrip=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
+    ${sch.map((t,i)=>{const train=t!=="rest";
+      return `<button ${train?`onclick="A.previewSession('${t}')"`:""} style="background:${i===dow?"var(--s2)":"none"};border:none;border-radius:10px;padding:6px 0;cursor:${train?"pointer":"default"};font-family:inherit;color:var(--t1)">
+        <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
+        <p style="font-size:16px;margin:4px 0">${t==="rest"?"·":`<span style="display:inline-flex">${icon(TYPES[t].icon,15)}</span>`}</p>
+        <p style="font-size:8.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
+      </button>`;}).join("")}
+  </div>`;
+  // Rotations-Strip: Boxen pro Einheit, „Nächste" markiert, alle antippbar
+  const rotStrip=`<div class="pills" style="margin-bottom:4px">
+    ${rot.map((t,i)=>{const isNext=i===(S.rotationPos||0)%rot.length;
+      return `<button class="pill ${isNext?"active":""}" style="flex-direction:column;height:auto;min-height:62px;padding:8px 12px;gap:3px" onclick="A.previewSession('${t}')">
+        <span style="display:inline-flex">${icon(TYPES[t].icon,16)}</span>
+        <span style="font-size:11px;font-weight:700">${TYPES[t].label}</span>
+        ${isNext?'<span style="font-size:8px;letter-spacing:.06em">NÄCHSTE</span>':""}</button>`;}).join("")}
+  </div>`;
   root.innerHTML=`
     ${banner("train","dumbbell","<b>Dein wissenschaftlich fundierter Trainingsplan</b> — individuell auf deine Ziele, dein Level und deine Zeit abgestimmt.")}
-    ${renderSection("Deine Woche",
+    ${renderSection("Dein Plan",
       `<div class="card">
-        <div class="row mb12"><span class="xs t2">${isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4"}</span>
-          <button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button></div>
-        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
-          ${sch.map((t,i)=>`<div>
-            <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
-            <p style="font-size:16px;margin:4px 0">${t==="rest"?"·":`<span style=\"display:inline-flex\">${icon(TYPES[t].icon,15)}</span>`}</p>
-            <p style="font-size:8.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
-          </div>`).join("")}
-        </div>
+        <div class="lp-seg mb12">
+          <button class="${!rotMode?"sel":""}" onclick="A.setPlanMode('week')">Nach Wochentagen</button>
+          <button class="${rotMode?"sel":""}" onclick="A.setPlanMode('rotation')">Fortlaufende Rotation</button></div>
+        <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4"}</span>
+          ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
+        ${rotMode?rotStrip:weekStrip}
+        <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
       </div>`)}
 
-    ${focusType?renderSection(sch[dow]!=="rest"?"Dein Training heute":"Dein nächstes Training",
+    ${focusType?renderSection(rotMode?"Deine nächste Einheit":(sch[dow]!=="rest"?"Dein Training heute":"Dein nächstes Training"),
       `<div class="card">
         <div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(TYPES[focusType].icon,18)} ${TYPES[focusType].label}</p>
           <button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button></div>
@@ -2504,18 +2769,19 @@ function renderTrain(){
       `<div class="row mb12"><span></span><div class="viewtoggle">
         <button class="${S.viewMode.train==="list"?"sel":""}" onclick="A.vm('train','list')" aria-label="Listenansicht">${icon("rows",15)}</button>
         <button class="${S.viewMode.train==="grid"?"sel":""}" onclick="A.vm('train','grid')" aria-label="Galerieansicht">${icon("grid",15)}</button></div></div>`+
-      (S.viewMode.train==="grid"
+      (()=>{const sub=(t)=>rotMode?`${TYPES[t].main.length} Übungen`:`${TYPES[t].main.length} Übungen · ${sch.map((x,i)=>x===t?WD[i]:null).filter(Boolean).join(", ")}`;
+      return S.viewMode.train==="grid"
         ?`<div class="tiles">${others.map(t=>`<button class="tile pop" onclick="A.startType('${t}')">
             <div class="tart" style="background:${TYPES[t].art}"><span style="color:var(--t1);opacity:.7">${icon(TYPES[t].icon,30)}</span></div>
-            <div class="tbody"><b>${TYPES[t].label}</b><span>${TYPES[t].main.length} Übungen · ${sch.map((x,i)=>x===t?WD[i]:null).filter(Boolean).join(", ")}</span></div>
+            <div class="tbody"><b>${TYPES[t].label}</b><span>${sub(t)}</span></div>
           </button>`).join("")}</div>`
         :others.map(t=>`<details class="acc"><summary>
-            <span style="display:flex;align-items:center;gap:8px">${icon(TYPES[t].icon,15)} ${TYPES[t].label} · ${sch.map((x,i)=>x===t?WD[i]:null).filter(Boolean).join(", ")}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+            <span style="display:flex;align-items:center;gap:8px">${icon(TYPES[t].icon,15)} ${TYPES[t].label} · ${sub(t)}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
           <div class="accbody">
             ${muscleSplitBars(t)}
             ${TYPES[t].main.map((e,i)=>exLine(e,t,i)).join("")}
             <button class="btn mt8" onclick="A.startType('${t}')">Loslegen</button>
-          </div></details>`).join("")))
+          </div></details>`).join("");})())
     :""}
   `;
 }
@@ -2555,8 +2821,12 @@ function renderPlayer(){
     const rpes=S.logged.map(l=>l.rpe);
     const existing=S.trainingHistory.find(t=>t.date===todayKey());
     if(existing){existing.sets+=S.logged.length;existing.volume+=vol;}
-    else S.trainingHistory.push({date:todayKey(),type,sets:S.logged.length,volume:vol,
+    else S.trainingHistory.push({date:todayKey(),type:parseTypeKey(type).base,sets:S.logged.length,volume:vol,
       avgRpe:rpes.length?Math.round(rpes.reduce((a,b)=>a+b,0)/rpes.length*10)/10:8});
+    // Rotations-Modus: Pointer auf die nächste Einheit rücken, wenn die fällige absolviert wurde
+    if(S.planMode==="rotation"&&type===rotationNext()){
+      const r=activeRotation(); S.rotationPos=((S.rotationPos||0)+1)%r.length;
+    }
     S.tab="summary"; S.restEnd=null; save(); render();
     // v5/Phase 4: der 10/10-Moment — Plan-Präzision voll, einmalig feiern
     if(!S.precisionShown&&S.trainingHistory.length>=10){
@@ -3188,6 +3458,7 @@ function renderProfile(){
     p.td=tdeeCalc(p.bmr,p.a.act||"light",p.a.weight,p.a.len||60,p.a.days||4);
     p.tg=multiTargets(p.a,p.bmr,p.td);
     S.plan=generateTrainingPlan(p); // Plan an neue Ziele anpassen
+    S.planB=generateTrainingPlan(p,"B"); S.rotation=null; // A/B + Rotation neu ableiten
     S.exOverrides={}; // Übungs-Täusche gehören zum alten Plan
     S.weightLog=S.weightLog.filter(x=>new Date(x.t).toISOString().slice(0,10)!==todayKey());
     S.weightLog.push({t:Date.now(),v:w});
@@ -3249,7 +3520,8 @@ function renderProfile(){
        schedule:null,scheduleSuggestion:null,scheduleRationale:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
        liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
-       viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,exOverrides:{},rhrLog:[],
+       viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],
+       planMode:"week",rotation:null,rotationPos:0,
        seenFeatures:false,precisionShown:false,billing:"monthly"};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
