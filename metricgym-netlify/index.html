@@ -2585,7 +2585,10 @@ function shareWeekPNG(){
   shareRecapPNG({sets,avgR,da:da?da.pct:null});
 }
 const STATUS_CARDS=[
-  ["sleep","moon","Schlaf"],["energy","zap","Energie"],["stress","brain","Stress"],["sore","activity","Muskelkater"],
+  ["sleep","moon","Schlaf","schlecht","top"],
+  ["energy","zap","Energie","müde","voller Energie"],
+  ["stress","brain","Stress","entspannt","gestresst"],
+  ["sore","activity","Muskelkater","keiner","stark"],
 ];
 function renderSection(label,content){return `<div class="section"><span class="label">${label}</span>${content}</div>`;}
 function openStatusSheet(){
@@ -2608,9 +2611,12 @@ function openStatusSheet(){
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
     <div class="sheet fade">
       <p class="display-m mb16">Bereit für heute?</p>
-      ${STATUS_CARDS.map(([k,e,l])=>`<div class="row mb12">
-        <span class="sm" style="width:120px">${e} ${l}</span>
-        <div class="scale">${[1,2,3,4,5].map(n=>`<button class="${ci[k]===n?"sel":""}" onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5" style="min-width:40px;width:40px;height:40px">${n}</button>`).join("")}</div>
+      ${STATUS_CARDS.map(([k,e,l,lo,hi])=>`<div class="mb16">
+        <div class="row mb8"><span class="sm" style="display:flex;align-items:center;gap:8px;font-weight:600">${icon(e,17)} ${l}</span></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+          ${[1,2,3,4,5].map(n=>`<button onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5" style="height:46px;border-radius:13px;border:1px solid ${ci[k]===n?"var(--accent)":"var(--hairline)"};background:${ci[k]===n?"var(--accent)":"rgba(255,255,255,.72)"};color:${ci[k]===n?"#fff":"var(--t1)"};font-family:var(--font-mono);font-weight:600;font-size:15px;cursor:pointer">${n}</button>`).join("")}
+        </div>
+        <div class="row" style="margin-top:5px"><span class="xs" style="color:var(--t3)">${lo}</span><span class="xs" style="color:var(--t3)">${hi}</span></div>
       </div>`).join("")}
       <div class="mt16">${quickLogField("Oder beschreib es: 'gut geschlafen, leichter Kater, kein Stress'","A.statusParse")}</div>
       <button class="btn volt mt16" onclick="A.stSave()">Check abschließen</button>
