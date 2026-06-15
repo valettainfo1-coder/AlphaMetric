@@ -198,9 +198,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%);
     border:1px solid rgba(255,255,255,.78);
     box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 12px 34px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.9);}
-  .menu-item{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:13px 16px; background:none; border:none; color:var(--t1); font-size:15px; font-weight:600; font-family:inherit; border-radius:14px; cursor:pointer; min-height:48px;}
-  .menu-item:active{background:var(--s2);}
-  .menu-divider{height:1px; background:var(--hairline); margin:8px 4px;}
+  .menu-head{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:12px 14px; margin-bottom:4px; background:var(--s1); border:1px solid var(--hairline); border-radius:16px; cursor:pointer; font-family:inherit; color:var(--t1); min-height:64px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .menu-head .avatar{width:46px;height:46px;font-size:18px;}
+  .menu-head .mh-name{font-weight:700; font-size:15px;}
+  .menu-item{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:11px 12px; background:none; border:none; color:var(--t1); font-size:14.5px; font-weight:600; font-family:inherit; border-radius:14px; cursor:pointer; min-height:52px; transition:background .2s;}
+  .menu-item:hover{background:var(--s2);}
+  .menu-item:active{background:var(--s3);}
+  .menu-item .mi-ic{width:38px;height:38px;min-width:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--t1);}
+  .menu-item .mi-sub{display:block;font-size:11.5px;color:var(--t2);font-weight:400;margin-top:1px;}
+  .menu-item .mi-chev{margin-left:auto;color:var(--t3);display:inline-flex;}
+  .menu-divider{height:1px; background:var(--hairline); margin:6px 4px;}
 
   /* ===== Bottom Nav: 5 Tabs, Floating Glass Pill, Analytics zentriert ===== */
   /* KRITISCH: #tabbar ist direktes Body-Kind, keine transform-Eltern → fixed bleibt stabil. */
@@ -1812,14 +1819,23 @@ function renderAppbar(){
     <button class="icon-btn" onclick="A.notif()" aria-label="Benachrichtigungen" style="margin-right:8px">${icon("bell",17)}</button>
     <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">${icon("menu",17)}</button>
   </div>
-  ${menuOpen?`<div class="menu-backdrop" onclick="A.openMenu()"></div>
+  ${menuOpen?(()=>{const u=S.users[S.currentUser]||{username:"Athlet",email:""};
+    const item=(ic,t,sub,act)=>`<button class="menu-item" onclick="${act}"><span class="mi-ic">${icon(ic,18)}</span><span style="flex:1">${t}<span class="mi-sub">${sub}</span></span><span class="mi-chev">${icon("chevronR",16)}</span></button>`;
+    return `<div class="menu-backdrop" onclick="A.openMenu()"></div>
   <div class="menu-sheet fade">
-    <button class="menu-item" onclick="A.menuGo('pricing')">${icon("star",17)} Plan ${S.tier==="free"?"entdecken":"verwalten"} <span class="badge ${S.tier==="free"?"mute":"volt"}" style="margin-left:auto">${TIER_LABEL[S.tier]}</span></button>
-    <button class="menu-item" onclick="A.menuGo('features')">${icon("sparkle",17)} So funktioniert METRICGYM</button>
-    <button class="menu-item" onclick="A.profileTab()">${icon("settings",17)} Einstellungen</button>
+    <button class="menu-head" onclick="A.profileTab()">
+      <div class="avatar">${u.username.slice(0,1).toUpperCase()}</div>
+      <div style="flex:1;min-width:0"><p class="mh-name">${u.username}</p>
+        <p class="xs t2" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${TIER_LABEL[S.tier]}${u.email?" · "+u.email:""}</p></div>
+      <span class="badge ${S.tier==="free"?"mute":"volt"}">${TIER_LABEL[S.tier]}</span>
+    </button>
     <div class="menu-divider"></div>
-    <button class="menu-item" onclick="A.logoutMenu()" style="color:var(--t2)">${icon("undo",17)} Abmelden</button>
-  </div>`:""}
+    ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr Tiefe freischalten":"Abo & Tier ändern","A.menuGo('pricing')")}
+    ${item("sparkle","So funktioniert METRICGYM","Features & Engine im Überblick","A.menuGo('features')")}
+    ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
+    <div class="menu-divider"></div>
+    <button class="menu-item" onclick="A.logoutMenu()" style="color:var(--t2)"><span class="mi-ic">${icon("undo",18)}</span><span style="flex:1">Abmelden</span></button>
+  </div>`;})():""}
   </header>`;
 }
 
@@ -2749,8 +2765,9 @@ const EX_ACT={
 };
 // Anatomische Muskelkarte: Front-/Rückansicht mit echten Muskelgruppen-Formen.
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
-function muscleBody(view,act){
-  const col=(id)=>act.p.includes(id)?"var(--hl)":act.s.includes(id)?"rgba(42,69,200,.42)":"#E2DACB";
+function muscleBody(view,arg){
+  // arg ist entweder ein Aktivierungs-Objekt {p,s} ODER eine Farb-Funktion (id)=>color
+  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?"var(--hl)":arg.s.includes(id)?"rgba(42,69,200,.42)":"#E2DACB");
   const ln="#CFC5B4";
   const base=`<g fill="#EAE3D6" stroke="none">
     <path d="M40 48 H90 L82 122 Q65 130 48 122 Z"/>
@@ -2796,6 +2813,58 @@ function bodyDiagram(act){
     <div class="row" style="justify-content:center;gap:16px;margin-top:6px">
       <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--hl);display:inline-block"></span>Primär</span>
       <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(42,69,200,.42);display:inline-block"></span>Sekundär</span></div>`;
+}
+/* Muskel-Heatmap: färbt den anatomischen Körper nach Wochenvolumen je Gruppe
+   gegen den MEV–MRV-Korridor — auf einen Blick: was ist optimal, zu wenig, zu viel. */
+const GROUP2REGION={Brust:["chest"],Schultern:["delts","reardelts"],"Rücken":["lats","traps","lowerback"],Arme:["biceps","triceps"],Beine:["quads","hams","glutes","calves"],Core:["abs"]};
+function muscleHeatBody(){
+  const w0=weeklyMuscleSets(0);
+  const r2c={}; const status={};
+  for(const [g,[lo,hi]] of Object.entries(VOL_BANDS)){
+    const n=w0[g]||0; let c,st;
+    if(n===0){c="#E2DACB";st="—";}
+    else if(n<lo){c="rgba(42,69,200,.30)";st="zu wenig";}
+    else if(n<=hi){const t=(n-lo)/(hi-lo||1);c=`rgba(42,69,200,${(0.55+t*0.4).toFixed(2)})`;st="optimal";}
+    else{c="var(--danger)";st="zu viel";}
+    status[g]={n,st,lo,hi};
+    (GROUP2REGION[g]||[]).forEach(r=>r2c[r]=c);
+  }
+  const col=(id)=>r2c[id]||"#E2DACB";
+  const rows=Object.entries(status).map(([g,o])=>`<div class="row" style="padding:3px 0"><span class="sm">${g}</span>
+    <span class="metric xs ${o.st==="optimal"?"volt-txt":o.st==="zu viel"?"danger-txt":"t2"}">${o.n} Sätze · ${o.st}</span></div>`).join("");
+  return `<div style="display:flex;justify-content:center;gap:14px;align-items:flex-start">${muscleBody("front",col)}${muscleBody("back",col)}</div>
+    <div class="row" style="justify-content:center;gap:12px;margin:8px 0 4px;flex-wrap:wrap">
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(42,69,200,.30);display:inline-block"></span>zu wenig</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(42,69,200,.9);display:inline-block"></span>optimal</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--danger);display:inline-block"></span>zu viel</span></div>
+    <div class="mt8">${rows}</div>`;
+}
+/* Konsistenz-Kalender: letzte 12 Wochen, Spalten=Wochen, Zeilen=Mo–So,
+   Zelle eingefärbt nach trainiertem Volumen des Tages. */
+function consistencyHeatmap(){
+  const weeks=12;
+  const byDate={};
+  S.trainingHistory.forEach(t=>{if(t.type!=="rest"&&t.type!=="cardio")byDate[t.date]=(byDate[t.date]||0)+t.sets;});
+  const today=new Date(); const dow=(today.getDay()+6)%7;
+  const monThis=new Date(today); monThis.setDate(today.getDate()-dow); // Montag dieser Woche
+  const shade=(s)=>s===0?"var(--s3)":s<=6?"rgba(42,69,200,.35)":s<=12?"rgba(42,69,200,.6)":"rgba(42,69,200,.95)";
+  let cols="";
+  for(let w=weeks-1;w>=0;w--){
+    let cells="";
+    for(let r=0;r<7;r++){
+      const d=new Date(monThis); d.setDate(monThis.getDate()-w*7+r);
+      const key=d.toISOString().slice(0,10);
+      const future=d>today;
+      const s=byDate[key]||0;
+      cells+=`<div title="${key}: ${s} Sätze" style="width:12px;height:12px;border-radius:3px;background:${future?"transparent":shade(s)}"></div>`;
+    }
+    cols+=`<div style="display:flex;flex-direction:column;gap:3px">${cells}</div>`;
+  }
+  return `<div style="display:flex;gap:3px;overflow-x:auto;padding-bottom:4px">${cols}</div>
+    <div class="row" style="justify-content:space-between;margin-top:8px"><span class="xs t2">vor 12 Wochen</span>
+      <span class="row" style="gap:4px;align-items:center"><span class="xs t2">weniger</span>
+        ${[0,5,10,16].map(s=>`<span style="width:11px;height:11px;border-radius:3px;background:${shade(s)};display:inline-block"></span>`).join("")}
+        <span class="xs t2">mehr</span></span></div>`;
 }
 function exDetailModal(name){
   const inf=EXINFO[name]||{prim:"—",sek:"—",cues:[]};
@@ -3223,6 +3292,13 @@ function renderAnalytics(){
       <p class="xs t2 mt8">Geschätzte Maximalkraft — berechnet aus deinen echten Sätzen.</p></div>`;
   }
 
+  // Konsistenz-Kalender (Heatmap der letzten 12 Wochen)
+  if(S.trainingHistory.length>=3){
+    html+=`<div class="card"><p class="ct">${icon("calendar",14)} Deine Konsistenz · 12 Wochen</p>
+      <p class="xs t2 mb12">Jeder Tag, an dem du trainiert hast — je dunkler, desto mehr Sätze. Dranbleiben ist der stärkste Hebel.</p>
+      ${consistencyHeatmap()}</div>`;
+  }
+
   // Volumen
   if(S.trainingHistory.length>=3){
     const wks=[...Array(4)].map((_,i)=>{
@@ -3247,8 +3323,10 @@ function renderAnalytics(){
     const w0=weeklyMuscleSets(0);
     const groups=Object.keys(VOL_BANDS).filter(m=>w0[m]>0);
     if(groups.length){
-      html+=`<div class="card"><p class="ct">${icon("activity",14)} Deine Muskelbalance · diese Woche ${infoBtn("volumeBand")}</p>
-        <p class="xs t2 mb12">Sätze je Muskelgruppe gegen den optimalen Korridor — zu wenig bremst Wachstum, zu viel deine Erholung.</p>
+      html+=`<div class="card"><p class="ct">${icon("activity",14)} Deine Muskel-Heatmap · diese Woche ${infoBtn("volumeBand")}</p>
+        <p class="xs t2 mb12">Welcher Muskel wie viel Reiz bekommt — eingefärbt nach deinem optimalen Volumen-Korridor.</p>
+        ${muscleHeatBody()}
+        <p class="label" style="margin:16px 0 8px">Im Detail</p>
         ${groups.map(m=>{
           const v=w0[m]||0, [lo,hi]=VOL_BANDS[m];
           const scale=Math.max(hi,v)*1.1;
@@ -3396,6 +3474,52 @@ function renderAnalytics(){
 // ERNÄHRUNG (Voice-first, Multi-Item, Approval)
 // =====================================================================
 let dayType="train", pendingItems=null, pendingManual=null;
+// Makro-„Batterie": horizontaler Füllbalken mit Zielmarke und Über-/Unterzustand
+function macroBattery(label,cur,target,col,priority){
+  const pct=target?Math.min(100,cur/target*100):0;
+  const over=cur>target*1.08;
+  return `<div style="margin-bottom:13px">
+    <div class="row mb4"><span class="sm" style="font-weight:${priority?700:600}">${label}${priority?' <span class="xs" style="color:var(--hl);font-weight:700">· Priorität</span>':""}</span>
+      <span class="metric xs ${over?"warn-txt":pct>=90?"volt-txt":"t2"}">${nfi.format(cur)} / ${nfi.format(target)} g</span></div>
+    <div style="position:relative;height:13px;border-radius:7px;background:var(--s3);overflow:hidden">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${over?"var(--warn)":col};border-radius:7px;transition:width .7s cubic-bezier(.25,.8,.25,1)"></div>
+      <div style="position:absolute;left:90%;top:-2px;bottom:-2px;width:2px;background:rgba(0,0,0,.18)"></div>
+    </div></div>`;
+}
+// Energie-Budget: verbleibende kcal als Held + segmentierter Makro-Treibstoffbalken
+function energyBudget(sum,tg){
+  const remaining=tg.kcal-sum.k, over=remaining<0;
+  const pk=sum.p*4,ck=sum.c*4,fk=sum.f*9, fuel=pk+ck+ffFix(fk)||1;
+  const fillPct=Math.min(100,sum.k/tg.kcal*100);
+  const seg=(v,c)=>`<div style="width:${fuel?v/fuel*100:0}%;background:${c}"></div>`;
+  return `<div style="text-align:center;padding:6px 0 2px">
+      <p class="hero-num" style="font-size:46px;line-height:1;${over?"color:var(--warn)":""}">${over?"+"+nfi.format(-remaining):nfi.format(remaining)}</p>
+      <p class="xs t2" style="margin-top:2px">${over?"kcal über Ziel":"kcal übrig"} · ${nfi.format(sum.k)} von ${nfi.format(tg.kcal)} kcal</p>
+    </div>
+    <div style="position:relative;height:18px;border-radius:9px;background:var(--s3);overflow:hidden;margin:12px 0 8px">
+      <div style="display:flex;height:100%;width:${fillPct}%;transition:width .7s cubic-bezier(.25,.8,.25,1)">
+        ${seg(pk,"var(--hl)")}${seg(ck,"#7D8CA3")}${seg(fk,"var(--warn)")}
+      </div>
+      <div style="position:absolute;right:0;top:0;bottom:0;width:3px;background:var(--t1);opacity:.25"></div>
+    </div>
+    <div class="row" style="justify-content:center;gap:14px">
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--hl);display:inline-block"></span>Protein</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:#7D8CA3;display:inline-block"></span>Carbs</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--warn);display:inline-block"></span>Fett</span>
+    </div>`;
+}
+function ffFix(x){return x;} // (Helfer für Lesbarkeit der Treibstoff-Summe)
+function nutritionStats(sum){
+  const p=S.profile, bw=p.a.weight||80;
+  const ppkg=Math.round(sum.p/bw*10)/10;
+  const last7=[...Array(7)].map((_,i)=>new Date(Date.now()-i*dayMs).toISOString().slice(0,10)).map(k=>S.nutritionLog[k]).filter(l=>l&&(l.meals||[]).length);
+  const avgK=last7.length?Math.round(last7.reduce((s,l)=>s+l.meals.reduce((a,m)=>a+m.k,0),0)/last7.length):0;
+  let streak=0;
+  for(let d=0;;d++){const key=new Date(Date.now()-d*dayMs).toISOString().slice(0,10);const l=S.nutritionLog[key];
+    if(!l||!(l.meals||[]).length){if(d===0)continue;break;}
+    if(l.meals.reduce((s,m)=>s+m.p,0)>=p.tg.train.p*0.9)streak++;else break;}
+  return [["metric",ppkg.toString().replace(".",","),"g Protein/kg"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Streak"]];
+}
 function renderNutrition(){
   const p=S.profile, tg=p.tg[dayType==="train"?"train":"rest"];
   const log=nlogToday();
@@ -3460,6 +3584,12 @@ function renderNutrition(){
     el.value=""; renderNutrition();
   };
   A.explainSat=()=>A.explain("satiety");
+  // Ein-Tipp-Favoriten: meistgeloggte Lebensmittel, sonst sinnvolle Defaults
+  const tally={};
+  Object.values(S.nutritionLog).forEach(l=>(l.meals||[]).forEach(m=>{const base=m.n.replace(/ \(.*\)$/,"");tally[base]=(tally[base]||0)+1;}));
+  let favIdx=Object.entries(tally).sort((a,b)=>b[1]-a[1]).map(([n])=>FOODS.findIndex(f=>f[0]===n)).filter(i=>i>=0);
+  ["Hähnchenbrust","Magerquark","Haferflocken","Banane (1 mittel)","Reis (weiß, gekocht)","Ei (1 Stück)"].forEach(n=>{const i=FOODS.findIndex(f=>f[0]===n);if(i>=0&&!favIdx.includes(i))favIdx.push(i);});
+  favIdx=favIdx.slice(0,6);
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
     ${banner("nutrition","utensils","<b>Loggen in 10 Sekunden.</b> Tippen oder einsprechen — Kalorien und Protein rechnet die Engine für dich.")}
@@ -3467,12 +3597,25 @@ function renderNutrition(){
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
         <button class="btn ${dayType==="rest"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('rest')">Ruhetag</button></div>
-      <div class="grid4">${miniRing("Kalorien",sum.k,tg.kcal,"kcal")}${miniRing("Protein",sum.p,tg.p,"g")}${miniRing("Carbs",sum.c,tg.c,"g")}${miniRing("Fett",sum.f,tg.f,"g")}</div>
-      <p class="xs t2 mt8" style="text-align:center">Ziele aus deinem Profil ${infoBtn("kcalTarget")} ${infoBtn("protein")}</p></div>
+      ${energyBudget(sum,tg)}
+      <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px">
+        ${nutritionStats(sum).map(([cls,v,l])=>`<div style="background:var(--s2);border-radius:12px;padding:11px 6px;text-align:center">
+          <p class="${cls}" style="font-size:17px;font-weight:700">${v}</p><p class="xs t2" style="margin-top:2px">${l}</p></div>`).join("")}
+      </div>
+      <p class="xs t2 mt8" style="text-align:center">Ziele aus deinem Profil ${infoBtn("kcalTarget")} ${infoBtn("protein")}</p>
+    </div>
 
-    <!-- Quick-Log: EIN Feld (Text + Tastatur-Diktat) + Foto -->
+    <div class="card"><p class="ct">Makros heute</p>
+      ${macroBattery("Protein",sum.p,tg.p,"var(--hl)",true)}
+      ${macroBattery("Carbs",sum.c,tg.c,"#7D8CA3",false)}
+      ${macroBattery("Fett",sum.f,tg.f,"var(--warn)",false)}
+      <p class="xs t2 mt4">Die Marke zeigt 90 % deines Ziels. Protein zuerst — der größte Hebel für Muskelaufbau und Sättigung.</p>
+    </div>
+
+    <!-- Quick-Log: vereinfacht — Favoriten-Chips (1 Tipp) + Feld + Sprache + Foto -->
     <div class="card">
-      <p class="ct">Mahlzeit loggen</p>
+      <p class="ct">Schnell loggen</p>
+      ${favIdx.length?`<div class="chips mb12">${favIdx.map(i=>`<button class="chip" onclick="A.quick(${i})">+ ${FOODS[i][0].replace(/ \(.*\)$/,"")}</button>`).join("")}</div>`:""}
       ${quickLogField("'500 g Hähnchen und 300 g Reis, 2 Tomaten'","A.parseFood")}
       <button class="btn mt8" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto aufnehmen (Demo)</button>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
@@ -3486,7 +3629,8 @@ function renderNutrition(){
         <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div></div>`:""}
     </div>
 
-    <div class="card"><p class="ct">Suche & manuell</p>
+    <details class="acc"><summary>Suche &amp; manuell eingeben<span class="chev">${icon("chevron",15)}</span></summary>
+      <div class="accbody">
       <div class="row mb8">
         <input type="text" id="food-name" placeholder="Lebensmittel …" style="flex:1" oninput="A.foodInput(this)" autocomplete="off">
         <input type="number" id="food-gram" placeholder="g" style="width:76px" min="1" max="2000" inputmode="numeric">
@@ -3499,7 +3643,7 @@ function renderNutrition(){
           <input type="number" id="m-c" placeholder="C" inputmode="numeric">
           <input type="number" id="m-f" placeholder="F" inputmode="numeric"></div>
         <div class="grid2 mt8"><button class="btn" onclick="A.manualCancel()">Abbrechen</button>
-        <button class="btn volt" onclick="A.manualSave()">Speichern</button></div></div>`:""}</div>
+        <button class="btn volt" onclick="A.manualSave()">Speichern</button></div></div>`:""}</div></details>
 
     <div class="card"><div class="row mb8"><p class="ct" style="margin:0">${icon("droplet",14)} Wasser</p>
       <span class="metric sm ${waterMl>=2500?"volt-txt":"t2"}">${nf.format(waterMl/1000)} / 2,5 l</span></div>
@@ -3522,14 +3666,8 @@ function renderNutrition(){
         return `<li><span>${m.n}${sat?` <button class="badge ${sat.cls}" style="cursor:pointer;border:none;font-size:9.5px;padding:2px 7px" onclick="A.explainSat()">${sat.lbl}</button>`:""}</span>
         <span style="display:flex;gap:10px;align-items:center"><span class="metric">${nfi.format(m.k)} kcal</span>
         <button class="iconbtn" style="min-width:32px;min-height:32px;font-size:13px" onclick="A.delMeal(${i})" aria-label="Löschen">✕</button></span></li>`;}).join("")}</ul>`
-      :`<p class="sm t2">Noch nichts geloggt. Sprich, such oder tipp deine Mahlzeit.</p>`}</div>
-
-    <div class="card"><p class="ct">Quickliste</p>
-      <div style="max-height:240px;overflow-y:auto">${FOODS.slice(0,24).map((f,i)=>`
-        <button class="opt row" style="margin-bottom:6px" onclick="A.quick(${i})">
-        <span><span style="display:block;font-size:14px">${f[0]}</span><span class="xs t2">${f[1]} g Basis</span></span>
-        <span class="metric xs t2">${nfi.format(f[2])} kcal · ${nf.format(f[3])} g P</span></button>`).join("")}
-        <p class="xs t2" style="text-align:center;padding:8px">… alle ${FOODS.length} via Suche</p></div></div>`;
+      :`<p class="sm t2">Noch nichts geloggt — tipp oben auf einen Favoriten oder sprich deine Mahlzeit ein.</p>`}</div>
+  `;
 }
 
 // =====================================================================
