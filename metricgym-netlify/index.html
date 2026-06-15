@@ -858,6 +858,9 @@ S.rotationPos=S.rotationPos||0;
 S.refCode=S.refCode||("MG"+Math.random().toString(36).slice(2,7).toUpperCase());
 S.invitedBy=S.invitedBy??null;
 S.proBonusUntil=S.proBonusUntil??null;
+// Engagement-/Bindungs-System (Streak, Level/XP, Meilensteine, gefeiert)
+S.celebrated=S.celebrated??null; // null = noch nicht initialisiert (Erstlauf seedet still)
+S.lastLevel=S.lastLevel??1;
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -2660,6 +2663,86 @@ function checklistCard(){
     <p class="xs t2 mt8">${done===items.length?"Alles drin — deine Analytics laufen heute auf voller Datenbasis.":"Alles zusammen unter 2 Minuten — jede Zeile füttert eine eigene Analyse im Analytics-Tab."}</p>
   </div>`;
 }
+/* =====================================================================
+   ENGAGEMENT-ENGINE (Bindung) — Streak (Verlustangst), Level/XP
+   (Fortschritts-Gefühl), Meilensteine + variable Belohnung (Konfetti),
+   sichtbares „Investment" (Sunk-Cost). Alles aus echten Daten abgeleitet.
+   ===================================================================== */
+function activityDays(){
+  const d=new Set();
+  S.readinessHistory.forEach(r=>d.add(r.date));
+  S.trainingHistory.forEach(t=>d.add(t.date));
+  Object.entries(S.nutritionLog).forEach(([k,l])=>{if((l.meals||[]).length)d.add(k);});
+  return d;
+}
+function engagementStats(){
+  const days=activityDays();
+  let streak=0;
+  for(let i=0;;i++){const key=new Date(Date.now()-i*dayMs).toISOString().slice(0,10);
+    if(days.has(key))streak++; else if(i===0) continue; else break;}
+  const activeToday=days.has(todayKey());
+  const sessions=S.trainingHistory.filter(t=>t.type!=="rest").length;
+  const statusN=S.readinessHistory.length;
+  const nutriN=Object.values(S.nutritionLog).filter(l=>(l.meals||[]).length).length;
+  const prs=Object.keys(S.liftLog).filter(n=>{const s=e1Series(n);return s.length>=2&&s[s.length-1].v>Math.min(...s.map(p=>p.v));}).length;
+  const xp=sessions*50+statusN*15+nutriN*10+prs*80+streak*8;
+  const LX=(lv)=>Math.round(80*(lv-1)*(lv-1)); // XP, um Level lv zu erreichen
+  let level=1; while(xp>=LX(level+1))level++;
+  const cur=LX(level), next=LX(level+1);
+  const levelPct=Math.min(1,(xp-cur)/((next-cur)||1));
+  const totalVol=Object.values(S.liftLog).flat().reduce((s,x)=>s+((x.w||0)*(x.reps||0)),0)
+    +S.trainingHistory.reduce((s,t)=>s+(t.volume||0),0);
+  const journey=days.size?Math.round((Date.now()-Math.min(...[...days].map(d=>new Date(d).getTime())))/dayMs)+1:0;
+  return {streak,activeToday,sessions,statusN,nutriN,prs,xp,level,toNext:Math.max(0,next-xp),levelPct,totalVol,journey,daysCount:days.size};
+}
+const MILESTONES=[
+  {id:"start",t:"Reise gestartet",d:"Dein erster Eintrag ist drin.",test:s=>s.daysCount>=1},
+  {id:"streak3",t:"3 Tage am Stück",d:"So entsteht eine Gewohnheit.",test:s=>s.streak>=3},
+  {id:"streak7",t:"7-Tage-Streak",d:"Eine ganze Woche. Das ist Disziplin.",test:s=>s.streak>=7},
+  {id:"streak14",t:"14-Tage-Streak",d:"Du gehörst zu den oberen 5 %.",test:s=>s.streak>=14},
+  {id:"streak30",t:"30-Tage-Streak",d:"Das ist kein Zufall mehr — das bist du.",test:s=>s.streak>=30},
+  {id:"sess10",t:"10 Einheiten",d:"Dein Plan kennt dich jetzt.",test:s=>s.sessions>=10},
+  {id:"sess25",t:"25 Einheiten",d:"Konstanz, die sich auszahlt.",test:s=>s.sessions>=25},
+  {id:"sess50",t:"50 Einheiten",d:"Halb-Veteran. Respekt.",test:s=>s.sessions>=50},
+  {id:"pr1",t:"Erster Rekord",d:"Wissenschaftlich belegter Fortschritt.",test:s=>s.prs>=1},
+  {id:"pr5",t:"5 Übungen verbessert",d:"Du wirst messbar stärker.",test:s=>s.prs>=5},
+];
+function confetti(){
+  try{
+    const c=document.createElement("canvas");
+    c.style.cssText="position:fixed;inset:0;z-index:75;pointer-events:none";
+    c.width=window.innerWidth; c.height=window.innerHeight;
+    document.body.appendChild(c); const x=c.getContext("2d");
+    const cols=["#2A45C8","#1A1A1A","#C98A3D","#7D8CA3","#3B5BDB"];
+    const P=Array.from({length:140},()=>({x:c.width*(0.3+Math.random()*0.4),y:c.height*0.28,
+      vx:(Math.random()-.5)*16,vy:Math.random()*-13-3,r:4+Math.random()*5,rot:Math.random()*6,
+      col:cols[Math.floor(Math.random()*cols.length)]}));
+    const start=performance.now();
+    (function f(t){
+      x.clearRect(0,0,c.width,c.height); let on=false;
+      P.forEach(p=>{p.vy+=0.5;p.x+=p.vx;p.y+=p.vy;p.rot+=0.2;
+        if(p.y<c.height+30)on=true;
+        x.save();x.translate(p.x,p.y);x.rotate(p.rot);x.fillStyle=p.col;x.fillRect(-p.r,-p.r,p.r*2,p.r*1.3);x.restore();});
+      if(on&&t-start<2400)requestAnimationFrame(f); else c.remove();
+    })(start);
+  }catch{}
+}
+function celebrate(title,desc){
+  confetti();
+  modal(`<div style="text-align:center;padding:6px 0">
+    <div style="width:74px;height:74px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">${icon("star",38)}</div>
+    <p class="display-m mb8">${title}</p>
+    <p class="sm t2" style="line-height:1.6">${desc}</p></div>`);
+}
+function checkCelebrations(){
+  const s=engagementStats();
+  const passed=MILESTONES.filter(m=>m.test(s)).map(m=>m.id);
+  if(S.celebrated==null){ S.celebrated=passed; S.lastLevel=s.level; save(); return; } // Erstlauf: still seeden
+  const news=passed.filter(id=>!S.celebrated.includes(id));
+  if(news.length){ S.celebrated=[...S.celebrated,...news]; save();
+    const m=MILESTONES.find(x=>x.id===news[news.length-1]); celebrate(m.t,m.d); return; }
+  if(s.level>(S.lastLevel||1)){ S.lastLevel=s.level; save(); celebrate("Level "+s.level+" erreicht!","Dein Einsatz zahlt sich aus. Weiter geht's."); }
+}
 function renderHome(){
   const p=S.profile;
   const tType=todayType(), tSession=TYPES[tType];
@@ -2691,10 +2774,7 @@ function renderHome(){
   A.shareRecap=()=>{ if(recapData)shareRecapPNG(recapData); };
   const ins=buildInsights();
   const dow=(new Date().getDay()+6)%7, sch=schedule();
-  const streak=(()=>{let n=0;for(let d=0;;d++){
-    const key=new Date(Date.now()-d*dayMs).toISOString().slice(0,10);
-    if(S.readinessHistory.some(r=>r.date===key))n++; else break;
-  } return n;})();
+  const eng=engagementStats(); const streak=eng.streak;
   const overtrain=ins.find(i=>i.risk&&/Übertrain/.test(i.t));
   // Wochen-Recap: beim Wochenwechsel als Banner vormerken (kein Auto-Modal)
   const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);})();
@@ -2714,11 +2794,33 @@ function renderHome(){
   const r=S.checkin;
   const visIns=S.tier==="free"?ins.slice(0,1):ins.slice(0,S.tier==="elite"?8:5);
 
+  setTimeout(checkCelebrations,400); // variable Belohnung: neue Meilensteine/Level feiern
+  // Streak-Ring (Flamme) als Verlustangst-Anker
+  const streakRing=(()=>{const sz=58,st=5,rr=(sz-st)/2,cc=2*Math.PI*rr,goal=Math.max(7,Math.ceil((streak+1)/7)*7),pct=Math.min(1,streak/goal);
+    return `<div style="position:relative;width:${sz}px;height:${sz}px">
+      <svg width="${sz}" height="${sz}" style="transform:rotate(-90deg)"><circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="var(--s3)" stroke-width="${st}"/>
+        <circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="var(--hl)" stroke-width="${st}" stroke-linecap="round" stroke-dasharray="${pct*cc} ${cc}"/></svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--hl)">${icon("flame",22)}</div></div>`;})();
   root.innerHTML=`
+    <!-- RITUAL-HUB: Streak (Bindung) + Level (Fortschrittsgefühl) -->
+    <div class="card fade" style="margin-bottom:var(--sp-4)">
+      <div class="row" style="align-items:center;gap:14px">
+        ${streakRing}
+        <div style="flex:1;min-width:0">
+          <p style="font-weight:800;font-size:20px;line-height:1">${streak} ${streak===1?"Tag":"Tage"} <span style="color:var(--hl)">Streak</span></p>
+          <p class="xs t2" style="margin-top:2px">${eng.activeToday?"Heute gesichert ✓ — bleib dran.":streak>0?`Trag heute etwas ein, sonst reißt deine ${streak}-Tage-Serie.`:"Starte heute deine Serie."}</p>
+        </div>
+        <div style="text-align:right">
+          <p class="xs t2">Level</p><p class="hero-num" style="font-size:26px;color:var(--accent)">${eng.level}</p>
+        </div>
+      </div>
+      <div class="row mt12" style="gap:8px"><div class="progress" style="height:7px;flex:1"><div style="width:${Math.round(eng.levelPct*100)}%;background:var(--accent)"></div></div>
+        <span class="metric xs t2" style="white-space:nowrap">${eng.toNext} XP bis L${eng.level+1}</span></div>
+    </div>
     ${banner("home","activity","<b>Starte deinen Tag.</b> Ein kurzer Check zeigt dir, wie viel heute in dir steckt.")}
     <div class="heroband fade">
       <h2>${greet()}, ${userName()}</h2>
-      <p class="sm" style="color:var(--t3)">${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}${streak>=2?` · <span style="display:inline-flex;vertical-align:-2px;color:var(--hl)">${icon("flame",13)}</span> ${streak} Tage dabei`:""}</p>
+      <p class="sm" style="color:var(--t3)">${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
       <div style="display:flex;justify-content:center;margin-top:var(--sp-5)">
         ${r?`<button style="background:none;border:none;cursor:pointer" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,160)}</button>`
           :`<button style="background:none;border:none;cursor:pointer" onclick="A.openStatus()" aria-label="Status-Check starten">
@@ -2740,6 +2842,14 @@ function renderHome(){
     :""}
 
     ${renderSection("Heute eintragen",checklistCard())}
+
+    ${eng.daysCount>=2?renderSection("Deine Reise",
+      `<div class="card"><div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+        ${[[eng.journey,"Tage dabei"],[eng.sessions,"Einheiten"],[nfi.format(Math.round(eng.totalVol/1000))+"t","bewegt"]].map(([v,l])=>`
+          <div style="background:var(--s2);border-radius:14px;padding:14px 6px"><p class="hero-num" style="font-size:26px">${v}</p><p class="xs t2" style="margin-top:2px">${l}</p></div>`).join("")}
+      </div>
+      <p class="xs t2 mt12" style="line-height:1.5">${eng.prs>0?`Du hast <b style="color:var(--t1)">${eng.prs} ${eng.prs===1?"Übung":"Übungen"}</b> messbar verbessert. Diese Historie gehört nur dir — und wächst mit jedem Tag.`:"Jeder Eintrag baut deine persönliche Fortschritts-Historie auf — dein Vorsprung, der mit jedem Tag wertvoller wird."}</p></div>`)
+    :""}
 
     ${renderSection("Adaptives Training",(()=>{
       // USP-Karte (v5/Phase 3): echte Anpassung zeigen, wenn vorhanden — sonst erklären, was kommt.
