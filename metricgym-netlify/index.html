@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F7F5F1">
-<title>METRICGYM — Versteh, warum dein Fortschritt passiert</title>
-<meta name="description" content="METRICGYM: adaptiver Trainingsplan, Analytics die das WARUM erklären, Ernährung in 10 Sekunden. Jede Empfehlung beruht auf deinen echten Daten.">
+<title>METRICGYM — Fortschritt, wissenschaftlich fundiert</title>
+<meta name="description" content="METRICGYM: wissenschaftlich fundierter Trainingsplan, Ernährung in 10 Sekunden und Statistiken, die deinen Fortschritt belegen. Jede Empfehlung beruht auf deinen echten Daten.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%231A1A1A'/%3E%3Crect x='15' y='34' width='7' height='16' rx='3.5' fill='%23fff'/%3E%3Crect x='28.5' y='26' width='7' height='24' rx='3.5' fill='%23fff'/%3E%3Crect x='42' y='16' width='7' height='34' rx='3.5' fill='%23fff'/%3E%3Cpath d='M15 28l9-7 7 4.5 14-11' stroke='%232A45C8' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='45' cy='14.5' r='3.4' fill='%232A45C8'/%3E%3C/svg%3E">
 <!--
 ═══════════════════════════════════════════════════════════════════════
@@ -1954,8 +1954,8 @@ function renderFeatureOverview(){
     ["brain","Ein Plan, der mitdenkt",
       "Dein Plan wächst mit dir. Er reagiert auf das, was du loggst — Woche für Woche, Satz für Satz.",
       ["Gewichts-Empfehlung aus deinen letzten Sätzen (RIR-gesteuert)","Automatische Erholungswoche bei Übertrainings-Signalen","Schonende Alternativen bei Muskelkater, per Long-Press tauschbar"]],
-    ["chart","Analytics, die WARUM erklären",
-      "Das Herzstück: jede Eingabe wird zu einer Auswertung. Jeder Wert beruht auf deinen echten Daten — und sobald die Basis reicht, zeigt die App dir deine Einblicke.",
+    ["chart","Dein Fortschritt, sichtbar gemacht",
+      "Das Herzstück: jede Eingabe wird zu einer Auswertung, die belegt, dass es vorangeht. Jeder Wert beruht auf deinen echten Daten — kein Schätzen.",
       ["Kraft-Prognose mit Konfidenzband (e1RM-Trend, 12 Wochen)","Muskelbalance & Belastungs-Ampel je Muskelgruppe","Erholungs-Trend, Körperkomposition, Ernährungs-Treue","Jede Aussage trägt ihre Konfidenz in %"]],
     ["utensils","Ernährung in 10 Sekunden",
       "Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Rechtschreibfehler.",
@@ -1966,7 +1966,7 @@ function renderFeatureOverview(){
   ];
   root.innerHTML=`
     <div class="heroband fade"><h2>Was METRICGYM für dich tut</h2>
-      <p class="sm t2" style="max-width:320px;margin:8px auto 0">Eine Engine, die aus deinen Eingaben versteht, <b style="color:var(--t1)">warum</b> dein Fortschritt passiert — und dir zeigt, was als Nächstes dran ist.</p></div>
+      <p class="sm t2" style="max-width:320px;margin:8px auto 0">Eine Engine auf <b style="color:var(--t1)">wissenschaftlicher Basis</b>, die deinen Fortschritt sichtbar macht und deinen Plan automatisch anpasst.</p></div>
     ${feats.map(([ic,t,b,bullets])=>`<div class="card">
       <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px">
         <span class="icon-circle">${icon(ic,20)}</span>
@@ -2108,9 +2108,9 @@ function renderLanding(){
     <section class="lp-hero">
       <div class="lp-herocopy">
         <div class="desk-hide" style="display:flex;justify-content:center;margin-bottom:18px">${logoMark(72)}</div>
-        <p class="lp-eyebrow">Performance Intelligence</p>
-        <h1 class="lp-h">Versteh, <span class="volt-txt">warum</span><br>dein Fortschritt passiert.</h1>
-        <p class="lp-lead" style="max-width:380px;margin:0 auto 22px">METRICGYM erklärt dir, <b style="color:var(--t1)">warum</b> dein Training wirkt — und zeigt dir, was als Nächstes dran ist. Training, Ernährung und Erholung in einer Engine.</p>
+        <p class="lp-eyebrow">Wissenschaftlich fundiert</p>
+        <h1 class="lp-h">Fortschritt, der auf<br><span class="volt-txt">Wissenschaft</span> basiert.</h1>
+        <p class="lp-lead" style="max-width:380px;margin:0 auto 22px">METRICGYM baut jeden Plan auf <b style="color:var(--t1)">belastbarer Trainingswissenschaft</b> — und macht deinen Fortschritt in klaren Zahlen sichtbar. Training, Ernährung und Erholung in einer Engine.</p>
         <div class="lp-cta-row" style="display:flex;flex-direction:column;gap:8px;align-items:center">
           <button class="btn volt" style="max-width:320px;width:100%;margin:0 auto" onclick="A.toRegister()">Kostenlos starten</button>
           <button class="btn" style="max-width:320px;width:100%;margin:0 auto" onclick="A.devMode()">${icon("play",15)} Live-Demo ansehen</button>
@@ -2135,18 +2135,18 @@ function renderLanding(){
     <!-- CLAIMS / REASONS TO BELIEVE -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-claimgrid">
-        <div class="lp-claim"><p class="n volt-txt">100<span style="font-size:18px">%</span></p><p class="l">deine Daten — jede Empfehlung beruht auf deinen echten Werten</p></div>
-        <div class="lp-claim"><p class="n">40+</p><p class="l">Studien als Fundament der Engine (Schoenfeld, Israetel, Helms …)</p></div>
-        <div class="lp-claim"><p class="n">6</p><p class="l">Analyse-Module: Kraft, Belastung, Intensität, Körper, Erholung, Ernährung</p></div>
+        <div class="lp-claim"><p class="n volt-txt">40+</p><p class="l">Studien als Fundament jeder Empfehlung (Schoenfeld, Israetel, Helms …)</p></div>
+        <div class="lp-claim"><p class="n">100<span style="font-size:18px">%</span></p><p class="l">deine Daten — jeder Wert beruht auf deinen echten Zahlen</p></div>
+        <div class="lp-claim"><p class="n">6</p><p class="l">Statistiken, die belegen, dass es vorangeht</p></div>
         <div class="lp-claim"><p class="n">10<span style="font-size:18px">s</span></p><p class="l">loggen pro Eintrag — tippen oder einsprechen</p></div>
       </div>
     </section>
 
     <!-- WARUM -->
     <section class="lp-sec" style="padding-top:0">
-      <p class="lp-eyebrow">Dein Vorteil</p>
-      <h2 class="lp-h2">Jede Zahl wird zu einer Entscheidung.</h2>
-      <p class="lp-lead mb16">Du siehst nicht nur, dass deine Bank stagniert — du erfährst die wahrscheinlichste Ursache und was du heute dagegen tun kannst. <b style="color:var(--t1)">Klare Antworten, mit Konfidenz hinterlegt.</b></p>
+      <p class="lp-eyebrow">Die Grundlage</p>
+      <h2 class="lp-h2">Auf der Wissenschaft gebaut,<br>die wirklich wirkt.</h2>
+      <p class="lp-lead mb16">Jeder Plan und jede Empfehlung ruht auf peer-reviewter Trainings- und Ernährungsforschung. <b style="color:var(--t1)">Und dein Fortschritt steht in klaren Zahlen vor dir</b> — Woche für Woche belegt.</p>
     </section>
 
     <!-- 3 SÄULEN -->
@@ -2154,8 +2154,8 @@ function renderLanding(){
       <p class="lp-eyebrow">Was die App kann</p>
       <h2 class="lp-h2 mb16">Drei Systeme, eine Engine</h2>
       <div class="lp-pillars-grid">
-      ${[["dumbbell","Adaptiver Trainingsplan","Entsteht aus deinem Equipment, deinem Level und deinen Zielen. Passt Gewichte, Sätze und Erholungswochen automatisch an das an, was du loggst."],
-         ["chart","Analytics, die erklären","Kraft-Prognosen mit Konfidenzband, Muskelbalance-Ampel, Erholungs- und Ernährungs-Trends — jede Aussage mit Konfidenz hinterlegt."],
+      ${[["dumbbell","Wissenschaftlich gebauter Plan","Entsteht aus deinem Equipment, deinem Level und deinen Zielen — nach den Prinzipien, die in der Forschung nachweislich Muskeln und Kraft aufbauen."],
+         ["chart","Dein Fortschritt, sichtbar gemacht","Kraftkurven, Muskel-Heatmap, Erholungs- und Ernährungs-Trends — du siehst schwarz auf weiß, dass es vorangeht, jede Aussage mit Konfidenz hinterlegt."],
          ["utensils","Ernährung in 10 Sekunden","Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Tippfehler („häncxen“ → Hähnchen) und rechnet Kalorien & Protein."]]
         .map(([ic,t,b])=>`<div class="lp-pillar"><span class="ic">${icon(ic,22)}</span>
           <div><p style="font-weight:700;font-size:16px;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>`).join("")}
@@ -2204,7 +2204,7 @@ function renderLanding(){
     <!-- REASON TO BELIEVE: WISSENSCHAFT -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-dark">
-        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Warum du uns glauben kannst</p>
+        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Die wissenschaftliche Basis</p>
         <p class="lp-quote mb16">Jede Empfehlung steht auf Peer-Review-Forschung.</p>
         ${[["Progressive Überladung & Volumen","Schoenfeld 2017 · Pelland 2025"],
            ["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
@@ -2218,7 +2218,7 @@ function renderLanding(){
     <!-- FINAL CTA -->
     <section class="lp-sec" style="text-align:center">
       <div style="display:flex;justify-content:center;margin-bottom:16px">${logoMark(60)}</div>
-      <h2 class="lp-h2">Trainier mit Klarheit.<br>Versteh deinen Körper.</h2>
+      <h2 class="lp-h2">Fortschritt, dem du<br>vertrauen kannst.</h2>
       <p class="lp-lead mb16" style="max-width:320px;margin-left:auto;margin-right:auto">Der kostenlose Plan ist ein vollständiges Produkt — Trainingsplan, Logging, Status und dein erster Insight inklusive.</p>
       <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
       <button class="btn ghost" style="max-width:320px;margin:0 auto" onclick="A.devMode()">${icon("settings",15)} Erst die Demo ansehen</button>
@@ -2501,7 +2501,7 @@ function shareRecapPNG(r){
     if(r.da!=null){x.fillStyle="#2A45C8";x.font="900 110px 'Space Grotesk',system-ui";x.fillText(r.da+" %",80,y);
       x.fillStyle="#6E6A62";x.font="600 40px 'Space Grotesk',system-ui";x.fillText("Ernährungs-Treue",80,y+58);}
     x.fillStyle="#A39E93"; x.font="500 30px 'Space Grotesk',system-ui";
-    x.fillText("Versteh, warum dein Fortschritt passiert.",80,1270);
+    x.fillText("Fortschritt, wissenschaftlich fundiert.",80,1270);
     const a=document.createElement("a");
     a.href=c.toDataURL("image/png"); a.download=`metricgym-woche-${todayKey()}.png`; a.click();
     toast("Wochenrückblick als Bild gespeichert");
@@ -3206,7 +3206,7 @@ function renderAnalytics(){
     return;
   }
   const dp=dataProgress();
-  let html0=banner("analytics","chart","<b>Versteh deinen Fortschritt.</b> Klare Einblicke aus deinen echten Daten.");
+  let html0=banner("analytics","chart","<b>Dein Fortschritt, schwarz auf weiß.</b> Belegt durch deine echten Daten.");
   const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length>=3);
   const allSets=Object.values(S.liftLog).flat();
   const ins=buildInsights();
