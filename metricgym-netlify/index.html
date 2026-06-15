@@ -2666,61 +2666,65 @@ const EX_ACT={
   "Beinbeuger":{p:["hams"],s:[]},"Wadenheben":{p:["calves"],s:[]},
   "Plank":{p:["abs"],s:[]},"Dead Bug":{p:["abs"],s:[]},"Superman":{p:["lowerback"],s:["glutes"]},"Zone-2 Cardio":{p:[],s:[]},
 };
-const FRONT_REGIONS={delts:[[23,27,5.5,5],[57,27,5.5,5]],chest:[[34,33,6,5],[46,33,6,5]],biceps:[[21,44,4,7],[59,44,4,7]],abs:[[40,50,7,11]],quads:[[35,85,5,15],[45,85,5,15]]};
-const BACK_REGIONS={traps:[[40,25,9,5]],reardelts:[[23,28,5,5],[57,28,5,5]],lats:[[33,42,5,9],[47,42,5,9]],triceps:[[21,44,4,7],[59,44,4,7]],lowerback:[[40,57,7,5]],glutes:[[35,70,5.5,5.5],[45,70,5.5,5.5]],hams:[[35,92,5,12],[45,92,5,12]],calves:[[35,114,4,8],[45,114,4,8]]};
-function muscleFig(regions,act,label){
-  const colOf=(id)=>act.p.includes(id)?"var(--hl)":act.s.includes(id)?"rgba(232,99,58,.38)":null;
-  const blobs=Object.entries(regions).map(([id,arr])=>{const c=colOf(id);return c?arr.map(([cx,cy,rx,ry])=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${c}"/>`).join(""):"";}).join("");
+// Anatomische Muskelkarte: Front-/Rückansicht mit echten Muskelgruppen-Formen.
+// col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
+function muscleBody(view,act){
+  const col=(id)=>act.p.includes(id)?"var(--hl)":act.s.includes(id)?"rgba(232,99,58,.42)":"#E2DACB";
+  const ln="#CFC5B4";
+  const base=`<g fill="#EAE3D6" stroke="none">
+    <path d="M40 48 H90 L82 122 Q65 130 48 122 Z"/>
+    <path d="M28 54 Q22 96 28 134 L40 132 Q35 94 41 58 Z"/><path d="M102 54 Q108 96 102 134 L90 132 Q95 94 89 58 Z"/>
+    <path d="M47 120 H64 L62 226 Q56 230 50 226 Z"/><path d="M66 120 H83 L80 226 Q74 230 68 226 Z"/></g>
+    <ellipse cx="65" cy="20" rx="13" ry="15" fill="#E2DACB"/><path d="M58 33 h14 v7 q-7 4 -14 0 z" fill="#E2DACB"/>`;
+  const front=`
+    <path d="M58 38 q-12 2 -20 10 q14 -2 20 -3 z M72 38 q12 2 20 10 q-14 -2 -20 -3 z" fill="${col('traps')}"/>
+    <path d="M40 46 q-13 3 -15 18 q-1 8 3 12 q8 -4 14 -6 q2 -14 -2 -24 z" fill="${col('delts')}"/>
+    <path d="M90 46 q13 3 15 18 q1 8 -3 12 q-8 -4 -14 -6 q-2 -14 2 -24 z" fill="${col('delts')}"/>
+    <path d="M64 44 q-16 0 -22 6 q-3 12 2 22 q12 6 20 4 q1 -16 0 -32 z" fill="${col('chest')}"/>
+    <path d="M66 44 q16 0 22 6 q3 12 -2 22 q-12 6 -20 4 q-1 -16 0 -32 z" fill="${col('chest')}"/>
+    <path d="M26 64 q-6 18 -3 34 q5 3 10 1 q-1 -18 3 -32 q-5 -4 -10 -3 z" fill="${col('biceps')}"/>
+    <path d="M104 64 q6 18 3 34 q-5 3 -10 1 q1 -18 -3 -32 q5 -4 10 -3 z" fill="${col('biceps')}"/>
+    <path d="M54 74 q11 4 22 0 l-1 44 q-10 5 -20 0 z" fill="${col('abs')}"/>
+    <path d="M54 86 h22 M54 98 h22 M54 110 h21 M65 74 v44" stroke="${ln}" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <path d="M48 80 q-3 18 6 36 l3 -2 q-7 -16 -5 -33 z" fill="${col('obliques')}"/>
+    <path d="M82 80 q3 18 -6 36 l-3 -2 q7 -16 5 -33 z" fill="${col('obliques')}"/>
+    <path d="M50 124 q-7 26 -2 52 q7 4 13 1 q3 -28 1 -52 q-6 -3 -12 -1 z" fill="${col('quads')}"/>
+    <path d="M80 124 q7 26 2 52 q-7 4 -13 1 q-3 -28 -1 -52 q6 -3 12 -1 z" fill="${col('quads')}"/>`;
+  const back=`
+    <path d="M65 38 q-22 4 -26 14 q10 4 26 4 q16 0 26 -4 q-4 -10 -26 -14 z M65 60 q-14 0 -22 -4 q6 18 22 22 q16 -4 22 -22 q-8 4 -22 4 z" fill="${col('traps')}"/>
+    <path d="M40 46 q-13 3 -15 18 q-1 8 3 12 q8 -4 14 -6 q2 -14 -2 -24 z" fill="${col('reardelts')}"/>
+    <path d="M90 46 q13 3 15 18 q1 8 -3 12 q-8 -4 -14 -6 q-2 -14 2 -24 z" fill="${col('reardelts')}"/>
+    <path d="M26 64 q-6 18 -3 34 q5 3 10 1 q-1 -18 3 -32 q-5 -4 -10 -3 z" fill="${col('triceps')}"/>
+    <path d="M104 64 q6 18 3 34 q-5 3 -10 1 q1 -18 -3 -32 q5 -4 10 -3 z" fill="${col('triceps')}"/>
+    <path d="M48 60 q-8 14 -4 30 q10 6 18 4 l0 -36 q-8 -2 -14 2 z" fill="${col('lats')}"/>
+    <path d="M82 60 q8 14 4 30 q-10 6 -18 4 l0 -36 q8 -2 14 2 z" fill="${col('lats')}"/>
+    <path d="M56 92 q9 4 18 0 l-2 26 q-7 3 -14 0 z" fill="${col('lowerback')}"/>
+    <path d="M64 120 q-16 -2 -20 12 q-2 12 8 18 q10 4 12 -6 z" fill="${col('glutes')}"/>
+    <path d="M66 120 q16 -2 20 12 q2 12 -8 18 q-10 4 -12 -6 z" fill="${col('glutes')}"/>
+    <path d="M50 150 q-6 22 -1 44 q7 4 13 1 q2 -24 0 -45 q-6 -3 -12 0 z" fill="${col('hams')}"/>
+    <path d="M80 150 q6 22 1 44 q-7 4 -13 1 q-2 -24 0 -45 q6 -3 12 0 z" fill="${col('hams')}"/>
+    <path d="M52 196 q-5 18 0 32 q6 3 11 0 q2 -16 -1 -32 q-5 -2 -10 0 z" fill="${col('calves')}"/>
+    <path d="M78 196 q5 18 0 32 q-6 3 -11 0 q-2 -16 1 -32 q5 -2 10 0 z" fill="${col('calves')}"/>`;
   return `<div style="text-align:center">
-    <svg viewBox="0 0 80 150" width="74" height="139" aria-hidden="true">
-      <g fill="var(--s3)">
-        <circle cx="40" cy="12" r="9"/><rect x="28" y="21" width="24" height="46" rx="11"/>
-        <rect x="17" y="24" width="9" height="38" rx="4.5"/><rect x="54" y="24" width="9" height="38" rx="4.5"/>
-        <rect x="31" y="64" width="8" height="58" rx="4"/><rect x="41" y="64" width="8" height="58" rx="4"/>
-      </g>${blobs}
-    </svg><p class="xs t2" style="margin-top:2px">${label}</p></div>`;
+    <svg viewBox="0 0 130 240" width="118" height="218" stroke="${ln}" stroke-width="0.7" aria-hidden="true">${base}${view==="front"?front:back}</svg>
+    <p class="xs t2" style="margin-top:2px">${view==="front"?"Vorderseite":"Rückseite"}</p></div>`;
 }
 function bodyDiagram(act){
-  return `<div style="display:flex;justify-content:center;gap:20px;align-items:flex-start">
-      ${muscleFig(FRONT_REGIONS,act,"Vorne")}${muscleFig(BACK_REGIONS,act,"Hinten")}</div>
-    <div class="row" style="justify-content:center;gap:16px;margin-top:8px">
+  return `<div style="display:flex;justify-content:center;gap:14px;align-items:flex-start">
+      ${muscleBody("front",act)}${muscleBody("back",act)}</div>
+    <div class="row" style="justify-content:center;gap:16px;margin-top:6px">
       <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--hl);display:inline-block"></span>Primär</span>
-      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(232,99,58,.38);display:inline-block"></span>Sekundär</span></div>`;
-}
-function movementDemo(pattern){
-  const W=(inner)=>`<svg viewBox="0 0 120 132" width="100%" style="max-width:148px;display:block;margin:0 auto" fill="none" stroke="var(--t2)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><line x1="16" y1="124" x2="104" y2="124" stroke="var(--s3)" stroke-width="3"/>${inner}</svg>`;
-  const stand=`<circle cx="52" cy="24" r="9"/><line x1="52" y1="33" x2="52" y2="74"/><line x1="52" y1="74" x2="44" y2="120"/><line x1="52" y1="74" x2="62" y2="120"/>`;
-  const A=(t,v,d)=>`<animateTransform attributeName="transform" type="${t}" values="${v}" dur="${d}" repeatCount="indefinite"/>`;
-  switch(pattern){
-    case "horizPress": return W(stand+`<line x1="52" y1="42" x2="72" y2="42"/><g stroke="var(--hl)"><line x1="72" y1="42" x2="86" y2="42"/>${A("translate","0 0;12 0;0 0","1.6s")}</g>`);
-    case "vertPress": return W(stand+`<line x1="52" y1="42" x2="60" y2="32"/><g stroke="var(--hl)"><line x1="60" y1="32" x2="62" y2="18"/>${A("translate","0 0;0 -10;0 0","1.6s")}</g>`);
-    case "raise": return W(stand+`<g stroke="var(--hl)"><line x1="52" y1="42" x2="52" y2="62"/>${A("rotate","0 52 42;-92 52 42;0 52 42","2s")}</g>`);
-    case "curl": return W(stand+`<line x1="52" y1="42" x2="52" y2="60"/><g stroke="var(--hl)"><line x1="52" y1="60" x2="66" y2="62"/>${A("rotate","0 52 60;-125 52 60;0 52 60","1.8s")}</g>`);
-    case "triExt": return W(stand+`<line x1="52" y1="42" x2="58" y2="30"/><g stroke="var(--hl)"><line x1="58" y1="30" x2="48" y2="22"/>${A("rotate","0 58 30;120 58 30;0 58 30","1.6s")}</g>`);
-    case "vertPull": return W(`<line x1="28" y1="16" x2="92" y2="16" stroke="var(--s3)" stroke-width="3"/><g><circle cx="60" cy="42" r="9"/><line x1="60" y1="51" x2="60" y2="84"/><line x1="60" y1="84" x2="52" y2="110"/><line x1="60" y1="84" x2="68" y2="110"/><line x1="60" y1="51" x2="50" y2="18" stroke="var(--hl)"/><line x1="60" y1="51" x2="70" y2="18" stroke="var(--hl)"/>${A("translate","0 0;0 -12;0 0","2s")}</g>`);
-    case "horizPull": return W(stand+`<line x1="52" y1="44" x2="72" y2="46"/><g stroke="var(--hl)"><line x1="72" y1="46" x2="86" y2="48"/>${A("translate","0 0;-14 0;0 0","1.6s")}</g>`);
-    case "squat": return W(`<g><circle cx="56" cy="22" r="9"/><line x1="56" y1="31" x2="56" y2="66"/><line x1="56" y1="40" x2="74" y2="40" stroke="var(--hl)"/><line x1="56" y1="66" x2="46" y2="100"/><line x1="56" y1="66" x2="66" y2="100"/>${A("translate","0 0;0 14;0 0","2s")}</g>`);
-    case "hinge": return W(`<line x1="56" y1="74" x2="48" y2="120"/><line x1="56" y1="74" x2="64" y2="120"/><g stroke="var(--hl)"><circle cx="56" cy="30" r="9"/><line x1="56" y1="39" x2="56" y2="74"/><line x1="56" y1="50" x2="46" y2="64"/>${A("rotate","0 56 74;58 56 74;0 56 74","2.2s")}</g>`);
-    case "legCurl": return W(`<circle cx="18" cy="98" r="8"/><line x1="24" y1="100" x2="72" y2="100"/><g stroke="var(--hl)"><line x1="72" y1="100" x2="94" y2="100"/>${A("rotate","0 72 100;-80 72 100;0 72 100","1.8s")}</g>`);
-    case "calf": return W(`<g><circle cx="52" cy="26" r="9"/><line x1="52" y1="35" x2="52" y2="78"/><line x1="52" y1="78" x2="46" y2="116" stroke="var(--hl)"/><line x1="52" y1="78" x2="60" y2="116" stroke="var(--hl)"/>${A("translate","0 0;0 -9;0 0","1.4s")}</g>`);
-    case "cardio": return W(`<g><circle cx="56" cy="24" r="9"/><line x1="56" y1="33" x2="56" y2="72"/></g><g stroke="var(--hl)"><line x1="56" y1="72" x2="50" y2="112"/>${A("rotate","-20 56 72;20 56 72;-20 56 72","0.8s")}</g><g stroke="var(--hl)"><line x1="56" y1="72" x2="62" y2="112"/>${A("rotate","20 56 72;-20 56 72;20 56 72","0.8s")}</g>`);
-    default: return W(`<circle cx="22" cy="101" r="8"/><line x1="40" y1="106" x2="34" y2="120"/><line x1="86" y1="112" x2="96" y2="120"/><g stroke="var(--hl)"><line x1="26" y1="103" x2="92" y2="113"/>${A("translate","0 0;0 -2;0 0","2.4s")}</g>`);
-  }
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(232,99,58,.42);display:inline-block"></span>Sekundär</span></div>`;
 }
 function exDetailModal(name){
   const inf=EXINFO[name]||{prim:"—",sek:"—",cues:[]};
   const d=EXDB[name]||{};
   const warn=injuryWarn(name);
   const why=recWhy(name), rec=recommend(name), best=bestE1(name);
-  const pattern=EX_PATTERN[name]||"core", act=EX_ACT[name]||{p:[],s:[]};
+  const act=EX_ACT[name]||{p:[],s:[]};
   const isCardio=(d.m==="Herz");
   modal(`<p class="display-m mb8">${name}</p>
     ${rec?`<p class="metric sm volt-txt mb8">Empfohlen: ${fmtKg(rec.w)} × ${rec.reps}</p>`:""}
-    <div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px">
-      <p class="label" style="margin-bottom:8px">Ausführung</p>
-      ${movementDemo(pattern)}
-      <p class="xs t2" style="text-align:center;margin-top:8px;line-height:1.5">${MOVE_TXT[pattern]||""}</p>
-    </div>
     ${isCardio
       ?`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px"><p class="label" style="margin-bottom:6px">Beansprucht</p><p class="sm t2" style="line-height:1.6">Herz-Kreislauf-System — stärkt deine Ausdauer und unterstützt die Erholung.</p></div>`
       :`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px">
@@ -2728,14 +2732,18 @@ function exDetailModal(name){
         ${bodyDiagram(act)}
         <ul class="list mt16"><li><span>Primär</span><span>${inf.prim}</span></li><li><span>Sekundär</span><span>${inf.sek}</span></li></ul>
       </div>`}
+    ${inf.cues&&inf.cues.length?`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px">
+      <p class="label" style="margin-bottom:10px">Ausführung — Schritt für Schritt</p>
+      ${inf.cues.map((c,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:5px 0">
+        <span style="width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
+        <span class="sm" style="line-height:1.5">${c}</span></div>`).join("")}
+    </div>`:""}
     ${why?`<p class="sm t2 mb8" style="line-height:1.6">${why}</p>`:'<p class="sm t2 mb8">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>'}
     ${best>0?`<p class="xs t2 mb8">Deine ${LABELS.e1rm}: <span class="metric">${fmtKg(best)}</span> ${infoBtn("e1rm")}</p>`:""}
     ${d.why?`<div class="whybox"><b style="color:var(--t1)">Warum diese Übung:</b> ${d.why}</div>`:""}
     ${(d.tempo||d.rir)?`<p class="mt8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir&&d.rir!=="–"?`<span class="statchip">${d.rir} in Reserve</span>`:""}${d.lengthened?'<span class="statchip">Volle Dehnung betonen</span>':""}</p>`:""}
     ${d.alt?`<p class="xs t2 mt8">Bei Muskelkater/Beschwerden: <b style="color:var(--t1)">${d.alt}</b></p>`:""}
-    ${warn?`<div class="warncard"><b>${icon("alert",13)} ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
-    <p class="label" style="margin-top:14px">Technik</p>
-    <p class="sm t2" style="line-height:1.8">${inf.cues.map(c=>"· "+c).join("<br>")}</p>`);
+    ${warn?`<div class="warncard"><b>${icon("alert",13)} ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}`);
 }
 // Global: Player & alle Screens nutzen dieselbe Übungs-Detailansicht.
 A.exInfo=(n)=>exDetailModal(n);
