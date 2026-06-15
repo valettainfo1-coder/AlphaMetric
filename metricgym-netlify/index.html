@@ -41,8 +41,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
 ═══════════════════════════════════════════════════════════════════════
 -->
 <style>
-  /* Typografie: Inter Tight (UI + Hero-Zahlen) + JetBrains Mono (Metriken). */
-  @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  /* Typografie (modern): Space Grotesk (Headlines/Hero) · Inter (UI/Fließtext) · JetBrains Mono (Metriken). */
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
   :root{
     /* Helles, warmes Creme-Theme (editorial-minimalistisch) */
     --bg:#F7F5F1; --s1:#FFFFFF; --s2:#F0EDE7; --s3:#E8E4DC; --border:#E2DDD3;
@@ -52,8 +52,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     --hl:#E8633A; --hl-soft:rgba(232,99,58,.12); /* einziger warmer Akzent */
     --volt:#E8633A; /* Daten-Highlights (Charts, Deltas) — remapped auf Terracotta */
     --info:#7D8CA3; --danger:#D4574B; --warn:#C98A3D;
-    --font-display:'Inter Tight',system-ui,sans-serif;
-    --font-hero:'Inter Tight',system-ui,sans-serif;
+    --font-display:'Space Grotesk',system-ui,sans-serif;
+    --font-ui:'Inter',system-ui,sans-serif;
+    --font-hero:'Space Grotesk',system-ui,sans-serif;
     --font-mono:'JetBrains Mono',ui-monospace,monospace;
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
     --spring:cubic-bezier(.34,1.56,.64,1);
@@ -64,11 +65,14 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   html{background:var(--bg); color-scheme:light;}
   body{
     background:var(--bg); color:var(--t1);
-    font-family:var(--font-display);
+    font-family:var(--font-ui);
     font-variant-numeric:tabular-nums;
-    -webkit-font-smoothing:antialiased;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    letter-spacing:-0.005em; line-height:1.5;
     min-height:100dvh;
   }
+  /* Headlines & Marken-Elemente: Space Grotesk; Fließtext bleibt Inter. */
+  h1,h2,h3,.display-m,.hero-num,.huge,.dial,.logo-text,.lp-h,.lp-h2,.lp-quote,.lp-claim .n,.tier-card .display-m{font-family:var(--font-display);}
   /* Pastell-Tiefe HINTER der Glas-Ebene — sonst wirkt Glas wie weiße Box */
   body::before{
     content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -2394,16 +2398,16 @@ function shareRecapPNG(r){
     [[80,104,36],[100,86,54],[120,68,72]].forEach(([bx,by,bh])=>{
       if(x.roundRect){x.beginPath();x.roundRect(bx,by,14,bh,7);x.fill();}else{x.fillRect(bx,by,14,bh);}
     });
-    x.font="800 60px 'Inter Tight',system-ui"; x.fillText("METRICGYM",156,140);
-    x.fillStyle="#6E6A62"; x.font="600 40px 'Inter Tight',system-ui"; x.fillText("Mein Wochenrückblick",80,215);
-    x.fillStyle="#1A1A1A"; x.font="900 220px 'Inter Tight',system-ui"; x.fillText(String(r.sets),80,520);
-    x.fillStyle="#6E6A62"; x.font="600 44px 'Inter Tight',system-ui"; x.fillText("Sätze diese Woche",80,590);
+    x.font="800 60px 'Space Grotesk',system-ui"; x.fillText("METRICGYM",156,140);
+    x.fillStyle="#6E6A62"; x.font="600 40px 'Space Grotesk',system-ui"; x.fillText("Mein Wochenrückblick",80,215);
+    x.fillStyle="#1A1A1A"; x.font="900 220px 'Space Grotesk',system-ui"; x.fillText(String(r.sets),80,520);
+    x.fillStyle="#6E6A62"; x.font="600 44px 'Space Grotesk',system-ui"; x.fillText("Sätze diese Woche",80,590);
     let y=760;
-    if(r.avgR!=null){x.fillStyle="#1A1A1A";x.font="900 110px 'Inter Tight',system-ui";x.fillText(r.avgR+" / 100",80,y);
-      x.fillStyle="#6E6A62";x.font="600 40px 'Inter Tight',system-ui";x.fillText("Ø Status",80,y+58); y+=230;}
-    if(r.da!=null){x.fillStyle="#E8633A";x.font="900 110px 'Inter Tight',system-ui";x.fillText(r.da+" %",80,y);
-      x.fillStyle="#6E6A62";x.font="600 40px 'Inter Tight',system-ui";x.fillText("Ernährungs-Treue",80,y+58);}
-    x.fillStyle="#A39E93"; x.font="500 30px 'Inter Tight',system-ui";
+    if(r.avgR!=null){x.fillStyle="#1A1A1A";x.font="900 110px 'Space Grotesk',system-ui";x.fillText(r.avgR+" / 100",80,y);
+      x.fillStyle="#6E6A62";x.font="600 40px 'Space Grotesk',system-ui";x.fillText("Ø Status",80,y+58); y+=230;}
+    if(r.da!=null){x.fillStyle="#E8633A";x.font="900 110px 'Space Grotesk',system-ui";x.fillText(r.da+" %",80,y);
+      x.fillStyle="#6E6A62";x.font="600 40px 'Space Grotesk',system-ui";x.fillText("Ernährungs-Treue",80,y+58);}
+    x.fillStyle="#A39E93"; x.font="500 30px 'Space Grotesk',system-ui";
     x.fillText("Versteh, warum dein Fortschritt passiert.",80,1270);
     const a=document.createElement("a");
     a.href=c.toDataURL("image/png"); a.download=`metricgym-woche-${todayKey()}.png`; a.click();
