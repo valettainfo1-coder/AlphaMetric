@@ -7,6 +7,17 @@
 <meta name="theme-color" content="#F7F5F1">
 <title>METRICGYM — Fortschritt, wissenschaftlich fundiert</title>
 <meta name="description" content="METRICGYM: wissenschaftlich fundierter Trainingsplan, Ernährung in 10 Sekunden und Statistiken, die deinen Fortschritt belegen. Jede Empfehlung beruht auf deinen echten Daten.">
+<!-- Open Graph / Link-Vorschau (Product-led Growth): geteilte Links zeigen eine attraktive Vorschau -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="METRICGYM — Fortschritt, wissenschaftlich fundiert">
+<meta property="og:description" content="Wissenschaftlich gebauter Trainingsplan, müheloses Ernährungs-Logging und Statistiken, die deinen Fortschritt belegen.">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="METRICGYM — Fortschritt, wissenschaftlich fundiert">
+<meta name="twitter:description" content="Wissenschaftlich gebauter Trainingsplan, müheloses Ernährungs-Logging und Statistiken, die deinen Fortschritt belegen.">
+<meta name="twitter:image" content="og-image.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%231A1A1A'/%3E%3Crect x='15' y='34' width='7' height='16' rx='3.5' fill='%23fff'/%3E%3Crect x='28.5' y='26' width='7' height='24' rx='3.5' fill='%23fff'/%3E%3Crect x='42' y='16' width='7' height='34' rx='3.5' fill='%23fff'/%3E%3Cpath d='M15 28l9-7 7 4.5 14-11' stroke='%232A45C8' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='45' cy='14.5' r='3.4' fill='%232A45C8'/%3E%3C/svg%3E">
 <!--
 ═══════════════════════════════════════════════════════════════════════
@@ -843,6 +854,14 @@ S.planB=S.planB||null;
 S.planMode=S.planMode||"week"; // "week" = Wochentage · "rotation" = fortlaufend
 S.rotation=S.rotation||null;
 S.rotationPos=S.rotationPos||0;
+// Wachstum: Referral-Code, Einlader, Pro-Bonus-Ablauf
+S.refCode=S.refCode||("MG"+Math.random().toString(36).slice(2,7).toUpperCase());
+S.invitedBy=S.invitedBy??null;
+S.proBonusUntil=S.proBonusUntil??null;
+// ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
+try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
+// Abgelaufenen Pro-Bonus zurücksetzen
+if(S.proBonusUntil&&Date.now()>S.proBonusUntil&&S.tier==="pro"){S.tier="free";S.proBonusUntil=null;}
 if(S.checkinDate&&S.checkinDate!==todayKey()){S.checkin=null;S.checkinDate=null;}
 
 // ---------- Tier-System (Good-Better-Better) ----------
@@ -2103,6 +2122,7 @@ function renderLanding(){
       <span style="display:flex;align-items:center;gap:9px">${logoSVG(22)}<span class="logo-text" style="font-size:15px">METRICGYM</span></span>
       <button class="btn ghost" style="width:auto;min-height:40px;padding:0 14px;font-size:13px" onclick="A.toLogin()">Anmelden</button>
     </div>
+    ${S.invitedBy?`<div style="background:var(--accent);color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600">${icon("send",14)} Du wurdest eingeladen — <b>14 Tage PERFORMANCE gratis</b> nach der Anmeldung.</div>`:""}
 
     <!-- HERO -->
     <section class="lp-hero">
@@ -2256,6 +2276,7 @@ function renderRegister(){
     const pwHash=await hashPw(p);
     S.users.push({username:u,email:e,pwHash});
     S.currentUser=S.users.length-1; S.devMode=false; S.tier="free";
+    if(S.invitedBy){ S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs; setTimeout(()=>toast("Willkommensbonus: 14 Tage PERFORMANCE aktiv"),600); }
     // Garantiert leerer Start: keine synthetischen Daten außerhalb des Demo-Zugangs.
     S.liftLog={}; S.weightLog=[]; S.readinessHistory=[]; S.trainingHistory=[];
     S.nutritionLog={}; S.chat=[]; S.schedule=null; S.plan=null; S.checkin=null; S.checkinDate=null;
@@ -2472,6 +2493,7 @@ function renderReveal(){
       <p class="sm t2 mt12" style="line-height:1.55">Trifft jede Muskelgruppe ${freq} und gibt deiner Erholung den Raum, den sie braucht. Tage jederzeit frei verschiebbar.</p>
     </div>`;})()}
     <button class="btn volt" onclick="A.startApp()">Los geht es</button>
+    <button class="btn mt8" onclick="sharePlanPNG()">${icon("send",15)} Meinen Plan teilen</button>
     <p class="xs t2 mt8" style="text-align:center">Du behältst die Kontrolle: Wochentage jederzeit selbst festlegen.</p></div>`;
 }
 
@@ -2480,32 +2502,87 @@ function renderReveal(){
 // =====================================================================
 let ci={sleep:0,energy:0,stress:0,sore:0};
 let recapData=null;
-/* v5/Phase 4: teilbarer Wochenrückblick als PNG (Canvas, 1080×1350 — Story-Format) */
+/* Teilbare Erfolgs-Karten (Canvas, 1080×1350 Story-Format) — der Kern des
+   Product-led-Growth-Loops: jede Karte trägt Marke + Tagline + App-Link,
+   jeder Share ist eine kostenlose Impression. Web-Share-API mit Datei,
+   sonst Download. */
+function drawShareCard(opts){
+  const c=document.createElement("canvas"); c.width=1080; c.height=1350;
+  const x=c.getContext("2d");
+  // Hintergrund mit dezentem Akzent-Schein
+  x.fillStyle="#F7F5F1"; x.fillRect(0,0,1080,1350);
+  const g=x.createRadialGradient(540,170,40,540,170,900);
+  g.addColorStop(0,"rgba(42,69,200,.10)"); g.addColorStop(1,"rgba(247,245,241,0)");
+  x.fillStyle=g; x.fillRect(0,0,1080,700);
+  // Logo: 3 Balken + Wortmarke
+  x.fillStyle="#1A1A1A";
+  [[80,104,36],[100,86,54],[120,68,72]].forEach(([bx,by,bh])=>{ if(x.roundRect){x.beginPath();x.roundRect(bx,by,14,bh,7);x.fill();}else x.fillRect(bx,by,14,bh); });
+  x.font="800 58px 'Space Grotesk',system-ui"; x.fillText("METRICGYM",156,138);
+  // Eyebrow
+  x.fillStyle="#2A45C8"; x.font="700 34px 'Space Grotesk',system-ui";
+  x.fillText((opts.eyebrow||"").toUpperCase(),80,250);
+  // Hero
+  x.fillStyle="#1A1A1A"; x.font=`900 ${opts.heroSize||200}px 'Space Grotesk',system-ui`;
+  x.fillText(opts.hero,80,opts.heroSize?250+opts.heroSize*0.95:470);
+  x.fillStyle="#6E6A62"; x.font="600 44px 'Space Grotesk',system-ui";
+  let y=(opts.heroSize?250+opts.heroSize*0.95:470)+70;
+  x.fillText(opts.heroLabel||"",80,y); y+=120;
+  // bis zu 3 Sekundär-Stats
+  (opts.stats||[]).forEach(([v,l,accent])=>{
+    x.fillStyle=accent?"#2A45C8":"#1A1A1A"; x.font="900 100px 'Space Grotesk',system-ui"; x.fillText(v,80,y);
+    x.fillStyle="#6E6A62"; x.font="600 38px 'Space Grotesk',system-ui"; x.fillText(l,80,y+52); y+=200;
+  });
+  // Footer-Band
+  x.fillStyle="#1A1A1A"; x.font="700 40px 'Space Grotesk',system-ui";
+  x.fillText("Fortschritt, wissenschaftlich fundiert.",80,1230);
+  x.fillStyle="#A39E93"; x.font="500 32px 'Space Grotesk',system-ui";
+  x.fillText("metricgym.app",80,1285);
+  return c;
+}
+function shareCanvas(canvas,fname,text){
+  const done=()=>toast("Bild bereit — teilen oder speichern");
+  if(canvas.toBlob){
+    canvas.toBlob(async(blob)=>{
+      try{
+        const file=new File([blob],fname,{type:"image/png"});
+        if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text}); return; }
+      }catch{}
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; a.click(); URL.revokeObjectURL(a.href); done();
+    },"image/png");
+  } else { const a=document.createElement("a"); a.href=canvas.toDataURL("image/png"); a.download=fname; a.click(); done(); }
+}
 function shareRecapPNG(r){
   try{
-    const c=document.createElement("canvas"); c.width=1080; c.height=1350;
-    const x=c.getContext("2d");
-    x.fillStyle="#F7F5F1"; x.fillRect(0,0,1080,1350);
-    x.fillStyle="#1A1A1A";
-    // Logo: 3 aufsteigende Balken (wie logoSVG) + Wortmarke
-    [[80,104,36],[100,86,54],[120,68,72]].forEach(([bx,by,bh])=>{
-      if(x.roundRect){x.beginPath();x.roundRect(bx,by,14,bh,7);x.fill();}else{x.fillRect(bx,by,14,bh);}
-    });
-    x.font="800 60px 'Space Grotesk',system-ui"; x.fillText("METRICGYM",156,140);
-    x.fillStyle="#6E6A62"; x.font="600 40px 'Space Grotesk',system-ui"; x.fillText("Mein Wochenrückblick",80,215);
-    x.fillStyle="#1A1A1A"; x.font="900 220px 'Space Grotesk',system-ui"; x.fillText(String(r.sets),80,520);
-    x.fillStyle="#6E6A62"; x.font="600 44px 'Space Grotesk',system-ui"; x.fillText("Sätze diese Woche",80,590);
-    let y=760;
-    if(r.avgR!=null){x.fillStyle="#1A1A1A";x.font="900 110px 'Space Grotesk',system-ui";x.fillText(r.avgR+" / 100",80,y);
-      x.fillStyle="#6E6A62";x.font="600 40px 'Space Grotesk',system-ui";x.fillText("Ø Status",80,y+58); y+=230;}
-    if(r.da!=null){x.fillStyle="#2A45C8";x.font="900 110px 'Space Grotesk',system-ui";x.fillText(r.da+" %",80,y);
-      x.fillStyle="#6E6A62";x.font="600 40px 'Space Grotesk',system-ui";x.fillText("Ernährungs-Treue",80,y+58);}
-    x.fillStyle="#A39E93"; x.font="500 30px 'Space Grotesk',system-ui";
-    x.fillText("Fortschritt, wissenschaftlich fundiert.",80,1270);
-    const a=document.createElement("a");
-    a.href=c.toDataURL("image/png"); a.download=`metricgym-woche-${todayKey()}.png`; a.click();
-    toast("Wochenrückblick als Bild gespeichert");
+    const stats=[];
+    if(r.avgR!=null)stats.push([r.avgR+"/100","Ø Status"]);
+    if(r.da!=null)stats.push([r.da+" %","Ernährungs-Treue",true]);
+    const c=drawShareCard({eyebrow:"Meine Woche",hero:String(r.sets),heroLabel:"Sätze diese Woche",stats});
+    shareCanvas(c,`metricgym-woche-${todayKey()}.png`,"Meine Trainingswoche mit METRICGYM 💪 #wissenschaftlichtrainieren");
   }catch{ toast("Bild-Export fehlgeschlagen"); }
+}
+function sharePlanPNG(){
+  try{
+    const a=S.profile.a, set=new Set(activeRotation().map(k=>parseTypeKey(k).base));
+    const split=set.has("push")?"Push · Pull · Beine":(set.has("upper")||set.has("lower"))?"Ober- & Unterkörper":"Ganzkörper";
+    const c=drawShareCard({eyebrow:"Mein Plan",hero:(a.days||4)+"×",heroLabel:"Trainingstage pro Woche",
+      stats:[[(a.len||60)+" Min","pro Einheit"],[split,"Aufteilung",true]]});
+    shareCanvas(c,"metricgym-plan.png","Mein wissenschaftlich gebauter Trainingsplan mit METRICGYM 💪");
+  }catch{ toast("Bild-Export fehlgeschlagen"); }
+}
+function sharePRPNG(pr){
+  try{
+    const c=drawShareCard({eyebrow:"Neuer Rekord",hero:nf.format(pr.e1)+" kg",heroSize:150,heroLabel:pr.n,
+      stats:[["+"+nf.format(pr.delta)+" kg","geschätzte Maximalkraft",true]]});
+    shareCanvas(c,"metricgym-rekord.png",`Neuer Rekord: ${pr.n} ${fmtKg(pr.e1)} 💪 mit METRICGYM`);
+  }catch{ toast("Bild-Export fehlgeschlagen"); }
+}
+function shareWeekPNG(){
+  const from=Date.now()-7*dayMs;
+  const sets=S.trainingHistory.filter(t=>new Date(t.date).getTime()>=from).reduce((s,t)=>s+t.sets,0);
+  const r7=S.readinessHistory.slice(-7);
+  const avgR=r7.length?Math.round(r7.reduce((s,x)=>s+x.score,0)/r7.length):null;
+  const da=dietAdherence(7);
+  shareRecapPNG({sets,avgR,da:da?da.pct:null});
 }
 const STATUS_CARDS=[
   ["sleep","moon","Schlaf"],["energy","zap","Energie"],["stress","brain","Stress"],["sore","activity","Muskelkater"],
@@ -3171,6 +3248,7 @@ function renderSummary(){
         <p class="mt16" style="font-weight:700;letter-spacing:2px">METRIC<span class="volt-txt">GYM</span></p>
       </div></div>`
     :`<p class="sm t2 mb16">Solide Arbeit. Die Engine hat deine Progression aktualisiert.</p>`}
+    ${S.prToday?`<button class="btn volt mb8" onclick="sharePRPNG(S.prToday)">${icon("send",15)} Rekord teilen</button>`:""}
     <button class="btn" onclick="A.done()">Zur Übersicht</button>`;
 }
 
@@ -3245,6 +3323,7 @@ function renderAnalytics(){
       </div>
       ${headline?`<div class="msg ai" style="max-width:100%;margin-top:12px;margin-bottom:0">${icon("zap",13)} <b>Wichtigste Erkenntnis:</b> ${headline.t}<div class="conf mt8">Konfidenz ${headline.conf} %</div></div>`
         :`<p class="sm t2 mt12" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
+      <button class="btn mt12" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
     </div>`;
 
   html+=`
@@ -3818,6 +3897,24 @@ function renderProfile(){
       URL.revokeObjectURL(url);
     }catch{ toast("Export fehlgeschlagen"); }
   };
+  A.inviteLink=()=>{
+    const base=location.origin+location.pathname;
+    return base+"?ref="+S.refCode;
+  };
+  A.invite=async()=>{
+    const link=A.inviteLink();
+    const text=`Trainier mit mir auf METRICGYM — wissenschaftlich fundierter Plan, Ernährung & Analytics. Mit meinem Link bekommst du 14 Tage PERFORMANCE gratis: ${link}`;
+    try{ if(navigator.share){ await navigator.share({title:"METRICGYM",text}); return; } }catch{}
+    try{ await navigator.clipboard.writeText(text); toast("Einladung kopiert — teilen & loslegen"); }
+    catch{ modal(`<p class="ct">Dein Einladungslink</p><p class="sm" style="word-break:break-all">${link}</p>`); }
+  };
+  A.redeem=()=>{
+    const el=document.getElementById("redeem-in"); const code=(el&&el.value.trim().toUpperCase())||"";
+    if(!code){toast("Code eingeben");return;}
+    if(code===S.refCode){toast("Das ist dein eigener Code");return;}
+    S.invitedBy=code; S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs;
+    save(); render(); toast("✓ 14 Tage PERFORMANCE freigeschaltet");
+  };
   A.saveSnapshot=()=>{
     if(S.tier!=="elite"){showUpgradeTeaser("snapshots");return;}
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
@@ -3901,6 +3998,15 @@ function renderProfile(){
         <button class="btn" onclick="A.saveSnapshot()">Snapshot jetzt speichern</button>`
       :`<div class="lockcard" style="margin-top:0"><p class="sm">${icon("lock",13)} Historische Profil-Stände zum Vorher/Nachher-Vergleich — Teil von ELITE.</p>
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('snapshots')">Mehr erfahren</button></div>`}
+    </div>
+
+    <div class="card" style="border-color:rgba(42,69,200,.3)"><p class="ct">${icon("send",14)} Freunde einladen</p>
+      <p class="sm t2 mb12" style="line-height:1.6">Lade Freunde ein — <b style="color:var(--t1)">beide bekommen 14 Tage PERFORMANCE gratis</b>. Dein Code: <span class="metric" style="color:var(--hl)">${S.refCode}</span></p>
+      <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Einladungslink teilen</button>
+      <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
+        <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
+      ${S.proBonusUntil&&Date.now()<S.proBonusUntil?`<p class="xs volt-txt mt8">PERFORMANCE-Bonus aktiv bis ${fmtD(new Date(S.proBonusUntil))}.</p>`:""}
+      <p class="xs t2 mt8">Demo: Der Bonus wird lokal freigeschaltet. In der Vollversion über Account verifiziert.</p>
     </div>
 
     <div class="card"><p class="ct">Health-Daten importieren</p>
