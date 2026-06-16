@@ -22,7 +22,7 @@
      Achtung: bei öffentlichem Deploy ist diese Datei abrufbar; für Produktion Server-Proxy nutzen. -->
 <script>window.addEventListener("error",function(e){if(e&&e.target&&e.target.src&&/config\.js/.test(e.target.src)){e.preventDefault();}},true);</script>
 <script src="config.js"></script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%231A1A1A'/%3E%3Cg fill='%23D9C3A0'%3E%3Ccircle cx='32' cy='32' r='3.2'/%3E%3Ccircle cx='42' cy='32' r='3'/%3E%3Ccircle cx='32' cy='42' r='2.6' opacity='.8'/%3E%3Ccircle cx='22' cy='32' r='2.6' opacity='.7'/%3E%3Ccircle cx='32' cy='22' r='2.8'/%3E%3Ccircle cx='48' cy='32' r='2.4' fill='%23B0895C'/%3E%3Ccircle cx='43' cy='43' r='2.4' fill='%23C7A87C'/%3E%3Ccircle cx='32' cy='48' r='2.2' fill='%23B0895C' opacity='.7'/%3E%3Ccircle cx='21' cy='43' r='2.2' fill='%23C7A87C' opacity='.6'/%3E%3Ccircle cx='16' cy='32' r='2.2' fill='%23B0895C' opacity='.6'/%3E%3Ccircle cx='21' cy='21' r='2.4' fill='%23C7A87C'/%3E%3Ccircle cx='32' cy='16' r='2.4' fill='%23D9C3A0'/%3E%3Ccircle cx='43' cy='21' r='2.6' fill='%23D9C3A0'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%23080A0F'/%3E%3Cg fill='%23C9D6EE'%3E%3Ccircle cx='32' cy='32' r='3.2'/%3E%3Ccircle cx='42' cy='32' r='3'/%3E%3Ccircle cx='32' cy='42' r='2.6' opacity='.8'/%3E%3Ccircle cx='22' cy='32' r='2.6' opacity='.7'/%3E%3Ccircle cx='32' cy='22' r='2.8'/%3E%3Ccircle cx='48' cy='32' r='2.4' fill='%2390A8E4'/%3E%3Ccircle cx='43' cy='43' r='2.4' fill='%23AEC0E8'/%3E%3Ccircle cx='32' cy='48' r='2.2' fill='%2390A8E4' opacity='.7'/%3E%3Ccircle cx='21' cy='43' r='2.2' fill='%23AEC0E8' opacity='.6'/%3E%3Ccircle cx='16' cy='32' r='2.2' fill='%2390A8E4' opacity='.6'/%3E%3Ccircle cx='21' cy='21' r='2.4' fill='%23AEC0E8'/%3E%3Ccircle cx='32' cy='16' r='2.4' fill='%23C9D6EE'/%3E%3Ccircle cx='43' cy='21' r='2.6' fill='%23C9D6EE'/%3E%3C/g%3E%3C/svg%3E">
 <!--
 ═══════════════════════════════════════════════════════════════════════
 PRICING & PACKAGING — DOKUMENTATION (McKinsey-Methodik, Good-Better-Better)
@@ -57,27 +57,32 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
 -->
 <style>
   /* Typografie (modern): Space Grotesk (Headlines/Hero) · Inter (UI/Fließtext) · JetBrains Mono (Metriken). */
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Schibsted+Grotesk:wght@500;600;700;800;900&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&display=swap');
   :root{
-    /* Helles, warmes Creme-Theme (editorial-minimalistisch) */
-    --bg:#F7F5F1; --s1:#FFFFFF; --s2:#F0EDE7; --s3:#E8E4DC; --border:#E2DDD3;
-    --hairline:rgba(0,0,0,.06);
-    --t1:#1A1A1A; --t2:#6E6A62; --t3:#A39E93;
-    --accent:#1A1A1A; --accent-soft:rgba(26,26,26,.06);
-    --hl:#9A6536; --hl-soft:rgba(154,101,54,.12); /* einziger warmer Akzent */
-    --volt:#9A6536; /* Daten-Highlights (Charts, Deltas) — remapped auf Terracotta */
-    --info:#7D8CA3; --danger:#D4574B; --warn:#C98A3D;
-    --font-display:'Space Grotesk',system-ui,sans-serif;
+    /* Premium Dark-Theme (Oura-inspiriert): tiefes Blau + Silber, kühl & hochwertig */
+    --bg:#080A0F; --s1:#13151C; --s2:#1A1D26; --s3:#262A36; --border:rgba(255,255,255,.12);
+    --hairline:rgba(255,255,255,.07);
+    --t1:#EEF1F6; --t2:#9BA3B4; --t3:#646C7D;
+    --accent:#4A6FD8; --accent-soft:rgba(74,111,216,.18);
+    --hl:#9DB4F0; --hl-soft:rgba(157,180,240,.16); /* kühler Blau-Akzent auf Dunkel */
+    --volt:#9DB4F0; /* Daten-Highlights (Charts, Deltas) */
+    --silver:#C9D2E2; /* Platin/Silber-Sekundärakzent */
+    --info:#7FA0C8; --danger:#E56A5C; --warn:#E0A24A;
+    --good:#5BC48A; /* Recovery-/Erfolgs-Grün (Whoop-Logik) */
+    /* Wiederkehrende Dark-Glass-Flächen: zentral steuerbar */
+    --surface:rgba(255,255,255,.045); --surface-2:rgba(255,255,255,.08); --stroke:rgba(255,255,255,.10);
+    --font-display:'Schibsted Grotesk',system-ui,sans-serif;
     --font-ui:'Inter',system-ui,sans-serif;
-    --font-hero:'Space Grotesk',system-ui,sans-serif;
+    --font-hero:'Schibsted Grotesk',system-ui,sans-serif;
+    --font-serif:'Fraunces',Georgia,'Times New Roman',serif; /* editoriale Insight-Headlines */
     --font-mono:'JetBrains Mono',ui-monospace,monospace;
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
     --spring:cubic-bezier(.34,1.56,.64,1);
-    --glass-bg:rgba(255,255,255,.6);
-    --glass-bg-strong:rgba(255,255,255,.82);
+    --glass-bg:rgba(30,28,36,.55);
+    --glass-bg-strong:rgba(22,21,27,.88);
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  html{background:var(--bg); color-scheme:light;}
+  html{background:var(--bg); color-scheme:dark;}
   body{
     background:var(--bg); color:var(--t1);
     font-family:var(--font-ui);
@@ -88,13 +93,15 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   }
   /* Headlines & Marken-Elemente: Space Grotesk; Fließtext bleibt Inter. */
   h1,h2,h3,.display-m,.hero-num,.huge,.dial,.logo-text,.lp-h,.lp-h2,.lp-quote,.lp-claim .n,.tier-card .display-m{font-family:var(--font-display);}
-  /* Pastell-Tiefe HINTER der Glas-Ebene — sonst wirkt Glas wie weiße Box */
+  .serif{font-family:var(--font-serif); font-weight:500; letter-spacing:-.01em;}
+  /* Ambient Aurora HINTER der Glas-Ebene — tiefe, leuchtende Bronze/Amber-Verläufe auf Schwarz */
   body::before{
     content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
-      radial-gradient(60% 40% at 15% 8%, rgba(154,101,54,.07), transparent 70%),
-      radial-gradient(50% 35% at 88% 22%, rgba(125,140,163,.09), transparent 70%),
-      radial-gradient(70% 50% at 50% 95%, rgba(201,138,61,.06), transparent 70%),
+      radial-gradient(55% 38% at 12% 4%, rgba(74,111,216,.22), transparent 70%),
+      radial-gradient(48% 34% at 92% 14%, rgba(130,110,214,.18), transparent 72%),
+      radial-gradient(60% 46% at 50% 102%, rgba(58,150,200,.16), transparent 70%),
+      radial-gradient(40% 30% at 80% 80%, rgba(150,170,214,.08), transparent 70%),
       var(--bg);
   }
   .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
@@ -117,39 +124,38 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:var(--glass-bg);
     -webkit-backdrop-filter:blur(24px) saturate(180%);
     backdrop-filter:blur(24px) saturate(180%);
-    border:1px solid rgba(255,255,255,.65);
+    border:1px solid var(--stroke);
     box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03),
-      0 8px 24px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.8);
+      0 8px 24px rgba(0,0,0,.06), inset 0 1px 0 var(--surface);
   }
   .card::before,.tier-card::before,.sheet::before,.modal::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:linear-gradient(135deg, rgba(255,255,255,.5), rgba(255,255,255,0) 50%);
+    background:linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%);
   }
   .card{border-radius:20px; padding:var(--sp-5); margin-bottom:var(--sp-4);}
   .modal,.sheet{background:var(--glass-bg-strong); -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%);}
   /* Glass-Light für Listen (Perf: kein blur auf vielen Elementen) */
-  .acc,.qcard,.lockcard,.warncard{-webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(255,255,255,.72);}
+  .acc,.qcard,.lockcard,.warncard{-webkit-backdrop-filter:none; backdrop-filter:none; background:var(--surface);}
 
   .ct{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); margin-bottom:12px;}
   .btn{
     display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
     min-height:48px; border-radius:999px; border:1px solid rgba(255,255,255,.65);
-    background:rgba(255,255,255,.66); color:var(--t1); font-size:15px; font-weight:600;
+    background:var(--surface); color:var(--t1); font-size:15px; font-weight:600;
     cursor:pointer; font-family:inherit;
-    box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.05), inset 0 1px 0 rgba(255,255,255,.8);
+    box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.05), inset 0 1px 0 var(--surface);
     transition:all .25s var(--spring);
   }
   .btn:active{transform:scale(.97); box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.05);}
-  .btn.volt{background:rgba(24,24,24,.92); color:#FFFFFF; border:1px solid rgba(255,255,255,.12);
-    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
-    box-shadow:0 6px 18px rgba(26,26,26,.22), inset 0 1px 0 rgba(255,255,255,.15);}
+  .btn.volt{background:linear-gradient(135deg,#F3F6FB,#CFD8E8 60%,#AFBAD0); color:#10131A; border:1px solid rgba(255,255,255,.55); font-weight:700;
+    box-shadow:0 10px 28px rgba(120,140,200,.22), inset 0 1px 0 rgba(255,255,255,.7);}
   .btn.volt:active{transform:scale(.97);}
   .btn.ghost{background:transparent; border:none; box-shadow:none; color:var(--t2); min-height:44px; font-weight:600;}
   .btn:disabled{opacity:.4; pointer-events:none;}
   .btn:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
   .opt{
     display:block; width:100%; text-align:left; padding:14px 16px; margin-bottom:8px;
-    background:rgba(255,255,255,.72); border:1px solid var(--hairline); border-radius:16px;
+    background:var(--surface); border:1px solid var(--hairline); border-radius:16px;
     color:var(--t1); font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;
     min-height:44px; transition:all .25s var(--spring);
     box-shadow:0 1px 3px rgba(0,0,0,.04);
@@ -161,7 +167,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .grid4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;}
   .grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
   .cell{
-    padding:13px 2px; text-align:center; background:rgba(255,255,255,.72); border:1px solid var(--hairline);
+    padding:13px 2px; text-align:center; background:var(--surface); border:1px solid var(--hairline);
     border-radius:14px; color:var(--t1); font-size:17px; font-weight:600; cursor:pointer;
     font-family:var(--font-mono); min-height:44px; transition:all .25s var(--spring);
   }
@@ -173,7 +179,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .back{background:none; border:none; color:var(--t2); font-size:22px; cursor:pointer; min-width:44px; min-height:44px;}
   input[type=range]{width:100%; height:44px; accent-color:var(--accent);}
   input[type=date],input[type=number],input[type=text],input[type=email],input[type=password]{
-    width:100%; min-height:48px; padding:0 14px; background:rgba(255,255,255,.8); color:var(--t1);
+    width:100%; min-height:48px; padding:0 14px; background:var(--surface); color:var(--t1);
     border:1px solid var(--border); border-radius:14px; font-size:16px; font-family:inherit;
   }
   input.err{border-color:var(--danger);}
@@ -189,13 +195,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .badge.danger{color:var(--danger); border-color:rgba(212,87,75,.3); background:rgba(212,87,75,.08);}
   .badge.warn{color:var(--warn); border-color:rgba(201,138,61,.35); background:rgba(201,138,61,.1);}
   .badge.mute{color:var(--t2); border-color:var(--border); background:var(--s2);}
-  .warncard{border:1px solid rgba(201,138,61,.3); background:rgba(255,250,240,.85); border-radius:16px; padding:14px; margin-bottom:10px; font-size:13px; line-height:1.55;}
+  .warncard{border:1px solid rgba(201,138,61,.3); background:rgba(224,162,74,.09); border-radius:16px; padding:14px; margin-bottom:10px; font-size:13px; line-height:1.55;}
   .warncard b{color:var(--warn);}
 
   /* ===== App Bar: helles Glass, fixed ===== */
   .appbar{
     position:fixed; top:0; left:0; right:0; z-index:45;
-    background:rgba(247,245,241,.72);
+    background:rgba(11,11,15,.72);
     -webkit-backdrop-filter:blur(24px) saturate(180%); backdrop-filter:blur(24px) saturate(180%);
     border-bottom:1px solid var(--hairline);
   }
@@ -203,16 +209,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .logo-btn{display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:8px 4px; color:var(--t1); min-height:44px;}
   .logo-text{font-family:var(--font-display); font-size:14px; font-weight:800; letter-spacing:.02em; color:var(--t1);}
   .icon-btn{width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.7); border:1px solid var(--hairline); border-radius:50%; cursor:pointer; color:var(--t1);
+    background:var(--surface); border:1px solid var(--hairline); border-radius:50%; cursor:pointer; color:var(--t1);
     box-shadow:0 1px 3px rgba(0,0,0,.05); transition:all .25s var(--spring);}
   .icon-btn:active{transform:scale(.94);}
   .menu-backdrop{position:fixed; inset:0; z-index:44; background:rgba(26,26,26,.18);}
   .menu-sheet{position:fixed; top:54px; left:12px; right:12px; z-index:46; max-width:406px; margin:0 auto;
     border-radius:22px; padding:10px;
-    background:linear-gradient(rgba(247,245,241,.35),rgba(247,245,241,.35)), var(--glass-bg-strong);
+    background:linear-gradient(rgba(18,17,22,.5),rgba(18,17,22,.5)), var(--glass-bg-strong);
     -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%);
-    border:1px solid rgba(255,255,255,.78);
-    box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 12px 34px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.9);}
+    border:1px solid var(--surface);
+    box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 12px 34px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.08);}
   .menu-head{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:12px 14px; margin-bottom:4px; background:var(--s1); border:1px solid var(--hairline); border-radius:16px; cursor:pointer; font-family:inherit; color:var(--t1); min-height:64px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
   .menu-head .avatar{width:46px;height:46px;font-size:18px;}
   .menu-head .mh-name{font-weight:700; font-size:15px;}
@@ -236,16 +242,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .tabbar-inner{
     pointer-events:auto; max-width:406px; margin:0 auto; position:relative;
     display:grid; grid-template-columns:repeat(5,1fr);
-    background:linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.34));
+    background:linear-gradient(135deg, rgba(40,38,48,.72), rgba(22,21,27,.5));
     -webkit-backdrop-filter:blur(32px) saturate(200%); backdrop-filter:blur(32px) saturate(200%);
-    border:1px solid rgba(255,255,255,.78);
+    border:1px solid var(--surface);
     border-radius:999px; padding:6px 8px;
     box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 14px 38px rgba(0,0,0,.14),
-      inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.28);
+      inset 0 1px 0 rgba(255,255,255,.10), inset 0 -10px 18px rgba(0,0,0,.2);
   }
   .tabbar-inner::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:linear-gradient(115deg, rgba(255,255,255,.7), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 62%, rgba(255,255,255,.4));
+    background:linear-gradient(115deg, rgba(255,255,255,.10), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 62%, rgba(255,255,255,.06));
     opacity:.7;
   }
   .tab{
@@ -261,9 +267,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .tab.active{color:var(--t1);}
   .tab.active .ic{
     transform:translateY(-1px);
-    background:linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.55));
-    border:1px solid rgba(255,255,255,.9);
-    box-shadow:0 2px 8px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.95);
+    background:linear-gradient(135deg, rgba(157,180,240,.30), rgba(157,180,240,.12));
+    border:1px solid rgba(157,180,240,.5);
+    box-shadow:0 2px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
   }
   .tab:active .ic{transform:scale(.92);}
   .tab.flag .ic{
@@ -277,7 +283,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
 
   .fab{
     position:fixed; bottom:104px; right:16px; z-index:47;
-    width:54px; height:54px; border-radius:50%; border:1px solid rgba(255,255,255,.6); cursor:pointer;
+    width:54px; height:54px; border-radius:50%; border:1px solid var(--stroke); cursor:pointer;
     background:rgba(24,24,24,.92); color:#fff;
     -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
     box-shadow:0 8px 22px rgba(26,26,26,.28); display:flex; align-items:center; justify-content:center;
@@ -290,11 +296,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
 
   .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .stepper{display:flex; align-items:center; gap:4px;}
-  .stepper button{width:44px; height:44px; border-radius:999px; background:rgba(255,255,255,.75); color:var(--t1);
+  .stepper button{width:44px; height:44px; border-radius:999px; background:var(--surface); color:var(--t1);
     border:1px solid var(--hairline); font-size:20px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.05);}
   .stepper .val{min-width:86px; text-align:center; font-size:18px;}
   .scale{display:flex; gap:6px; flex-wrap:wrap;}
-  .scale button{min-width:44px; height:44px; border-radius:999px; background:rgba(255,255,255,.72); border:1px solid var(--hairline);
+  .scale button{min-width:44px; height:44px; border-radius:999px; background:var(--surface); border:1px solid var(--hairline);
     color:var(--t2); font-family:var(--font-mono); font-size:14px; cursor:pointer; padding:0 8px; transition:all .25s var(--spring);}
   .scale button.sel{border-color:var(--accent); background:var(--accent); color:#fff;}
   .center{display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80dvh; text-align:center; gap:18px;}
@@ -314,7 +320,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @keyframes popIn{from{opacity:0; transform:translateY(16px) scale(.95)}to{opacity:1; transform:none}}
   .pop{animation:popIn .45s var(--spring);}
   .chips{display:flex; flex-wrap:wrap; gap:8px;}
-  .chip{padding:9px 14px; border-radius:999px; background:rgba(255,255,255,.72); border:1px solid var(--hairline);
+  .chip{padding:9px 14px; border-radius:999px; background:var(--surface); border:1px solid var(--hairline);
     color:var(--t1); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; min-height:40px; transition:all .25s var(--spring);
     box-shadow:0 1px 3px rgba(0,0,0,.04);}
   .chip:active{transform:scale(.96);}
@@ -333,14 +339,14 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .weekstrip{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:14px;}
   .pills{display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;}
   .pill{flex-shrink:0; padding:8px 14px; border-radius:999px; border:1px solid var(--hairline);
-    background:rgba(255,255,255,.72); color:var(--t2); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; min-height:38px;}
+    background:var(--surface); color:var(--t2); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; min-height:38px;}
   .pill.active{border-color:var(--accent); background:var(--accent); color:#fff;}
   .setdots{display:flex; gap:6px; align-items:center;}
   .setdots .dot{width:11px; height:11px; border-radius:50%; border:1.5px solid var(--t3); transition:all .3s var(--spring);}
   .setdots .dot.full{background:var(--hl); border-color:var(--hl); transform:scale(1.1);}
   .hscroll{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px;}
   .qcard{flex-shrink:0; width:140px; border-radius:18px; padding:12px; cursor:pointer; font-family:inherit; color:var(--t1); text-align:left;}
-  .modal-bg{position:fixed; inset:0; background:rgba(26,26,26,.25); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;}
   .modal{border-radius:24px; padding:22px; max-width:380px; width:100%; max-height:80dvh; overflow-y:auto;}
   .toast{position:fixed; bottom:118px; left:50%; transform:translateX(-50%); z-index:70;
     background:rgba(24,24,24,.92); color:#fff; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
@@ -350,7 +356,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   details summary::-webkit-details-marker{display:none;}
   .strength-meter{height:5px; border-radius:999px; background:var(--s3); overflow:hidden; margin-top:6px;}
   .strength-meter>div{height:100%; transition:width .3s,background .3s;}
-  .ac-list{background:rgba(255,255,255,.85); border:1px solid var(--hairline); border-radius:14px; overflow:hidden; margin-top:6px; box-shadow:0 4px 12px rgba(0,0,0,.06);}
+  .ac-list{background:var(--surface-2); border:1px solid var(--hairline); border-radius:14px; overflow:hidden; margin-top:6px; box-shadow:0 4px 12px rgba(0,0,0,.06);}
   .ac-item{display:block; width:100%; text-align:left; padding:10px 14px; background:none; border:none; border-bottom:1px solid var(--hairline); color:var(--t1); font-size:14px; cursor:pointer; font-family:inherit; min-height:44px;}
   .ac-item:last-child{border-bottom:none;}
   .barrow{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
@@ -361,7 +367,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .iconbtn{background:none; border:none; color:var(--t2); cursor:pointer; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;}
   .conf{font-size:10px; color:var(--t3); font-family:var(--font-mono);}
   .quicklog-field{width:100%; min-height:64px; padding:14px 16px 50px; box-sizing:border-box;
-    background:rgba(255,255,255,.8); border:1px solid var(--hairline); border-radius:18px;
+    background:var(--surface); border:1px solid var(--hairline); border-radius:18px;
     color:var(--t1); font-size:15px; font-family:var(--font-display); resize:none; line-height:1.5;}
   .quick-log{position:relative;}
   .quicklog-submit{position:absolute; bottom:10px; right:10px; width:auto; min-height:38px; min-width:44px; padding:0 18px; border-radius:999px; font-size:13px;}
@@ -374,7 +380,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .acc[open] summary .chev{transform:rotate(180deg);}
   .acc[open] summary{border-bottom:1px solid var(--hairline);}
   .acc .accbody{padding:6px 16px 16px; animation:fade .35s var(--spring);}
-  .sheet-bg{position:fixed; inset:0; background:rgba(26,26,26,.25); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
+  .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
   .sheet{border-radius:28px 28px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom)); max-width:430px; width:100%; max-height:85dvh; overflow-y:auto; animation:sheetUp .45s var(--spring);}
   @keyframes sheetUp{from{transform:translateY(40px); opacity:0}to{transform:none; opacity:1}}
   .tier-card{border-radius:22px; padding:var(--sp-5); margin-bottom:var(--sp-4);}
@@ -383,20 +389,31 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .tier-feat span:first-child{color:var(--hl); flex-shrink:0; font-weight:700;}
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
+  /* ===== Oura-Style Today-Hero: Gradient-Score-Ring + Serif-Insight + Score-Kacheln ===== */
+  .hero-today{padding:6px 0 2px; margin-bottom:var(--sp-5);}
+  .hero-ring{display:flex; justify-content:center; margin:16px 0 8px; filter:drop-shadow(0 14px 36px rgba(110,130,230,.26));}
+  .hero-insight{font-family:var(--font-serif); font-weight:500; font-size:24px; line-height:1.26; letter-spacing:-.01em;
+    text-align:center; color:var(--t1); max-width:300px; margin:8px auto 20px;}
+  .score-tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .score-tile{background:var(--glass-bg); border:1px solid var(--stroke); border-radius:18px; padding:15px 10px 13px; text-align:center;
+    -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); box-shadow:0 6px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.05);}
+  .score-tile .st-ic{color:var(--hl); display:flex; justify-content:center; margin-bottom:7px;}
+  .score-tile .st-v{font-family:var(--font-hero); font-weight:800; font-size:25px; line-height:1; letter-spacing:-.02em;}
+  .score-tile .st-l{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); margin-top:6px; font-weight:700;}
   /* Value Banner: Soft-Paper-Karte mit Icon-Kreis */
   .banner{display:flex; gap:12px; align-items:center; border-radius:18px; padding:14px 14px 14px 16px; margin-bottom:var(--sp-4);
-    background:rgba(255,255,255,.66); border:1px solid rgba(255,255,255,.65);
-    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05), inset 0 1px 0 rgba(255,255,255,.8);}
+    background:var(--surface); border:1px solid rgba(255,255,255,.65);
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05), inset 0 1px 0 var(--surface);}
   .banner .bicon{width:38px; height:38px; min-width:38px; border-radius:50%; background:var(--s3); display:flex; align-items:center; justify-content:center; color:var(--t1);}
   .banner p{font-size:12.5px; line-height:1.5; color:var(--t2); flex:1; min-width:0;}
   .banner b{color:var(--t1); font-weight:700;}
   .banner .bx{flex-shrink:0; min-width:30px; min-height:30px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:var(--t3); cursor:pointer;}
   /* Grid-/Listen-Toggle + Kacheln (Magazin-Stil) */
-  .viewtoggle{display:flex; gap:4px; background:rgba(255,255,255,.72); border:1px solid var(--hairline); border-radius:999px; padding:3px;}
+  .viewtoggle{display:flex; gap:4px; background:var(--surface); border:1px solid var(--hairline); border-radius:999px; padding:3px;}
   .viewtoggle button{width:38px; height:32px; border:none; border-radius:999px; background:none; color:var(--t3); cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .viewtoggle button.sel{background:var(--accent); color:#fff;}
   .tiles{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; animation:fade .35s var(--spring);}
-  .tile{border-radius:18px; overflow:hidden; background:rgba(255,255,255,.78); border:1px solid var(--hairline);
+  .tile{border-radius:18px; overflow:hidden; background:var(--surface); border:1px solid var(--hairline);
     box-shadow:0 2px 10px rgba(0,0,0,.05); text-align:left; cursor:pointer; font-family:inherit; color:var(--t1); padding:0;}
   .tile .tart{aspect-ratio:4/3; display:flex; align-items:center; justify-content:center;}
   .tile .tbody{padding:10px 12px 12px;}
@@ -456,7 +473,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     .tabbar{top:56px; bottom:0; left:0; right:auto; width:236px; padding:0; pointer-events:auto;}
     .tabbar-inner{display:flex!important; flex-direction:column; justify-content:flex-start; gap:4px; width:236px; height:calc(100dvh - 56px);
       border-radius:0; border:none; border-right:1px solid var(--hairline); padding:20px 16px; margin:0;
-      background:rgba(255,255,255,.55); box-shadow:none;}
+      background:rgba(22,21,27,.55); box-shadow:none;}
     .tab{flex-direction:row; justify-content:flex-start; gap:13px; font-size:14.5px; min-height:48px; padding:11px 14px; border-radius:13px;}
     .tab .ic{width:auto!important; height:auto!important; margin:0!important; background:none!important; border:none!important; box-shadow:none!important; border-radius:0!important; color:inherit!important; transform:none!important;}
     .tab.active{background:var(--accent-soft);}
@@ -562,7 +579,7 @@ function icon(name,size){
 /* ===== Partikel-Marke: Sphäre aus beige/braunen Punkten =====
    spherePoints projiziert eine Fibonacci-Sphäre bei fixer Rotation in 2D —
    Basis für das statische Logo (SVG) UND den interaktiven Hero-Ball (Canvas). */
-const PART_COLORS=["#D9C3A0","#C7A87C","#B0895C","#947043","#6F5436","#E6D8BE"];
+const PART_COLORS=["#C9D6EE","#AEC0E8","#90A8E4","#7E8BE8","#A9B8DA","#E2E8F4"];
 function spherePoints(n,ry,rx){
   ry=ry==null?0.5:ry; rx=rx==null?-0.35:rx;
   const cy=Math.cos(ry),sy=Math.sin(ry),cx=Math.cos(rx),sx=Math.sin(rx), out=[];
@@ -1735,16 +1752,27 @@ function addFood(food,gram){
 
 // ---------- SVG ----------
 function ringSVG(score,tier,size=130){
-  const st=8,r=(size-st)/2,c=2*Math.PI*r,arc=c*.75,fill=score/100*arc;
-  const col=score<40?"var(--danger)":score<60?"var(--info)":"var(--volt)";
+  // Premium-Gradient-Ring (Oura-Stil): leuchtender 3/4-Bogen mit Glow + Verlauf,
+  // feiner Bahn dahinter. Gradient/Glow je nach Zustand (gut=Amber, mittel=Blau, niedrig=Rot).
+  const st=Math.max(7,Math.round(size*.075)),r=(size-st)/2,c=2*Math.PI*r,arc=c*.75,fill=Math.max(.001,score/100)*arc;
+  const id="rg"+Math.random().toString(36).slice(2,8);
+  const stops=score<40
+      ?["#F0917F","#E56A5C"]:score<60?["#A9C2E6","#7FA0C8"]:["#7FD7E0","#7E8BE8"];
+  const big=size>100;
   return `<div style="position:relative;width:${size}px;height:${size}px">
-    <svg width="${size}" height="${size}" style="transform:rotate(135deg)" aria-hidden="true">
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--s2)" stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${st}" stroke-dasharray="${fill} ${c}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease-out"/>
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(135deg);overflow:visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="${stops[0]}"/><stop offset="1" stop-color="${stops[1]}"/></linearGradient>
+        <filter id="${id}f" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="${big?4:2.5}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${st}" stroke-dasharray="${fill} ${c}" stroke-linecap="round" filter="url(#${id}f)" style="transition:stroke-dasharray .8s var(--spring)"/>
     </svg>
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <span class="metric" style="font-size:${size>100?34:size/3.6}px;font-weight:600">${score}</span>
-      <span class="ring-lbl" style="font-size:${size>100?11:8}px">${tier}</span>
+      <span class="hero-num" style="font-size:${big?Math.round(size*.30):size/3.4}px;line-height:1;background:linear-gradient(135deg,${stops[0]},${stops[1]});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">${score}</span>
+      <span class="ring-lbl" style="font-size:${big?11:8}px;margin-top:${big?4:1}px">${tier}</span>
     </div></div>`;
 }
 function miniRing(label,v,t,unit,size=68){
@@ -2738,7 +2766,7 @@ function openStatusSheet(){
       ${STATUS_CARDS.map(([k,e,l,lo,hi])=>`<div class="mb16">
         <div class="row mb8"><span class="sm" style="display:flex;align-items:center;gap:8px;font-weight:600">${icon(e,17)} ${l}</span></div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-          ${[1,2,3,4,5].map(n=>`<button onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5" style="height:46px;border-radius:13px;border:1px solid ${ci[k]===n?"var(--accent)":"var(--hairline)"};background:${ci[k]===n?"var(--accent)":"rgba(255,255,255,.72)"};color:${ci[k]===n?"#fff":"var(--t1)"};font-family:var(--font-mono);font-weight:600;font-size:15px;cursor:pointer">${n}</button>`).join("")}
+          ${[1,2,3,4,5].map(n=>`<button onclick="A.st('${k}',${n})" aria-label="${l} ${n} von 5" style="height:46px;border-radius:13px;border:1px solid ${ci[k]===n?"var(--accent)":"var(--hairline)"};background:${ci[k]===n?"var(--accent)":"var(--surface)"};color:${ci[k]===n?"#fff":"var(--t1)"};font-family:var(--font-mono);font-weight:600;font-size:15px;cursor:pointer">${n}</button>`).join("")}
         </div>
         <div class="row" style="margin-top:5px"><span class="xs" style="color:var(--t3)">${lo}</span><span class="xs" style="color:var(--t3)">${hi}</span></div>
       </div>`).join("")}
@@ -2923,35 +2951,26 @@ function renderHome(){
         <circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="var(--hl)" stroke-width="${st}" stroke-linecap="round" stroke-dasharray="${pct*cc} ${cc}"/></svg>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--hl)">${icon("flame",22)}</div></div>`;})();
   root.innerHTML=`
-    <!-- RITUAL-HUB: Streak (Bindung) + Level (Fortschrittsgefühl) -->
-    <div class="card fade" style="margin-bottom:var(--sp-4)">
-      <div class="row" style="align-items:center;gap:14px">
-        ${streakRing}
-        <div style="flex:1;min-width:0">
-          <p style="font-weight:800;font-size:20px;line-height:1">${streak} ${streak===1?"Tag":"Tage"} <span style="color:var(--hl)">Streak</span></p>
-          <p class="xs t2" style="margin-top:2px">${eng.activeToday?"Heute gesichert ✓ — bleib dran.":streak>0?`Trag heute etwas ein, sonst reißt deine ${streak}-Tage-Serie.`:"Starte heute deine Serie."}</p>
-        </div>
-        <div style="text-align:right">
-          <p class="xs t2">Level</p><p class="hero-num" style="font-size:26px;color:var(--accent)">${eng.level}</p>
-        </div>
-      </div>
-      <div class="row mt12" style="gap:8px"><div class="progress" style="height:7px;flex:1"><div style="width:${Math.round(eng.levelPct*100)}%;background:var(--accent)"></div></div>
-        <span class="metric xs t2" style="white-space:nowrap">${eng.toNext} XP bis L${eng.level+1}</span></div>
-    </div>
-    ${banner("home","activity","<b>Starte deinen Tag.</b> Ein kurzer Check zeigt dir, wie viel heute in dir steckt.")}
-    <div class="heroband fade">
-      <h2>${greet()}, ${userName()}</h2>
-      <p class="sm" style="color:var(--t3)">${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
-      <div style="display:flex;justify-content:center;margin-top:var(--sp-5)">
-        ${r?`<button style="background:none;border:none;cursor:pointer" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,160)}</button>`
-          :`<button style="background:none;border:none;cursor:pointer" onclick="A.openStatus()" aria-label="Status-Check starten">
-              <div style="width:160px;height:160px;border-radius:50%;border:8px solid var(--s2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
-                <span style="font-size:26px">＋</span><span class="xs t2">Bereit für heute?<br>Check in 10 Sek.</span>
+    <!-- TODAY-HERO (Oura-Stil): Gradient-Score-Ring + Serif-Insight + Score-Kacheln -->
+    <section class="hero-today fade">
+      <p class="sm" style="text-align:center;color:var(--t3)">${greet()}, ${userName()} · ${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
+      <div class="hero-ring">
+        ${r?`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,180)}</button>`
+          :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
+              <div style="width:180px;height:180px;border-radius:50%;border:8px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+                <span style="font-size:30px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.4">Bereit für heute?<br>Check in 10 Sek.</span>
               </div></button>`}
       </div>
-      <p class="sm mt16" style="max-width:280px;margin-left:auto;margin-right:auto">${r?(r.score>=80?"Voll belastbar — geh heute an die obere Range.":r.score>=60?"Solide — trainiere wie geplant.":r.score>=40?"Gedrosselt — RPE 7 als Deckel.":"Erholung hat heute Vorrang."):"Tipp auf den Ring für deinen Tages-Check."}</p>
-      ${infoBtn("status")}
-    </div>
+      <p class="hero-insight">${r?(r.score>=80?"Heute steckt richtig viel in dir.":r.score>=60?"Solide Basis — trainier wie geplant.":r.score>=40?"Geh es heute kontrolliert an.":"Heute hat Erholung Vorrang."):(ins.length?ins[0].t:"Mach deinen 10-Sekunden-Check und sieh, wie viel heute in dir steckt.")}</p>
+      <div class="score-tiles">
+        <div class="score-tile"><div class="st-ic">${icon("flame",18)}</div><p class="st-v">${streak}</p><p class="st-l">Tage Streak</p></div>
+        <div class="score-tile"><div class="st-ic">${icon("zap",18)}</div><p class="st-v" style="color:var(--hl)">${eng.level}</p><p class="st-l">Level</p></div>
+        <button class="score-tile" style="cursor:pointer;font-family:inherit;color:inherit" onclick="A.q('train')"><div class="st-ic">${icon((TYPE_META[tType]||{}).icon||"dumbbell",18)}</div><p class="st-v" style="font-size:15px;padding-top:6px">${(TYPE_META[tType]||{}).label||"Training"}</p><p class="st-l">Heute</p></button>
+      </div>
+      <div class="row mt12" style="gap:8px"><div class="progress" style="height:6px;flex:1"><div style="width:${Math.round(eng.levelPct*100)}%;background:linear-gradient(90deg,#9DB4F0,#4A6FD8)"></div></div>
+        <span class="metric xs t2" style="white-space:nowrap">${eng.toNext} XP bis L${eng.level+1}</span></div>
+      <p class="xs t2" style="text-align:center;margin-top:9px">${eng.activeToday?"Heute gesichert ✓ — bleib dran.":streak>0?`Trag heute etwas ein, sonst reißt deine ${streak}-Tage-Serie.`:"Starte heute deine Serie."}</p>
+    </section>
 
     ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
       <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
@@ -3556,13 +3575,6 @@ function renderTrain(){
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
       </div>`)}
 
-    ${renderSection("Wissenschaft hinter deinem Plan",
-      `<div class="card" style="border-color:rgba(154,101,54,.28)">
-        <p class="sm mb12" style="line-height:1.55"><b style="color:var(--t1)">Perfekt für dich</b> — jede Säule steht auf Forschung. Tipp für den Beleg.</p>
-        <div class="chips mb12">${planEvidence().map((e,i)=>`<button class="chip" onclick="A.evShow(${i})"><span style="color:var(--hl);display:inline-flex;margin-right:4px">${icon("check",12)}</span>${e.tag}</button>`).join("")}</div>
-        <button class="btn volt" onclick="openPlanCoach()">${icon("message",15)} Frag den Plan-Assistenten</button>
-      </div>`)}
-
     ${focusType?renderSection(rotMode?"Deine nächste Einheit":(sch[dow]!=="rest"?"Dein Training heute":"Dein nächstes Training"),
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
@@ -3586,8 +3598,7 @@ function renderTrain(){
           <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
           ${S.planUndo&&S.planUndo.typeKey===focusType?`<button class="btn ghost mt8" style="min-height:40px" onclick="planUndoRestore()">${icon("undo",14)} KI-Anpassung rückgängig machen</button>`:""}
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:16px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
-          ${phaseAcc("Aufwärmen",F.warmup)}
-          ${phaseAcc("Cool-down",F.cooldown)}
+          <div style="margin-top:18px">${phaseAcc("Aufwärmen",F.warmup)}${phaseAcc("Cool-down",F.cooldown)}</div>
           <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
           <p class="label" style="margin:18px 0 8px">Schnell loggen</p>
           ${quickLogField("z. B. 'Bankdrücken 90 kg 3x8'","A.trainParse")}
@@ -3619,6 +3630,12 @@ function renderTrain(){
             <button class="btn mt8" onclick="A.startType('${t}')">Loslegen</button>
           </div></details>`).join("");})())
     :""}
+
+    ${renderSection("Wissenschaft hinter deinem Plan",
+      `<div class="card">
+        <p class="sm t2 mb12" style="line-height:1.6">Frequenz, Volumen, Intensität und Übungswahl beruhen auf aktueller Trainingsforschung. Frag nach, <b style="color:var(--t1)">warum dein Plan genau so aussieht</b>.</p>
+        <button class="btn volt" onclick="openPlanCoach()">${icon("message",15)} Frag den Plan-Assistenten</button>
+      </div>`)}
   `;
 }
 
@@ -4147,14 +4164,11 @@ function renderNutrition(){
       valid.forEach(it=>nlogToday().meals.push({n:(it.name||txt)+" (KI)",g:it.grams||0,k:Math.round(it.kcal),p:Math.round(it.p||0),c:Math.round(it.c||0),f:Math.round(it.f||0)}));
       if(el)el.value="";
       save(); renderNutrition();
-      // Klare Meldung: WAS genau die KI interpretiert und eingefügt hat.
+      // Kein Modal mehr (kein Extra-Tippen): stiller Toast, die Einträge erscheinen direkt
+      // in der Liste „Heute gegessen" — dort sieht man, WAS die KI interpretiert hat.
       const sumK=valid.reduce((s,it)=>s+Math.round(it.kcal),0), sumP=valid.reduce((s,it)=>s+Math.round(it.p||0),0);
-      modal(`<p class="ct">${icon("sparkle",14)} KI hat eingetragen</p>
-        <p class="xs t2 mb12">Coach Metric hat deine Eingabe „${txt.replace(/</g,"&lt;")}" interpretiert und so eingefügt:</p>
-        ${valid.map(it=>`<div class="row" style="padding:8px 0;border-top:1px solid var(--hairline)">
-          <span class="sm" style="font-weight:600">${(it.name||"—")} · <span class="metric">${it.grams||0} g</span></span>
-          <span class="metric sm" style="white-space:nowrap">${Math.round(it.kcal)} kcal · ${Math.round(it.p||0)} g P</span></div>`).join("")}
-        <p class="sm volt-txt metric mt12">Summe: ${sumK} kcal · ${sumP} g Protein</p>`);
+      const nm=valid.length===1?valid[0].name:`${valid.length} Einträge`;
+      toast(`✓ ${nm} · ${sumK} kcal · ${sumP} g Protein`);
     }).catch(()=>toast("KI gerade nicht erreichbar — versuch es gleich nochmal"));
   };
   A.mealSuggest=()=>{
