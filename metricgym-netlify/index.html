@@ -99,7 +99,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   }
   .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
   .hero-num{font-family:var(--font-hero); font-weight:900; letter-spacing:-0.03em;}
-  .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:70px 16px 110px;}
+  .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:70px 16px 124px;}
   .wrap.noshell{padding-top:16px;}
   h1{font-size:17px; font-weight:800; letter-spacing:-0.01em;}
   h2{font-size:27px; font-weight:800; letter-spacing:-0.02em; line-height:1.15; margin-bottom:4px;}
@@ -284,6 +284,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     transition:transform .25s var(--spring);
   }
   .fab:active{transform:scale(.93);}
+  /* Wenn ein Sheet/Modal offen ist: Bottom-Nav + Coach-FAB ausblenden, damit nichts überlappt. */
+  body.overlay-open .tabbar, body.overlay-open .fab{opacity:0; pointer-events:none; visibility:hidden;}
   .coach-panel{position:fixed; bottom:104px; right:12px; left:12px; max-width:406px; margin:0 auto; z-index:50;}
 
   .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
@@ -413,7 +415,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lp-h{font-size:38px;font-weight:900;letter-spacing:-.035em;line-height:1.04;margin-bottom:16px;}
   .lp-h2{font-size:27px;font-weight:800;letter-spacing:-.025em;line-height:1.14;margin-bottom:11px;}
   .lp-lead{font-size:16.5px;line-height:1.62;color:var(--t2);}
-  .lp-hero{padding:30px 20px 40px;text-align:center;position:relative;overflow:hidden;}
+  .lp-hero{padding:16px 20px 32px;text-align:center;position:relative;overflow:hidden;}
   .lp-hero::after{content:"";position:absolute;inset:-40% -20% auto -20%;height:70%;z-index:-1;
     background:radial-gradient(60% 80% at 50% 0%,rgba(154,101,54,.12),transparent 70%);}
   .lp-claimgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
@@ -436,10 +438,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     font-family:inherit;cursor:pointer;padding:0 6px;}
   .lp-seg button.sel{background:var(--accent);color:#fff;}
   /* Partikelball */
-  .pb-wrap{width:300px; height:300px; position:relative;}
+  .pb-wrap{width:188px; height:188px; position:relative;}
   .pb-wrap::after{content:""; position:absolute; inset:4%; border-radius:50%; z-index:-1;
     background:radial-gradient(circle at 38% 32%, rgba(176,137,92,.26), rgba(247,245,241,0) 72%);}
-  .pb-big{width:clamp(380px,50vw,580px); height:clamp(380px,50vw,580px);}
+  .pb-big{width:clamp(360px,46vw,520px); height:clamp(360px,46vw,520px);}
   .pb-canvas{width:100%; height:100%; display:block; touch-action:none; cursor:grab;}
   .pb-canvas:active{cursor:grabbing;}
   @keyframes lp-pop{0%{transform:scale(.65);opacity:.2}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
@@ -954,6 +956,7 @@ S.proBonusUntil=S.proBonusUntil??null;
 S.celebrated=S.celebrated??null; // null = noch nicht initialisiert (Erstlauf seedet still)
 S.lastLevel=S.lastLevel??1;
 S.planChat=S.planChat||[]; // Verlauf des Plan-Assistenten
+S.planUndo=S.planUndo||null; // letzter KI-Plan-Eingriff (Vorher-Schnappschuss für Rückgängig)
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -1803,6 +1806,10 @@ function circleTimer(left,total,size=84){
 
 // ---------- Toast/Modal/Speech ----------
 const overlay=document.getElementById("overlay");
+// Sheets/Modals leben im #overlay. Sobald Inhalt da ist, Bottom-Nav + FAB ausblenden
+// (sonst überlappen sie den „Schließen"-Button / Sheet-Inhalt am unteren Rand).
+try{ new MutationObserver(()=>{ document.body.classList.toggle("overlay-open", overlay.innerHTML.trim()!==""); })
+  .observe(overlay,{childList:true}); }catch{}
 let toastTimer=null;
 function toast(msg){
   // Eigene Ebene: darf offene Sheets/Modals im #overlay nicht zerstören.
@@ -2144,10 +2151,14 @@ function renderAuth(){
     S.plan=plan;
     const opt=generateOptimalSchedule(a);
     S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
-    S.weightLog=[{t:Date.now(),v:a.weight}];
+    // Demo-Modus zeigt die App im Vollbild: 10 Wochen synthetische Historie laden,
+    // damit Analytics sofort mit echten Grafiken (Kraftkurven, Heatmap, Volumen) gefüllt ist.
+    const seed=buildDevSeed();
+    S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
+    S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog;
     S.screen="app"; S.tab="home"; S.seenFeatures=true;
     save(); render();
-    toast("Developer-Modus: leeres Profil — Demo-Daten bei Bedarf im Profil laden");
+    toast("Demo-Modus: 10-Wochen-Historie geladen — Analytics komplett gefüllt");
   };
   A.devModeIntro=()=>{
     overlay.innerHTML="";
@@ -2343,7 +2354,7 @@ function renderLanding(){
     const vis=(el)=>el&&el.offsetParent!==null;
     const cd=document.getElementById("pb-hero-d"), cm=document.getElementById("pb-hero-m");
     const target=vis(cd)?cd:(vis(cm)?cm:(cd||cm));
-    if(target)particleBall(target,{count:(window.innerWidth>=1024?820:560)});
+    if(target)particleBall(target,{count:(window.innerWidth>=1024?760:340)});
     lpAnimateResult();
   },60);
 }
@@ -3421,8 +3432,11 @@ function openAIPlanAdjust(typeKey){
       const j=await aiJSON(sys,usr);
       const ex=((j&&j.exercises)||[]).filter(e=>e&&EXDB[e.name]).slice(0,9);
       if(!ex.length)throw new Error("keine gültigen Übungen");
-      applyAISession(typeKey,ex); overlay.innerHTML=""; render();
-      toast("✓ "+((j&&j.summary)||"Plan angepasst"));
+      const before=sessionDef(typeKey).main.map(e=>`${e.n} ${e.sets}×${e.reps}`);
+      applyAISession(typeKey,ex);
+      const after=ex.map(e=>`${e.name} ${e.sets}×${e.reps}`);
+      overlay.innerHTML=""; render();
+      setTimeout(()=>aiAdjustResult((j&&j.summary)||"Einheit neu zusammengestellt.", before, after),70);
     }catch(err){ if(box){box.textContent="Konnte nicht anpassen — formulier es konkreter. ("+String(err.message||err).slice(0,50)+")";} }
   };
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
@@ -3438,9 +3452,36 @@ function applyAISession(typeKey,exList){
   const {base,variant}=parseTypeKey(typeKey);
   const plan=variant==="B"?activePlanB():activePlan();
   const mk=(n,sets,reps)=>{const d=EXDB[n]||{};return {n,sets:Math.max(1,Math.min(6,parseInt(sets)||3)),reps:String(reps||"8-12"),tempo:d.tempo||"2-0-1-0",rir:d.rir||"1–2",m:d.m||"—",why:d.why||"",alt:d.alt||null,lengthened:!!d.lengthened};};
-  if(plan[base])plan[base].main=exList.map(e=>mk(e.name,e.sets,e.reps));
+  if(plan[base]){
+    // Undo-Schnappschuss: vorherige Übungen sichern, damit der Nutzer die KI-Anpassung
+    // jederzeit zurücknehmen kann (Vorher/Nachher).
+    S.planUndo={typeKey, prevMain:JSON.parse(JSON.stringify(plan[base].main||[])), when:Date.now()};
+    plan[base].main=exList.map(e=>mk(e.name,e.sets,e.reps));
+  }
   if(S.exOverrides)delete S.exOverrides[typeKey];
   save();
+}
+function planUndoRestore(){
+  const u=S.planUndo; if(!u){toast("Nichts rückgängig zu machen");return;}
+  const {base,variant}=parseTypeKey(u.typeKey);
+  const plan=variant==="B"?activePlanB():activePlan();
+  if(plan[base])plan[base].main=u.prevMain;
+  S.planUndo=null; save(); overlay.innerHTML=""; render();
+  toast("↩ KI-Anpassung zurückgenommen — Originalplan wiederhergestellt");
+}
+// Klare Meldung: WAS die KI am Plan geändert hat — Vorher/Nachher + Rückgängig.
+function aiAdjustResult(summary, before, after){
+  const li=(arr,other)=>arr.map(x=>`<li style="${other.includes(x)?"color:var(--t3)":"color:var(--t1);font-weight:600"}">${x}</li>`).join("");
+  modal(`<p class="ct">${icon("sparkle",14)} KI hat deinen Plan angepasst</p>
+    ${summary?`<p class="sm mb12" style="line-height:1.5">${summary}</p>`:""}
+    <div class="grid2" style="gap:10px">
+      <div style="background:var(--s2);border-radius:12px;padding:12px"><p class="xs t2 mb4">Vorher</p>
+        <ul class="xs" style="margin:0;padding-left:15px;line-height:1.7">${li(before,after)}</ul></div>
+      <div style="background:rgba(154,101,54,.08);border-radius:12px;padding:12px"><p class="xs t2 mb4">Nachher (neu)</p>
+        <ul class="xs" style="margin:0;padding-left:15px;line-height:1.7">${li(after,before)}</ul></div>
+    </div>
+    <p class="xs t2 mt8">Fett markiert = von der KI geändert.</p>
+    <button class="btn mt12" onclick="planUndoRestore()">${icon("undo",15)} Rückgängig — Original wiederherstellen</button>`);
 }
 function renderTrain(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
@@ -3543,6 +3584,7 @@ function renderTrain(){
           ${F.main.map((e,i)=>exLine(e,focusType,i)).join("")}
           <p class="xs t2 mt8">Übung gedrückt halten, um eine Alternative zu wählen.</p>
           <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
+          ${S.planUndo&&S.planUndo.typeKey===focusType?`<button class="btn ghost mt8" style="min-height:40px" onclick="planUndoRestore()">${icon("undo",14)} KI-Anpassung rückgängig machen</button>`:""}
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:16px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
           ${phaseAcc("Aufwärmen",F.warmup)}
           ${phaseAcc("Cool-down",F.cooldown)}
@@ -4085,9 +4127,11 @@ function renderNutrition(){
   A.parseFood=()=>{
     const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
+    // KI aktiv → IMMER von der KI interpretieren lassen: korrigiert Tippfehler,
+    // erkennt mehrere Lebensmittel und schätzt unbekannte Mengen fehlerfrei.
+    if(aiActive()){A.aiEstimate();return;}
     const items=parseNutrition(el.value);
     if(!items.some(i=>i.food)){
-      if(aiActive()){A.aiEstimate();return;} // unbekannt → direkt KI schätzen lassen
       toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");return;}
     pendingItems=items; renderNutrition();
   };
@@ -4095,13 +4139,23 @@ function renderNutrition(){
     const el=document.getElementById("quicklog-in"); const txt=(el&&el.value.trim())||"";
     if(!txt){toast("Schreib zuerst, was du gegessen hast");return;}
     if(!aiActive()){toast("KI-Coach im Profil aktivieren");return;}
-    toast("Coach Metric schätzt …");
-    const sys='Schätze realistische Nährwerte. Antworte NUR mit JSON: {"name":"kurzer Name","grams":<int>,"kcal":<int>,"p":<protein g int>,"c":<carbs g int>,"f":<fett g int>}.';
-    aiJSON(sys,'Lebensmittel/Mahlzeit: "'+txt+'"').then(j=>{
-      if(!j||!j.kcal){toast("Konnte nicht schätzen — bitte manuell");return;}
-      nlogToday().meals.push({n:(j.name||txt)+" (KI)",g:j.grams||0,k:Math.round(j.kcal),p:Math.round(j.p||0),c:Math.round(j.c||0),f:Math.round(j.f||0)});
-      save(); renderNutrition(); toast("✓ "+(j.name||txt)+": "+Math.round(j.kcal)+" kcal (KI-Schätzung)");
-    }).catch(()=>toast("KI-Schätzung fehlgeschlagen"));
+    toast("Coach Metric liest deinen Eintrag …");
+    const sys='Du interpretierst freie Lebensmittel-Eingaben (auch mit Tippfehlern, Umgangssprache, mehreren Posten) und schätzt realistische Nährwerte. Korrigiere Schreibfehler still. Antworte NUR mit JSON: {"items":[{"name":"sauberer Name","grams":<int>,"kcal":<int>,"p":<protein g int>,"c":<carbs g int>,"f":<fett g int>}]}.';
+    aiJSON(sys,'Eingabe: "'+txt+'"').then(j=>{
+      const valid=(((j&&j.items))||[]).filter(it=>it&&it.kcal);
+      if(!valid.length){toast("Konnte nicht deuten — bitte konkreter (z. B. '200 g Hähnchen')");return;}
+      valid.forEach(it=>nlogToday().meals.push({n:(it.name||txt)+" (KI)",g:it.grams||0,k:Math.round(it.kcal),p:Math.round(it.p||0),c:Math.round(it.c||0),f:Math.round(it.f||0)}));
+      if(el)el.value="";
+      save(); renderNutrition();
+      // Klare Meldung: WAS genau die KI interpretiert und eingefügt hat.
+      const sumK=valid.reduce((s,it)=>s+Math.round(it.kcal),0), sumP=valid.reduce((s,it)=>s+Math.round(it.p||0),0);
+      modal(`<p class="ct">${icon("sparkle",14)} KI hat eingetragen</p>
+        <p class="xs t2 mb12">Coach Metric hat deine Eingabe „${txt.replace(/</g,"&lt;")}" interpretiert und so eingefügt:</p>
+        ${valid.map(it=>`<div class="row" style="padding:8px 0;border-top:1px solid var(--hairline)">
+          <span class="sm" style="font-weight:600">${(it.name||"—")} · <span class="metric">${it.grams||0} g</span></span>
+          <span class="metric sm" style="white-space:nowrap">${Math.round(it.kcal)} kcal · ${Math.round(it.p||0)} g P</span></div>`).join("")}
+        <p class="sm volt-txt metric mt12">Summe: ${sumK} kcal · ${sumP} g Protein</p>`);
+    }).catch(()=>toast("KI gerade nicht erreichbar — versuch es gleich nochmal"));
   };
   A.mealSuggest=()=>{
     if(!aiActive()){toast("KI-Coach im Profil aktivieren (Profil)");return;}
