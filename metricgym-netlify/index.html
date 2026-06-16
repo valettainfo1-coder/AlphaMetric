@@ -18,6 +18,10 @@
 <meta name="twitter:title" content="METRICGYM — Fortschritt, wissenschaftlich fundiert">
 <meta name="twitter:description" content="Wissenschaftlich gebauter Trainingsplan, müheloses Ernährungs-Logging und Statistiken, die deinen Fortschritt belegen.">
 <meta name="twitter:image" content="og-image.png">
+<!-- Optionale lokale Konfiguration (z. B. KI-Key). NICHT im Repo — liegt nur im Deploy-Ordner.
+     Achtung: bei öffentlichem Deploy ist diese Datei abrufbar; für Produktion Server-Proxy nutzen. -->
+<script>window.addEventListener("error",function(e){if(e&&e.target&&e.target.src&&/config\.js/.test(e.target.src)){e.preventDefault();}},true);</script>
+<script src="config.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%231A1A1A'/%3E%3Crect x='15' y='34' width='7' height='16' rx='3.5' fill='%23fff'/%3E%3Crect x='28.5' y='26' width='7' height='24' rx='3.5' fill='%23fff'/%3E%3Crect x='42' y='16' width='7' height='34' rx='3.5' fill='%23fff'/%3E%3Cpath d='M15 28l9-7 7 4.5 14-11' stroke='%232A45C8' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='45' cy='14.5' r='3.4' fill='%232A45C8'/%3E%3C/svg%3E">
 <!--
 ═══════════════════════════════════════════════════════════════════════
@@ -879,6 +883,8 @@ S.measure=S.measure||[]; // [{t, waist,chest,arm,thigh,hips}]
 // KI-Coach (Groq): Key liegt NUR lokal im Gerät, nie im Code/Repo.
 S.aiKey=S.aiKey||"";
 S.aiOn=S.aiOn??false;
+// Auto-Aktivierung über optionale config.js (window.METRICGYM_CONFIG.groqKey)
+try{ if(window.METRICGYM_CONFIG&&window.METRICGYM_CONFIG.groqKey){ S.aiKey=window.METRICGYM_CONFIG.groqKey; S.aiOn=true; } }catch{}
 // Flexibler Plan: A/B-Varianten + Rotations-Modus (nicht an Wochentage gekoppelt)
 S.planB=S.planB||null;
 S.planMode=S.planMode||"week"; // "week" = Wochentage · "rotation" = fortlaufend
@@ -3232,6 +3238,9 @@ function aiContext(){
     `Beste Lifts: ${lifts}`,
     `Engagement: Streak ${eng.streak} Tage, Level ${eng.level}, ${eng.sessions} Einheiten gesamt`,
     `Heutiger Status: ${S.checkin?S.checkin.score+"/100 ("+S.checkin.tier+")":"noch kein Check"}`,
+    (()=>{const l=S.nutritionLog[todayKey()];if(!l||!(l.meals||[]).length)return "Ernährung heute: noch nichts geloggt";
+      const su=l.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p}),{k:0,p:0});
+      return `Ernährung heute: ${Math.round(su.k)}/${tg.train.kcal} kcal, ${Math.round(su.p)}/${tg.train.p} g Protein (noch ${Math.max(0,tg.train.kcal-Math.round(su.k))} kcal / ${Math.max(0,tg.train.p-Math.round(su.p))} g Protein offen)`;})(),
     ins?`Aktueller Insight: ${ins.t}`:"",
   ].filter(Boolean).join("\n");
 }
@@ -3253,6 +3262,25 @@ async function aiStream(history,onDelta){
       try{ const tok=JSON.parse(d).choices?.[0]?.delta?.content||""; if(tok){full+=tok;onDelta(full);} }catch{} }
   }
   return full.trim();
+}
+// Nicht-streamender Aufruf (für strukturierte/kurze Antworten)
+async function aiComplete(system,user,opts){
+  opts=opts||{};
+  const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+    method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.aiKey},
+    body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},{role:"user",content:user}],
+      temperature:opts.temp??0.5,max_tokens:opts.max||500,...(opts.json?{response_format:{type:"json_object"}}:{})}),
+  });
+  if(!res.ok){throw new Error("Groq "+res.status);}
+  return (await res.json()).choices?.[0]?.message?.content||"";
+}
+// Erwartet JSON-Objekt zurück; parst robust (Code-Fences/umgebenden Text entfernen)
+async function aiJSON(system,user){
+  const raw=await aiComplete(system,user,{json:true,temp:0.3,max:700});
+  let t=raw.trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+  try{return JSON.parse(t);}catch{}
+  const m=t.match(/\{[\s\S]*\}/); if(m){try{return JSON.parse(m[0]);}catch{}}
+  return null;
 }
 /* Eine Chat-Runde: streamt in die letzte .msg.ai-Bubble des Containers;
    bei Fehler/kein Key → Fallback-Funktion. Persistiert in arr. */
@@ -3297,9 +3325,50 @@ function openPlanCoach(){
   </div></div>`;
   const cc=document.getElementById("pc-chat"); if(cc)cc.scrollTop=cc.scrollHeight;
 }
+/* KI-Plananpassung: Nutzer-Anforderung → strukturierte JSON-Übungsliste →
+   validiert gegen EXDB/Equipment → ersetzt die Einheit. Mit Fallback. */
+function openAIPlanAdjust(typeKey){
+  if(!aiActive()){toast("Aktiviere zuerst den KI-Coach im Profil");return;}
+  const {base}=parseTypeKey(typeKey), a=S.profile.a;
+  const allowed=EQ_ALLOWED[a.equipment]||EQ_ALLOWED.gym_full, hasBench=EQ_BENCH[a.equipment]??true;
+  const pool=Object.entries(EXDB).filter(([n,d])=>allowed.includes(d.eq)&&(!d.bench||hasBench)&&n!=="Zone-2 Cardio").map(([n])=>n);
+  const cur=sessionDef(typeKey).main.map(e=>`${e.n} ${e.sets}×${e.reps}`).join(", ");
+  const chips=["Mehr Brust","Schonend fürs Knie","Kürzer","Mehr Arme","Anfängerfreundlich"];
+  A.aiAdjustGo=async(extra)=>{
+    const req=extra||(document.getElementById("aiadj-in")||{}).value;
+    if(!req||!req.trim()){toast("Was soll geändert werden?");return;}
+    const box=document.getElementById("aiadj-status"); if(box){box.style.display="block";box.textContent="Coach Metric passt deinen Plan an …";}
+    const sys=`Du bist Trainingsplaner. Antworte NUR mit JSON: {"summary":"kurzer Satz","exercises":[{"name":"<exakt aus erlaubter Liste>","sets":3,"reps":"6-10"}]}. 5–8 Übungen, Mehrgelenksübungen zuerst. NUR Namen aus der erlaubten Liste verwenden.`;
+    const usr=`Erlaubte Übungen: ${pool.join(", ")}.\nAktuelle Einheit (${TYPE_META[base].label}): ${cur}.\nNutzer: ${a.exp}, Ziel ${(S.profile.tg.goals||[]).map(g=>GOAL_LABEL[g]).join("+")}.\nWunsch: "${req.trim()}"`;
+    try{
+      const j=await aiJSON(sys,usr);
+      const ex=((j&&j.exercises)||[]).filter(e=>e&&EXDB[e.name]).slice(0,9);
+      if(!ex.length)throw new Error("keine gültigen Übungen");
+      applyAISession(typeKey,ex); overlay.innerHTML=""; render();
+      toast("✓ "+((j&&j.summary)||"Plan angepasst"));
+    }catch(err){ if(box){box.textContent="Konnte nicht anpassen — formulier es konkreter. ("+String(err.message||err).slice(0,50)+")";} }
+  };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="display-m mb4" style="display:flex;align-items:center;gap:8px">${icon("sparkle",18)} Plan anpassen <span class="badge volt" style="font-size:9px">KI</span></p>
+    <p class="xs t2 mb12">Sag, was du an „${TYPE_META[base].label}" ändern willst — Coach Metric baut die Einheit um.</p>
+    <div class="chips mb12">${chips.map(c=>`<button class="chip" onclick="A.aiAdjustGo('${c}')">${c}</button>`).join("")}</div>
+    <textarea id="aiadj-in" class="quicklog-field" rows="2" placeholder="z. B. 'Nur Kurzhanteln da und mein Knie zwickt'"></textarea>
+    <div id="aiadj-status" class="xs t2 mt8" style="display:none"></div>
+    <button class="btn volt mt12" onclick="A.aiAdjustGo()">Anpassen lassen</button>
+  </div></div>`;
+}
+function applyAISession(typeKey,exList){
+  const {base,variant}=parseTypeKey(typeKey);
+  const plan=variant==="B"?activePlanB():activePlan();
+  const mk=(n,sets,reps)=>{const d=EXDB[n]||{};return {n,sets:Math.max(1,Math.min(6,parseInt(sets)||3)),reps:String(reps||"8-12"),tempo:d.tempo||"2-0-1-0",rir:d.rir||"1–2",m:d.m||"—",why:d.why||"",alt:d.alt||null,lengthened:!!d.lengthened};};
+  if(plan[base])plan[base].main=exList.map(e=>mk(e.name,e.sets,e.reps));
+  if(S.exOverrides)delete S.exOverrides[typeKey];
+  save();
+}
 function renderTrain(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   const isDeload=S.currentWeek===4;
+  A.aiAdjust=(t)=>openAIPlanAdjust(t);
   A.evShow=(i)=>{const e=planEvidence()[i]; if(!e)return; modal(`<p class="ct">${e.h}</p><p class="sm t2" style="line-height:1.65">${e.b}</p><p class="xs" style="color:var(--hl);margin-top:10px;font-weight:700;display:flex;align-items:center;gap:5px">${icon("info",13)} Quelle: ${e.c}</p>`);};
   const rotMode=S.planMode==="rotation";
   A.editSchedule=()=>openScheduleSheet();
@@ -3396,6 +3465,7 @@ function renderTrain(){
           <p class="label" style="margin-bottom:8px">Übungen</p>
           ${F.main.map((e,i)=>exLine(e,focusType,i)).join("")}
           <p class="xs t2 mt8">Übung gedrückt halten, um eine Alternative zu wählen.</p>
+          <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:16px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
           ${phaseAcc("Aufwärmen",F.warmup)}
           ${phaseAcc("Cool-down",F.cooldown)}
@@ -3939,8 +4009,32 @@ function renderNutrition(){
     const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
     const items=parseNutrition(el.value);
-    if(!items.some(i=>i.food)){toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");return;}
+    if(!items.some(i=>i.food)){
+      if(aiActive()){A.aiEstimate();return;} // unbekannt → direkt KI schätzen lassen
+      toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");return;}
     pendingItems=items; renderNutrition();
+  };
+  A.aiEstimate=()=>{
+    const el=document.getElementById("quicklog-in"); const txt=(el&&el.value.trim())||"";
+    if(!txt){toast("Schreib zuerst, was du gegessen hast");return;}
+    if(!aiActive()){toast("KI-Coach im Profil aktivieren");return;}
+    toast("Coach Metric schätzt …");
+    const sys='Schätze realistische Nährwerte. Antworte NUR mit JSON: {"name":"kurzer Name","grams":<int>,"kcal":<int>,"p":<protein g int>,"c":<carbs g int>,"f":<fett g int>}.';
+    aiJSON(sys,'Lebensmittel/Mahlzeit: "'+txt+'"').then(j=>{
+      if(!j||!j.kcal){toast("Konnte nicht schätzen — bitte manuell");return;}
+      nlogToday().meals.push({n:(j.name||txt)+" (KI)",g:j.grams||0,k:Math.round(j.kcal),p:Math.round(j.p||0),c:Math.round(j.c||0),f:Math.round(j.f||0)});
+      save(); renderNutrition(); toast("✓ "+(j.name||txt)+": "+Math.round(j.kcal)+" kcal (KI-Schätzung)");
+    }).catch(()=>toast("KI-Schätzung fehlgeschlagen"));
+  };
+  A.mealSuggest=()=>{
+    if(!aiActive()){toast("KI-Coach im Profil aktivieren (Profil)");return;}
+    const tgX=p.tg[dayType==="train"?"train":"rest"], lg=nlogToday();
+    const su=lg.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p}),{k:0,p:0});
+    const remK=Math.max(0,tgX.kcal-su.k), remP=Math.max(0,tgX.p-Math.round(su.p));
+    modal(`<p class="ct">${icon("sparkle",14)} Coach Metric überlegt …</p><p class="sm t2" id="meal-sg" style="line-height:1.6">…</p>`);
+    aiComplete(aiPersona(),`Mir fehlen heute noch ${remK} kcal und ${remP} g Protein (Tagesziel ${tgX.kcal} kcal / ${tgX.p} g Protein). Schlag mir 2 konkrete, einfache Mahlzeiten vor, die das ungefähr treffen — kurz, mit groben Mengen.`,{max:320})
+      .then(t=>{const el=document.getElementById("meal-sg"); if(el)el.innerHTML=(t||"—").replace(/\n/g,"<br>");})
+      .catch(()=>{const el=document.getElementById("meal-sg"); if(el)el.textContent="Gerade nicht erreichbar — versuch es gleich nochmal.";});
   };
   A.approveItems=()=>{
     let n=0;
@@ -3991,7 +4085,11 @@ function renderNutrition(){
       <p class="ct">Schnell loggen</p>
       ${favIdx.length?`<div class="chips mb12">${favIdx.map(i=>`<button class="chip" onclick="A.quick(${i})">+ ${FOODS[i][0].replace(/ \(.*\)$/,"")}</button>`).join("")}</div>`:""}
       ${quickLogField("'500 g Hähnchen und 300 g Reis, 2 Tomaten'","A.parseFood")}
-      <button class="btn mt8" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto aufnehmen (Demo)</button>
+      <div class="grid2 mt8" style="gap:8px">
+        <button class="btn" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto (Demo)</button>
+        <button class="btn" onclick="A.aiEstimate()">${icon("sparkle",15)} KI-Schätzung${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
+      </div>
+      <button class="btn mt8" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich jetzt essen?</button>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?`<div class="warncard" style="border-color:rgba(42,69,200,.4);background:rgba(42,69,200,.06)">
         ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
