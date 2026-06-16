@@ -412,6 +412,19 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .th-headline{font-family:var(--font-serif); font-weight:500; font-size:31px; line-height:1.08; letter-spacing:-.015em; margin:8px auto 10px; max-width:330px;}
   .th-sub{font-size:13.5px; line-height:1.55; color:var(--t2); max-width:300px; margin:0 auto 18px;}
   .th-cta{max-width:260px; margin:0 auto;}
+  /* ===== Beam-in: elegante Warp-Transition ins Programm ===== */
+  .beam-ov{position:fixed; inset:0; z-index:95; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background:radial-gradient(circle at 50% 50%, #131D38 0%, #080A0F 68%); animation:beamFade .42s ease both;}
+  .beam-ov.beam-out{animation:beamFade .5s ease reverse forwards;}
+  @keyframes beamFade{from{opacity:0}to{opacity:1}}
+  .beam-core{width:16px; height:16px; border-radius:50%; background:radial-gradient(circle,#EAF1FF,#9DB4F0 60%,#4A6FD8);
+    box-shadow:0 0 40px 12px rgba(157,180,240,.7); animation:beamCore 1.15s cubic-bezier(.62,0,.32,1) both;}
+  @keyframes beamCore{0%{transform:scale(.2);opacity:.5}42%{transform:scale(1);opacity:1}100%{transform:scale(70);opacity:0}}
+  .beam-ring{position:absolute; top:50%; left:50%; width:90px; height:90px; margin:-45px 0 0 -45px; border:1.5px solid rgba(157,180,240,.55); border-radius:50%; animation:beamRing 1.15s ease-out both;}
+  .beam-ring:nth-child(2){animation-delay:.16s} .beam-ring:nth-child(3){animation-delay:.32s}
+  @keyframes beamRing{0%{opacity:.85;transform:scale(.25)}100%{opacity:0;transform:scale(6.5)}}
+  .beam-flash{position:absolute; inset:0; background:radial-gradient(circle, rgba(234,241,255,.95), transparent 58%); opacity:0; animation:beamFlash 1.15s ease both;}
+  @keyframes beamFlash{0%,38%{opacity:0}54%{opacity:.85}100%{opacity:0}}
   /* Value Banner: Soft-Paper-Karte mit Icon-Kreis */
   .banner{display:flex; gap:12px; align-items:center; border-radius:18px; padding:14px 14px 14px 16px; margin-bottom:var(--sp-4);
     background:var(--surface); border:1px solid rgba(255,255,255,.65);
@@ -447,8 +460,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lp-hero{padding:16px 20px 32px;text-align:center;position:relative;overflow:hidden;}
   .lp-hero::after{content:"";position:absolute;inset:-40% -20% auto -20%;height:70%;z-index:-1;
     background:radial-gradient(60% 80% at 50% 0%,rgba(154,101,54,.12),transparent 70%);}
-  .lp-claimgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-  .lp-claim{background:var(--s1);border:1px solid var(--hairline);border-radius:18px;padding:22px 16px;text-align:center;
+  .lp-claimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  /* Mobile: Landing bewusst kurz — textlastige Sektionen nur auf Desktop */
+  .lp-deskonly{display:none;}
+  .lp-claim{background:var(--s1);border:1px solid var(--hairline);border-radius:18px;padding:18px 10px;text-align:center;
     box-shadow:0 2px 14px rgba(0,0,0,.05);transition:transform .28s var(--spring),box-shadow .28s ease,border-color .28s ease;}
   .lp-claim:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(154,101,54,.13);border-color:rgba(154,101,54,.28);}
   .lp-claim .n{font-family:var(--font-hero);font-weight:800;font-size:36px;letter-spacing:-.03em;line-height:1;}
@@ -512,7 +527,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     .lp-lead{font-size:18.5px; margin-left:0!important; margin-right:0!important;}
     .lp-hero::after{inset:-30% -10% auto 20%; height:80%;}
     .lp-sec{padding:56px 48px; max-width:1120px; margin:0 auto;}
-    .lp-claimgrid{grid-template-columns:repeat(4,1fr);}
+    .lp-claimgrid{grid-template-columns:repeat(3,1fr);}
+    .lp-deskonly{display:block;}
     .lp-pillars-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
     .lp-pillars-grid .lp-pillar{border-top:none; border:1px solid var(--hairline); border-radius:18px; padding:22px; background:var(--s1);}
     .lp-steps-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
@@ -1882,6 +1898,17 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
       appbarEl=document.getElementById("appbar"), fabEl=document.getElementById("fab");
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
+// Elegante Warp-Transition „ins Programm gebeamt" — Screen-Wechsel passiert hinter dem Flash.
+function beamIntoApp(cb){
+  try{
+    const ov=document.createElement("div"); ov.className="beam-ov";
+    ov.innerHTML='<div class="beam-flash"></div><div class="beam-ring"></div><div class="beam-ring"></div><div class="beam-ring"></div><div class="beam-core"></div>';
+    document.body.appendChild(ov);
+    setTimeout(()=>{ try{cb&&cb();}catch(e){} }, 560);        // App rendern, während der Flash alles überdeckt
+    setTimeout(()=>{ ov.classList.add("beam-out"); }, 640);
+    setTimeout(()=>{ ov.remove(); }, 1160);
+  }catch(e){ cb&&cb(); }
+}
 // ---------- ⓘ-Erklärungen: WARUM kommt die Engine zu diesem Wert ----------
 /* v5/Phase 2: Erklärungen in Klartext — erste Zeile für jeden verständlich,
    zweite Zeile nennt den Fachbegriff für alle, die tiefer einsteigen wollen. */
@@ -2196,9 +2223,8 @@ function renderAuth(){
     const seed=buildDevSeed();
     S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
     S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog;
-    S.screen="app"; S.tab="home"; S.seenFeatures=true;
-    save(); render();
-    toast("Demo-Modus: 10-Wochen-Historie geladen — Analytics komplett gefüllt");
+    S.screen="app"; S.tab="home"; S.seenFeatures=true; save();
+    beamIntoApp(()=>{ render(); toast("Demo-Modus: 10-Wochen-Historie geladen — Analytics komplett gefüllt"); });
   };
   A.devModeIntro=()=>{
     overlay.innerHTML="";
@@ -2307,25 +2333,24 @@ function renderLanding(){
       </div>
     </section>
 
-    <!-- CLAIMS / REASONS TO BELIEVE -->
+    <!-- CLAIMS / REASONS TO BELIEVE — mobil bewusst nur 3 kompakte Boxen -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-claimgrid">
-        <div class="lp-claim"><p class="n volt-txt">40+</p><p class="l">Studien als Fundament jeder Empfehlung (Schoenfeld, Israetel, Helms …)</p></div>
-        <div class="lp-claim"><p class="n">100<span style="font-size:18px">%</span></p><p class="l">deine Daten — jeder Wert beruht auf deinen echten Zahlen</p></div>
-        <div class="lp-claim"><p class="n">6</p><p class="l">Statistiken, die belegen, dass es vorangeht</p></div>
-        <div class="lp-claim"><p class="n">10<span style="font-size:18px">s</span></p><p class="l">loggen pro Eintrag — tippen oder einsprechen</p></div>
+        <div class="lp-claim"><p class="n volt-txt">40+</p><p class="l">Studien als Fundament jeder Empfehlung</p></div>
+        <div class="lp-claim"><p class="n">100<span style="font-size:18px">%</span></p><p class="l">deine echten Daten — nichts erfunden</p></div>
+        <div class="lp-claim"><p class="n">10<span style="font-size:18px">s</span></p><p class="l">loggen — tippen oder sprechen</p></div>
       </div>
     </section>
 
     <!-- WARUM -->
-    <section class="lp-sec" style="padding-top:0">
+    <section class="lp-sec lp-deskonly" style="padding-top:0">
       <p class="lp-eyebrow">Die Grundlage</p>
       <h2 class="lp-h2">Auf der Wissenschaft gebaut,<br>die wirklich wirkt.</h2>
       <p class="lp-lead mb16">Jeder Plan und jede Empfehlung ruht auf peer-reviewter Trainings- und Ernährungsforschung. <b style="color:var(--t1)">Und dein Fortschritt steht in klaren Zahlen vor dir</b> — Woche für Woche belegt.</p>
     </section>
 
     <!-- 3 SÄULEN -->
-    <section class="lp-sec" style="padding-top:0">
+    <section class="lp-sec lp-deskonly" style="padding-top:0">
       <p class="lp-eyebrow">Was die App kann</p>
       <h2 class="lp-h2 mb16">Drei Systeme, eine Engine</h2>
       <div class="lp-pillars-grid">
@@ -2349,7 +2374,7 @@ function renderLanding(){
     </section>
 
     <!-- SO FUNKTIONIERT'S -->
-    <section class="lp-sec" style="padding-top:0">
+    <section class="lp-sec lp-deskonly" style="padding-top:0">
       <p class="lp-eyebrow">In 3 Schritten</p>
       <h2 class="lp-h2 mb16">Vom Log zur Entscheidung</h2>
       <div class="lp-steps-grid">
@@ -2362,7 +2387,7 @@ function renderLanding(){
     </section>
 
     <!-- REASON TO BELIEVE: WISSENSCHAFT -->
-    <section class="lp-sec" style="padding-top:0">
+    <section class="lp-sec lp-deskonly" style="padding-top:0">
       <div class="lp-dark">
         <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Die wissenschaftliche Basis</p>
         <p class="lp-quote mb16">Jede Empfehlung steht auf Peer-Review-Forschung.</p>
@@ -2596,7 +2621,10 @@ function renderReveal(){
   // Der vorgeschlagene Wochenplan wird übernommen — bleibt aber frei editierbar.
   A.startApp=()=>{
     if(!S.schedule&&S.scheduleSuggestion)S.schedule=S.scheduleSuggestion.slice();
-    S.screen="app";S.tab=S.seenFeatures?"home":"features";S.seenFeatures=true;save();render();
+    // Nur EINE Erklärungsfolie nach dem Quiz: direkt ins Programm (Feature-Übersicht
+    // bleibt über das Menü erreichbar) — mit eleganter Beam-in-Animation.
+    S.seenFeatures=true; save();
+    beamIntoApp(()=>{ S.screen="app"; S.tab="home"; save(); render(); });
   };
   const a=p.a, sug=S.scheduleSuggestion||[];
   const trainCount=sug.filter(t=>t!=="rest").length, set=new Set(sug);
