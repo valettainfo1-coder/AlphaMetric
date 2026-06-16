@@ -1972,41 +1972,20 @@ function renderApp(){
 // =====================================================================
 function renderFeatureOverview(){
   A.featDone=()=>{S.tab="home";save();render();};
-  // Detailliertes Intro: WIE die Engine arbeitet, WELCHE Analyse aus WELCHER
-  // Eingabe entsteht und WORAUF sie wissenschaftlich fußt.
+  // Bewusst minimal: 4 Zeilen, je ein Icon + eine kurze Aussage. Kein Fließtext.
   const feats=[
-    ["dumbbell","Ein Plan, der wirklich deiner ist",
-      "Aus deinen Antworten baut die Engine einen Plan aus 6–9 Übungen pro Einheit — gefiltert nach deinem Equipment, mit Extra-Volumen für deine Fokus-Muskeln und auf deine Wochentage gelegt.",
-      ["Equipment-Filter: nur Übungen, die du wirklich machen kannst","Satz-Zahl nach Trainingserfahrung (Pelland 2025: 5–10 Sätze/Muskel)","Session-Dauer wird berechnet, nicht geschätzt"]],
-    ["brain","Ein Plan, der mitdenkt",
-      "Dein Plan wächst mit dir. Er reagiert auf das, was du loggst — Woche für Woche, Satz für Satz.",
-      ["Gewichts-Empfehlung aus deinen letzten Sätzen (RIR-gesteuert)","Automatische Erholungswoche bei Übertrainings-Signalen","Schonende Alternativen bei Muskelkater, per Long-Press tauschbar"]],
-    ["chart","Dein Fortschritt, sichtbar gemacht",
-      "Das Herzstück: jede Eingabe wird zu einer Auswertung, die belegt, dass es vorangeht. Jeder Wert beruht auf deinen echten Daten — kein Schätzen.",
-      ["Kraft-Prognose mit Konfidenzband (e1RM-Trend, 12 Wochen)","Muskelbalance & Belastungs-Ampel je Muskelgruppe","Erholungs-Trend, Körperkomposition, Ernährungs-Treue","Jede Aussage trägt ihre Konfidenz in %"]],
-    ["utensils","Ernährung in 10 Sekunden",
-      "Tippen oder sprechen — die Engine versteht ganze Sätze und sogar Rechtschreibfehler.",
-      ["„200g hähnchen und 150g reis“ wird automatisch zerlegt","Tipp- & Hörfehler werden korrigiert (häncxen → Hähnchen)","Kalorien, Protein, Sättigung pro Mahlzeit"]],
-    ["message","Ein Coach im Kontext",
-      "Der Coach kennt deine Daten und den Bereich, in dem du gerade bist — und antwortet konkret auf deine Situation.",
-      ["Im Training: Progressions-Tipps zu deinen Lifts","In der Ernährung: was dir heute noch fehlt","In Analytics: erklärt deinen Trend"]],
+    ["dumbbell","Dein Plan","Wissenschaftlich auf dich gebaut — passt sich an, was du loggst."],
+    ["chart","Deine Analytics","Kraft, Muskeln, Erholung — schwarz auf weiß, alles aus echten Daten."],
+    ["utensils","Deine Ernährung","Tippen oder sprechen, in 10 Sekunden geloggt."],
+    ["flame","Dein Antrieb","Streak, Level & Meilensteine, die dich dranbleiben lassen."],
   ];
   root.innerHTML=`
-    <div class="heroband fade"><h2>Was METRICGYM für dich tut</h2>
-      <p class="sm t2" style="max-width:320px;margin:8px auto 0">Eine Engine auf <b style="color:var(--t1)">wissenschaftlicher Basis</b>, die deinen Fortschritt sichtbar macht und deinen Plan automatisch anpasst.</p></div>
-    ${feats.map(([ic,t,b,bullets])=>`<div class="card">
-      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px">
-        <span class="icon-circle">${icon(ic,20)}</span>
-        <div><p style="font-weight:700;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.6">${b}</p></div></div>
-      ${bullets.map(x=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0">
-        <span style="color:var(--hl);flex-shrink:0;display:inline-flex;margin-top:1px">${icon("check",14)}</span>
-        <span class="sm" style="line-height:1.5">${x}</span></div>`).join("")}
-    </div>`).join("")}
-    <div class="card" style="background:var(--accent);color:#fff;border:none">
-      <p style="font-weight:700;margin-bottom:6px;color:#fff">${icon("zap",15)} Der Deal ist einfach</p>
-      <p class="sm" style="line-height:1.6;color:rgba(255,255,255,.85)">Je vollständiger du deinen Tag einträgst, desto schärfer werden deine Analytics. Auf der Startseite findest du deine <b style="color:#fff">Daten-Routine</b> — eine Checkliste, die dir genau zeigt, was heute noch fehlt.</p>
-    </div>
-    <button class="btn volt" onclick="A.featDone()">Los geht's — Daten-Routine ansehen</button>`;
+    <div class="heroband fade" style="padding-top:8px"><h2>So funktioniert's</h2>
+      <p class="sm t2" style="max-width:280px;margin:6px auto 0">Vier Dinge — mehr brauchst du nicht.</p></div>
+    ${feats.map(([ic,t,b])=>`<div class="card" style="display:flex;gap:14px;align-items:center;padding:16px">
+      <span class="icon-circle" style="background:var(--accent);color:#fff">${icon(ic,20)}</span>
+      <div><p style="font-weight:700">${t}</p><p class="sm t2" style="line-height:1.45">${b}</p></div></div>`).join("")}
+    <button class="btn volt mt8" onclick="A.featDone()">Los geht's</button>`;
 }
 
 // ---------- Universelles Quick-Log-Feld (Text ODER iOS-Tastatur-Diktat) ----------
@@ -2464,58 +2443,34 @@ function renderReveal(){
   // Dopamin: realistische 12-Wochen-Projektion + Identitäts-Hook
   const base={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[a.exp]||[12,22];
   const dFac=Math.min(1,0.55+(a.days||4)*0.11), pLo=Math.round(base[0]*dFac), pHi=Math.round(base[1]*dFac);
-  const goalWord={fat_loss:"schlanker & definierter",muscle_gain:"sichtbar muskulöser",recomp:"definierter & stärker",strength:"deutlich stärker",general:"fitter",endurance:"ausdauernder",mobility:"beweglicher"}[tg.goals[0]]||"stärker";
+  const goalWord={fat_loss:"schlanker",muscle_gain:"muskulöser",recomp:"definierter & stärker",strength:"stärker",general:"fitter",endurance:"ausdauernder",mobility:"beweglicher"}[tg.goals[0]]||"stärker";
   const m4=Math.max(2,Math.round(pHi*0.35)), m8=Math.round(pHi*0.7);
-  // Ziel-spezifische „Das erreichst du"-Vision
-  const G=tg.goals[0];
-  const winLine={fat_loss:`Sichtbar weniger Körperfett — ~${Math.max(2,Math.round((a.weight||80)*0.04))} kg in 12 Wochen realistisch`,
-    muscle_gain:`Mehr Muskelmasse — sichtbar fülliger in Brust, Schultern, Armen`,
-    strength:`Deutlich mehr Maximalkraft auf Bank, Kniebeuge & Co.`,
-    recomp:`Gleichzeitig schlanker und stärker — der Body-Recomp-Effekt`,
-    general:`Spürbar mehr Energie, Kraft und Fitness im Alltag`,
-    endurance:`Mehr Ausdauer — länger durchhalten, schneller erholen`,
-    mobility:`Beweglicher und schmerzfreier in jeder Bewegung`}[G]||"Sichtbarer Fortschritt, Woche für Woche";
-  const wins=[
-    winLine,
-    `+${pLo}–${pHi}% Kraft auf deinen Grundübungen`,
-    `Neue persönliche Rekorde — jeder wissenschaftlich belegt`,
-    `Deinen Fortschritt schwarz auf weiß in Live-Statistiken`,
-    `Eine Gewohnheit, die hält — Streak, Level & Meilensteine`,
-  ];
+  // Ziel-spezifische „Das erreichst du"-Vision — kurze, knackige Aussagen
+  const winLine={fat_loss:`~${Math.max(2,Math.round((a.weight||80)*0.04))} kg Fett weg in 12 Wochen`,
+    muscle_gain:`Sichtbar mehr Muskeln`,
+    strength:`Deutlich mehr Maximalkraft`,
+    recomp:`Schlanker UND stärker zugleich`,
+    general:`Mehr Energie & Fitness im Alltag`,
+    endurance:`Mehr Ausdauer, schnellere Erholung`,
+    mobility:`Beweglicher & schmerzfreier`}[tg.goals[0]]||"Sichtbarer Fortschritt";
+  const wins=[winLine,`+${pLo}–${pHi}% Kraft`,`Neue Rekorde, wissenschaftlich belegt`,`Fortschritt in Echtzeit-Statistiken`,`Streak, Level & Meilensteine`];
   setTimeout(()=>{try{confetti();}catch{}},220);
   root.innerHTML=`<div class="fade" style="text-align:center">
     <div style="width:62px;height:62px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:6px auto 12px">${icon("check",34)}</div>
     <p class="lp-eyebrow" style="display:block">Dein Plan steht</p>
-    <h2 style="font-size:27px">Startklar, ${userName()}.</h2>
-    <p class="sm t2" style="max-width:300px;margin:8px auto 18px;line-height:1.6">Wissenschaftlich auf <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b> gebaut. So sieht dein Weg aus:</p>
-    <div class="card" style="text-align:left;border-color:rgba(42,69,200,.3)">
-      <p class="ct">${icon("sparkle",14)} In 12 Wochen realistisch</p>
-      <p class="hero-num volt-txt" style="font-size:42px;line-height:1">+${pLo}–${pHi} %</p>
-      <p class="sm t2" style="margin-top:2px">mehr Kraft auf deinen Grundübungen — und sichtbar ${goalWord}.</p>
+    <h2 style="font-size:28px">Startklar, ${userName()}.</h2>
+    <p class="sm t2" style="margin:6px auto 16px">Auf <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b> gebaut. Das ist drin:</p>
+    <div class="card" style="border-color:rgba(42,69,200,.3);padding:18px">
+      <p class="hero-num volt-txt" style="font-size:46px;line-height:1">+${pLo}–${pHi}%</p>
+      <p class="sm t2">mehr Kraft in 12 Wochen — und ${goalWord}.</p>
     </div>
 
-    <!-- DOPAMIN: Das erreichst du -->
-    <div class="card" style="text-align:left;background:var(--accent);border:none">
-      <p class="ct" style="color:rgba(255,255,255,.65)">${icon("star",14)} Das erreichst du mit METRICGYM</p>
-      ${wins.map(w=>`<div style="display:flex;gap:11px;align-items:flex-start;padding:6px 0">
-        <span style="width:24px;height:24px;min-width:24px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center">${icon("check",15)}</span>
-        <span class="sm" style="color:#fff;line-height:1.45;font-weight:500">${w}</span></div>`).join("")}
-    </div>
-
-    <!-- DOPAMIN: dein Weg, Woche für Woche -->
-    <div class="card" style="text-align:left">
-      <p class="ct">${icon("calendar",14)} Dein Weg — Meilenstein für Meilenstein</p>
-      ${[["Woche 1","Routine startet — dein Plan sitzt, erste Logs"],
-         ["Woche 4",`+~${m4}% Kraft · deine ersten Rekorde fallen`],
-         ["Woche 8",`+~${m8}% Kraft · die Veränderung wird sichtbar`],
-         ["Woche 12",`+${pLo}–${pHi}% Kraft · ${goalWord}`]]
-        .map(([w,t],i,arr)=>`<div style="display:flex;gap:12px">
-          <div style="display:flex;flex-direction:column;align-items:center">
-            <div style="width:13px;height:13px;border-radius:50%;background:${i===arr.length-1?"var(--hl)":"var(--accent)"};margin-top:3px"></div>
-            ${i<arr.length-1?'<div style="width:2px;flex:1;background:var(--s3);min-height:20px"></div>':""}</div>
-          <div style="padding-bottom:${i<arr.length-1?"14px":"0"}"><p class="sm" style="font-weight:700">${w}</p><p class="xs t2" style="line-height:1.4">${t}</p></div>
-        </div>`).join("")}
-      <p class="xs t2 mt8" style="line-height:1.5">Realistische Orientierung auf Basis der Trainingswissenschaft — deine echten Zahlen begleiten dich ab Tag 1.</p>
+    <!-- DOPAMIN: Das erreichst du (kompakt) -->
+    <div class="card" style="text-align:left;background:var(--accent);border:none;padding:18px">
+      <p class="ct" style="color:rgba(255,255,255,.65);margin-bottom:10px">Das holst du raus</p>
+      ${wins.map(w=>`<div style="display:flex;gap:10px;align-items:center;padding:5px 0">
+        <span style="color:#fff;display:inline-flex;flex-shrink:0">${icon("check",16)}</span>
+        <span class="sm" style="color:#fff;font-weight:500">${w}</span></div>`).join("")}
     </div>
 
     <p class="label" style="text-align:center;margin-bottom:8px">Dein Start-Setup</p>
@@ -3830,14 +3785,15 @@ function energyBudget(sum,tg){
 function ffFix(x){return x;} // (Helfer für Lesbarkeit der Treibstoff-Summe)
 function nutritionStats(sum){
   const p=S.profile, bw=p.a.weight||80;
-  const ppkg=Math.round(sum.p/bw*10)/10;
+  // Ziel-Verhältnis (wissenschaftlich, ~1,8 g/kg) statt des verwirrenden Tages-Iststands
+  const ppkg=Math.round(p.tg.train.p/bw*10)/10;
   const last7=[...Array(7)].map((_,i)=>new Date(Date.now()-i*dayMs).toISOString().slice(0,10)).map(k=>S.nutritionLog[k]).filter(l=>l&&(l.meals||[]).length);
   const avgK=last7.length?Math.round(last7.reduce((s,l)=>s+l.meals.reduce((a,m)=>a+m.k,0),0)/last7.length):0;
   let streak=0;
   for(let d=0;;d++){const key=new Date(Date.now()-d*dayMs).toISOString().slice(0,10);const l=S.nutritionLog[key];
     if(!l||!(l.meals||[]).length){if(d===0)continue;break;}
     if(l.meals.reduce((s,m)=>s+m.p,0)>=p.tg.train.p*0.9)streak++;else break;}
-  return [["metric",ppkg.toString().replace(".",","),"g Protein/kg"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Streak"]];
+  return [["metric",ppkg.toString().replace(".",","),"g/kg Protein-Ziel"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Streak"]];
 }
 function renderNutrition(){
   const p=S.profile, tg=p.tg[dayType==="train"?"train":"rest"];
