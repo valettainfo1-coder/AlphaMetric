@@ -876,6 +876,9 @@ S.billing=S.billing||"monthly";
 // Körper-Fortschritt: Fotos (Metadaten; Bild in IndexedDB) + Maße
 S.photos=S.photos||[];   // [{id,t,weight}]
 S.measure=S.measure||[]; // [{t, waist,chest,arm,thigh,hips}]
+// KI-Coach (Groq): Key liegt NUR lokal im Gerät, nie im Code/Repo.
+S.aiKey=S.aiKey||"";
+S.aiOn=S.aiOn??false;
 // Flexibler Plan: A/B-Varianten + Rotations-Modus (nicht an Wochentage gekoppelt)
 S.planB=S.planB||null;
 S.planMode=S.planMode||"week"; // "week" = Wochentage · "rotation" = fortlaufend
@@ -1938,23 +1941,24 @@ function coachContext(){
     }};
 }
 function renderFab(){
+  window["__rerender_coach-chat"]=renderFab;
   A.coach=()=>{coachOpen=!coachOpen;renderFab();};
-  A.coachAsk=(q)=>{
-    const ctx=coachContext();
+  const coachFallback=(q)=>{const ctx=coachContext();
+    if(ctx.answers[q])return ctx.answers[q];
+    const hit=Object.keys(ctx.answers).find(k=>k.toLowerCase().split(" ").some(w=>w.length>4&&q.toLowerCase().includes(w)));
+    return hit?ctx.answers[hit]:"Dazu habe ich gerade keine Standard-Antwort — aktiviere den KI-Coach im Profil für freie Fragen, oder probier die Vorschläge unten.";};
+  const respond=(q)=>{
     S.chat.push({r:"user",t:q});
-    S.chat.push({r:"ai",t:ctx.answers[q]||"Dazu habe ich noch keine Daten — logge weiter, dann wird meine Antwort konkret."});
+    S.chat.push({r:"ai",t:aiActive()?"…":coachFallback(q)});
     save(); renderFab();
+    if(aiActive()) aiTurn(S.chat,"coach-chat",()=>coachFallback(q));
   };
+  A.coachAsk=respond;
   A.coachVoice=()=>speech((txt)=>{const inp=document.getElementById("coach-in"); if(inp){inp.value=txt; A.coachSend();}},"co-mic");
   A.coachSend=()=>{
     const inp=document.getElementById("coach-in");
     if(!inp||!inp.value.trim())return;
-    const q=inp.value.trim();
-    const ctx=coachContext();
-    const hit=Object.keys(ctx.answers).find(k=>k.toLowerCase().split(" ").some(w=>w.length>4&&q.toLowerCase().includes(w)));
-    S.chat.push({r:"user",t:q});
-    S.chat.push({r:"ai",t:hit?ctx.answers[hit]:"Gute Frage — in der Vollversion beantworte ich das mit deinen Live-Daten über die AI-API. Probier die Vorschläge unten."});
-    save(); renderFab();
+    const q=inp.value.trim(); inp.value=""; respond(q);
   };
   if(!coachOpen){
     fabEl.innerHTML=`<button class="fab" onclick="A.coach()" aria-label="Coach öffnen">${icon("message",22)}</button>`;
@@ -1962,7 +1966,7 @@ function renderFab(){
   }
   const ctx=coachContext();
   fabEl.innerHTML=`<div class="coach-panel"><div class="card fade" style="border-color:rgba(42,69,200,.4);box-shadow:0 8px 32px rgba(0,0,0,.55);margin:0">
-    <div class="row mb8"><p class="ct" style="margin:0">${icon("message",15)} Coach · ${TAB_TITLES[S.tab]||"Kontext"}</p>
+    <div class="row mb8"><p class="ct" style="margin:0">${icon("message",15)} ${aiActive()?"Coach Metric":"Coach"} · ${TAB_TITLES[S.tab]||"Kontext"}${aiActive()?' <span class="badge volt" style="font-size:9px">KI</span>':""}</p>
       <button class="btn ghost" style="width:auto" onclick="A.coach()" aria-label="Schließen">✕</button></div>
     <div id="coach-chat" style="max-height:200px;overflow-y:auto;margin-bottom:8px">
       ${S.chat.slice(S.tier==="elite"?-20:-6).map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${m.t}</div>`).join("")||'<p class="sm" style="line-height:1.6">Hi, ich bin dein Coach. Ich kenne deine Daten und den Bereich, in dem du gerade bist — frag mich, was dich weiterbringt.</p>'}
@@ -3199,17 +3203,89 @@ function planAnswer(q){
   for(const e of PLAN_QA){ if(e.k.some(k=>t.includes(k))) return e.a(); }
   return "Gute Frage. Frag mich zu: Volumen, Frequenz, Gewicht steigern, Reihenfolge, Erholungswochen, Übungstausch oder warum dein Plan genau so aufgebaut ist.";
 }
+/* =====================================================================
+   KI-COACH (Groq / OpenAI-kompatibel) — echte LLM-Persona.
+   Sicherheit: Der API-Key wird ausschließlich lokal (S.aiKey) gespeichert
+   und nie ins Repo/Build geschrieben. Für den öffentlichen Launch gehört
+   der Key hinter einen Server-Proxy — der Client-Pfad ist für persönliche
+   Nutzung / Demo. Fällt die KI aus, greift die Regel-Engine als Fallback.
+   ===================================================================== */
+const AI_MODEL="llama-3.3-70b-versatile";
+function aiActive(){ return !!(S.aiOn && S.aiKey && S.aiKey.length>20); }
+function aiPersona(){
+  return `Du bist COACH METRIC — der persönliche Kraft- und Ernährungs-Coach der App METRICGYM.
+Persönlichkeit: wissenschaftlich fundiert, direkt, motivierend, auf Augenhöhe. Du klingst wie ein exzellenter Personal Trainer, nicht wie ein Lehrbuch.
+Stil: Deutsch, per Du, KURZ (2–5 Sätze), konkret und umsetzbar. Keine Romane, keine Aufzählungs-Wände.
+Wissen: Progressive Überladung, Volumen-Korridore (MEV–MRV, Israetel), RIR-gesteuerte Intensität (Helms), gedehnte Isolation (Wolf), Protein 1,6–2,2 g/kg (Morton), Schlaf/Erholung. Nenne bei Bedarf knapp die Quelle.
+Regeln: Nutze die echten Nutzerdaten aus dem Kontext. Erfinde KEINE Zahlen, die nicht im Kontext stehen — wenn Daten fehlen, sag es und ermutige zum Loggen. Keine medizinischen Heilversprechen; bei Schmerz/Verletzung/Erkrankung → ärztlich abklären. Bleib immer ermutigend, aber ehrlich.`;
+}
+function aiContext(){
+  const p=S.profile; if(!p) return "Noch kein Profil angelegt.";
+  const a=p.a, tg=p.tg, eng=engagementStats();
+  const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length).map(n=>`${n} e1RM ${Math.round(bestE1(n))}kg`).slice(0,4).join(", ")||"noch keine geloggt";
+  const ins=buildInsights()[0];
+  return [
+    `Ziele: ${(tg.goals||[]).map(g=>GOAL_LABEL[g]).join(", ")} (${tg.dirLabel||""})`,
+    `Person: ${a.sex==="female"?"w":"m"}, ${a.age} J., ${a.weight} kg, ${a.height} cm, Erfahrung ${a.exp}, ${a.days} Trainingstage/Woche, Equipment ${EQ_LABEL?.[a.equipment]||a.equipment}`,
+    `Kalorienziel: Trainingstag ${tg.train.kcal} kcal / Ruhetag ${tg.rest.kcal} kcal · Protein ${tg.train.p} g/Tag`,
+    `Trainingsblock: Woche ${S.currentWeek}/4${S.currentWeek===4?" (Erholungswoche)":""} · Split ${S.planMode==="rotation"?"Rotation":"Wochentage"}`,
+    `Beste Lifts: ${lifts}`,
+    `Engagement: Streak ${eng.streak} Tage, Level ${eng.level}, ${eng.sessions} Einheiten gesamt`,
+    `Heutiger Status: ${S.checkin?S.checkin.score+"/100 ("+S.checkin.tier+")":"noch kein Check"}`,
+    ins?`Aktueller Insight: ${ins.t}`:"",
+  ].filter(Boolean).join("\n");
+}
+async function aiStream(history,onDelta){
+  const messages=[{role:"system",content:aiPersona()+"\n\n=== AKTUELLE NUTZERDATEN ===\n"+aiContext()}, ...history.slice(-10)];
+  const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.aiKey},
+    body:JSON.stringify({model:AI_MODEL,messages,temperature:0.6,max_tokens:500,stream:true}),
+  });
+  if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("Groq "+res.status+(m?": "+m:"")); }
+  const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
+  while(true){
+    const {done,value}=await reader.read(); if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    const parts=buf.split("\n"); buf=parts.pop();
+    for(const ln of parts){ const t=ln.trim(); if(!t.startsWith("data:"))continue;
+      const d=t.slice(5).trim(); if(d==="[DONE]")continue;
+      try{ const tok=JSON.parse(d).choices?.[0]?.delta?.content||""; if(tok){full+=tok;onDelta(full);} }catch{} }
+  }
+  return full.trim();
+}
+/* Eine Chat-Runde: streamt in die letzte .msg.ai-Bubble des Containers;
+   bei Fehler/kein Key → Fallback-Funktion. Persistiert in arr. */
+async function aiTurn(arr,chatId,fallbackFn){
+  const renderFn=window["__rerender_"+chatId];
+  const history=arr.filter(m=>m.t!=="…").map(m=>({role:m.r==="user"?"user":"assistant",content:m.t}));
+  if(!aiActive()){ arr[arr.length-1].t=fallbackFn(); save(); renderFn&&renderFn(); return; }
+  try{
+    const full=await aiStream(history,(txt)=>{
+      const box=document.getElementById(chatId); if(!box)return;
+      const bubble=box.querySelector(".msg.ai:last-child"); if(bubble){bubble.textContent=txt; box.scrollTop=box.scrollHeight;}
+    });
+    arr[arr.length-1].t=full||fallbackFn();
+  }catch(err){ arr[arr.length-1].t=fallbackFn()+"\n\n_(KI gerade nicht erreichbar — Standard-Antwort. Details: "+String(err.message||err).slice(0,80)+")_"; }
+  save(); renderFn&&renderFn();
+}
 function openPlanCoach(){
+  window["__rerender_pc-chat"]=openPlanCoach;
   const chips=["Warum ist dieser Plan perfekt für mich?","Kann ich mehr Volumen machen?","Wann steigere ich das Gewicht?","Was ist eine Erholungswoche?","Warum diese Reihenfolge?"];
-  const ask=(qq)=>{S.planChat.push({r:"user",t:qq});S.planChat.push({r:"ai",t:planAnswer(qq)});save();openPlanCoach();};
-  A.pcAsk=ask;
-  A.pcSend=()=>{const inp=document.getElementById("pc-in");if(!inp||!inp.value.trim())return;ask(inp.value.trim());};
+  const respond=(qq)=>{
+    S.planChat.push({r:"user",t:qq});
+    S.planChat.push({r:"ai",t:aiActive()?"…":planAnswer(qq)});
+    save(); openPlanCoach();
+    if(aiActive()) aiTurn(S.planChat,"pc-chat",()=>planAnswer(qq));
+  };
+  A.pcAsk=respond;
+  A.pcSend=()=>{const inp=document.getElementById("pc-in");if(!inp||!inp.value.trim())return;const q=inp.value.trim();inp.value="";respond(q);};
   A.pcVoice=()=>speech((txt)=>{const i=document.getElementById("pc-in");if(i){i.value=txt;A.pcSend();}},"pc-mic");
   A.pcClear=()=>{S.planChat=[];save();openPlanCoach();};
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
-    <div class="row mb4"><p class="display-m" style="display:flex;align-items:center;gap:8px;margin:0">${icon("message",18)} Plan-Assistent</p>
+    <div class="row mb4"><p class="display-m" style="display:flex;align-items:center;gap:8px;margin:0">${icon("message",18)} ${aiActive()?"Coach Metric":"Plan-Assistent"}${aiActive()?'<span class="badge volt" style="font-size:9px">KI</span>':""}</p>
       <button class="iconbtn" onclick="A.closeModal()" aria-label="Schließen">${icon("x",18)}</button></div>
-    <p class="xs t2 mb12">Frag alles zu deinem Plan — jede Antwort mit wissenschaftlicher Quelle.</p>
+    <p class="xs t2 mb12">${aiActive()?"Dein KI-Coach — kennt deine Daten, antwortet auf alles rund um Training & Ernährung.":'Frag alles zu deinem Plan. <button class="btn ghost" style="display:inline;width:auto;min-height:0;padding:0;font-size:11px;color:var(--hl)" onclick="A.closeModal();A.tab(\'profile\')">KI-Coach aktivieren →</button>'}</p>
     <div id="pc-chat" style="max-height:44vh;overflow-y:auto;margin-bottom:10px">
       ${S.planChat.length?S.planChat.map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${m.t}</div>`).join("")
         :`<p class="sm" style="line-height:1.6">Hi! Ich erkläre dir, <b>warum</b> dein Plan genau so aufgebaut ist — und beantworte deine Fragen mit Quellenangabe. Tipp eine Frage an oder schreib selbst.</p>`}
@@ -4186,6 +4262,11 @@ function renderProfile(){
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
     save(); render(); toast("✓ Snapshot gespeichert");
   };
+  A.aiActivate=()=>{const el=document.getElementById("ai-key");const k=(el&&el.value||"").trim();
+    if(k.length<20){toast("Bitte gültigen Groq-Key (gsk_…) einfügen");return;}
+    S.aiKey=k; S.aiOn=true; save(); render();
+    toast("KI-Coach aktiviert — frag Coach Metric alles");};
+  A.aiToggle=()=>{S.aiOn=!S.aiOn; save(); render(); toast(S.aiOn?"KI-Coach an":"KI-Coach aus");};
   A.measOpen=()=>openMeasureSheet();
   A.photoAdd=(el)=>{ addProgressPhoto(el.files&&el.files[0]); el.value=""; };
   A.photoCompare=()=>openPhotoCompare();
@@ -4234,7 +4315,7 @@ function renderProfile(){
        liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],
-       planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],
+       planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
        seenFeatures:false,precisionShown:false,billing:"monthly"};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
@@ -4287,6 +4368,16 @@ function renderProfile(){
         <button class="btn" onclick="A.saveSnapshot()">Snapshot jetzt speichern</button>`
       :`<div class="lockcard" style="margin-top:0"><p class="sm">${icon("lock",13)} Historische Profil-Stände zum Vorher/Nachher-Vergleich — Teil von ELITE.</p>
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('snapshots')">Mehr erfahren</button></div>`}
+    </div>
+
+    <div class="card" style="border-color:rgba(42,69,200,.3)"><p class="ct">${icon("brain",14)} KI-Coach (Coach Metric)</p>
+      ${aiActive()
+        ? `<p class="sm mb8"><span class="badge volt">aktiv</span> Dein KI-Coach ist an — er kennt deine Daten und antwortet frei im Plan-Assistenten und im Coach-Chat.</p>
+           <button class="btn mb8" onclick="A.aiToggle()">KI-Coach ausschalten</button>`
+        : `<p class="sm t2 mb8" style="line-height:1.6">Schalte den echten KI-Coach frei: freie Fragen zu Training, Ernährung & Motivation — mit deinen Daten beantwortet (Groq / Llama 3.3).</p>
+           <input type="password" id="ai-key" placeholder="Groq API-Key (gsk_…)" style="width:100%;margin-bottom:8px" autocomplete="off" value="${(S.aiKey||"").replace(/"/g,"")}">
+           <button class="btn volt" onclick="A.aiActivate()">KI-Coach aktivieren</button>`}
+      <p class="xs t2 mt8" style="line-height:1.5">${icon("lock",12)} Dein Key bleibt <b style="color:var(--t1)">nur auf diesem Gerät</b> (lokal gespeichert, nie an uns gesendet). Hinweis: In einer Web-App ist der Key im Browser sichtbar — für den öffentlichen Launch gehört er hinter einen Server. Teile ihn nicht & rotiere ihn bei Verdacht.</p>
     </div>
 
     <div class="card" style="border-color:rgba(42,69,200,.3)"><p class="ct">${icon("send",14)} Freunde einladen</p>
