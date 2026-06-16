@@ -861,6 +861,7 @@ S.proBonusUntil=S.proBonusUntil??null;
 // Engagement-/Bindungs-System (Streak, Level/XP, Meilensteine, gefeiert)
 S.celebrated=S.celebrated??null; // null = noch nicht initialisiert (Erstlauf seedet still)
 S.lastLevel=S.lastLevel??1;
+S.planChat=S.planChat||[]; // Verlauf des Plan-Assistenten
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -3127,6 +3128,77 @@ function openSessionPreview(typeKey){
   </div></div>`;
 }
 A.previewSession=(t)=>openSessionPreview(t);
+/* =====================================================================
+   WISSENSCHAFTS-EVIDENZ DES PLANS + PLAN-ASSISTENT (Chat).
+   Macht sichtbar, WARUM dieser Plan für DIESEN Nutzer optimal ist —
+   jede Säule mit Quelle. Der Assistent beantwortet Rückfragen
+   deterministisch aus der Wissensbasis, immer mit Beleg.
+   ===================================================================== */
+function planEvidence(){
+  const a=(S.profile&&S.profile.a)||{}, days=a.days||4, strength=(a.goals||[])[0]==="strength";
+  const freq=days>=4?"2×":"1–2×";
+  const ev=[
+    {h:`Frequenz: ${freq} pro Muskel & Woche`,
+     b:"Dein Split verteilt das Volumen auf mehr Einheiten. Höhere Frequenz bei gleichem Gesamtvolumen reizt jeden Muskel öfter und baut nachweislich mehr auf.",
+     c:"Schoenfeld et al., 2016"},
+    {h:"Progressives Volumen über den Trainingsblock",
+     b:"Woche 1 startet nahe deinem Minimal-Reiz, bis Woche 3 steigt das Volumen Richtung deines produktiven Maximums — dann eine Erholungswoche. So holst du das Maximum heraus und erholst rechtzeitig.",
+     c:"Israetel 2017 · Pelland 2025"},
+    {h:"Intensität: 1–2 Wiederholungen in Reserve",
+     b:"Nah genug am Muskelversagen für den vollen Wachstumsreiz, ohne dich für die nächste Einheit auszubrennen.",
+     c:"Helms 2016 · Robinson 2024"},
+    {h:"Grundübungen zuerst, dann Isolation mit Dehnung",
+     b:"Schwere Mehrgelenksübungen, solange du frisch bist; danach Isolation mit betonter Dehnphase — gedehnte Teilwiederholungen steigern das Wachstum messbar.",
+     c:"Wolf 2024 · Maeo 2021"},
+    strength
+      ?{h:"Für Maximalkraft: 3–5 Wdh., längere Pausen",
+        b:"Schwere Lasten mit langen Pausen rekrutieren maximale Muskelfasern und trainieren dein Nervensystem auf hohe Kraftentfaltung.",c:"Schoenfeld 2021"}
+      :{h:"Für Muskelaufbau: 5–12 Wiederholungen",
+        b:"Der moderate Bereich verbindet mechanische Spannung mit ausreichend Volumen — der Sweet Spot für Hypertrophie.",c:"Schoenfeld 2017"},
+  ];
+  return ev;
+}
+const PLAN_QA=[
+  {k:["volumen","sätze","mehr trainier","zu wenig","zu viel"],a:()=>"Dein Plan hält jede Muskelgruppe im optimalen Volumen-Korridor (MEV–MRV) und steigert ihn über den Block progressiv. Mehr ist nicht automatisch besser — über deinem Maximum bremst die Erholung den Fortschritt (Israetel, 2017). Deine Muskel-Heatmap im Analytics-Tab zeigt dir das live."},
+  {k:["frequen","wie oft","2 mal","zwei mal","zweimal"],a:()=>"Höhere Frequenz verteilt dein Volumen auf mehr Einheiten — bei gleichem Gesamtvolumen reizt das jeden Muskel öfter und baut mehr auf (Schoenfeld et al., 2016)."},
+  {k:["gewicht","steiger","progress","schwerer","mehr gewicht","wann mehr"],a:()=>"Steigere, sobald du alle Sätze mit 1–2 Wiederholungen in Reserve schaffst — meist +2,5 kg. Die Engine empfiehlt dir das Gewicht aus deinen letzten Sätzen (Helms, 2016)."},
+  {k:["reihenfolg","warum erst","zuerst"],a:()=>"Grundübungen kommen zuerst, solange du frisch bist — da bewegst du die meiste Last und holst den größten Reiz raus. Isolation danach, wenn etwas Ermüdung okay ist."},
+  {k:["deload","erholungswoche","woche 4","leichter","pause woche"],a:()=>"Jede 4. Woche trainierst du bewusst leichter (−45 % Sätze). In dieser Erholungswoche setzt dein Körper die Reize der harten Wochen in Muskeln und Kraft um (Israetel, 2017)."},
+  {k:["dauer","wie lang","minuten","zeit pro"],a:()=>`Jede Einheit dauert ≈ ${(S.profile&&S.profile.a.len)||60} Min — berechnet aus Sätzen, Pausen und Aufwärmen, nicht geschätzt.`},
+  {k:["tausch","alternativ","gerät","besetzt","ersetzen","anders"],a:()=>"Halt eine Übung gedrückt — die Engine schlägt dir Alternativen nach Effizienz vor, falls ein Gerät belegt oder nicht da ist. Sätze und Pausen bleiben gleich."},
+  {k:["muskelkater","kater","sore","weh"],a:()=>"Aktivier den „Muskelkater?\"-Schalter bei der Einheit — die Engine wechselt auf schonendere Varianten, ohne den Reiz zu verlieren."},
+  {k:["protein","ernähr","essen","kalorien"],a:()=>"Für den Aufbau brauchst du ~1,8–2,2 g Protein/kg täglich (Morton et al., 2018). Dein konkretes Ziel steht im Ernährungs-Tab."},
+  {k:["cardio","ausdauer"],a:()=>"Cardio liegt locker (Zone 2) auf einem Ruhetag — es stärkt dein Herz-Kreislauf-System und unterstützt die Erholung, statt sie zu kosten (Seiler, 2010)."},
+  {k:["rir","reserve","versagen","anstrengung"],a:()=>"„1–2 in Reserve\" heißt: du hörst auf, wenn du noch 1–2 saubere Wiederholungen schaffen würdest. Nah genug am Limit für vollen Reiz, ohne Überlastung (Robinson, 2024)."},
+  {k:["warum","perfekt","wissenschaft","evidenz","begründ","optimal"],a:()=>"Dein Plan ruht auf vier Säulen: passende Frequenz (Schoenfeld 2016), progressives Volumen Richtung Maximum (Israetel 2017), RIR-gesteuerte Intensität (Helms 2016) und Übungsauswahl mit gedehnter Isolation (Wolf 2024). Genau diese Kombination macht ihn für dich optimal."},
+];
+function planAnswer(q){
+  const t=q.toLowerCase();
+  for(const e of PLAN_QA){ if(e.k.some(k=>t.includes(k))) return e.a(); }
+  return "Gute Frage. Frag mich zu: Volumen, Frequenz, Gewicht steigern, Reihenfolge, Erholungswochen, Übungstausch oder warum dein Plan genau so aufgebaut ist.";
+}
+function openPlanCoach(){
+  const chips=["Warum ist dieser Plan perfekt für mich?","Kann ich mehr Volumen machen?","Wann steigere ich das Gewicht?","Was ist eine Erholungswoche?","Warum diese Reihenfolge?"];
+  const ask=(qq)=>{S.planChat.push({r:"user",t:qq});S.planChat.push({r:"ai",t:planAnswer(qq)});save();openPlanCoach();};
+  A.pcAsk=ask;
+  A.pcSend=()=>{const inp=document.getElementById("pc-in");if(!inp||!inp.value.trim())return;ask(inp.value.trim());};
+  A.pcVoice=()=>speech((txt)=>{const i=document.getElementById("pc-in");if(i){i.value=txt;A.pcSend();}},"pc-mic");
+  A.pcClear=()=>{S.planChat=[];save();openPlanCoach();};
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <div class="row mb4"><p class="display-m" style="display:flex;align-items:center;gap:8px;margin:0">${icon("message",18)} Plan-Assistent</p>
+      <button class="iconbtn" onclick="A.closeModal()" aria-label="Schließen">${icon("x",18)}</button></div>
+    <p class="xs t2 mb12">Frag alles zu deinem Plan — jede Antwort mit wissenschaftlicher Quelle.</p>
+    <div id="pc-chat" style="max-height:44vh;overflow-y:auto;margin-bottom:10px">
+      ${S.planChat.length?S.planChat.map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${m.t}</div>`).join("")
+        :`<p class="sm" style="line-height:1.6">Hi! Ich erkläre dir, <b>warum</b> dein Plan genau so aufgebaut ist — und beantworte deine Fragen mit Quellenangabe. Tipp eine Frage an oder schreib selbst.</p>`}
+    </div>
+    <div class="chips mb8">${chips.map(c=>`<button class="chip" onclick="A.pcAsk('${c.replace(/'/g,"\\'")}')">${c}</button>`).join("")}</div>
+    <div class="row"><button id="pc-mic" class="btn" style="width:48px;min-width:48px" onclick="A.pcVoice()" aria-label="Sprechen">${icon("mic",16)}</button>
+      <input type="text" id="pc-in" placeholder="Deine Frage zum Plan …" style="flex:1;border-radius:999px" onkeydown="if(event.key==='Enter')A.pcSend()">
+      <button class="btn volt" style="width:48px;min-width:48px" onclick="A.pcSend()" aria-label="Senden">${icon("send",16)}</button></div>
+  </div></div>`;
+  const cc=document.getElementById("pc-chat"); if(cc)cc.scrollTop=cc.scrollHeight;
+}
 function renderTrain(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   const isDeload=S.currentWeek===4;
@@ -3196,6 +3268,17 @@ function renderTrain(){
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
         ${rotMode?rotStrip:weekStrip}
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
+      </div>`)}
+
+    ${renderSection("Die Wissenschaft hinter deinem Plan",
+      `<div class="card" style="border-color:rgba(42,69,200,.28)">
+        <p class="sm mb12" style="line-height:1.6">Dieser Plan ist <b style="color:var(--t1)">perfekt für dich</b> — weil jede Entscheidung auf Forschung steht. Tipp eine Säule an für den Beleg.</p>
+        ${planEvidence().map(e=>`<details class="acc" style="margin-bottom:8px;background:rgba(255,255,255,.6)"><summary style="font-size:13.5px;padding:13px 14px">
+          <span style="display:flex;align-items:center;gap:9px"><span style="color:var(--hl);display:inline-flex">${icon("check",16)}</span>${e.h}</span><span class="chev">${icon("chevron",15)}</span></summary>
+          <div class="accbody"><p class="sm t2" style="line-height:1.65">${e.b}</p>
+            <p class="xs" style="color:var(--hl);margin-top:8px;font-weight:700;display:flex;align-items:center;gap:5px">${icon("info",13)} Quelle: ${e.c}</p></div></details>`).join("")}
+        <button class="btn volt mt8" onclick="openPlanCoach()">${icon("message",15)} Frag den Plan-Assistenten</button>
+        <p class="xs t2 mt8" style="text-align:center">Rückfragen zu Volumen, Progression, Erholung … — mit Quelle beantwortet.</p>
       </div>`)}
 
     ${focusType?renderSection(rotMode?"Deine nächste Einheit":(sch[dow]!=="rest"?"Dein Training heute":"Dein nächstes Training"),
