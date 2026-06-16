@@ -2465,6 +2465,23 @@ function renderReveal(){
   const base={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[a.exp]||[12,22];
   const dFac=Math.min(1,0.55+(a.days||4)*0.11), pLo=Math.round(base[0]*dFac), pHi=Math.round(base[1]*dFac);
   const goalWord={fat_loss:"schlanker & definierter",muscle_gain:"sichtbar muskulöser",recomp:"definierter & stärker",strength:"deutlich stärker",general:"fitter",endurance:"ausdauernder",mobility:"beweglicher"}[tg.goals[0]]||"stärker";
+  const m4=Math.max(2,Math.round(pHi*0.35)), m8=Math.round(pHi*0.7);
+  // Ziel-spezifische „Das erreichst du"-Vision
+  const G=tg.goals[0];
+  const winLine={fat_loss:`Sichtbar weniger Körperfett — ~${Math.max(2,Math.round((a.weight||80)*0.04))} kg in 12 Wochen realistisch`,
+    muscle_gain:`Mehr Muskelmasse — sichtbar fülliger in Brust, Schultern, Armen`,
+    strength:`Deutlich mehr Maximalkraft auf Bank, Kniebeuge & Co.`,
+    recomp:`Gleichzeitig schlanker und stärker — der Body-Recomp-Effekt`,
+    general:`Spürbar mehr Energie, Kraft und Fitness im Alltag`,
+    endurance:`Mehr Ausdauer — länger durchhalten, schneller erholen`,
+    mobility:`Beweglicher und schmerzfreier in jeder Bewegung`}[G]||"Sichtbarer Fortschritt, Woche für Woche";
+  const wins=[
+    winLine,
+    `+${pLo}–${pHi}% Kraft auf deinen Grundübungen`,
+    `Neue persönliche Rekorde — jeder wissenschaftlich belegt`,
+    `Deinen Fortschritt schwarz auf weiß in Live-Statistiken`,
+    `Eine Gewohnheit, die hält — Streak, Level & Meilensteine`,
+  ];
   setTimeout(()=>{try{confetti();}catch{}},220);
   root.innerHTML=`<div class="fade" style="text-align:center">
     <div style="width:62px;height:62px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:6px auto 12px">${icon("check",34)}</div>
@@ -2476,6 +2493,32 @@ function renderReveal(){
       <p class="hero-num volt-txt" style="font-size:42px;line-height:1">+${pLo}–${pHi} %</p>
       <p class="sm t2" style="margin-top:2px">mehr Kraft auf deinen Grundübungen — und sichtbar ${goalWord}.</p>
     </div>
+
+    <!-- DOPAMIN: Das erreichst du -->
+    <div class="card" style="text-align:left;background:var(--accent);border:none">
+      <p class="ct" style="color:rgba(255,255,255,.65)">${icon("star",14)} Das erreichst du mit METRICGYM</p>
+      ${wins.map(w=>`<div style="display:flex;gap:11px;align-items:flex-start;padding:6px 0">
+        <span style="width:24px;height:24px;min-width:24px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center">${icon("check",15)}</span>
+        <span class="sm" style="color:#fff;line-height:1.45;font-weight:500">${w}</span></div>`).join("")}
+    </div>
+
+    <!-- DOPAMIN: dein Weg, Woche für Woche -->
+    <div class="card" style="text-align:left">
+      <p class="ct">${icon("calendar",14)} Dein Weg — Meilenstein für Meilenstein</p>
+      ${[["Woche 1","Routine startet — dein Plan sitzt, erste Logs"],
+         ["Woche 4",`+~${m4}% Kraft · deine ersten Rekorde fallen`],
+         ["Woche 8",`+~${m8}% Kraft · die Veränderung wird sichtbar`],
+         ["Woche 12",`+${pLo}–${pHi}% Kraft · ${goalWord}`]]
+        .map(([w,t],i,arr)=>`<div style="display:flex;gap:12px">
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <div style="width:13px;height:13px;border-radius:50%;background:${i===arr.length-1?"var(--hl)":"var(--accent)"};margin-top:3px"></div>
+            ${i<arr.length-1?'<div style="width:2px;flex:1;background:var(--s3);min-height:20px"></div>':""}</div>
+          <div style="padding-bottom:${i<arr.length-1?"14px":"0"}"><p class="sm" style="font-weight:700">${w}</p><p class="xs t2" style="line-height:1.4">${t}</p></div>
+        </div>`).join("")}
+      <p class="xs t2 mt8" style="line-height:1.5">Realistische Orientierung auf Basis der Trainingswissenschaft — deine echten Zahlen begleiten dich ab Tag 1.</p>
+    </div>
+
+    <p class="label" style="text-align:center;margin-bottom:8px">Dein Start-Setup</p>
     <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
       ${[[nfi.format(tg.train.kcal),"kcal · Trainingstag"],[nfi.format(tg.train.p)+" g","Protein/Tag"],[trainCount+"×","Training/Woche"]].map(([v,l])=>`
         <div class="card" style="margin:0;padding:14px 6px"><p class="metric" style="font-size:17px;font-weight:700">${v}</p><p class="xs t2" style="margin-top:3px;line-height:1.3">${l}</p></div>`).join("")}
