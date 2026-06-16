@@ -610,6 +610,26 @@ const store={
 let saveTimer=null;
 function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>store.set(KEY,JSON.stringify(S)),100); }
 
+/* Foto-Speicher: Bilder liegen in IndexedDB (nicht im localStorage-State, der
+   sonst die Quote sprengt) — in S stehen nur Metadaten. Komplett lokal. */
+const PDB={db:null,
+  open(){return new Promise((res)=>{try{const r=indexedDB.open("mg-photos",1);
+    r.onupgradeneeded=()=>r.result.createObjectStore("p");
+    r.onsuccess=()=>{PDB.db=r.result;res(PDB.db);}; r.onerror=()=>res(null);}catch{res(null);}});},
+  async put(id,v){const db=await PDB.open();if(!db)return;return new Promise(r=>{const tx=db.transaction("p","readwrite");tx.objectStore("p").put(v,id);tx.oncomplete=()=>r();tx.onerror=()=>r();});},
+  async get(id){const db=await PDB.open();if(!db)return null;return new Promise(r=>{const t=db.transaction("p","readonly").objectStore("p").get(id);t.onsuccess=()=>r(t.result||null);t.onerror=()=>r(null);});},
+  async del(id){const db=await PDB.open();if(!db)return;return new Promise(r=>{const tx=db.transaction("p","readwrite");tx.objectStore("p").delete(id);tx.oncomplete=()=>r();tx.onerror=()=>r();});}};
+// Bild herunterskalieren (max 900px, JPEG) → kleine dataURL für Vergleichsansicht
+function downscaleImage(file,max,cb){
+  const fr=new FileReader();
+  fr.onload=()=>{const img=new Image();
+    img.onload=()=>{let{width:w,height:h}=img; const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s);h=Math.round(h*s);
+      const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
+      cb(c.toDataURL("image/jpeg",0.82));};
+    img.onerror=()=>cb(null); img.src=fr.result;};
+  fr.onerror=()=>cb(null); fr.readAsDataURL(file);
+}
+
 // ---------- Engine ----------
 function mifflin(sex,age,h,w){ return Math.round(10*w+6.25*h-5*age+(sex==="male"?5:-161)); }
 function katch(w,bf){ return Math.round(370+21.6*w*(1-bf/100)); }
@@ -853,6 +873,9 @@ S.scheduleRationale=S.scheduleRationale??null;
 S.exOverrides=S.exOverrides||{};
 S.rhrLog=S.rhrLog||[];
 S.billing=S.billing||"monthly";
+// Körper-Fortschritt: Fotos (Metadaten; Bild in IndexedDB) + Maße
+S.photos=S.photos||[];   // [{id,t,weight}]
+S.measure=S.measure||[]; // [{t, waist,chest,arm,thigh,hips}]
 // Flexibler Plan: A/B-Varianten + Rotations-Modus (nicht an Wochentage gekoppelt)
 S.planB=S.planB||null;
 S.planMode=S.planMode||"week"; // "week" = Wochentage · "rotation" = fortlaufend
@@ -4047,6 +4070,53 @@ function importHealthData(text,fname){
   return null;
 }
 
+/* =====================================================================
+   KÖRPER-FORTSCHRITT — Fotos (Vorher/Nachher) + Maße. Stärkster sichtbarer
+   Beweis = stärkster Bindungs-/Dopamin-Trigger. Alles lokal.
+   ===================================================================== */
+const MEASURE_FIELDS=[["waist","Taille"],["chest","Brust"],["arm","Arm"],["thigh","Oberschenkel"],["hips","Hüfte"]];
+function openMeasureSheet(){
+  const last=S.measure[S.measure.length-1]||{};
+  A.measSave=()=>{
+    const entry={t:Date.now()}; let any=false;
+    MEASURE_FIELDS.forEach(([k])=>{const el=document.getElementById("ms-"+k);const v=parseFloat((el&&el.value||"").replace(",","."));if(isFinite(v)&&v>0){entry[k]=v;any=true;}});
+    if(!any){toast("Mindestens einen Wert eintragen");return;}
+    S.measure.push(entry); save(); overlay.innerHTML=""; render(); toast("Maße gespeichert");
+  };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="display-m mb4">Maße eintragen</p>
+    <p class="xs t2 mb16">In cm. Leer lassen, was du nicht misst.</p>
+    ${MEASURE_FIELDS.map(([k,l])=>`<div class="row mb8"><span class="sm" style="width:130px">${l}</span>
+      <input type="number" id="ms-${k}" inputmode="decimal" placeholder="${last[k]?last[k]+" (zuletzt)":"cm"}" style="flex:1" step="0.1" min="0" max="300"></div>`).join("")}
+    <button class="btn volt mt8" onclick="A.measSave()">Speichern</button></div></div>`;
+}
+function addProgressPhoto(file){
+  if(!file)return;
+  downscaleImage(file,900,async(durl)=>{
+    if(!durl){toast("Foto konnte nicht gelesen werden");return;}
+    const id="ph"+Date.now();
+    await PDB.put(id,durl);
+    S.photos.push({id,t:Date.now(),weight:S.profile?S.profile.a.weight:null});
+    save(); render(); toast("Foto hinzugefügt");
+  });
+}
+async function openPhotoCompare(aIdx,bIdx){
+  const ph=S.photos; if(ph.length<1)return;
+  aIdx=aIdx??0; bIdx=bIdx??ph.length-1;
+  const A0=ph[aIdx], B0=ph[bIdx];
+  const [da,db]=await Promise.all([PDB.get(A0.id),PDB.get(B0.id)]);
+  const cell=(m,durl)=>`<div style="flex:1;text-align:center">
+    <div style="aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--s2)">${durl?`<img src="${durl}" style="width:100%;height:100%;object-fit:cover">`:""}</div>
+    <p class="xs t2 mt4">${fmtD(new Date(m.t))}${m.weight?" · "+fmtKg(m.weight):""}</p></div>`;
+  const strip=ph.map((p,i)=>`<button class="pill ${i===aIdx?"active":""}" onclick="A.cmpSet('a',${i})">${fmtD(new Date(p.t))}</button>`).join("");
+  A.cmpSet=(slot,i)=>{ if(slot==="a")openPhotoCompare(i,bIdx); };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="display-m mb12">Vorher / Nachher</p>
+    <div style="display:flex;gap:10px">${cell(A0,da)}${cell(B0,db)}</div>
+    ${A0.weight&&B0.weight?`<p class="sm t2 mt12" style="text-align:center">Gewicht: <b style="color:var(--t1)">${fmtKg(B0.weight-A0.weight>=0?B0.weight-A0.weight:A0.weight-B0.weight)}</b> ${B0.weight<A0.weight?"verloren":"zugelegt"} über ${Math.max(1,Math.round((B0.t-A0.t)/dayMs))} Tage</p>`:""}
+    <p class="xs t2 mt12">Linkes Foto wählen:</p><div class="pills">${strip}</div>
+    <button class="btn mt8" onclick="A.closeModal()">Schließen</button></div></div>`;
+}
 let EP=null;
 function renderProfile(){
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
@@ -4116,6 +4186,10 @@ function renderProfile(){
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
     save(); render(); toast("✓ Snapshot gespeichert");
   };
+  A.measOpen=()=>openMeasureSheet();
+  A.photoAdd=(el)=>{ addProgressPhoto(el.files&&el.files[0]); el.value=""; };
+  A.photoCompare=()=>openPhotoCompare();
+  A.delPhoto=async(id)=>{ await PDB.del(id); S.photos=S.photos.filter(p=>p.id!==id); save(); render(); };
   A.healthFile=(el)=>{
     const f=el.files&&el.files[0]; if(!f)return;
     const reader=new FileReader();
@@ -4153,13 +4227,14 @@ function renderProfile(){
   };
   A.wipeConfirm=()=>{
     try{localStorage.removeItem(KEY);}catch{}
+    try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
     S={screen:"landing",users:[],currentUser:null,loginAttempts:0,lockoutUntil:null,devMode:false,step:0,
        a:{height:181,weight:82,sleep:7,goals:[],injuries:[]},profile:null,tab:"home",currentWeek:1,checkin:null,checkinDate:null,
        schedule:null,scheduleSuggestion:null,scheduleRationale:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
        liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],
-       planMode:"week",rotation:null,rotationPos:0,
+       planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],
        seenFeatures:false,precisionShown:false,billing:"monthly"};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
@@ -4184,6 +4259,24 @@ function renderProfile(){
         <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
       </div>
       <button class="btn mt16" onclick="A.editProfile()">Profil bearbeiten</button></div>`:""}
+    <div class="card"><p class="ct">${icon("camera",14)} Körper-Fortschritt</p>
+      ${(()=>{const m=S.measure;const last=m[m.length-1],first=m[0];
+        if(!last)return `<p class="sm t2 mb12">Tracke Maße & Fotos — dein sichtbarer Beweis, wie weit du kommst.</p>`;
+        return `<div class="chips mb12">${MEASURE_FIELDS.filter(([k])=>last[k]!=null).map(([k,l])=>{
+          const d=first&&first!==last&&first[k]!=null?last[k]-first[k]:null;
+          return `<span class="statchip">${l} ${nf.format(last[k])} cm${d!=null&&Math.abs(d)>=0.1?` <span style="color:${d<0?"var(--hl)":"var(--t2)"}">(${d>0?"+":""}${nf.format(Math.round(d*10)/10)})</span>`:""}</span>`;}).join("")}</div>`;})()}
+      <div class="grid2" style="gap:8px">
+        <button class="btn" onclick="A.measOpen()">${icon("edit",14)} Maße eintragen</button>
+        <button class="btn" onclick="document.getElementById('photo-file').click()">${icon("camera",14)} Foto hinzufügen</button></div>
+      <input type="file" id="photo-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoAdd(this)">
+      ${S.photos.length?`<div class="row mt12" style="gap:6px;overflow-x:auto;padding-bottom:4px">
+        ${S.photos.slice(-8).map(p=>`<div style="position:relative;flex-shrink:0">
+          <div id="thumb-${p.id}" style="width:70px;height:90px;border-radius:10px;background:var(--s2);background-size:cover;background-position:center"></div>
+          <button class="iconbtn" style="position:absolute;top:-6px;right:-6px;min-width:24px;min-height:24px;background:var(--bg);border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.2);font-size:11px" onclick="A.delPhoto('${p.id}')" aria-label="Foto löschen">${icon("x",12)}</button>
+        </div>`).join("")}</div>
+        ${S.photos.length>=2?`<button class="btn volt mt12" onclick="A.photoCompare()">${icon("sparkle",15)} Vorher / Nachher ansehen</button>`:`<p class="xs t2 mt8">Ab dem 2. Foto kannst du Vorher/Nachher vergleichen.</p>`}`:""}
+    </div>
+
     <div class="card"><p class="ct">Profil-Snapshots</p>
       ${S.tier==="elite"?`
         ${S.snapshots.length?`<ul class="list mb8">${S.snapshots.slice(-4).map(sn=>`<li>
@@ -4226,6 +4319,8 @@ function renderProfile(){
       <p class="xs t2 mt8">DSGVO Art. 17 / 20 · Alle Daten liegen lokal auf diesem Gerät.</p></div>
     <button class="btn ghost" onclick="A.logout()">⎋ Abmelden</button>
     <p class="xs" style="color:var(--t3);text-align:center;margin-top:16px">METRICGYM V4 · Performance Intelligence</p>`;
+  // Foto-Thumbnails asynchron aus IndexedDB nachladen
+  S.photos.slice(-8).forEach(async(p)=>{const d=await PDB.get(p.id);const el=document.getElementById("thumb-"+p.id);if(el&&d)el.style.backgroundImage=`url(${d})`;});
 }
 
 // ---------- Boot ----------
