@@ -98,15 +98,33 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   h1,h2,h3,.display-m,.hero-num,.huge,.dial,.logo-text,.lp-h,.lp-h2,.lp-quote,.lp-claim .n,.tier-card .display-m{font-family:var(--font-display);}
   .serif{font-family:var(--font-serif); font-weight:500; letter-spacing:-.01em;}
   /* Ambient Aurora HINTER der Glas-Ebene — tiefe, leuchtende Bronze/Amber-Verläufe auf Schwarz */
+  /* Animierte Aurora: zwei langsam driftende Gradient-Ebenen ueber dem soliden Schwarz
+     -> lebendiger, hochwertiger Hintergrund auf ALLEN Seiten (GPU-composited, subtil). */
   body::before{
-    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    content:""; position:fixed; inset:-30%; z-index:-2; pointer-events:none; will-change:transform;
     background:
-      radial-gradient(55% 38% at 12% 4%, rgba(74,111,216,.22), transparent 70%),
-      radial-gradient(48% 34% at 92% 14%, rgba(130,110,214,.18), transparent 72%),
-      radial-gradient(60% 46% at 50% 102%, rgba(58,150,200,.16), transparent 70%),
-      radial-gradient(40% 30% at 80% 80%, rgba(150,170,214,.08), transparent 70%),
-      var(--bg);
+      radial-gradient(46% 32% at 18% 8%, rgba(74,111,216,.28), transparent 70%),
+      radial-gradient(42% 30% at 88% 16%, rgba(132,110,216,.22), transparent 72%),
+      radial-gradient(54% 42% at 50% 100%, rgba(58,150,200,.20), transparent 70%);
+    animation:auroraA 28s ease-in-out infinite alternate;
   }
+  body::after{
+    content:""; position:fixed; inset:-30%; z-index:-2; pointer-events:none; will-change:transform;
+    background:
+      radial-gradient(40% 30% at 78% 82%, rgba(150,170,220,.14), transparent 70%),
+      radial-gradient(38% 30% at 6% 68%, rgba(95,110,205,.16), transparent 72%);
+    animation:auroraB 37s ease-in-out infinite alternate;
+  }
+  @keyframes auroraA{
+    0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+    50%{transform:translate3d(3%,-2.5%,0) scale(1.1) rotate(2deg)}
+    100%{transform:translate3d(-2.5%,3%,0) scale(1.06) rotate(-2deg)}
+  }
+  @keyframes auroraB{
+    0%{transform:translate3d(0,0,0) scale(1.05)}
+    100%{transform:translate3d(3.5%,-3%,0) scale(1.16)}
+  }
+  @media (prefers-reduced-motion:reduce){ body::before,body::after{animation:none} }
   .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
   .hero-num{font-family:var(--font-hero); font-weight:800; letter-spacing:-0.03em;}
   .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:70px 16px 124px;}
@@ -2993,7 +3011,7 @@ function renderHome(){
     <!-- IMMERSIVE TODAY-HERO (Oura/Apple-würdig): atmosphärische Szene, Score, Serif-Voice, USP-CTA -->
     ${(()=>{
       const isRest=tType==="rest", tLabel=(TYPE_META[tType]||{}).label||"Training";
-      const headline=r?(r.score>=80?"Heute steckt richtig viel in dir.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Wie viel steckt heute in dir?";
+      const headline=r?(r.score>=80?"Du bist heute voll belastbar.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Wie bereit bist du heute?";
       const sub=isRest?"Dein Plan gibt dir heute frei — Erholung ist Teil des Fortschritts."
         :r?(r.score>=80?`Dein Körper ist bereit — heute steht <b style="color:var(--t1)">${tLabel}</b> an. Geh an die obere Range deiner Sätze.`
               :r.score>=60?`Heute steht <b style="color:var(--t1)">${tLabel}</b> an — trainier wie geplant.`
