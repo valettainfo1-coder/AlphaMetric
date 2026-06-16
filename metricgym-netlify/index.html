@@ -121,18 +121,17 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      der Seiteninhalt durchs offene Menü. */
   .card,.acc,.tier-card,.lockcard,.warncard,.qcard,.modal,.sheet{
     position:relative;
-    background:var(--glass-bg);
-    -webkit-backdrop-filter:blur(24px) saturate(180%);
-    backdrop-filter:blur(24px) saturate(180%);
+    background:linear-gradient(168deg, rgba(255,255,255,.06), rgba(255,255,255,.012) 62%), var(--glass-bg);
+    -webkit-backdrop-filter:blur(26px) saturate(150%);
+    backdrop-filter:blur(26px) saturate(150%);
     border:1px solid var(--stroke);
-    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03),
-      0 8px 24px rgba(0,0,0,.06), inset 0 1px 0 var(--surface);
+    box-shadow:0 12px 34px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.06);
   }
   .card::before,.tier-card::before,.sheet::before,.modal::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%);
+    background:linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,0) 48%);
   }
-  .card{border-radius:20px; padding:var(--sp-5); margin-bottom:var(--sp-4);}
+  .card{border-radius:24px; padding:22px; margin-bottom:14px;}
   .modal,.sheet{background:var(--glass-bg-strong); -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%);}
   /* Glass-Light für Listen (Perf: kein blur auf vielen Elementen) */
   .acc,.qcard,.lockcard,.warncard{-webkit-backdrop-filter:none; backdrop-filter:none; background:var(--surface);}
@@ -389,17 +388,24 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .tier-feat span:first-child{color:var(--hl); flex-shrink:0; font-weight:700;}
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
-  /* ===== Oura-Style Today-Hero: Gradient-Score-Ring + Serif-Insight + Score-Kacheln ===== */
-  .hero-today{padding:6px 0 2px; margin-bottom:var(--sp-5);}
-  .hero-ring{display:flex; justify-content:center; margin:16px 0 8px; filter:drop-shadow(0 14px 36px rgba(110,130,230,.26));}
-  .hero-insight{font-family:var(--font-serif); font-weight:500; font-size:24px; line-height:1.26; letter-spacing:-.01em;
-    text-align:center; color:var(--t1); max-width:300px; margin:8px auto 20px;}
-  .score-tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
-  .score-tile{background:var(--glass-bg); border:1px solid var(--stroke); border-radius:18px; padding:15px 10px 13px; text-align:center;
-    -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); box-shadow:0 6px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.05);}
-  .score-tile .st-ic{color:var(--hl); display:flex; justify-content:center; margin-bottom:7px;}
-  .score-tile .st-v{font-family:var(--font-hero); font-weight:800; font-size:25px; line-height:1; letter-spacing:-.02em;}
-  .score-tile .st-l{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); margin-top:6px; font-weight:700;}
+  /* ===== Immersive Today-Hero (Oura/Apple-würdig): atmosphärische Szene + Score + Serif-Voice ===== */
+  .today-hero{position:relative; margin:-70px -16px 20px; padding:80px 22px 30px; overflow:hidden; text-align:center;}
+  .today-hero .th-scene{position:absolute; inset:0; z-index:-1;
+    background:
+      radial-gradient(120% 78% at 50% -6%, #313F70 0%, #1A2342 36%, #0C1020 70%, var(--bg) 100%),
+      radial-gradient(70% 44% at 50% 86%, rgba(125,160,240,.16), transparent 72%);}
+  .today-hero .th-scene::after{content:""; position:absolute; inset:0;
+    background:radial-gradient(78% 46% at 50% 16%, rgba(165,195,255,.14), transparent 60%);}
+  .th-metrics{display:flex; justify-content:center; gap:26px; margin-bottom:14px;}
+  .th-metric{background:none; border:none; font-family:inherit; cursor:pointer; color:inherit; padding:0;}
+  .th-metric .m-ic{color:var(--hl); display:flex; justify-content:center; margin-bottom:5px; opacity:.92;}
+  .th-metric .m-v{font-family:var(--font-hero); font-weight:700; font-size:19px; line-height:1; letter-spacing:-.01em;}
+  .th-metric .m-l{font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--t2); margin-top:4px; font-weight:600;}
+  .th-ring{display:flex; justify-content:center; margin:8px 0 2px; filter:drop-shadow(0 18px 44px rgba(110,140,240,.34));}
+  .th-lbl{font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--t2); font-weight:700; margin-top:8px;}
+  .th-headline{font-family:var(--font-serif); font-weight:500; font-size:31px; line-height:1.08; letter-spacing:-.015em; margin:8px auto 10px; max-width:330px;}
+  .th-sub{font-size:13.5px; line-height:1.55; color:var(--t2); max-width:300px; margin:0 auto 18px;}
+  .th-cta{max-width:260px; margin:0 auto;}
   /* Value Banner: Soft-Paper-Karte mit Icon-Kreis */
   .banner{display:flex; gap:12px; align-items:center; border-radius:18px; padding:14px 14px 14px 16px; margin-bottom:var(--sp-4);
     background:var(--surface); border:1px solid rgba(255,255,255,.65);
@@ -2951,26 +2957,40 @@ function renderHome(){
         <circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="var(--hl)" stroke-width="${st}" stroke-linecap="round" stroke-dasharray="${pct*cc} ${cc}"/></svg>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--hl)">${icon("flame",22)}</div></div>`;})();
   root.innerHTML=`
-    <!-- TODAY-HERO (Oura-Stil): Gradient-Score-Ring + Serif-Insight + Score-Kacheln -->
-    <section class="hero-today fade">
-      <p class="sm" style="text-align:center;color:var(--t3)">${greet()}, ${userName()} · ${dfLong.format(new Date())}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
-      <div class="hero-ring">
-        ${r?`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,180)}</button>`
-          :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
-              <div style="width:180px;height:180px;border-radius:50%;border:8px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-                <span style="font-size:30px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.4">Bereit für heute?<br>Check in 10 Sek.</span>
-              </div></button>`}
-      </div>
-      <p class="hero-insight">${r?(r.score>=80?"Heute steckt richtig viel in dir.":r.score>=60?"Solide Basis — trainier wie geplant.":r.score>=40?"Geh es heute kontrolliert an.":"Heute hat Erholung Vorrang."):(ins.length?ins[0].t:"Mach deinen 10-Sekunden-Check und sieh, wie viel heute in dir steckt.")}</p>
-      <div class="score-tiles">
-        <div class="score-tile"><div class="st-ic">${icon("flame",18)}</div><p class="st-v">${streak}</p><p class="st-l">Tage Streak</p></div>
-        <div class="score-tile"><div class="st-ic">${icon("zap",18)}</div><p class="st-v" style="color:var(--hl)">${eng.level}</p><p class="st-l">Level</p></div>
-        <button class="score-tile" style="cursor:pointer;font-family:inherit;color:inherit" onclick="A.q('train')"><div class="st-ic">${icon((TYPE_META[tType]||{}).icon||"dumbbell",18)}</div><p class="st-v" style="font-size:15px;padding-top:6px">${(TYPE_META[tType]||{}).label||"Training"}</p><p class="st-l">Heute</p></button>
-      </div>
-      <div class="row mt12" style="gap:8px"><div class="progress" style="height:6px;flex:1"><div style="width:${Math.round(eng.levelPct*100)}%;background:linear-gradient(90deg,#9DB4F0,#4A6FD8)"></div></div>
-        <span class="metric xs t2" style="white-space:nowrap">${eng.toNext} XP bis L${eng.level+1}</span></div>
-      <p class="xs t2" style="text-align:center;margin-top:9px">${eng.activeToday?"Heute gesichert ✓ — bleib dran.":streak>0?`Trag heute etwas ein, sonst reißt deine ${streak}-Tage-Serie.`:"Starte heute deine Serie."}</p>
-    </section>
+    <!-- IMMERSIVE TODAY-HERO (Oura/Apple-würdig): atmosphärische Szene, Score, Serif-Voice, USP-CTA -->
+    ${(()=>{
+      const isRest=tType==="rest", tLabel=(TYPE_META[tType]||{}).label||"Training";
+      const headline=r?(r.score>=80?"Heute steckt richtig viel in dir.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Wie viel steckt heute in dir?";
+      const sub=isRest?"Dein Plan gibt dir heute frei — Erholung ist Teil des Fortschritts."
+        :r?(r.score>=80?`Dein Körper ist bereit — heute steht <b style="color:var(--t1)">${tLabel}</b> an. Geh an die obere Range deiner Sätze.`
+              :r.score>=60?`Heute steht <b style="color:var(--t1)">${tLabel}</b> an — trainier wie geplant.`
+              :r.score>=40?`Heute <b style="color:var(--t1)">${tLabel}</b>, aber gedrosselt — RPE 7 als Deckel.`
+              :`Heute wäre <b style="color:var(--t1)">${tLabel}</b> — halte es leicht oder verschieb auf morgen.`)
+        :`Mach den 10-Sekunden-Check — dein <b style="color:var(--t1)">${tLabel}</b>-Plan passt sich deiner Tagesform an.`;
+      const cta=isRest?`<button class="btn volt th-cta" onclick="A.q('train')">${icon("calendar",15)} Plan ansehen</button>`
+        :r?`<button class="btn volt th-cta" onclick="A.start()">${icon("play",15)} Training beginnen</button>`
+            :`<button class="btn volt th-cta" onclick="A.openStatus()">${icon("activity",15)} Tages-Check starten</button>`;
+      const metric=(ic,v,l,oc)=>`<button class="th-metric" ${oc?`onclick="${oc}"`:""}><div class="m-ic">${icon(ic,17)}</div><p class="m-v">${v}</p><p class="m-l">${l}</p></button>`;
+      return `<section class="today-hero fade"><div class="th-scene"></div>
+        <p class="sm" style="color:var(--t2);margin-bottom:14px">${greet()}, ${userName()}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
+        <div class="th-metrics">
+          ${metric("activity",r?r.score:"–","Bereitschaft","A.openStatus()")}
+          ${metric("flame",streak,"Streak")}
+          ${metric("zap",eng.level,"Level")}
+        </div>
+        <div class="th-ring">
+          ${r?`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,184)}</button>`
+            :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
+                <div style="width:184px;height:184px;border-radius:50%;border:7px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+                  <span style="font-size:32px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.4">Bereit für heute?<br>Check in 10 Sek.</span>
+                </div></button>`}
+        </div>
+        <p class="th-lbl">${r?"Bereitschaft":"Tages-Check"}</p>
+        <p class="th-headline serif">${headline}</p>
+        <p class="th-sub">${sub}</p>
+        ${cta}
+      </section>`;
+    })()}
 
     ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
       <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
