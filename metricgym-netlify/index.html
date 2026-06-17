@@ -708,13 +708,17 @@ function spherePoints(n,ry,rx){
   }
   return out.sort((a,b)=>a.z-b.z);
 }
-/* Statisches Partikel-Sphären-Logo (für Appbar/Nav/inline, performant). */
+/* Marken-Logo: cleaner Gradient-Orb-Disc (passt zum Smoke-Orb, performant & crisp). */
 function logoSVG(h){
-  h=h||24; const R=h*0.46, c=h/2;
-  const pts=spherePoints(46,0.6,-0.3);
-  const dots=pts.map(p=>{const a=(0.4+0.6*(p.z+1)/2).toFixed(2);const rad=(h*0.045)*(0.7+0.6*(p.z+1)/2);
-    return `<circle cx="${(c+p.x*R).toFixed(2)}" cy="${(c+p.y*R).toFixed(2)}" r="${rad.toFixed(2)}" fill="currentColor" opacity="${a}"/>`;}).join("");
-  return `<svg width="${h}" height="${h}" viewBox="0 0 ${h} ${h}" aria-hidden="true" style="display:inline-block;color:var(--hl)">${dots}</svg>`;
+  h=h||24; const id="lg"+Math.random().toString(36).slice(2,6); const c=h/2, r=h*0.44;
+  return `<svg width="${h}" height="${h}" viewBox="0 0 ${h} ${h}" aria-hidden="true" style="display:inline-block">
+    <defs><radialGradient id="${id}" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#EAF1FF"/><stop offset="38%" stop-color="#9DB4F0"/>
+      <stop offset="72%" stop-color="#6E7BE0"/><stop offset="100%" stop-color="#363B86"/>
+    </radialGradient></defs>
+    <circle cx="${c}" cy="${c}" r="${r.toFixed(2)}" fill="url(#${id})"/>
+    <circle cx="${(c-r*0.26).toFixed(2)}" cy="${(c-r*0.3).toFixed(2)}" r="${(r*0.3).toFixed(2)}" fill="#fff" opacity=".38"/>
+  </svg>`;
 }
 /* Größere Partikel-Sphäre als Marke (Hero/Splash/Reveal). */
 function logoMark(size){
@@ -2638,7 +2642,7 @@ function renderLanding(){
     <!-- HERO mit animiertem Rauch-/Wolken-Orb -->
     <section class="lp-hero">
       <div class="lp-herocopy">
-        <div class="desk-hide orb-float" style="width:230px;height:230px;margin:0 auto 14px">${smokeOrb(230)}</div>
+        <div class="desk-hide orb-float" style="width:288px;height:288px;margin:-8px auto 10px">${smokeOrb(288)}</div>
         <p class="lp-eyebrow">Wissenschaftlich fundiert</p>
         <h1 class="lp-h">Fortschritt, der auf<br><span class="volt-txt">Wissenschaft</span> basiert.</h1>
         <p class="lp-lead" style="max-width:380px;margin:0 auto 22px">METRICGYM baut jeden Plan auf <b style="color:var(--t1)">belastbarer Trainingswissenschaft</b> — und macht deinen Fortschritt in klaren Zahlen sichtbar. Training, Ernährung und Erholung in einer Engine.</p>
@@ -2649,7 +2653,7 @@ function renderLanding(){
         <p class="xs t2" style="margin-top:14px">dauerhaft kostenlos · Daten bleiben auf deinem Gerät</p>
       </div>
       <div class="lp-herovis mob-hide">
-        <div class="orb-float" style="width:clamp(340px,44vw,500px);height:clamp(340px,44vw,500px)">${smokeOrb(500)}</div>
+        <div class="orb-float" style="width:clamp(400px,52vw,600px);height:clamp(400px,52vw,600px)">${smokeOrb(600)}</div>
       </div>
     </section>
 
@@ -2932,7 +2936,7 @@ function renderOnboarding(){
       <button class="btn volt" id="mednext" disabled onclick="A.next()">Weiter</button></div>`;
   }
   else if(st.type==="reveal"){
-    root.innerHTML=`<div class="center"><div class="spin"></div><p class="sm t2">Engine berechnet …</p></div>`;
+    root.innerHTML=`<div class="center"><div class="orb-float" style="width:140px;height:140px">${smokeOrb(140)}</div><p class="sm t2" style="margin-top:8px">Engine berechnet deinen Plan …</p></div>`;
     setTimeout(()=>{
       const a={...S.a,days:S.a.days||4,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
       if(!a.goals||!a.goals.length)a.goals=["muscle_gain"];
