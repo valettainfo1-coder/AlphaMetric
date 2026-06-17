@@ -854,10 +854,17 @@ const SB={
   enabled(){ return !!SB.cfg(); },
   _load(){ return new Promise((res,rej)=>{
     if(window.supabase&&window.supabase.createClient) return res();
-    const s=document.createElement("script");
-    s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
-    s.onload=()=>res(); s.onerror=()=>rej(new Error("Supabase-Bibliothek konnte nicht geladen werden"));
-    document.head.appendChild(s);
+    const urls=["https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+                "https://unpkg.com/@supabase/supabase-js@2",
+                "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"];
+    let i=0;
+    const tryNext=()=>{ if(i>=urls.length) return rej(new Error("Supabase-Bibliothek konnte nicht geladen werden"));
+      const s=document.createElement("script"); s.src=urls[i++]; s.async=true;
+      s.onload=()=>{ (window.supabase&&window.supabase.createClient)?res():tryNext(); };
+      s.onerror=()=>tryNext();
+      document.head.appendChild(s);
+    };
+    tryNext();
   });},
   async init(){
     if(SB.ready) return true; const c=SB.cfg(); if(!c) return false;
