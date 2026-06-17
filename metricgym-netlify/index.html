@@ -291,7 +291,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:linear-gradient(135deg, rgba(157,180,240,.30), rgba(157,180,240,.12));
     border:1px solid rgba(157,180,240,.5);
     box-shadow:0 2px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+    animation:tabPop .42s var(--spring);
   }
+  @keyframes tabPop{0%{transform:translateY(-1px) scale(.78)}58%{transform:translateY(-1px) scale(1.16)}100%{transform:translateY(-1px) scale(1)}}
   .tab:active .ic{transform:scale(.92);}
   .tab.flag .ic{
     width:46px; height:46px; margin-top:-22px; border-radius:50%;
@@ -423,7 +425,23 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .th-metric .m-ic{color:var(--hl); display:flex; justify-content:center; margin-bottom:5px; opacity:.92;}
   .th-metric .m-v{font-family:var(--font-hero); font-weight:700; font-size:19px; line-height:1; letter-spacing:-.01em;}
   .th-metric .m-l{font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--t2); margin-top:4px; font-weight:600;}
-  .th-ring{display:flex; justify-content:center; margin:8px 0 2px; filter:drop-shadow(0 18px 44px rgba(110,140,240,.34));}
+  .th-ring{position:relative; display:flex; justify-content:center; margin:8px 0 2px; filter:drop-shadow(0 18px 44px rgba(110,140,240,.34));}
+  /* Signature Hero-Visual: rotierende Energie-Aura hinter dem Score */
+  .hero-aura{position:absolute; top:50%; left:50%; width:230px; height:230px; margin:-115px 0 0 -115px; border-radius:50%; z-index:0; pointer-events:none;
+    background:conic-gradient(from 0deg, rgba(74,111,216,0), rgba(124,150,240,.5), rgba(86,200,214,.32), rgba(132,110,216,.46), rgba(74,111,216,0));
+    filter:blur(26px); animation:auraSpin 13s linear infinite, auraBreath 5.5s ease-in-out infinite;}
+  .th-ring>button{position:relative; z-index:1;}
+  @keyframes auraSpin{to{transform:rotate(360deg)}}
+  @keyframes auraBreath{0%,100%{opacity:.55}50%{opacity:1}}
+  /* Score-Ring zeichnet sich beim Laden */
+  @keyframes ringDraw{from{stroke-dashoffset:var(--rl)}to{stroke-dashoffset:0}}
+  /* Linien-Chart zeichnet sich live */
+  .chartdraw{stroke-dasharray:1400; stroke-dashoffset:1400; animation:chartDraw 1.5s ease forwards;}
+  @keyframes chartDraw{to{stroke-dashoffset:0}}
+  /* Sanfte Seiten-Transition bei Tab-Wechsel */
+  .page-enter{animation:pageEnter .44s var(--spring);}
+  @keyframes pageEnter{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){ .hero-aura,.chartdraw,.page-enter{animation:none} .chartdraw{stroke-dashoffset:0} }
   .th-lbl{font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--t2); font-weight:700; margin-top:8px;}
   .th-headline{font-family:var(--font-serif); font-weight:500; font-size:31px; line-height:1.08; letter-spacing:-.015em; margin:8px auto 10px; max-width:330px;}
   .th-sub{font-size:13.5px; line-height:1.55; color:var(--t2); max-width:300px; margin:0 auto 18px;}
@@ -560,7 +578,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
 <div id="appbar"></div>
 <div id="root" class="wrap">
   <noscript><div style="padding:32px 16px;color:#F5F5F4;font-family:system-ui">
-    <p style="font-weight:700;letter-spacing:2px;margin-bottom:12px">METRIC<span style="color:#9A6536">GYM</span></p>
+    <p style="font-weight:700;letter-spacing:2px;margin-bottom:12px">METRIC<span style="color:#9DB4F0">GYM</span></p>
     <p style="color:#9C9CA6;font-size:14px;line-height:1.6">Diese App braucht JavaScript. Lade die Datei herunter und öffne sie direkt im Browser (Chrome, Safari, Firefox).</p></div></noscript>
 </div>
 <div id="tabbar"></div>
@@ -1813,10 +1831,10 @@ function ringSVG(score,tier,size=130){
           <feGaussianBlur stdDeviation="${big?4:2.5}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
       <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${st}" stroke-dasharray="${fill} ${c}" stroke-linecap="round" filter="url(#${id}f)" style="transition:stroke-dasharray .8s var(--spring)"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${st}" stroke-dasharray="${fill} ${c}" stroke-linecap="round" filter="url(#${id}f)" style="--rl:${fill};animation:ringDraw 1.2s cubic-bezier(.34,1.06,.5,1) both"/>
     </svg>
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <span class="hero-num" style="font-size:${big?Math.round(size*.30):size/3.4}px;line-height:1;background:linear-gradient(135deg,${stops[0]},${stops[1]});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">${score}</span>
+      <span class="hero-num"${big?` data-count="${score}"`:""} style="font-size:${big?Math.round(size*.30):size/3.4}px;line-height:1;background:linear-gradient(135deg,${stops[0]},${stops[1]});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">${score}</span>
       <span class="ring-lbl" style="font-size:${big?11:8}px;margin-top:${big?4:1}px">${tier}</span>
     </div></div>`;
 }
@@ -1854,7 +1872,7 @@ function lineChart(series, fc){
     lastTick=lbl;
     return `<text x="${X(t)}" y="${H-2}" fill="var(--t3)" font-size="9" text-anchor="middle" font-family="Schibsted Grotesk,sans-serif">${lbl}</text>`;}).join("");
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;aspect-ratio:16/10;display:block" aria-hidden="true">
-    ${band}<path d="${line}" fill="none" stroke="var(--volt)" stroke-width="2"/>
+    ${band}<path class="chartdraw" d="${line}" fill="none" stroke="var(--volt)" stroke-width="2"/>
     ${dash?`<path d="${dash}" fill="none" stroke="var(--volt)" stroke-width="1.5" stroke-dasharray="5 4"/>`:""}${ticks}</svg>`;
 }
 function donutSVG(parts,size=110){
@@ -2000,6 +2018,21 @@ function render(){
     renderAppbar(); renderTabbar(); renderFab(); renderApp();
   }
   window.scrollTo(0,0);
+  // Wow-FX nur bei echtem Seitenwechsel (nicht bei In-Place-Re-Renders) -> Zahlen
+  // zaehlen hoch, Ringe zeichnen sich, Inhalt blendet elegant ein.
+  const view=(S.screen||"")+"/"+(S.tab||"")+"/"+(inApp?"app":"auth");
+  if(view!==_lastView){ _lastView=view; root.classList.remove("page-enter"); void root.offsetWidth; root.classList.add("page-enter");
+    requestAnimationFrame(()=>animateCounts()); }
+}
+let _lastView="";
+function animateCounts(){
+  document.querySelectorAll("[data-count]").forEach(el=>{
+    const target=parseFloat(el.getAttribute("data-count")); if(isNaN(target))return;
+    const dur=950, t0=performance.now();
+    const tick=(t)=>{ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+      el.textContent=Math.round(target*e); if(k<1)requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
 }
 
 function renderAppbar(){
@@ -2119,7 +2152,7 @@ function renderFab(){
     return;
   }
   const ctx=coachContext();
-  fabEl.innerHTML=`<div class="coach-panel"><div class="card fade" style="border-color:rgba(154,101,54,.4);box-shadow:0 8px 32px rgba(0,0,0,.55);margin:0">
+  fabEl.innerHTML=`<div class="coach-panel"><div class="card fade" style="border-color:rgba(96,140,230,.4);box-shadow:0 8px 32px rgba(0,0,0,.55);margin:0">
     <div class="row mb8"><p class="ct" style="margin:0">${icon("message",15)} ${aiActive()?"Coach Metric":"Coach"} · ${TAB_TITLES[S.tab]||"Kontext"}${aiActive()?' <span class="badge volt" style="font-size:9px">KI</span>':""}</p>
       <button class="btn ghost" style="width:auto" onclick="A.coach()" aria-label="Schließen">✕</button></div>
     <div id="coach-chat" style="max-height:200px;overflow-y:auto;margin-bottom:8px">
@@ -2381,7 +2414,7 @@ function renderLanding(){
 
     <!-- INTERAKTIVER ZIEL-RECHNER (spritzig, live) -->
     <section class="lp-sec" style="padding-top:0">
-      <div class="card" style="border-color:rgba(154,101,54,.3)">
+      <div class="card" style="border-color:rgba(96,140,230,.3)">
         <p class="lp-eyebrow" style="margin-bottom:8px">${icon("sparkle",13)} Dein Potenzial</p>
         <h2 class="lp-h2" style="font-size:21px">Was ist für dich drin?</h2>
         <p class="sm t2 mb16">Stell deinen Plan ein — die Projektion reagiert sofort.</p>
@@ -2666,8 +2699,8 @@ function renderReveal(){
     <p class="lp-eyebrow" style="display:block">Dein Plan steht</p>
     <h2 style="font-size:28px">Startklar, ${userName()}.</h2>
     <p class="sm t2" style="margin:6px auto 16px">Auf <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b> gebaut. Das ist drin:</p>
-    <div class="card" style="border-color:rgba(154,101,54,.3);padding:18px">
-      <p class="hero-num volt-txt" style="font-size:46px;line-height:1">+${pLo}–${pHi}%</p>
+    <div class="card" style="border-color:rgba(157,180,240,.35);padding:18px">
+      <p class="hero-num volt-txt" style="font-size:46px;line-height:1">+<span data-count="${pLo}">0</span>–<span data-count="${pHi}">0</span>%</p>
       <p class="sm t2">mehr Kraft in 12 Wochen — und ${goalWord}.</p>
     </div>
 
@@ -2704,6 +2737,8 @@ function renderReveal(){
           ${WD.map((d,i)=>{const t=sug[i]||"rest";const tr=t!=="rest";return `<div style="background:${tr?"var(--s2)":"none"};border-radius:8px;padding:5px 0"><p class="xs" style="color:var(--t3)">${d}</p><p style="font-size:13px;margin:3px 0">${tr?`<span style="display:inline-flex">${icon(TYPE_META[t].icon,13)}</span>`:'<span style="color:var(--t3)">·</span>'}</p></div>`;}).join("")}
         </div>
       </div></details></div>`;
+  // Kino-Onboarding: Projektions-Zahlen zaehlen hoch
+  requestAnimationFrame(()=>animateCounts());
 }
 
 // =====================================================================
@@ -2721,14 +2756,14 @@ function drawShareCard(opts){
   // Hintergrund mit dezentem Akzent-Schein
   x.fillStyle="#F7F5F1"; x.fillRect(0,0,1080,1350);
   const g=x.createRadialGradient(540,170,40,540,170,900);
-  g.addColorStop(0,"rgba(154,101,54,.10)"); g.addColorStop(1,"rgba(247,245,241,0)");
+  g.addColorStop(0,"rgba(96,140,230,.10)"); g.addColorStop(1,"rgba(247,245,241,0)");
   x.fillStyle=g; x.fillRect(0,0,1080,700);
   // Logo: 3 Balken + Wortmarke
   x.fillStyle="#1A1A1A";
   [[80,104,36],[100,86,54],[120,68,72]].forEach(([bx,by,bh])=>{ if(x.roundRect){x.beginPath();x.roundRect(bx,by,14,bh,7);x.fill();}else x.fillRect(bx,by,14,bh); });
   x.font="800 58px 'Schibsted Grotesk',system-ui"; x.fillText("METRICGYM",156,138);
   // Eyebrow
-  x.fillStyle="#9A6536"; x.font="700 34px 'Schibsted Grotesk',system-ui";
+  x.fillStyle="#9DB4F0"; x.font="700 34px 'Schibsted Grotesk',system-ui";
   x.fillText((opts.eyebrow||"").toUpperCase(),80,250);
   // Hero
   x.fillStyle="#1A1A1A"; x.font=`900 ${opts.heroSize||200}px 'Schibsted Grotesk',system-ui`;
@@ -2738,7 +2773,7 @@ function drawShareCard(opts){
   x.fillText(opts.heroLabel||"",80,y); y+=120;
   // bis zu 3 Sekundär-Stats
   (opts.stats||[]).forEach(([v,l,accent])=>{
-    x.fillStyle=accent?"#9A6536":"#1A1A1A"; x.font="900 100px 'Schibsted Grotesk',system-ui"; x.fillText(v,80,y);
+    x.fillStyle=accent?"#9DB4F0":"#1A1A1A"; x.font="900 100px 'Schibsted Grotesk',system-ui"; x.fillText(v,80,y);
     x.fillStyle="#6E6A62"; x.font="600 38px 'Schibsted Grotesk',system-ui"; x.fillText(l,80,y+52); y+=200;
   });
   // Footer-Band
@@ -2919,7 +2954,7 @@ function confetti(){
     c.style.cssText="position:fixed;inset:0;z-index:75;pointer-events:none";
     c.width=window.innerWidth; c.height=window.innerHeight;
     document.body.appendChild(c); const x=c.getContext("2d");
-    const cols=["#9A6536","#1A1A1A","#C98A3D","#7D8CA3","#3B5BDB"];
+    const cols=["#9DB4F0","#7E8BE8","#56C8D6","#C9D2E2","#4A6FD8"];
     const P=Array.from({length:140},()=>({x:c.width*(0.3+Math.random()*0.4),y:c.height*0.28,
       vx:(Math.random()-.5)*16,vy:Math.random()*-13-3,r:4+Math.random()*5,rot:Math.random()*6,
       col:cols[Math.floor(Math.random()*cols.length)]}));
@@ -3030,6 +3065,7 @@ function renderHome(){
           ${metric("zap",eng.level,"Level")}
         </div>
         <div class="th-ring">
+          <div class="hero-aura" aria-hidden="true"></div>
           ${r?`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,184)}</button>`
             :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
                 <div style="width:184px;height:184px;border-radius:50%;border:7px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
@@ -3171,13 +3207,13 @@ const EX_ACT={
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
 function muscleBody(view,arg){
   // arg ist entweder ein Aktivierungs-Objekt {p,s} ODER eine Farb-Funktion (id)=>color
-  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?"var(--hl)":arg.s.includes(id)?"rgba(154,101,54,.42)":"#E2DACB");
+  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?"var(--hl)":arg.s.includes(id)?"rgba(96,140,230,.42)":"#2A2F3C");
   const ln="#CFC5B4";
   const base=`<g fill="#EAE3D6" stroke="none">
     <path d="M40 48 H90 L82 122 Q65 130 48 122 Z"/>
     <path d="M28 54 Q22 96 28 134 L40 132 Q35 94 41 58 Z"/><path d="M102 54 Q108 96 102 134 L90 132 Q95 94 89 58 Z"/>
     <path d="M47 120 H64 L62 226 Q56 230 50 226 Z"/><path d="M66 120 H83 L80 226 Q74 230 68 226 Z"/></g>
-    <ellipse cx="65" cy="20" rx="13" ry="15" fill="#E2DACB"/><path d="M58 33 h14 v7 q-7 4 -14 0 z" fill="#E2DACB"/>`;
+    <ellipse cx="65" cy="20" rx="13" ry="15" fill="#2A2F3C"/><path d="M58 33 h14 v7 q-7 4 -14 0 z" fill="#2A2F3C"/>`;
   const front=`
     <path d="M58 38 q-12 2 -20 10 q14 -2 20 -3 z M72 38 q12 2 20 10 q-14 -2 -20 -3 z" fill="${col('traps')}"/>
     <path d="M40 46 q-13 3 -15 18 q-1 8 3 12 q8 -4 14 -6 q2 -14 -2 -24 z" fill="${col('delts')}"/>
@@ -3216,7 +3252,7 @@ function bodyDiagram(act){
       ${muscleBody("front",act)}${muscleBody("back",act)}</div>
     <div class="row" style="justify-content:center;gap:16px;margin-top:6px">
       <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--hl);display:inline-block"></span>Primär</span>
-      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(154,101,54,.42);display:inline-block"></span>Sekundär</span></div>`;
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(96,140,230,.42);display:inline-block"></span>Sekundär</span></div>`;
 }
 /* Muskel-Heatmap: färbt den anatomischen Körper nach Wochenvolumen je Gruppe
    gegen den MEV–MRV-Korridor — auf einen Blick: was ist optimal, zu wenig, zu viel. */
@@ -3226,20 +3262,20 @@ function muscleHeatBody(){
   const r2c={}; const status={};
   for(const [g,[lo,hi]] of Object.entries(VOL_BANDS)){
     const n=w0[g]||0; let c,st;
-    if(n===0){c="#E2DACB";st="—";}
-    else if(n<lo){c="rgba(154,101,54,.30)";st="zu wenig";}
-    else if(n<=hi){const t=(n-lo)/(hi-lo||1);c=`rgba(154,101,54,${(0.55+t*0.4).toFixed(2)})`;st="optimal";}
+    if(n===0){c="#2A2F3C";st="—";}
+    else if(n<lo){c="rgba(96,140,230,.30)";st="zu wenig";}
+    else if(n<=hi){const t=(n-lo)/(hi-lo||1);c=`rgba(96,140,230,${(0.55+t*0.4).toFixed(2)})`;st="optimal";}
     else{c="var(--danger)";st="zu viel";}
     status[g]={n,st,lo,hi};
     (GROUP2REGION[g]||[]).forEach(r=>r2c[r]=c);
   }
-  const col=(id)=>r2c[id]||"#E2DACB";
+  const col=(id)=>r2c[id]||"#2A2F3C";
   const rows=Object.entries(status).map(([g,o])=>`<div class="row" style="padding:3px 0"><span class="sm">${g}</span>
     <span class="metric xs ${o.st==="optimal"?"volt-txt":o.st==="zu viel"?"danger-txt":"t2"}">${o.n} Sätze · ${o.st}</span></div>`).join("");
   return `<div style="display:flex;justify-content:center;gap:14px;align-items:flex-start">${muscleBody("front",col)}${muscleBody("back",col)}</div>
     <div class="row" style="justify-content:center;gap:12px;margin:8px 0 4px;flex-wrap:wrap">
-      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(154,101,54,.30);display:inline-block"></span>zu wenig</span>
-      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(154,101,54,.9);display:inline-block"></span>optimal</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(96,140,230,.30);display:inline-block"></span>zu wenig</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:rgba(96,140,230,.9);display:inline-block"></span>optimal</span>
       <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--danger);display:inline-block"></span>zu viel</span></div>
     <div class="mt8">${rows}</div>`;
 }
@@ -3251,7 +3287,7 @@ function consistencyHeatmap(){
   S.trainingHistory.forEach(t=>{if(t.type!=="rest"&&t.type!=="cardio")byDate[t.date]=(byDate[t.date]||0)+t.sets;});
   const today=new Date(); const dow=(today.getDay()+6)%7;
   const monThis=new Date(today); monThis.setDate(today.getDate()-dow); // Montag dieser Woche
-  const shade=(s)=>s===0?"var(--s3)":s<=6?"rgba(154,101,54,.35)":s<=12?"rgba(154,101,54,.6)":"rgba(154,101,54,.95)";
+  const shade=(s)=>s===0?"var(--s3)":s<=6?"rgba(96,140,230,.35)":s<=12?"rgba(96,140,230,.6)":"rgba(96,140,230,.95)";
   let cols="";
   for(let w=weeks-1;w>=0;w--){
     let cells="";
@@ -3567,7 +3603,7 @@ function aiAdjustResult(summary, before, after){
     <div class="grid2" style="gap:10px">
       <div style="background:var(--s2);border-radius:12px;padding:12px"><p class="xs t2 mb4">Vorher</p>
         <ul class="xs" style="margin:0;padding-left:15px;line-height:1.7">${li(before,after)}</ul></div>
-      <div style="background:rgba(154,101,54,.08);border-radius:12px;padding:12px"><p class="xs t2 mb4">Nachher (neu)</p>
+      <div style="background:rgba(96,140,230,.08);border-radius:12px;padding:12px"><p class="xs t2 mb4">Nachher (neu)</p>
         <ul class="xs" style="margin:0;padding-left:15px;line-height:1.7">${li(after,before)}</ul></div>
     </div>
     <p class="xs t2 mt8">Fett markiert = von der KI geändert.</p>
@@ -3810,7 +3846,7 @@ function renderSummary(){
     <div class="card"><p class="ct">Volumen</p>
       <p class="metric volt-txt" style="font-size:36px;font-weight:600">${nfi.format(vol)} kg</p>
       <p class="xs t2 mt8">${S.logged.length} Sätze geloggt</p></div>
-    ${S.prToday?`<div class="card" style="border-color:rgba(154,101,54,.4)">
+    ${S.prToday?`<div class="card" style="border-color:rgba(96,140,230,.4)">
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:24px">
         <p class="ring-lbl mb8">NEUER REKORD</p>
         <p style="font-size:20px;font-weight:600;margin-bottom:8px">${S.prToday.n}</p>
@@ -3984,7 +4020,7 @@ function renderAnalytics(){
           return `<div class="mb12"><div class="row mb4"><span class="sm" style="font-weight:600">${m}</span>
             <span class="metric xs ${v<lo?"":v>hi?"danger-txt":"volt-txt"}">${v} Sätze · ${status[0]}</span></div>
             <div style="position:relative;height:14px;background:var(--s3);border-radius:7px;overflow:hidden">
-              <div style="position:absolute;left:${lo/scale*100}%;width:${(hi-lo)/scale*100}%;top:0;bottom:0;background:rgba(154,101,54,.16)"></div>
+              <div style="position:absolute;left:${lo/scale*100}%;width:${(hi-lo)/scale*100}%;top:0;bottom:0;background:rgba(96,140,230,.16)"></div>
               <div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100,v/scale*100)}%;background:${status[1]};opacity:.8;border-radius:7px"></div>
             </div>
             <p class="xs t2" style="margin-top:3px">Optimal: ${lo}–${hi} Sätze/Woche</p></div>`;
@@ -4307,7 +4343,7 @@ function renderNutrition(){
       </div>
       <button class="btn mt8" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich jetzt essen?</button>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
-      ${pendingItems?`<div class="warncard" style="border-color:rgba(154,101,54,.4);background:rgba(154,101,54,.06)">
+      ${pendingItems?`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
         ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
         ${pendingItems.map(it=>it.food?`
           <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${it.raw.trim()}" erkannt als</span> `:""}${it.food[0]} · <span class="metric">${it.gram} g</span></span>
@@ -4684,7 +4720,7 @@ function renderProfile(){
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('snapshots')">Mehr erfahren</button></div>`}
     </div>
 
-    <div class="card" style="border-color:rgba(154,101,54,.3)"><p class="ct">${icon("brain",14)} KI-Coach (Coach Metric)</p>
+    <div class="card" style="border-color:rgba(96,140,230,.3)"><p class="ct">${icon("brain",14)} KI-Coach (Coach Metric)</p>
       ${aiActive()
         ? `<p class="sm mb8"><span class="badge volt">aktiv</span> Dein KI-Coach ist an — er kennt deine Daten und antwortet frei im Plan-Assistenten und im Coach-Chat.</p>
            <button class="btn mb8" onclick="A.aiToggle()">KI-Coach ausschalten</button>`
@@ -4694,7 +4730,7 @@ function renderProfile(){
       <p class="xs t2 mt8" style="line-height:1.5">${icon("lock",12)} Dein Key bleibt <b style="color:var(--t1)">nur auf diesem Gerät</b> (lokal gespeichert, nie an uns gesendet). Hinweis: In einer Web-App ist der Key im Browser sichtbar — für den öffentlichen Launch gehört er hinter einen Server. Teile ihn nicht & rotiere ihn bei Verdacht.</p>
     </div>
 
-    <div class="card" style="border-color:rgba(154,101,54,.3)"><p class="ct">${icon("send",14)} Freunde einladen</p>
+    <div class="card" style="border-color:rgba(96,140,230,.3)"><p class="ct">${icon("send",14)} Freunde einladen</p>
       <p class="sm t2 mb12" style="line-height:1.6">Lade Freunde ein — <b style="color:var(--t1)">beide bekommen 14 Tage PERFORMANCE gratis</b>. Dein Code: <span class="metric" style="color:var(--hl)">${S.refCode}</span></p>
       <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Einladungslink teilen</button>
       <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
