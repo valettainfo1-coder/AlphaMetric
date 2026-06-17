@@ -2692,6 +2692,19 @@ function lpAnimateResult(){
   const to=parseInt(el.getAttribute("data-to"))||0, t0=performance.now();
   (function step(t){const k=Math.min(1,(t-t0)/420); el.textContent=Math.round(to*(1-Math.pow(1-k,3))); if(k<1)requestAnimationFrame(step);})(t0);
 }
+// Analytics-Vorschau auf der Landing: Gradient-Kraftkurve + Kennzahlen (Beispiel)
+function lpAnalyticsPreview(){
+  const now=Date.now(), wk=7*dayMs, vals=[78,80,79,83,85,84,88,92];
+  const series=vals.map((v,i)=>({t:now-(vals.length-1-i)*wk, v}));
+  const tile=(v,l,c)=>`<div style="background:var(--surface);border:1px solid var(--stroke);border-radius:14px;padding:12px 6px;text-align:center">
+    <p class="hero-num ${c||""}" style="font-size:22px">${v}</p><p class="xs t2" style="margin-top:2px">${l}</p></div>`;
+  return `<div class="card" style="padding:18px">
+    <p class="ct">${icon("chart",13)} Kraft-Trajektorie · Bankdrücken</p>
+    ${lineChart(series)}
+    <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+      ${tile("+18 %","Kraft / 12 Wo.","volt-txt")}${tile("84","Ø Erholung")}${tile("91 %","Konstanz","volt-txt")}
+    </div></div>`;
+}
 function renderLanding(){
   A.lpSet=(k,v)=>{
     LP[k]=(k==="days")?parseInt(v):v;
@@ -2764,6 +2777,14 @@ function renderLanding(){
         <div id="lp-calc">${lpCalcInner()}</div>
         <button class="btn volt mt16" onclick="A.toRegister()">Diesen Plan kostenlos bekommen</button>
       </div>
+    </section>
+
+    <!-- ANALYTICS-VORSCHAU (kurze Überschrift) -->
+    <section class="lp-sec" style="padding-top:0">
+      <p class="lp-eyebrow">Dein Fortschritt</p>
+      <h2 class="lp-h2">Sieh, dass es wirkt.</h2>
+      <p class="lp-lead mb16">Kraft, Erholung & Ernährung — Woche für Woche in Zahlen.</p>
+      ${lpAnalyticsPreview()}
     </section>
 
     <!-- SO FUNKTIONIERT'S -->
