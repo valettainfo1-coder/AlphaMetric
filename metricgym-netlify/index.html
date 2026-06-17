@@ -1037,6 +1037,7 @@ S.celebrated=S.celebrated??null; // null = noch nicht initialisiert (Erstlauf se
 S.lastLevel=S.lastLevel??1;
 S.planChat=S.planChat||[]; // Verlauf des Plan-Assistenten
 S.planUndo=S.planUndo||null; // letzter KI-Plan-Eingriff (Vorher-Schnappschuss für Rückgängig)
+S.monthOffset=S.monthOffset||0; // Monats-Überblick: 0 = aktueller Monat
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -3860,6 +3861,96 @@ function renderSummary(){
 }
 
 // =====================================================================
+// MONATS-ÜBERBLICK — Tagesbewertung (Adhärenz) + Kalender rot->grün + Cheat-Days
+// =====================================================================
+const DAY_COLORS={green:"#5BC48A",orange:"#E0A24A",red:"#E56A5C",cheat:"#9B7CF0",
+  empty:"rgba(255,255,255,.05)",future:"rgba(255,255,255,.025)"};
+const DAY_KIND_LBL={green:"Durchgezogen",orange:"Teilweise",red:"Verpasst",cheat:"Cheat Day",empty:"Keine Daten"};
+// Tages-Score 0..100 aus echten Daten: Training (40) + Ernährung (45) + Status-Check (15).
+// Geplante Ruhetage zählen voll (Erholung gehört dazu). Großes kcal-Plus = Cheat Day (zählt, kein Fail).
+function dayScore(dateKey){
+  const today=todayKey();
+  if(dateKey>today) return {kind:"future"};
+  const p=S.profile; if(!p) return {kind:"empty",parts:{}};
+  const dow=(new Date(dateKey+"T12:00:00").getDay()+6)%7;
+  const planned=schedule()[dow];
+  let pts=0,max=0; const parts={};
+  max+=40;
+  const trained=S.trainingHistory.some(t=>t.date===dateKey&&t.type!=="rest");
+  if(planned==="rest"){pts+=40;parts.train="rest";}
+  else if(trained){pts+=40;parts.train="done";}
+  else parts.train="missed";
+  max+=45; let cheat=false;
+  const nl=S.nutritionLog[dateKey]; const tg=(planned==="rest")?p.tg.rest:p.tg.train;
+  if(nl&&(nl.meals||[]).length){
+    const sum=nl.meals.reduce((s,m)=>({k:s.k+(m.k||0),pr:s.pr+(m.p||0)}),{k:0,pr:0});
+    parts.kcal=Math.round(sum.k); parts.prot=Math.round(sum.pr);
+    if(sum.k>tg.kcal*1.25){cheat=true;pts+=22;parts.nutri="cheat";}
+    else{const dev=Math.abs(sum.k-tg.kcal)/(tg.kcal||1);
+      pts+=dev<=0.12?25:dev<=0.25?16:8;
+      pts+=sum.pr>=tg.p*0.9?20:sum.pr>=tg.p*0.7?12:5; parts.nutri="ok";}
+  } else parts.nutri="none";
+  max+=15;
+  if(S.readinessHistory.some(r=>r.date===dateKey)){pts+=15;parts.status="done";}
+  const score=Math.round(pts/max*100);
+  const anyData=parts.train==="done"||parts.nutri==="ok"||parts.nutri==="cheat"||parts.status==="done";
+  let kind;
+  if(!anyData) kind="empty"; else if(cheat) kind="cheat";
+  else if(score>=75) kind="green"; else if(score>=50) kind="orange"; else kind="red";
+  return {score,kind,cheat,parts,planned};
+}
+function monthlyOverview(){
+  const off=S.monthOffset||0, now=new Date();
+  const base=new Date(now.getFullYear(), now.getMonth()+off, 1);
+  const year=base.getFullYear(), month=base.getMonth();
+  const MN=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  const dim=new Date(year,month+1,0).getDate();
+  const firstDow=(new Date(year,month,1).getDay()+6)%7;
+  const todayK=todayKey();
+  const tally={green:0,orange:0,red:0,cheat:0,scored:0,sum:0};
+  let cells="";
+  for(let i=0;i<firstDow;i++) cells+="<div></div>";
+  for(let d=1;d<=dim;d++){
+    const dk=`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const ds=dayScore(dk), col=DAY_COLORS[ds.kind]||DAY_COLORS.empty;
+    const filled=["green","orange","red","cheat"].includes(ds.kind);
+    if(filled){tally[ds.kind]++;tally.scored++;tally.sum+=ds.score||0;}
+    const tcol=filled?"#0B0B0F":"var(--t3)";
+    cells+=`<button onclick="A.dayDetail('${dk}')" aria-label="${d}." style="aspect-ratio:1;border:none;border-radius:9px;background:${col};color:${tcol};font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;${dk===todayK?"box-shadow:0 0 0 2px var(--hl)":""}">${d}</button>`;
+  }
+  const done=tally.scored, avg=done?Math.round(tally.sum/done):0;
+  const pct=done?Math.round(tally.green/done*100):0;
+  const grade=avg>=85?["Stark","var(--good)"]:avg>=70?["Solide","var(--hl)"]:avg>=50?["Ausbaufähig","var(--warn)"]:["Dranbleiben","var(--danger)"];
+  const msg=done===0?"Noch keine bewerteten Tage diesen Monat — logge Training und Ernährung, dann färbt sich dein Kalender Tag für Tag."
+    :pct>=70?`Starker Monat — du ziehst durch.${tally.cheat>0?` ${tally.cheat} Cheat-Day${tally.cheat>1?"s":""} sind völlig okay, solange der Rest sitzt.`:""}`
+    :pct>=40?"Solide Basis. Ein paar Tage mehr im grünen Bereich heben deinen Schnitt spürbar."
+    :"Jeder grüne Tag zählt. Fang mit dem täglichen Loggen an — der Rest folgt.";
+  const WD=["M","D","M","D","F","S","S"];
+  return `<div class="card">
+    <div class="row mb12">
+      <button class="iconbtn" onclick="A.monthNav(-1)" aria-label="Vormonat"><span style="display:inline-flex;transform:rotate(180deg)">${icon("chevronR",18)}</span></button>
+      <p class="ct" style="margin:0">${icon("calendar",13)} ${MN[month]} ${year}</p>
+      <button class="iconbtn" onclick="A.monthNav(1)" aria-label="Folgemonat" ${off>=0?'disabled style="opacity:.25"':""}>${icon("chevronR",18)}</button>
+    </div>
+    <div class="row mb12" style="align-items:flex-end">
+      <div><p class="hero-num" style="font-size:40px;line-height:1;color:${grade[1]}" data-count="${avg}">${avg}</p>
+        <p class="xs t2" style="margin-top:3px">Monatsnote · <span style="color:${grade[1]}">${grade[0]}</span></p></div>
+      <div style="text-align:right">
+        <p class="metric" style="font-size:17px;color:var(--good)">${tally.green}<span class="xs t2" style="font-family:var(--font-ui)"> durchgezogen</span></p>
+        <p class="metric xs t2">${tally.cheat} Cheat · ${tally.orange} teils · ${tally.red} verpasst</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px">
+      ${WD.map(d=>`<div style="text-align:center;color:var(--t3);font-size:10px;font-weight:700">${d}</div>`).join("")}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${cells}</div>
+    <p class="sm t2 mt12" style="line-height:1.55">${msg}</p>
+    <div class="row mt12" style="gap:10px;flex-wrap:wrap;justify-content:flex-start">
+      ${[["#E56A5C","verpasst"],["#E0A24A","teils"],["#5BC48A","durchgezogen"],["#9B7CF0","Cheat Day"]].map(([c,l])=>`
+        <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:${c};display:inline-block"></span>${l}</span>`).join("")}
+    </div>
+  </div>`;
+}
+
+// =====================================================================
 // ANALYTICS — niemals erfundene Werte, Daten-Gates pro Modul
 // =====================================================================
 function gateCard(title,need,have,unit,ctaLabel,ctaTab){
@@ -3875,6 +3966,21 @@ function gateCard(title,need,have,unit,ctaLabel,ctaTab){
 }
 function renderAnalytics(){
   const p=S.profile, a=p.a;
+  A.monthNav=(d)=>{ const n=(S.monthOffset||0)+d; if(n>0)return; S.monthOffset=n; save(); renderAnalytics(); };
+  A.dayDetail=(dk)=>{
+    const ds=dayScore(dk), d=new Date(dk+"T12:00:00");
+    const lbl=d.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
+    if(ds.kind==="future"){modal(`<p class="ct">${lbl}</p><p class="sm t2">Dieser Tag liegt noch vor dir.</p>`);return;}
+    const row=(k,v)=>`<div class="row" style="padding:8px 0;border-top:1px solid var(--hairline)"><span class="sm t2">${k}</span><span class="sm" style="font-weight:600">${v}</span></div>`;
+    const P=ds.parts||{};
+    const tr=P.train==="done"?"✓ Trainiert":P.train==="rest"?"Ruhetag (geplant)":"✗ Kein Training";
+    const nu=P.nutri==="cheat"?`Cheat Day · ${P.kcal} kcal`:P.nutri==="ok"?`${P.kcal} kcal · ${P.prot} g Protein`:"Nicht geloggt";
+    const st=P.status==="done"?"✓ Check gemacht":"—";
+    modal(`<p class="ct">${lbl}</p>
+      ${ds.kind==="empty"?`<p class="sm t2">Für diesen Tag wurde nichts geloggt.</p>`
+        :`<div style="text-align:center;margin:4px 0 10px"><p class="hero-num" style="font-size:44px;color:${DAY_COLORS[ds.kind]}">${ds.score}</p><p class="xs t2">${DAY_KIND_LBL[ds.kind]}</p></div>`}
+      ${row("Training",tr)}${row("Ernährung",nu)}${row("Status-Check",st)}`);
+  };
   // Ganzseitiger Empty-State bei NULL Daten — unmissverständlich, nichts erfunden.
   const hasAnyData=S.trainingHistory.length>0
     ||Object.values(S.nutritionLog).some(l=>(l.meals||[]).length>0)
@@ -3932,6 +4038,9 @@ function renderAnalytics(){
         :`<p class="sm t2 mt12" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
       <button class="btn mt12" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
     </div>`;
+
+  // Monats-Überblick: Tagesbewertung als Kalender (rot->grün) + Cheat-Days + Monatsnote
+  html+=`<p class="label" style="margin-top:4px">Monats-Überblick</p>`+monthlyOverview();
 
   html+=`
     <!-- Daten-Sammelstand: ehrlich, immer sichtbar bis voll -->
