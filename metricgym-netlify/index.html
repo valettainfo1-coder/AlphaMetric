@@ -199,8 +199,12 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   }
   .cell.sel{border-color:var(--accent); background:var(--accent); color:#fff;}
   .cell.dash{border-style:dashed;}
-  .progress{height:6px; flex:1; background:var(--s3); border-radius:999px; overflow:hidden;}
-  .progress>div{height:100%; background:var(--hl); border-radius:999px; transition:width .7s cubic-bezier(.25,.8,.25,1);}
+  .progress{height:6px; flex:1; background:rgba(255,255,255,.07); border-radius:999px; overflow:hidden;}
+  .progress>div{height:100%; background:linear-gradient(90deg,#9DB4F0,#4A6FD8); border-radius:999px; box-shadow:0 0 8px rgba(74,111,216,.45); transition:width .7s cubic-bezier(.25,.8,.25,1);}
+  /* Wiederverwendbare Gradient-Füllung mit Glow + Sheen + Wachstums-Animation (Oura-Look) */
+  .gradfill{position:relative; box-shadow:0 0 10px rgba(120,140,235,.45); animation:barGrowX 1s cubic-bezier(.25,.8,.25,1);}
+  .gradfill::after{content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.24)); mix-blend-mode:overlay;}
+  @media (prefers-reduced-motion:reduce){.gradfill{animation:none}}
   .topbar{display:flex; align-items:center; gap:12px; margin-bottom:24px;}
   .back{background:none; border:none; color:var(--t2); font-size:22px; cursor:pointer; min-width:44px; min-height:44px;}
   input[type=range]{width:100%; height:44px; accent-color:var(--accent);}
@@ -2027,11 +2031,12 @@ function ringSVG(score,tier,size=130){
     </div></div>`;
 }
 function miniRing(label,v,t,unit,size=68){
-  const pct=Math.min(1,t?v/t:0),st=5,r=(size-st)/2,c=2*Math.PI*r;
+  const pct=Math.min(1,t?v/t:0),st=5,r=(size-st)/2,c=2*Math.PI*r,id="mr"+Math.random().toString(36).slice(2,7);
   return `<div style="text-align:center"><div style="position:relative;width:${size}px;height:${size}px;margin:0 auto">
-    <svg width="${size}" height="${size}" style="transform:rotate(-90deg)" aria-hidden="true">
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--s2)" stroke-width="${st}"/>
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--volt)" stroke-width="${st}" stroke-linecap="round" stroke-dasharray="${pct*c} ${c}"/></svg>
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg);overflow:visible" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7FD7E0"/><stop offset="1" stop-color="#7E8BE8"/></linearGradient></defs>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="${st}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${st}" stroke-linecap="round" stroke-dasharray="${pct*c} ${c}" style="filter:drop-shadow(0 0 4px rgba(126,139,232,.5))"/></svg>
     <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center" class="metric xs">${nfi.format(v)}</div></div>
     <p class="xs t2" style="margin-top:4px">${label}</p>
     <p class="metric" style="font-size:9px;color:var(--t3)">/ ${nfi.format(t)} ${unit}</p></div>`;
@@ -2081,11 +2086,12 @@ function donutSVG(parts,size=110){
   return `<svg width="${size}" height="${size}" style="transform:rotate(-90deg)" aria-hidden="true">${segs}</svg>`;
 }
 function circleTimer(left,total,size=84){
-  const r=(size-8)/2,c=2*Math.PI*r,pct=Math.max(0,left/Math.max(1,total));
+  const r=(size-8)/2,c=2*Math.PI*r,pct=Math.max(0,left/Math.max(1,total)),id="ct"+Math.random().toString(36).slice(2,7);
   return `<div style="position:relative;width:${size}px;height:${size}px">
-    <svg width="${size}" height="${size}" style="transform:rotate(-90deg)" aria-hidden="true">
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--s2)" stroke-width="6"/>
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--volt)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${pct*c} ${c}"/></svg>
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg);overflow:visible" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7FD7E0"/><stop offset="1" stop-color="#7E8BE8"/></linearGradient></defs>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="6" stroke-linecap="round" stroke-dasharray="${pct*c} ${c}" style="filter:drop-shadow(0 0 5px rgba(126,139,232,.55))"/></svg>
     <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center" class="metric">
       ${Math.floor(left/60)}:${String(Math.round(left)%60).padStart(2,"0")}</div></div>`;
 }
@@ -4498,9 +4504,9 @@ function macroBattery(label,cur,target,col,priority){
   return `<div style="margin-bottom:13px">
     <div class="row mb4"><span class="sm" style="font-weight:${priority?700:600}">${label}${priority?' <span class="xs" style="color:var(--hl);font-weight:700">· Priorität</span>':""}</span>
       <span class="metric xs ${over?"warn-txt":pct>=90?"volt-txt":"t2"}">${nfi.format(cur)} / ${nfi.format(target)} g</span></div>
-    <div style="position:relative;height:13px;border-radius:7px;background:var(--s3);overflow:hidden">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${over?"var(--warn)":col};border-radius:7px;transition:width .7s cubic-bezier(.25,.8,.25,1)"></div>
-      <div style="position:absolute;left:90%;top:-2px;bottom:-2px;width:2px;background:rgba(0,0,0,.18)"></div>
+    <div style="position:relative;height:13px;border-radius:7px;background:rgba(255,255,255,.06);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)">
+      <div class="gradfill" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${over?"linear-gradient(90deg,#E0A24A,#D4574B)":priority?"linear-gradient(90deg,#A9C2E6,#4A6FD8)":"linear-gradient(90deg,#9DB4F0,#7E8BE8)"};border-radius:7px;transition:width .7s cubic-bezier(.25,.8,.25,1)"></div>
+      <div style="position:absolute;left:90%;top:-2px;bottom:-2px;width:2px;background:rgba(255,255,255,.25)"></div>
     </div></div>`;
 }
 // Energie-Budget: verbleibende kcal als Held + segmentierter Makro-Treibstoffbalken
