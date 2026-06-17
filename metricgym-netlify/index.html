@@ -561,6 +561,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .pb-big{width:clamp(360px,46vw,520px); height:clamp(360px,46vw,520px);}
   .pb-canvas{width:100%; height:100%; display:block; touch-action:none; cursor:grab;}
   .pb-canvas:active{cursor:grabbing;}
+  /* Rauch-Orb: sanftes Schweben + minimales Atmen */
+  .orb-float{animation:orbFloat 9s ease-in-out infinite;}
+  .orb-float svg{filter:drop-shadow(0 20px 50px rgba(110,130,235,.35));}
+  @keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.03)}}
+  @media (prefers-reduced-motion:reduce){.orb-float{animation:none}}
   @keyframes lp-pop{0%{transform:scale(.65);opacity:.2}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
   @keyframes lp-draw{to{stroke-dashoffset:0}}
   .lp-res-pop{display:inline-block;animation:lp-pop .45s var(--spring);}
@@ -710,8 +715,37 @@ function logoMark(size){
     return `<circle cx="${(c+p.x*R).toFixed(2)}" cy="${(c+p.y*R).toFixed(2)}" r="${rad.toFixed(2)}" fill="${PART_COLORS[i%PART_COLORS.length]}" opacity="${a}"/>`;}).join("");
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="display:block">${dots}</svg>`;
 }
-/* Interaktiver Partikelball (Canvas): rotiert, stößt Partikel vom Zeiger ab.
-   Lebenszyklus über PB.stop() (wird bei Navigation beendet, spart Akku). */
+/* Animierter Rauch-/Wolken-Orb (SVG feTurbulence + Displacement): morphende
+   Nebel-Kugel in den Markenfarben — passt zur Oura-Designsprache, ersetzt die
+   Partikelkugel. Bewegt/verformt sich kontinuierlich (SMIL-Animation). */
+function smokeOrb(size,opts){
+  opts=opts||{}; const id="so"+Math.random().toString(36).slice(2,7); const dur=opts.dur||"16s";
+  const sc=(size*0.32).toFixed(0), bl=(size*0.012).toFixed(2);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="display:block;overflow:visible">
+    <defs>
+      <radialGradient id="${id}g" cx="42%" cy="36%" r="66%">
+        <stop offset="0%" stop-color="#F2F6FF"/><stop offset="30%" stop-color="#A9C0F2"/>
+        <stop offset="58%" stop-color="#7E8BE8"/><stop offset="82%" stop-color="#5A57B0"/>
+        <stop offset="100%" stop-color="#2A2A5E" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="${id}h" cx="50%" cy="52%" r="52%">
+        <stop offset="0%" stop-color="#7FD7E0" stop-opacity=".55"/>
+        <stop offset="60%" stop-color="#7E8BE8" stop-opacity=".14"/>
+        <stop offset="100%" stop-color="#7E8BE8" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="${id}f" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.011 0.018" numOctaves="3" seed="7" result="n">
+          <animate attributeName="baseFrequency" dur="${dur}" values="0.011 0.018;0.018 0.012;0.013 0.02;0.011 0.018" repeatCount="indefinite"/>
+          <animate attributeName="seed" dur="${dur}" values="7;9;7" repeatCount="indefinite"/>
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="${sc}" xChannelSelector="R" yChannelSelector="G"/>
+        <feGaussianBlur stdDeviation="${bl}"/>
+      </filter>
+    </defs>
+    <circle cx="${size/2}" cy="${size/2}" r="${(size*0.47).toFixed(0)}" fill="url(#${id}h)" opacity=".75"/>
+    <g filter="url(#${id}f)"><circle cx="${size/2}" cy="${size/2}" r="${(size*0.33).toFixed(0)}" fill="url(#${id}g)"/></g>
+  </svg>`;
+}
 let PB={raf:null,onMove:null,onResize:null,
   stop(){ if(PB.raf)cancelAnimationFrame(PB.raf); PB.raf=null;
     if(PB.onMove)window.removeEventListener("pointermove",PB.onMove);
@@ -1345,11 +1379,22 @@ const DAY_MUSCLES={push:["Brust","Schultern","Arme"],pull:["Rücken","Arme"],leg
 const FOCUS_EX={
   Brust:["KH-Fliegende","Liegestütze"],
   "Rücken":["Kabelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
+  Latissimus:["Latzug","Klimmzug"],
   Schultern:["Seitheben","Band Pull-Apart"],
+  "Seitl. Schulter":["Seitheben"],
+  "Hintere Schulter":["Reverse Flys","Face Pull"],
   Arme:["Bizeps-Curls","Enge Liegestütze"],
+  Bizeps:["Bizeps-Curls"],
+  Trizeps:["Trizepsdrücken","Enge Liegestütze"],
   Beine:["Bulgarian Split Squat","Ausfallschritte"],
+  Quadrizeps:["Bulgarian Split Squat","Ausfallschritte"],
+  Beinbeuger:["Beinbeuger","Rumänisches Kreuzheben"],
+  "Gesäß":["Hip Thrust"],
+  Waden:["Wadenheben"],
   Core:["Plank"],
 };
+// Granulare Fokus-Muskeln -> übergeordnete Sessiongruppe (für die Tag-Zuordnung)
+const FOCUS_PARENT={Brust:"Brust","Rücken":"Rücken",Latissimus:"Rücken",Schultern:"Schultern","Seitl. Schulter":"Schultern","Hintere Schulter":"Schultern",Arme:"Arme",Bizeps:"Arme",Trizeps:"Arme",Beine:"Beine",Quadrizeps:"Beine",Beinbeuger:"Beine","Gesäß":"Beine",Waden:"Beine",Core:"Core"};
 /* Satz-Schema je Erfahrung: c = Haupt-Grundübungen, a = weitere Mehrgelenks-
    übungen, i = Isolation (Robinson 2024: Isolation näher ans Versagen).
    Grundwerte = Wochenstart (MEV-nah). Über den Trainingsblock baut sich das
@@ -1429,11 +1474,14 @@ function generateTrainingPlan(profile,variant){
       const n=vB&&fitting.length>1?fitting[1]:fitting[0];
       if(n)chosen.push(n);
     }
-    // Fokus-Bonus: Extra-Übung für den Schwerpunkt früh einsortieren (erweitert um max. 1).
+    // Fokus-Bonus: Extra-Übungen für die Schwerpunkte früh einsortieren. Bei mehreren
+    // gewählten Fokus-Muskeln dürfen bis zu 2 Bonus-Übungen pro passender Session rein.
+    let added=0;
     for(const fm of focus){
-      if(!(DAY_MUSCLES[key]||[]).includes(fm))continue;
+      const parent=FOCUS_PARENT[fm]||fm;
+      if(!(DAY_MUSCLES[key]||[]).includes(parent))continue;
       const bonus=(FOCUS_EX[fm]||[]).find(x=>fits(x)&&!chosen.includes(x));
-      if(bonus){chosen.splice(Math.min(2,chosen.length),0,bonus); if(chosen.length>count+1)chosen.length=count+1; break;}
+      if(bonus){chosen.splice(Math.min(2+added,chosen.length),0,bonus); added++; if(chosen.length>count+2)chosen.length=count+2; if(added>=2)break;}
     }
     return chosen.map((n,i)=>{
       const d=EXDB[n]||{};
@@ -2577,10 +2625,10 @@ function renderLanding(){
     </div>
     ${S.invitedBy?`<div style="background:var(--accent);color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600">${icon("send",14)} Du wurdest eingeladen — <b>14 Tage PERFORMANCE gratis</b> nach der Anmeldung.</div>`:""}
 
-    <!-- HERO mit interaktivem Partikelball -->
+    <!-- HERO mit animiertem Rauch-/Wolken-Orb -->
     <section class="lp-hero">
       <div class="lp-herocopy">
-        <div class="desk-hide pb-wrap" style="margin:0 auto 14px"><canvas id="pb-hero-m" class="pb-canvas"></canvas></div>
+        <div class="desk-hide orb-float" style="width:230px;height:230px;margin:0 auto 14px">${smokeOrb(230)}</div>
         <p class="lp-eyebrow">Wissenschaftlich fundiert</p>
         <h1 class="lp-h">Fortschritt, der auf<br><span class="volt-txt">Wissenschaft</span> basiert.</h1>
         <p class="lp-lead" style="max-width:380px;margin:0 auto 22px">METRICGYM baut jeden Plan auf <b style="color:var(--t1)">belastbarer Trainingswissenschaft</b> — und macht deinen Fortschritt in klaren Zahlen sichtbar. Training, Ernährung und Erholung in einer Engine.</p>
@@ -2588,10 +2636,10 @@ function renderLanding(){
           <button class="btn volt" style="max-width:320px;width:100%;margin:0 auto" onclick="A.toRegister()">Kostenlos starten</button>
           <button class="btn" style="max-width:320px;width:100%;margin:0 auto" onclick="A.devMode()">${icon("play",15)} Live-Demo ansehen</button>
         </div>
-        <p class="xs t2" style="margin-top:14px">Berühr den Ball · dauerhaft kostenlos · Daten bleiben auf deinem Gerät</p>
+        <p class="xs t2" style="margin-top:14px">dauerhaft kostenlos · Daten bleiben auf deinem Gerät</p>
       </div>
       <div class="lp-herovis mob-hide">
-        <div class="pb-wrap pb-big"><canvas id="pb-hero-d" class="pb-canvas"></canvas></div>
+        <div class="orb-float" style="width:clamp(340px,44vw,500px);height:clamp(340px,44vw,500px)">${smokeOrb(500)}</div>
       </div>
     </section>
 
@@ -2664,7 +2712,7 @@ function renderLanding(){
 
     <!-- FINAL CTA -->
     <section class="lp-sec" style="text-align:center">
-      <div style="display:flex;justify-content:center;margin-bottom:16px">${logoMark(60)}</div>
+      <div class="orb-float" style="display:flex;justify-content:center;margin-bottom:16px;width:84px;height:84px;margin-left:auto;margin-right:auto">${smokeOrb(84)}</div>
       <h2 class="lp-h2">Fortschritt, dem du<br>vertrauen kannst.</h2>
       <p class="lp-lead mb16" style="max-width:320px;margin-left:auto;margin-right:auto">Der kostenlose Plan ist ein vollständiges Produkt — Trainingsplan, Logging, Status und dein erster Insight inklusive.</p>
       <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
@@ -2676,19 +2724,13 @@ function renderLanding(){
       </div>
     </section>
   </div>`;
-  // Interaktiven Partikelball auf dem sichtbaren Hero-Canvas starten
-  setTimeout(()=>{
-    const vis=(el)=>el&&el.offsetParent!==null;
-    const cd=document.getElementById("pb-hero-d"), cm=document.getElementById("pb-hero-m");
-    const target=vis(cd)?cd:(vis(cm)?cm:(cd||cm));
-    if(target)particleBall(target,{count:(window.innerWidth>=1024?760:340)});
-    lpAnimateResult();
-  },60);
+  // Rauch-Orb ist reines (animiertes) SVG — kein Canvas-Start mehr nötig.
+  setTimeout(()=>{ lpAnimateResult(); },60);
 }
 
 function renderRegister(){
   A.back=()=>{S.screen="landing";save();render();};
-  A.vUser=(el)=>{el.classList.toggle("err",el.value.length>0&&el.value.length<3);el.classList.toggle("ok",el.value.length>=3);};
+  A.vUser=(el)=>{el.classList.toggle("err",el.value.length>0&&el.value.length<2);el.classList.toggle("ok",el.value.length>=2);};
   A.vMail=(el)=>{const ok=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(el.value);el.classList.toggle("err",el.value.length>0&&!ok);el.classList.toggle("ok",ok);};
   A.vPw=(el)=>{
     const s=pwStrength(el.value), m=document.getElementById("pwmeter"), lbl=document.getElementById("pwlbl");
@@ -2703,7 +2745,7 @@ function renderRegister(){
     const p2=document.getElementById("r-pw2").value;
     const err=document.getElementById("r-err");
     err.textContent="";
-    if(u.length<3){err.textContent="Benutzername: mindestens 3 Zeichen.";return;}
+    if(u.length<2){err.textContent="Bitte gib deinen Vornamen ein.";return;}
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)){err.textContent="Bitte gültige E-Mail-Adresse angeben.";return;}
     if(p.length<8){err.textContent="Passwort: mindestens 8 Zeichen.";return;}
     if(p!==p2){err.textContent="Passwörter stimmen nicht überein.";return;}
@@ -2720,8 +2762,8 @@ function renderRegister(){
   };
   root.innerHTML=`<div class="fade" style="padding-top:8px">
     <div class="topbar"><button class="back" onclick="A.back()" aria-label="Zurück">‹</button><h2>Konto erstellen</h2></div>
-    <div class="field"><label for="r-user">Benutzername</label>
-      <input type="text" id="r-user" autocomplete="username" oninput="A.vUser(this)" placeholder="mind. 3 Zeichen"></div>
+    <div class="field"><label for="r-user">Vorname</label>
+      <input type="text" id="r-user" autocomplete="given-name" oninput="A.vUser(this)" placeholder="Wie sollen wir dich nennen?"></div>
     <div class="field"><label for="r-mail">E-Mail</label>
       <input type="email" id="r-mail" autocomplete="email" oninput="A.vMail(this)" placeholder="du@beispiel.de"></div>
     <div class="field"><label for="r-pw">Passwort</label>
@@ -2790,8 +2832,8 @@ const STEPS=[
   {id:"time",q:"Wie viel Zeit pro Einheit?",hint:"Bestimmt mit, wie viele Übungen sinnvoll in deine Session passen — mehr Zeit = mehr Volumen, weniger Zeit = kompakter & effizienter.",type:"cells",key:"sessionTime",opts:[30,45,60,75,90],unit:"Min"},
   {id:"equipment",q:"Wo trainierst du?",hint:"Dein Plan enthält nur Übungen, die du wirklich machen kannst.",type:"single",key:"equipment",
    opts:[["gym_full","Gym — voll ausgestattet","Maschinen, Kabelzüge, Freihanteln"],["gym_basic","Gym ohne Maschinen","Langhantel, Kurzhanteln, Rack, Bank"],["home_full","Homegym","Kurzhanteln, Bank, Bänder"],["home_min","Zuhause — minimal","Kurzhanteln oder Bänder, ohne Bank"],["bodyweight","Nur Körpergewicht","Kein Equipment nötig"]]},
-  {id:"focus",q:"Worauf willst du besonderen Fokus legen?",hint:"Optional, max. 2 — diese Bereiche bekommen eine Extra-Übung, früh in der Session platziert.",type:"multi",key:"focus",max:2,skip:true,
-   opts:[["Brust","Brust",""],["Rücken","Rücken",""],["Schultern","Schultern",""],["Arme","Arme",""],["Beine","Beine",""],["Core","Core",""]]},
+  {id:"focus",q:"Welche Muskelgruppen willst du besonders pushen?",hint:"Wähl so viele du willst — jede bekommt gezielt zusätzliches, früh platziertes Volumen in den passenden Einheiten.",type:"multi",key:"focus",max:6,skip:true,
+   opts:[["Brust","Brust",""],["Latissimus","Latissimus (Rückenbreite)",""],["Rücken","Rücken (Dicke)",""],["Seitl. Schulter","Seitliche Schulter",""],["Hintere Schulter","Hintere Schulter",""],["Bizeps","Bizeps",""],["Trizeps","Trizeps",""],["Quadrizeps","Quadrizeps",""],["Beinbeuger","Beinbeuger",""],["Gesäß","Gesäß",""],["Waden","Waden",""],["Core","Core / Bauch",""]]},
   {id:"schedule_pref",q:"Wann trainierst du am liebsten?",hint:"Danach richtet sich, auf welche Wochentage dein Plan die Einheiten legt.",type:"single",key:"schedule_pref",
    opts:[["weekday_strong","Unter der Woche","Wochenende bleibt frei"],["weekend_strong","Eher am Wochenende","Sa/So tragen die Hauptlast"],["consistent","Gleichmäßig verteilt","Konstanter Rhythmus"]]},
   {id:"recovery",q:"Wie schnell erholst du dich?",hint:"Steuert, wie dicht deine Einheiten liegen dürfen.",type:"single",key:"recovery_profile",
@@ -2939,6 +2981,32 @@ function renderReveal(){
     <p class="xs t2 mt8">${tg.dirLabel} · ${splitName} · ${a.len} Min/Einheit</p>
     ${tg.conflicts.length?`<div class="warncard mt12" style="text-align:left" role="alert"><b>Hinweis:</b> ${tg.conflicts[0].msg}</div>`:""}
     ${(tg.recs||[]).map(rmsg=>`<div class="card mt8" style="text-align:left;border-color:rgba(157,180,240,.35)"><p class="sm" style="line-height:1.55"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Empfehlung</b><br>${rmsg}</p></div>`).join("")}
+
+    <!-- USP: So funktioniert METRICGYM (4 Boxen) -->
+    <p class="label" style="text-align:center;margin:26px 0 10px">Warum METRICGYM dein bester Plan ist</p>
+    <div class="grid2" style="gap:10px;text-align:left">
+      ${[["brain","Auf deine Biologie gerechnet","Grundumsatz, adjustiertes Gewicht, Volumen-Korridore — kein Tabellen-Plan, sondern deine Zahlen."],
+         ["activity","Passt sich täglich an","Kalorien koppeln an deinen echten Verbrauch, der Plan lernt aus deiner Gewichtskurve."],
+         ["chart","Fortschritt schwarz auf weiß","Kraft-Prognosen, Volumen-Ampel, Monats-Score — du siehst, dass es wirkt."],
+         ["flame","Optimal, nicht beliebig","Jede Übung & jeder Satz folgt Peer-Review-Forschung — maximaler Reiz, minimale Verschwendung."]]
+        .map(([ic,t,d])=>`<div class="card" style="margin:0;padding:14px"><div style="color:var(--hl);margin-bottom:7px">${icon(ic,20)}</div>
+          <p class="sm" style="font-weight:700;margin-bottom:3px">${t}</p><p class="xs t2" style="line-height:1.5">${d}</p></div>`).join("")}
+    </div>
+
+    <!-- SKEPTIKER-ZERSTÖRER: harte Evidenz, dass dies die beste Form ist -->
+    <div class="card" style="margin-top:14px;text-align:left;background:linear-gradient(160deg,rgba(74,111,216,.12),rgba(126,139,232,.04)),var(--glass-bg);border-color:rgba(157,180,240,.4)">
+      <p class="ct" style="margin-bottom:6px">${icon("zap",14)} „Mein alter Plan war doch gut" — die Fakten</p>
+      <p class="xs t2 mb12" style="line-height:1.55">Bauchgefühl-Pläne lassen im Schnitt Ergebnisse liegen. Genau diese Hebel macht METRICGYM richtig — belegt durch Forschung:</p>
+      ${[["+25–48 %","mehr Hypertrophie durch korrektes Wochenvolumen im MEV–MRV-Korridor statt „so viel wie möglich“","Schoenfeld 2017 · Pelland 2025"],
+         ["≈ +2×","Muskelwachstum bei 2× statt 1× Frequenz pro Muskel/Woche — exakt, wie dein Split verteilt","Schoenfeld 2016"],
+         ["bis +9 %","stärkeres Wachstum durch gedehnte (lengthened) Isolation — in deinen Übungen verbaut","Wolf 2024"],
+         ["−0 % Muskel","Muskelerhalt im Defizit durch 1,8–2,2 g/kg Protein + RIR-Steuerung","Helms 2014 · Morton 2018"]]
+        .map(([n,t,c])=>`<div class="row" style="align-items:flex-start;gap:12px;padding:9px 0;border-top:1px solid var(--hairline)">
+          <span class="hero-num volt-txt" style="font-size:20px;min-width:78px;line-height:1.1">${n}</span>
+          <span style="flex:1"><span class="sm" style="line-height:1.45">${t}</span><br><span class="xs" style="color:var(--t3)">${c}</span></span></div>`).join("")}
+      <p class="xs t2 mt10" style="line-height:1.5">Dein Plan kombiniert <b style="color:var(--t1)">alle vier Hebel gleichzeitig</b> und passt sie an deine Daten an. Ein Standard- oder Bauchgefühl-Plan trifft meist nur einen davon.</p>
+    </div>
+
     <button class="btn volt mt16" onclick="A.startApp()">Optimalen Plan übernehmen — los geht's</button>
     <button class="btn mt8" onclick="A.startAppCustom()">${icon("calendar",15)} Lieber meine Tage selbst festlegen</button>
     <button class="btn mt8" onclick="sharePlanPNG()">${icon("send",15)} Meinen Plan teilen</button>
@@ -3171,21 +3239,34 @@ const MILESTONES=[
 ];
 function confetti(){
   try{
+    if(window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches)return;
+    const DPR=Math.min(2,window.devicePixelRatio||1);
     const c=document.createElement("canvas");
     c.style.cssText="position:fixed;inset:0;z-index:75;pointer-events:none";
-    c.width=window.innerWidth; c.height=window.innerHeight;
-    document.body.appendChild(c); const x=c.getContext("2d");
-    const cols=["#9DB4F0","#7E8BE8","#56C8D6","#C9D2E2","#4A6FD8"];
-    const P=Array.from({length:140},()=>({x:c.width*(0.3+Math.random()*0.4),y:c.height*0.28,
-      vx:(Math.random()-.5)*16,vy:Math.random()*-13-3,r:4+Math.random()*5,rot:Math.random()*6,
-      col:cols[Math.floor(Math.random()*cols.length)]}));
-    const start=performance.now();
+    c.width=window.innerWidth*DPR; c.height=window.innerHeight*DPR;
+    document.body.appendChild(c); const x=c.getContext("2d"); x.scale(DPR,DPR);
+    const W=window.innerWidth,H=window.innerHeight;
+    const cols=["#9DB4F0","#7E8BE8","#56C8D6","#C9D2E2","#4A6FD8","#B7C6F2","#FFFFFF"];
+    // feinere, hochwertigere Partikel: Mix aus schmalen Plättchen, Kreisen & Funken
+    const P=Array.from({length:190},()=>{const kind=Math.random();return {
+      x:W*(0.34+Math.random()*0.32), y:H*0.30,
+      vx:(Math.random()-.5)*11, vy:Math.random()*-12-4,
+      r:1.4+Math.random()*3, rot:Math.random()*6.28, vr:(Math.random()-.5)*0.34,
+      drift:(Math.random()-.5)*0.04, ph:Math.random()*6.28,
+      shape: kind<0.5?"rect":kind<0.82?"circle":"spark",
+      col:cols[Math.floor(Math.random()*cols.length)], a:1 };});
+    const start=performance.now(), LIFE=2600;
     (function f(t){
-      x.clearRect(0,0,c.width,c.height); let on=false;
-      P.forEach(p=>{p.vy+=0.5;p.x+=p.vx;p.y+=p.vy;p.rot+=0.2;
-        if(p.y<c.height+30)on=true;
-        x.save();x.translate(p.x,p.y);x.rotate(p.rot);x.fillStyle=p.col;x.fillRect(-p.r,-p.r,p.r*2,p.r*1.3);x.restore();});
-      if(on&&t-start<2400)requestAnimationFrame(f); else c.remove();
+      const el=t-start; x.clearRect(0,0,W,H); let on=false;
+      P.forEach(p=>{ p.vy+=0.34; p.ph+=0.08; p.x+=p.vx+Math.sin(p.ph)*0.6; p.y+=p.vy; p.rot+=p.vr; p.vx*=0.992;
+        p.a=el>LIFE*0.6?Math.max(0,1-(el-LIFE*0.6)/(LIFE*0.4)):1;
+        if(p.y<H+30&&p.a>0)on=true;
+        x.save(); x.globalAlpha=p.a; x.translate(p.x,p.y); x.rotate(p.rot); x.fillStyle=p.col;
+        if(p.shape==="circle"){x.beginPath();x.arc(0,0,p.r,0,6.283);x.fill();}
+        else if(p.shape==="spark"){x.fillRect(-0.6,-p.r*2,1.2,p.r*4);}
+        else {x.fillRect(-p.r,-p.r*0.5,p.r*2,p.r);}
+        x.restore(); });
+      if(on&&el<LIFE+200)requestAnimationFrame(f); else c.remove();
     })(start);
   }catch{}
 }
@@ -4681,16 +4762,16 @@ function renderNutrition(){
       <p class="xs t2 mt4">Die Marke zeigt 90 % deines Ziels. Protein zuerst — der größte Hebel für Muskelaufbau und Sättigung.</p>
     </div>
 
-    <!-- Quick-Log: vereinfacht — Favoriten-Chips (1 Tipp) + Feld + Sprache + Foto -->
+    <!-- SMART-LOG: KI-Natursprache als primäre Methode (ersetzt das alte „Schnell loggen") -->
     <div class="card">
-      <p class="ct">Schnell loggen</p>
-      ${favIdx.length?`<div class="chips mb12">${favIdx.map(i=>`<button class="chip" onclick="A.quick(${i})">+ ${FOODS[i][0].replace(/ \(.*\)$/,"")}</button>`).join("")}</div>`:""}
-      ${quickLogField("'500 g Hähnchen und 300 g Reis, 2 Tomaten'","A.parseFood")}
-      <div class="grid2 mt8" style="gap:8px">
-        <button class="btn" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto (Demo)</button>
-        <button class="btn" onclick="A.aiEstimate()">${icon("sparkle",15)} KI-Schätzung${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
+      <p class="ct">${icon("sparkle",14)} Smart-Log${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:6px">KI aktiv</span>':""}</p>
+      <p class="xs t2 mb12" style="line-height:1.5">Schreib oder sprich einfach, was du gegessen hast — auch mehrere Sachen, mit Tippfehlern. Die KI erkennt alles, rechnet Kalorien & Makros und trägt es ein.</p>
+      ${quickLogField("z. B. „2 Eier, Haferflocken mit Banane und ein Proteinshake“","A.parseFood")}
+      ${favIdx.length?`<p class="label" style="margin:16px 0 8px">Schnellzugriff</p><div class="chips mb4">${favIdx.map(i=>`<button class="chip" onclick="A.quick(${i})">+ ${FOODS[i][0].replace(/ \(.*\)$/,"")}</button>`).join("")}</div>`:""}
+      <div class="grid2 mt12" style="gap:8px">
+        <button class="btn" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto</button>
+        <button class="btn" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich essen?</button>
       </div>
-      <button class="btn mt8" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich jetzt essen?</button>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
         ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
@@ -4896,20 +4977,28 @@ let EP=null;
 function renderProfile(){
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
   A.logout=()=>{S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
-  A.editProfile=()=>{EP={weight:p.a.weight,goals:[...(p.tg.goals||[])]};A.epRender();};
+  A.editProfile=()=>{EP={weight:p.a.weight,goals:[...(p.tg.goals||[])],days:p.a.days||4,act:p.a.act||"light"};A.epRender();};
   A.epGoal=(g)=>{
     if(S.tier==="free"&&EP.goals.length>=1&&!EP.goals.includes(g)){overlay.innerHTML="";showUpgradeTeaser("multi_goal");return;}
     EP.goals=EP.goals.includes(g)?EP.goals.filter(x=>x!==g):(EP.goals.length<3?[...EP.goals,g]:EP.goals);
     A.epRender();
   };
+  A.epDays=(d)=>{EP.days=d;A.epRender();};
+  A.epAct=(a)=>{EP.act=a;A.epRender();};
   A.epRender=()=>{
-    modal(`<p class="ct">Profil bearbeiten</p>
+    const ACTL={sedentary:"Sitzend",light:"Etwas Bewegung",moderate:"Auf den Beinen",active:"Aktiver Beruf",very_active:"Schwere Arbeit"};
+    modal(`<p class="ct">${icon("settings",14)} Engine & Ziele anpassen</p>
+      <p class="xs t2 mb12" style="line-height:1.5">Ändere dein Ziel oder deinen Alltag — die Engine rechnet <b style="color:var(--t1)">Kalorien, Makros und Trainingsplan sofort neu</b> (Tagesbedarf + Langfrist-Ziel wie Fettabbau).</p>
       <div class="field"><label for="ep-w">Aktuelles Gewicht (kg)</label>
         <input type="number" id="ep-w" inputmode="decimal" value="${EP.weight}" min="30" max="250" step="0.1"></div>
       <p class="xs t2 mb8">Ziele (max. 3, erstes = primär)</p>
-      <div class="chips mb8">${Object.entries(GOAL_LABEL).map(([g,l])=>`
+      <div class="chips mb12">${Object.entries(GOAL_LABEL).filter(([g])=>g!=="recomp").map(([g,l])=>`
         <button class="chip ${EP.goals.includes(g)?"sel":""}" onclick="A.epGoal('${g}')">${EP.goals.includes(g)?(EP.goals.indexOf(g)+1)+". ":""}${l}</button>`).join("")}</div>
-      <button class="btn volt" onclick="A.epSave()">Speichern & Ziele neu berechnen</button>`);
+      <p class="xs t2 mb8">Trainingstage pro Woche</p>
+      <div class="chips mb12">${[2,3,4,5,6].map(d=>`<button class="chip ${EP.days===d?"sel":""}" onclick="A.epDays(${d})">${d}</button>`).join("")}</div>
+      <p class="xs t2 mb8">Alltag (bestimmt den Tagesbedarf)</p>
+      <div class="chips mb12">${Object.entries(ACTL).map(([a,l])=>`<button class="chip ${EP.act===a?"sel":""}" onclick="A.epAct('${a}')">${l}</button>`).join("")}</div>
+      <button class="btn volt" onclick="A.epSave()">${icon("zap",15)} Engine neu berechnen</button>`);
     const inp=document.getElementById("ep-w");
     if(inp)inp.oninput=()=>{EP.weight=parseFloat(inp.value)||EP.weight;};
   };
@@ -4917,18 +5006,23 @@ function renderProfile(){
     if(!EP)return;
     const w=Math.round((EP.weight||p.a.weight)*10)/10;
     if(w<30||w>250){toast("Gewicht zwischen 30 und 250 kg");return;}
+    const goalsChanged=EP.goals.length&&JSON.stringify(EP.goals)!==JSON.stringify(p.tg.goals||[]);
     p.a.weight=w;
     if(EP.goals.length)p.a.goals=EP.goals;
+    if(EP.days)p.a.days=EP.days;
+    if(EP.act)p.a.act=EP.act;
+    // Ziel geändert -> Langfrist-Richtung neu, adaptive Memory-Korrektur zurücksetzen
+    if(goalsChanged){ S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; }
     p.bmr=bmrCalc(p.a);
     p.td=tdeeCalc(p.bmr,p.a.act||"light",effWeight(p.a),p.a.len||60,p.a.days||4);
     p.tg=multiTargets(p.a,p.bmr,p.td);
-    S.plan=generateTrainingPlan(p); // Plan an neue Ziele anpassen
-    S.planB=generateTrainingPlan(p,"B"); S.rotation=null; // A/B + Rotation neu ableiten
-    S.exOverrides={}; // Übungs-Täusche gehören zum alten Plan
+    S.plan=generateTrainingPlan(p); S.planB=generateTrainingPlan(p,"B"); S.rotation=null;
+    const opt=generateOptimalSchedule(p.a); S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+    S.exOverrides={};
     S.weightLog=S.weightLog.filter(x=>new Date(x.t).toISOString().slice(0,10)!==todayKey());
     S.weightLog.push({t:Date.now(),v:w});
     EP=null; overlay.innerHTML=""; save(); render();
-    toast("Profil aktualisiert — Ziele neu berechnet");
+    toast("Engine neu berechnet — Kalorien, Makros & Plan aktualisiert");
   };
   A.exportData=()=>{
     try{
@@ -5038,7 +5132,7 @@ function renderProfile(){
         <div><p class="xs t2">Kalorienziel (Training) ${infoBtn("kcalTarget")}</p><p class="metric sm">${fmtKcal(p.tg.train.kcal)}</p></div>
         <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
       </div>
-      <button class="btn mt16" onclick="A.editProfile()">Profil bearbeiten</button></div>`:""}
+      <button class="btn volt mt16" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button></div>`:""}
     <div class="card"><p class="ct">${icon("camera",14)} Körper-Fortschritt</p>
       ${(()=>{const m=S.measure;const last=m[m.length-1],first=m[0];
         if(!last)return `<p class="sm t2 mb12">Tracke Maße & Fotos — dein sichtbarer Beweis, wie weit du kommst.</p>`;
