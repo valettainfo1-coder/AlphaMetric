@@ -848,7 +848,9 @@ function forecast12w(series){
 // ---------- Volumen-Toleranz je Muskelgruppe (MEV–MRV, Israetel et al., 2017) ----------
 const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Beine","Wadenheben":"Beine","Kreuzheben":"Beine","Rumänisches Kreuzheben":"Beine","Bankdrücken":"Brust","Schrägbankdrücken":"Brust","Schulterdrücken":"Schultern","Seitheben":"Schultern","Face Pull":"Schultern","Klimmzug":"Rücken","Langhantelrudern":"Rücken","Kabelrudern":"Rücken","Trizepsdrücken":"Arme","Plank":"Core",
   "Liegestütze":"Brust","KH-Bankdrücken":"Brust","KH-Fliegende":"Brust","KH-Schulterdrücken":"Schultern","Pike Push-ups":"Schultern","Band Pull-Apart":"Schultern","Reverse Flys":"Schultern","Latzug":"Rücken","Einarmiges KH-Rudern":"Rücken","Rudern am Tisch":"Rücken","Superman":"Rücken","Enge Liegestütze":"Arme","Bizeps-Curls":"Arme","Goblet Squat":"Beine","Kniebeuge (Körpergewicht)":"Beine","Beinpresse":"Beine","KH-Rumänisches Kreuzheben":"Beine","Bulgarian Split Squat":"Beine","Hip Thrust":"Beine"};
-const VOL_BANDS={Beine:[10,20],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Arme:[6,18],Core:[4,16]};
+// MEV–MRV-Korridore (Israetel 2017). "Beine" ist eine Sammelgruppe (Quadrizeps +
+// Beinbeuger + Gesäß + Waden) und verträgt daher zusammengenommen mehr Sätze.
+const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Arme:[6,18],Core:[4,16]};
 function weeklyMuscleSets(weeksBack){
   const from=Date.now()-(weeksBack+1)*7*dayMs, to=Date.now()-weeksBack*7*dayMs;
   const out={};
@@ -1232,9 +1234,9 @@ const SESSION_SLOTS={
          ["Bizeps-Curls","Band Pull-Apart"],
          ["Trizepsdrücken","Enge Liegestütze"]],
   lower:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
-         ["Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
-         ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Bulgarian Split Squat"],
-         ["Beinbeuger","Hip Thrust","Bulgarian Split Squat"],
+         ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
+         ["Beinpresse","Bulgarian Split Squat","Hip Thrust"],
+         ["Beinbeuger","KH-Rumänisches Kreuzheben","Hip Thrust"],
          ["Ausfallschritte","Bulgarian Split Squat"],
          ["Wadenheben"],
          ["Hip Thrust","Goblet Squat"]],
@@ -1255,10 +1257,13 @@ const FOCUS_EX={
    Volumen progressiv auf (siehe weekSets) Richtung MAV/MRV (Israetel 2017,
    Pelland 2025), Woche 4 = Erholung. */
 const SETS_BY_EXP={
-  beginner:{c:3,a:2,i:2,count:5},
-  novice:{c:3,a:3,i:2,count:6},
-  intermediate:{c:4,a:3,i:3,count:7},
-  advanced:{c:4,a:4,i:3,count:8},
+  // count = Übungen pro Einheit. Bewusst schlank (4–6): mehr Übungen je Session
+  // erhöhen v. a. die Ermüdung, nicht die Reizqualität — späte Übungen leiden
+  // (Schoenfeld 2019). Fokus-Bonus ERSETZT eine Übung, addiert nicht (s. buildMain).
+  beginner:{c:3,a:2,i:2,count:4},
+  novice:{c:3,a:3,i:2,count:5},
+  intermediate:{c:4,a:3,i:3,count:6},
+  advanced:{c:4,a:4,i:3,count:6},
 };
 /* Progressives Volumen je Trainingsblock-Woche: Mehrgelenksübungen tragen den
    Aufbau (mehr Last-Toleranz), Isolation steigt gedämpft; Woche 4 deloadet. */
@@ -1292,11 +1297,12 @@ function generateTrainingPlan(profile,variant){
       const n=vB&&fitting.length>1?fitting[1]:fitting[0];
       if(n)chosen.push(n);
     }
-    // Fokus-Bonus: Extra-Übung früh einsortieren (Position 3, nach den Haupt-Grundübungen)
+    // Fokus-Bonus: Extra-Übung für den Schwerpunkt früh einsortieren — ERSETZT aber
+    // eine spätere Übung (Trim auf scheme.count), damit die Session nicht überläuft.
     for(const fm of focus){
       if(!(DAY_MUSCLES[key]||[]).includes(fm))continue;
       const bonus=(FOCUS_EX[fm]||[]).find(x=>fits(x)&&!chosen.includes(x));
-      if(bonus){chosen.splice(Math.min(2,chosen.length),0,bonus);break;}
+      if(bonus){chosen.splice(Math.min(2,chosen.length),0,bonus); if(chosen.length>scheme.count+1)chosen.length=scheme.count+1; break;}
     }
     return chosen.map((n,i)=>{
       const d=EXDB[n]||{};
@@ -1325,17 +1331,46 @@ function generateTrainingPlan(profile,variant){
 /* ---------- Optimaler Wochenplan (v5/Phase 1): Vorschlag + Begründung ----------
    Split nach Tagen + Erholungsprofil, Platzierung nach Wochen-Präferenz,
    Cardio auf einem Ruhetag. Der Nutzer behält die volle Kontrolle (User owns schedule). */
+// Schwerpunkt aus dem Fokus ableiten: Oberkörper-Fokus -> Push/Pull-lastig (mehr
+// Frequenz für Brust/Rücken/Schultern/Arme), Bein-Fokus -> mehr Bein-Tage.
+function focusPriority(a){
+  const f=(a&&a.focus)||[]; const UP=["Brust","Rücken","Schultern","Arme"];
+  const hasUp=f.some(m=>UP.includes(m)), hasLow=f.includes("Beine");
+  if(hasUp&&!hasLow) return "upper";
+  if(hasLow&&!hasUp) return "lower";
+  return "balanced";
+}
 function generateOptimalSchedule(a){
   a=a||{};
   const days=Math.min(6,Math.max(2,a.days||4));
   const rec=a.recovery_profile||"average", pref=a.schedule_pref||"consistent";
-  const SPLITS={
-    2:["upper","lower"],
-    3:rec==="slow"?["upper","lower","upper"]:["push","pull","legs"],
-    4:["upper","lower","upper","lower"],
-    5:rec==="slow"?["upper","lower","push","pull","legs"]:["push","pull","legs","upper","lower"],
-    6:rec==="slow"?["push","pull","legs","upper","lower","cardio"]:["push","pull","legs","push","pull","legs"],
+  const fp=focusPriority(a);
+  // Fokus-abhängige Splits: Push/Pull verteilen das Oberkörper-Volumen auf fokussierte
+  // Einheiten (statt einer überladenen "Upper"-Session) und treffen den Schwerpunkt.
+  const SP={
+    balanced:{
+      2:["upper","lower"],
+      3:rec==="slow"?["upper","lower","upper"]:["push","pull","legs"],
+      4:["upper","lower","upper","lower"],
+      5:rec==="slow"?["upper","lower","push","pull","legs"]:["push","pull","legs","upper","lower"],
+      6:rec==="slow"?["push","pull","legs","upper","lower","cardio"]:["push","pull","legs","push","pull","legs"],
+    },
+    upper:{ // Oberkörper-Schwerpunkt: hohe Frequenz via Push/Pull, jeder Muskel max ~2×/Woche
+      2:["push","pull"],
+      3:["push","pull","legs"],
+      4:["push","pull","legs","upper"],
+      5:["push","pull","legs","push","pull"],
+      6:["push","pull","legs","push","pull","upper"],
+    },
+    lower:{ // Bein-Schwerpunkt: max 2 Bein-Tage, Oberkörper bleibt erhalten
+      2:["lower","upper"],
+      3:["legs","upper","lower"],
+      4:["legs","upper","lower","upper"],
+      5:["legs","upper","lower","push","pull"],
+      6:["legs","upper","lower","push","pull","legs"],
+    },
   };
+  const SPLITS=SP[fp]||SP.balanced;
   const POS={
     consistent:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,4,5],6:[0,1,2,3,4,5]},
     weekday_strong:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4],6:[0,1,2,3,4,5]},
@@ -1348,13 +1383,17 @@ function generateOptimalSchedule(a){
     const restIdx=sch.map((t,i)=>t==="rest"?i:null).filter(x=>x!=null);
     if(restIdx.length>=2)sch[restIdx[Math.floor(restIdx.length/2)]]="cardio";
   }
-  const splitTxt={
-    2:"2 kompakte Einheiten (Ober-/Unterkörper) — maximaler Effekt pro Training.",
-    3:rec==="slow"?"3 Einheiten im Ober-/Unterkörper-Wechsel — voller Reiz, viel Luft zur Erholung.":"3 Einheiten als Push / Pull / Beine — klare Trennung, jede Muskelgruppe erholt sich komplett.",
-    4:"4 Einheiten im Ober-/Unterkörper-Wechsel — jede Muskelgruppe wird 2× pro Woche trainiert: der Sweet Spot für Muskelaufbau.",
-    5:"5 Einheiten — Push / Pull / Beine plus Oberkörper / Unterkörper: hohe Frequenz, klug verteilt.",
-    6:rec==="slow"?"6 Einheiten mit eingebautem Cardio-Tag — Frequenz hoch, Belastung dosiert.":"6 Einheiten — doppelter Push/Pull/Beine-Durchlauf für maximale Trainingsfrequenz.",
-  }[days];
+  const splitTxt=fp==="upper"
+    ? `${days} Einheiten mit Oberkörper-Schwerpunkt: Push und Pull liefern hohe Frequenz für Brust, Rücken, Schultern und Arme (statt alles in eine überladene Einheit zu packen), ein Bein-Tag hält die Beine über die Grundübungen stark.`
+    : fp==="lower"
+    ? `${days} Einheiten mit Bein-Schwerpunkt: mehr Volumen für Beine und Po, der Oberkörper bleibt über kompakte Einheiten voll erhalten.`
+    : {
+        2:"2 kompakte Einheiten (Ober-/Unterkörper) — maximaler Effekt pro Training.",
+        3:rec==="slow"?"3 Einheiten im Ober-/Unterkörper-Wechsel — voller Reiz, viel Luft zur Erholung.":"3 Einheiten als Push / Pull / Beine — klare Trennung, jede Muskelgruppe erholt sich komplett.",
+        4:"4 Einheiten im Ober-/Unterkörper-Wechsel — jede Muskelgruppe wird 2× pro Woche trainiert: der Sweet Spot für Muskelaufbau.",
+        5:"5 Einheiten — Push / Pull / Beine plus Oberkörper / Unterkörper: hohe Frequenz, klug verteilt.",
+        6:rec==="slow"?"6 Einheiten mit eingebautem Cardio-Tag — Frequenz hoch, Belastung dosiert.":"6 Einheiten — doppelter Push/Pull/Beine-Durchlauf für maximale Trainingsfrequenz.",
+      }[days];
   const recTxt={
     fast:"Du erholst dich schnell — deine Einheiten dürfen dicht beieinander liegen.",
     average:"Zwischen harten Einheiten für dieselben Muskeln liegen mindestens 48 Stunden.",
@@ -1375,13 +1414,31 @@ function generateRotation(a){
   a=a||{};
   const days=Math.min(6,Math.max(2,a.days||4));
   const rec=a.recovery_profile||"average";
-  const ROT={
-    2:["upperA","lowerA"],
-    3:rec==="slow"?["upperA","lowerA","upperB"]:["pushA","pullA","legs"],
-    4:["upperA","lowerA","upperB","lowerB"],
-    5:["pushA","pullA","legs","upperA","lowerA"],
-    6:rec==="slow"?["pushA","pullA","legsA","upperA","lowerA","cardio"]:["pushA","pullA","legsA","pushB","pullB","legsB"],
+  const fp=focusPriority(a);
+  const RT={
+    balanced:{
+      2:["upperA","lowerA"],
+      3:rec==="slow"?["upperA","lowerA","upperB"]:["pushA","pullA","legs"],
+      4:["upperA","lowerA","upperB","lowerB"],
+      5:["pushA","pullA","legs","upperA","lowerA"],
+      6:rec==="slow"?["pushA","pullA","legsA","upperA","lowerA","cardio"]:["pushA","pullA","legsA","pushB","pullB","legsB"],
+    },
+    upper:{
+      2:["pushA","pullA"],
+      3:["pushA","pullA","legs"],
+      4:["pushA","pullA","legs","upperA"],
+      5:["pushA","pullA","legs","pushB","pullB"],
+      6:["pushA","pullA","legs","pushB","pullB","upperA"],
+    },
+    lower:{
+      2:["lowerA","upperA"],
+      3:["legsA","upperA","lowerB"],
+      4:["legsA","upperA","lowerB","upperB"],
+      5:["legsA","upperA","lowerB","pushA","pullA"],
+      6:["legsA","upperA","lowerB","pushA","pullA","legsB"],
+    },
   };
+  const ROT=RT[fp]||RT.balanced;
   return (ROT[days]||ROT[4]).slice();
 }
 function activeRotation(){
@@ -2683,6 +2740,12 @@ function renderReveal(){
     S.seenFeatures=true; save();
     beamIntoApp(()=>{ S.screen="app"; S.tab="home"; save(); render(); });
   };
+  // Alternative: Tage/Split selbst festlegen (statt den optimalen Vorschlag zu übernehmen).
+  A.startAppCustom=()=>{
+    if(!S.schedule&&S.scheduleSuggestion)S.schedule=S.scheduleSuggestion.slice();
+    S.seenFeatures=true; save();
+    beamIntoApp(()=>{ S.screen="app"; S.tab="train"; save(); render(); setTimeout(()=>openScheduleSheet(),360); });
+  };
   const a=p.a, sug=S.scheduleSuggestion||[];
   const trainCount=sug.filter(t=>t!=="rest").length, set=new Set(sug);
   const splitName=set.has("push")?"Push · Pull · Beine":(set.has("upper")||set.has("lower"))?"Ober- & Unterkörper":"Ganzkörper";
@@ -2726,7 +2789,8 @@ function renderReveal(){
     </div>
     <p class="xs t2 mt8">${tg.dirLabel} · ${splitName} · ${a.len} Min/Einheit</p>
     ${tg.conflicts.length?`<div class="warncard mt12" style="text-align:left" role="alert"><b>Hinweis:</b> ${tg.conflicts[0].msg}</div>`:""}
-    <button class="btn volt mt16" onclick="A.startApp()">Los geht's — leg los</button>
+    <button class="btn volt mt16" onclick="A.startApp()">Optimalen Plan übernehmen — los geht's</button>
+    <button class="btn mt8" onclick="A.startAppCustom()">${icon("calendar",15)} Lieber meine Tage selbst festlegen</button>
     <button class="btn mt8" onclick="sharePlanPNG()">${icon("send",15)} Meinen Plan teilen</button>
     <details class="acc mt8" style="text-align:left"><summary style="font-size:13px;padding:12px 14px">Alle Details — Umsätze, Makros, Wochenplan<span class="chev">${icon("chevron",15)}</span></summary>
       <div class="accbody">
