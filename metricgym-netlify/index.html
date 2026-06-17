@@ -1253,6 +1253,7 @@ S.planUndo=S.planUndo||null; // letzter KI-Plan-Eingriff (Vorher-Schnappschuss f
 S.monthOffset=S.monthOffset||0; // Monats-Überblick: 0 = aktueller Monat
 S.calAdjust=S.calAdjust||0; S.calAdjustAt=S.calAdjustAt||0; S.calAdjustMsg=S.calAdjustMsg||null; // adaptiver Kalorien-Abgleich (Memory)
 S.wearActive=S.wearActive||{}; S.wearSteps=S.wearSteps||{}; // Wearable: Aktiv-Kalorien & Schritte je Tag
+S.consent=S.consent||null; // DSGVO-Einwilligung (AGB/Datenschutz + Gesundheitsdaten Art.9)
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -2407,6 +2408,7 @@ function renderAppbar(){
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr Tiefe freischalten":"Abo & Tier ändern","A.menuGo('pricing')")}
     ${item("sparkle","So funktioniert METRICGYM","Features & Engine im Überblick","A.menuGo('features')")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
+    ${item("info","Rechtliches & Datenschutz","Impressum · AGB · Datenschutz","openLegalIndex()")}
     <div class="menu-divider"></div>
     <button class="menu-item" onclick="A.logoutMenu()" style="color:var(--t2)"><span class="mi-ic">${icon("undo",18)}</span><span style="flex:1">Abmelden</span></button>
   </div>`;})():""}
@@ -2793,8 +2795,14 @@ function renderLanding(){
       <button class="btn ghost" style="max-width:320px;margin:0 auto" onclick="A.devMode()">${icon("settings",15)} Erst die Demo ansehen</button>
       <div class="row" style="gap:14px;justify-content:center;margin-top:20px">
         <span class="xs t2">Dauerhaft kostenlos</span><span class="xs" style="color:var(--t3)">·</span>
-        <span class="xs t2">Daten lokal</span><span class="xs" style="color:var(--t3)">·</span>
-        <span class="xs t2">DSGVO</span>
+        <span class="xs t2">DSGVO-konform</span><span class="xs" style="color:var(--t3)">·</span>
+        <span class="xs t2">Kein Tracking</span>
+      </div>
+      <div class="row" style="gap:14px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+        <a class="xs" style="color:var(--t3);text-decoration:underline;cursor:pointer" onclick="openLegal('impressum')">Impressum</a>
+        <a class="xs" style="color:var(--t3);text-decoration:underline;cursor:pointer" onclick="openLegal('privacy')">Datenschutz</a>
+        <a class="xs" style="color:var(--t3);text-decoration:underline;cursor:pointer" onclick="openLegal('terms')">AGB</a>
+        <a class="xs" style="color:var(--t3);text-decoration:underline;cursor:pointer" onclick="openLegal('disclaimer')">Gesundheitshinweis</a>
       </div>
     </section>
   </div>`;
@@ -2802,6 +2810,54 @@ function renderLanding(){
   setTimeout(()=>{ lpAnimateResult(); },60);
 }
 
+/* ===== Rechtliches (Vorlagen mit [PLATZHALTER] — vor Launch anwaltlich prüfen/füllen) ===== */
+const LEGAL_VERSION=1;
+function legalDoc(type){
+  const ph='<span style="color:var(--warn)">[bitte ausfüllen]</span>';
+  const docs={
+    impressum:`<p class="ct">Impressum</p><div class="sm t2" style="line-height:1.65">
+      <p style="color:var(--t1);font-weight:600">Angaben gemäß § 5 DDG</p>
+      <p>${ph} (Name / Firma)<br>${ph} (Straße, Hausnr.)<br>${ph} (PLZ, Ort)<br>${ph} (Land)</p>
+      <p class="mt8"><b style="color:var(--t1)">Kontakt:</b><br>E-Mail: ${ph}<br>Tel.: ${ph}</p>
+      <p class="mt8"><b style="color:var(--t1)">Umsatzsteuer-ID:</b> ${ph}</p>
+      <p class="mt8"><b style="color:var(--t1)">Verantwortlich i.S.d. § 18 Abs. 2 MStV:</b> ${ph}</p></div>`,
+    privacy:`<p class="ct">Datenschutzerklärung</p><div class="sm t2" style="line-height:1.65">
+      <p><b style="color:var(--t1)">1. Verantwortlicher</b><br>${ph} (Name, Anschrift, E-Mail). Datenschutz-Kontakt: ${ph}.</p>
+      <p class="mt8"><b style="color:var(--t1)">2. Welche Daten wir verarbeiten</b><br>
+        • Konto: Vorname, E-Mail (über Supabase Auth).<br>
+        • <b style="color:var(--t1)">Gesundheits-/Fitnessdaten</b> (besondere Kategorie, Art. 9 DSGVO): Gewicht, Körperfett, Training, Ernährung, Erholung/Status.<br>
+        • Nutzungsdaten der App (rein lokal/zur Funktion).</p>
+      <p class="mt8"><b style="color:var(--t1)">3. Zwecke & Rechtsgrundlagen</b><br>
+        Vertragserfüllung/Funktion der App (Art. 6 Abs. 1 b). Verarbeitung der Gesundheitsdaten ausschließlich auf Basis deiner <b style="color:var(--t1)">ausdrücklichen Einwilligung</b> (Art. 9 Abs. 2 a) — jederzeit widerrufbar.</p>
+      <p class="mt8"><b style="color:var(--t1)">4. Speicherung & Auftragsverarbeiter</b><br>
+        Daten liegen lokal auf deinem Gerät und — bei aktiviertem Konto — bei <b style="color:var(--t1)">Supabase</b> (Auftragsverarbeiter; Region/Serverstandort: ${ph}). Mit Supabase ist ein AV-Vertrag abzuschließen (DPA).</p>
+      <p class="mt8"><b style="color:var(--t1)">5. KI-Funktion & Drittlandübermittlung</b><br>
+        Nur wenn du die KI nutzt, werden die jeweiligen Eingaben + Trainings-/Ernährungskontext an <b style="color:var(--t1)">Groq Inc. (USA)</b> übermittelt. Übermittlung in ein Drittland auf Grundlage deiner Einwilligung (Art. 49 Abs. 1 a) bzw. geeigneter Garantien. Ohne KI erfolgt keine solche Übermittlung.</p>
+      <p class="mt8"><b style="color:var(--t1)">6. Speicherdauer</b><br>Bis zur Löschung deines Kontos bzw. Widerruf. Lokale Daten löschst du jederzeit selbst.</p>
+      <p class="mt8"><b style="color:var(--t1)">7. Deine Rechte</b><br>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch, Widerruf der Einwilligung sowie Beschwerde bei einer Aufsichtsbehörde (Art. 15–21, 77 DSGVO). In der App: Profil → Daten exportieren / Konto löschen.</p>
+      <p class="mt8"><b style="color:var(--t1)">8. Cookies/Tracking</b><br>Kein Tracking, keine Werbe-Cookies. Es wird nur technisch notwendiger lokaler Speicher (localStorage) zur Funktion genutzt.</p></div>`,
+    terms:`<p class="ct">Nutzungsbedingungen (AGB)</p><div class="sm t2" style="line-height:1.65">
+      <p><b style="color:var(--t1)">1. Leistung</b><br>METRICGYM stellt Trainings-/Ernährungsempfehlungen auf Basis deiner Angaben bereit. Es handelt sich um allgemeine Fitness-Information, <b style="color:var(--t1)">keine medizinische, diätetische oder therapeutische Beratung</b>.</p>
+      <p class="mt8"><b style="color:var(--t1)">2. Eigenverantwortung & Mindestalter</b><br>Training erfolgt auf eigene Verantwortung. Mindestalter 16 Jahre (bzw. mit Zustimmung der Sorgeberechtigten).</p>
+      <p class="mt8"><b style="color:var(--t1)">3. Haftung</b><br>Keine Haftung für Schäden aus der Nutzung der Empfehlungen, soweit gesetzlich zulässig; unberührt bleibt die Haftung für Vorsatz, grobe Fahrlässigkeit sowie Leben, Körper, Gesundheit.</p>
+      <p class="mt8"><b style="color:var(--t1)">4. Konto & Kündigung</b><br>Du kannst dein Konto jederzeit in der App löschen. Wir können Konten bei Missbrauch sperren.</p>
+      <p class="mt8"><b style="color:var(--t1)">5. Änderungen</b><br>Wir können diese Bedingungen anpassen; wesentliche Änderungen werden angekündigt.</p>
+      <p class="mt8">Anbieter & Kontakt: ${ph}. Stand: ${ph}.</p></div>`,
+    disclaimer:`<p class="ct">Gesundheits- & Haftungshinweis</p><div class="sm t2" style="line-height:1.65">
+      <p>METRICGYM <b style="color:var(--t1)">ersetzt keine ärztliche oder ernährungsmedizinische Beratung</b>. Die Empfehlungen sind allgemeine Fitness-Information.</p>
+      <p class="mt8">Hol vor Trainingsbeginn ärztlichen Rat ein, wenn du Vorerkrankungen, Herz-Kreislauf-Probleme, Verletzungen, Schwangerschaft oder andere gesundheitliche Einschränkungen hast.</p>
+      <p class="mt8">Brich das Training bei Schmerzen, Schwindel oder Unwohlsein sofort ab und konsultiere eine Ärztin/einen Arzt. Die Nutzung erfolgt auf eigene Gefahr.</p></div>`,
+  };
+  return (docs[type]||"")+`<p class="xs t2 mt12" style="line-height:1.5;border-top:1px solid var(--hairline);padding-top:10px">Hinweis: Diese Texte sind sorgfältige Vorlagen, jedoch <b style="color:var(--t1)">keine Rechtsberatung</b>. Bitte vor öffentlichem Launch anwaltlich prüfen und die Platzhalter mit euren echten Angaben füllen.</p>`;
+}
+function openLegal(t){ modal(legalDoc(t)); }
+function openLegalIndex(){
+  modal(`<p class="ct">Rechtliches & Datenschutz</p>
+    <button class="btn mb8" onclick="openLegal('privacy')">Datenschutzerklärung</button>
+    <button class="btn mb8" onclick="openLegal('terms')">Nutzungsbedingungen (AGB)</button>
+    <button class="btn mb8" onclick="openLegal('impressum')">Impressum</button>
+    <button class="btn" onclick="openLegal('disclaimer')">Gesundheits- & Haftungshinweis</button>`);
+}
 function renderRegister(){
   A.back=()=>{S.screen="landing";save();render();};
   A.vUser=(el)=>{el.classList.toggle("err",el.value.length>0&&el.value.length<2);el.classList.toggle("ok",el.value.length>=2);};
@@ -2823,6 +2879,10 @@ function renderRegister(){
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)){err.textContent="Bitte gültige E-Mail-Adresse angeben.";return;}
     if(p.length<8){err.textContent="Passwort: mindestens 8 Zeichen.";return;}
     if(p!==p2){err.textContent="Passwörter stimmen nicht überein.";return;}
+    const cTos=document.getElementById("c-tos"), cHealth=document.getElementById("c-health");
+    if(!cTos||!cTos.checked){err.textContent="Bitte Nutzungsbedingungen & Datenschutz akzeptieren.";return;}
+    if(!cHealth||!cHealth.checked){err.textContent="Für die Funktion ist die Einwilligung zur Verarbeitung deiner Gesundheitsdaten nötig.";return;}
+    S.consent={tos:true,health:true,at:Date.now(),ver:LEGAL_VERSION};
     if(SB.enabled()){
       err.textContent="Konto wird erstellt …";
       try{
@@ -2859,9 +2919,15 @@ function renderRegister(){
       <p class="xs t2 mt8" id="pwlbl" style="min-height:14px"></p></div>
     <div class="field"><label for="r-pw2">Passwort bestätigen</label>
       <input type="password" id="r-pw2" autocomplete="new-password" oninput="A.vPw2(this)"></div>
-    <p class="fielderr" id="r-err" role="alert"></p>
+    <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer;margin-top:8px">
+      <input type="checkbox" id="c-tos" style="width:20px;height:20px;min-width:20px;accent-color:var(--accent);margin-top:1px">
+      <span class="xs t2" style="flex:1;line-height:1.5">Ich akzeptiere die <a onclick="openLegal('terms')" style="color:var(--hl);text-decoration:underline;cursor:pointer">Nutzungsbedingungen</a> und habe die <a onclick="openLegal('privacy')" style="color:var(--hl);text-decoration:underline;cursor:pointer">Datenschutzerklärung</a> gelesen.</span></label>
+    <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer;margin-top:10px">
+      <input type="checkbox" id="c-health" style="width:20px;height:20px;min-width:20px;accent-color:var(--accent);margin-top:1px">
+      <span class="xs t2" style="flex:1;line-height:1.5">Ich willige ausdrücklich ein, dass meine <b style="color:var(--t1)">Gesundheits- & Fitnessdaten</b> (Gewicht, Training, Ernährung) zur Bereitstellung der App verarbeitet werden (Art. 9 Abs. 2 a DSGVO) — jederzeit widerrufbar.</span></label>
+    <p class="fielderr mt8" id="r-err" role="alert"></p>
     <button class="btn volt mt8" onclick="A.register()">Registrieren & Assessment starten</button>
-    <p class="xs t2 mt16" style="text-align:center">SHA-256-Hash, nie Klartext. Daten bleiben auf diesem Gerät.</p></div>`;
+    <p class="xs t2 mt16" style="text-align:center">Passwort sicher gehasht. Mit der Registrierung stimmst du den o. g. Bedingungen zu.</p></div>`;
 }
 
 function renderLogin(){
@@ -5274,7 +5340,9 @@ function renderProfile(){
     modal(`<p class="ct">Alle Daten löschen?</p><p class="sm t2 mb8">Unwiderruflich — Konto, Profil, gesamte Historie.</p>
       <button class="btn" style="border-color:rgba(255,77,77,.4);color:var(--danger)" onclick="A.wipeConfirm()">Endgültig löschen</button>`);
   };
-  A.wipeConfirm=()=>{
+  A.wipeConfirm=async()=>{
+    // DSGVO Art. 17: serverseitige Daten (Gesundheitsdaten) zuerst löschen, dann abmelden.
+    try{ if(typeof SB!=="undefined"&&SB.client&&SB.user){ await SB.client.from("user_state").delete().eq("user_id",SB.user.id); await SB.signOut(); } }catch(e){}
     try{localStorage.removeItem(KEY);}catch{}
     try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
     S={screen:"landing",users:[],currentUser:null,loginAttempts:0,lockoutUntil:null,devMode:false,step:0,
@@ -5285,7 +5353,7 @@ function renderProfile(){
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],
        planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
        seenFeatures:false,precisionShown:false,billing:"monthly",
-       calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null};
+       calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null,consent:null};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
   root.innerHTML=`
