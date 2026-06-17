@@ -173,9 +173,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     transition:all .25s var(--spring);
   }
   .btn:active{transform:scale(.97); box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.05);}
-  .btn.volt{background:linear-gradient(135deg,#F3F6FB,#CFD8E8 60%,#AFBAD0); color:#10131A; border:1px solid rgba(255,255,255,.55); font-weight:700;
-    box-shadow:0 10px 28px rgba(120,140,200,.22), inset 0 1px 0 rgba(255,255,255,.7);}
+  .btn.volt{background:linear-gradient(115deg,#F3F6FB,#DCE3F0 40%,#C6D0E4 60%,#EAEFF8 85%,#F3F6FB); background-size:240% 100%;
+    color:#10131A; border:1px solid rgba(255,255,255,.55); font-weight:700;
+    box-shadow:0 10px 28px rgba(120,140,200,.22), inset 0 1px 0 rgba(255,255,255,.7);
+    animation:voltSheen 7s ease-in-out infinite;}
+  @keyframes voltSheen{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
   .btn.volt:active{transform:scale(.97);}
+  @media (prefers-reduced-motion:reduce){.btn.volt{animation:none}}
   .btn.ghost{background:transparent; border:none; box-shadow:none; color:var(--t2); min-height:44px; font-weight:600;}
   .btn:disabled{opacity:.4; pointer-events:none;}
   .btn:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
@@ -1179,6 +1183,7 @@ S.planChat=S.planChat||[]; // Verlauf des Plan-Assistenten
 S.planUndo=S.planUndo||null; // letzter KI-Plan-Eingriff (Vorher-Schnappschuss für Rückgängig)
 S.monthOffset=S.monthOffset||0; // Monats-Überblick: 0 = aktueller Monat
 S.calAdjust=S.calAdjust||0; S.calAdjustAt=S.calAdjustAt||0; S.calAdjustMsg=S.calAdjustMsg||null; // adaptiver Kalorien-Abgleich (Memory)
+S.wearActive=S.wearActive||{}; S.wearSteps=S.wearSteps||{}; // Wearable: Aktiv-Kalorien & Schritte je Tag
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -4635,7 +4640,11 @@ function nutritionStats(sum){
   return [["metric",ppkg.toString().replace(".",","),"g/kg Protein-Ziel"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Streak"]];
 }
 function renderNutrition(){
-  const p=S.profile, tg=p.tg[dayType==="train"?"train":"rest"];
+  const p=S.profile; let tg=p.tg[dayType==="train"?"train":"rest"];
+  // Wearable: liegt für heute ein echter Aktiv-Verbrauch vor, ersetzt er die Schätzung
+  // -> Tagesziel = Ruhetag-Basis + tatsächlich verbrannte Aktiv-Kalorien (echtes TDEE).
+  const wearKcal=S.wearActive[todayKey()];
+  if(wearKcal!=null){ const adj=Math.round(p.tg.rest.kcal+wearKcal); tg=Object.assign({},p.tg.rest,{kcal:adj,c:Math.max(0,Math.round((adj-p.tg.rest.p*4-p.tg.rest.f*9)/4))}); }
   const log=nlogToday();
   const sum=log.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p,c:s.c+m.c,f:s.f+m.f}),{k:0,p:0,c:0,f:0});
   A.dt=(t)=>{dayType=t;renderNutrition();};
@@ -4745,7 +4754,9 @@ function renderNutrition(){
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
         <button class="btn ${dayType==="rest"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('rest')">Ruhetag</button></div>
       ${energyBudget(sum,tg)}
-      <p class="xs t2" style="text-align:center;line-height:1.5;margin-top:4px">${dayType==="train"
+      <p class="xs t2" style="text-align:center;line-height:1.5;margin-top:4px">${wearKcal!=null
+        ? `${icon("activity",12)} <b style="color:var(--hl)">An dein Wearable angepasst:</b> ${nfi.format(wearKcal)} kcal aktiv heute → Tagesziel = Ruhebedarf + echter Verbrauch.`
+        : dayType==="train"
         ? `Trainingstag-Ziel — enthält die Kalorien, die du in der Einheit verbrennst (≈ ${nfi.format(Math.max(0,p.tg.train.kcal-p.tg.rest.kcal))} kcal mehr als am Ruhetag). <b style="color:var(--t1)">Trainierst du nicht oder lässt das Cardio aus, nimm das Ruhetag-Ziel.</b>`
         : `Ruhetag-Ziel — die Basis ohne Trainingsverbrauch. An Trainingstagen darfst du entsprechend mehr essen.`}</p>
       <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px">
@@ -4977,6 +4988,9 @@ let EP=null;
 function renderProfile(){
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
   A.logout=()=>{S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
+  A.setWearActive=()=>{ const el=document.getElementById("wear-k"); const v=parseInt(el&&el.value);
+    if(isNaN(v)||v<0||v>4000){toast("Bitte Aktiv-Kalorien (0–4000) eingeben");return;}
+    S.wearActive[todayKey()]=v; save(); toast("✓ Übernommen — Tagesziel an deinen echten Verbrauch angepasst"); render(); };
   A.editProfile=()=>{EP={weight:p.a.weight,goals:[...(p.tg.goals||[])],days:p.a.days||4,act:p.a.act||"light"};A.epRender();};
   A.epGoal=(g)=>{
     if(S.tier==="free"&&EP.goals.length>=1&&!EP.goals.includes(g)){overlay.innerHTML="";showUpgradeTeaser("multi_goal");return;}
@@ -5109,7 +5123,8 @@ function renderProfile(){
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],
        planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
-       seenFeatures:false,precisionShown:false,billing:"monthly"};
+       seenFeatures:false,precisionShown:false,billing:"monthly",
+       calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
   root.innerHTML=`
@@ -5133,6 +5148,16 @@ function renderProfile(){
         <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
       </div>
       <button class="btn volt mt16" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button></div>`:""}
+
+    <div class="card"><p class="ct">${icon("activity",14)} Wearable · Apple Watch</p>
+      <p class="xs t2 mb12" style="line-height:1.55">Trag die <b style="color:var(--t1)">heute aktiv verbrannten Kalorien</b> von deiner Watch ein — dein Kalorienziel passt sich sofort an deinen echten Verbrauch an (statt der Schätzung).</p>
+      <div class="row" style="gap:10px">
+        <input type="number" id="wear-k" inputmode="numeric" placeholder="z. B. 480 kcal aktiv" value="${S.wearActive[todayKey()]??""}" style="flex:1">
+        <button class="btn volt" style="width:auto;padding:0 18px" onclick="A.setWearActive()">Übernehmen</button>
+      </div>
+      ${S.wearActive[todayKey()]!=null?`<p class="xs volt-txt mt8" style="display:flex;align-items:center;gap:5px">${icon("check",12)} ${nfi.format(S.wearActive[todayKey()])} kcal aktiv heute — Tagesziel angepasst.</p>`:""}
+      <p class="xs t2 mt8" style="line-height:1.5">Automatischer Sync (Apple HealthKit / Google Fit) kommt mit der nativen Companion-App. Bis dahin liest du den Wert kurz von der Watch ab — die Anbindung an dein Tagesziel funktioniert bereits voll.</p>
+    </div>
     <div class="card"><p class="ct">${icon("camera",14)} Körper-Fortschritt</p>
       ${(()=>{const m=S.measure;const last=m[m.length-1],first=m[0];
         if(!last)return `<p class="sm t2 mb12">Tracke Maße & Fotos — dein sichtbarer Beweis, wie weit du kommst.</p>`;
