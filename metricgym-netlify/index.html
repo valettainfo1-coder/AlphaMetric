@@ -4315,6 +4315,36 @@ function gateCard(title,need,have,unit,ctaLabel,ctaTab){
     <span class="metric xs t2" style="white-space:nowrap;flex-shrink:0">${have} / ${need}</span></div>
     ${ctaLabel?`<button class="btn" style="min-height:42px;font-size:13px" onclick="S.tab='${ctaTab||"train"}';save();render();">${ctaLabel}</button>`:""}</div>`;
 }
+// Selbstlernender Stoffwechsel sichtbar: Erhaltung vs. Ziel + Lern-Korrektur + echter Gewichtstrend.
+function metabolismCard(){
+  const p=S.profile; if(!p||!p.td) return "";
+  const days=Math.min(7,Math.max(1,p.a.days||4));
+  const intakeAvg=Math.round((p.tg.train.kcal*days+p.tg.rest.kcal*(7-days))/7);
+  const maint=p.td.avg, deltaPct=Math.round((intakeAvg-maint)/maint*100), adj=S.calAdjust||0;
+  const wl=(S.weightLog||[]).filter(x=>x&&x.t&&x.v).sort((x,y)=>x.t-y.t);
+  let obsKgWk=null, chart="";
+  if(wl.length>=4 && (wl[wl.length-1].t-wl[0].t)/dayMs>=10){
+    const n=wl.length; let sx=0,sy=0,sxx=0,sxy=0;
+    wl.forEach(q=>{const x=(q.t-wl[0].t)/dayMs;sx+=x;sy+=q.v;sxx+=x*x;sxy+=x*q.v;});
+    const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx); if(isFinite(slope))obsKgWk=Math.round(slope*7*100)/100;
+    chart=`<p class="sm mb8" style="font-weight:500;margin-top:14px">Dein Gewichtstrend</p>`+lineChart(wl.map(q=>({t:q.t,v:q.v})));
+  }
+  const stat=(l,v,c)=>`<div style="background:var(--s2);border-radius:14px;padding:12px 8px;text-align:center">
+    <p class="hero-num ${c||''}" style="font-size:21px">${v}</p><p class="xs t2" style="margin-top:2px">${l}</p></div>`;
+  const adjTxt = adj===0?"noch keine Korrektur" : (adj<0?`−${Math.abs(adj)} kcal`:`+${adj} kcal`);
+  const note = obsKgWk!=null
+    ? `Dein Gewicht ändert sich aktuell <b style="color:var(--t1)">${obsKgWk>=0?"+":""}${obsKgWk.toFixed(2).replace(".",",")} kg/Woche</b>. Die Engine gleicht dein Ziel automatisch mit deiner echten Kurve ab${adj!==0?` (bereits ${adjTxt} angepasst)`:""} — so wird es Woche für Woche genauer.`
+    : `Sobald du dich ~2 Wochen regelmäßig wiegst, gleicht die Engine dein Kalorienziel automatisch mit deiner echten Gewichtskurve ab — und korrigiert die Schätzung auf deinen realen Stoffwechsel.`;
+  return `<div class="card"><p class="ct">${icon("activity",14)} Dein Stoffwechsel · selbstlernend</p>
+    <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px">
+      ${stat("Erhaltung",nfi.format(maint))}
+      ${stat("Dein Ziel",nfi.format(intakeAvg),deltaPct<0?"volt-txt":deltaPct>0?"warn-txt":"")}
+      ${stat("Lern-Korrektur",adj===0?"±0":(adj<0?"−"+Math.abs(adj):"+"+adj),adj!==0?"volt-txt":"t2")}
+    </div>
+    <p class="xs t2 mt8" style="text-align:center">${deltaPct===0?"Erhaltung":(deltaPct<0?deltaPct+"% Defizit":"+"+deltaPct+"% Überschuss")} · ${p.tg.dirLabel}</p>
+    ${chart}
+    <p class="sm t2 mt12" style="line-height:1.55">${note}</p></div>`;
+}
 function renderAnalytics(){
   const p=S.profile, a=p.a;
   A.monthNav=(d)=>{ const n=(S.monthOffset||0)+d; if(n>0)return; S.monthOffset=n; save(); renderAnalytics(); };
@@ -4392,6 +4422,7 @@ function renderAnalytics(){
 
   // Monats-Überblick: Tagesbewertung als Kalender (rot->grün) + Cheat-Days + Monatsnote
   html+=`<p class="label" style="margin-top:4px">Monats-Überblick</p>`+monthlyOverview();
+  html+=`<p class="label" style="margin-top:4px">Stoffwechsel & Kalorien</p>`+metabolismCard();
 
   html+=`
     <!-- Daten-Sammelstand: ehrlich, immer sichtbar bis voll -->
