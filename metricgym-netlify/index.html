@@ -390,8 +390,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .ac-item:last-child{border-bottom:none;}
   .barrow{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
   .barrow .blbl{width:86px; font-size:11px; font-weight:600; color:var(--t2); flex-shrink:0;}
-  .barrow .btrack{flex:1; height:12px; background:var(--s3); border-radius:6px; overflow:hidden;}
-  .barrow .bfill{height:100%; border-radius:6px; transition:width .7s cubic-bezier(.25,.8,.25,1);}
+  .barrow .btrack{flex:1; height:13px; background:rgba(255,255,255,.06); border-radius:7px; overflow:hidden; box-shadow:inset 0 1px 2px rgba(0,0,0,.3);}
+  .barrow .bfill{height:100%; border-radius:7px; position:relative; transition:width .9s cubic-bezier(.25,.8,.25,1);
+    box-shadow:0 0 12px rgba(157,180,240,.4); animation:barGrowX 1s cubic-bezier(.25,.8,.25,1);}
+  .barrow .bfill::after{content:""; position:absolute; inset:0; border-radius:inherit;
+    background:linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.24)); mix-blend-mode:overlay;}
+  @keyframes barGrowX{from{width:0 !important}} /* greift visuell beim Einblenden */
+  /* Oura-Style vertikale Balken (Volumen): Gradient + Wachstums-Animation von unten */
+  .volbar{transform-origin:bottom; animation:barGrowY .85s var(--spring) both; border-radius:5px 5px 2px 2px;}
+  @keyframes barGrowY{from{transform:scaleY(0);opacity:.4}to{transform:scaleY(1);opacity:1}}
+  @media (prefers-reduced-motion:reduce){.barrow .bfill,.volbar{animation:none}}
   .barrow .bval{width:62px; text-align:right; font-size:11px; color:var(--t2); flex-shrink:0;}
   .iconbtn{background:none; border:none; color:var(--t2); cursor:pointer; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;}
   .conf{font-size:10px; color:var(--t3); font-family:var(--font-mono);}
@@ -845,7 +853,8 @@ function multiTargets(a,bmr,td){
   if(bmi>=30 && !hasFat){ recs.push("Bei deinem BMI senkt regelmäßiges Cardio (2–3×/Woche, lockeres Tempo) Gesundheitsrisiken und beschleunigt den Fettabbau — gelenkschonend per Rad, Crosstrainer oder zügigem Gehen."); }
   else if(bmi>=27 && hasFat){ recs.push("2–3 lockere Cardio-Einheiten pro Woche zusätzlich zum Krafttraining beschleunigen deinen Fettabbau spürbar, ohne die Erholung zu stören."); }
   const days=Math.min(7,Math.max(1,a.days||4));
-  const avgT=Math.round(td.avg*(1+dir));               // Ziel = Wochenschnitt
+  const adj=(typeof S!=="undefined"&&S.calAdjust)||0;  // Lern-Korrektur (adaptiver Abgleich)
+  const avgT=Math.round(td.avg*(1+dir))+adj;           // Ziel = Wochenschnitt (+ Korrektur)
   const trainBurn=Math.max(0, td.train-td.rest);       // echter Extra-Verbrauch je Einheit
   const floor=a.sex==="female"?1400:1600, warn=[];
   // Eat-back-Cycling: am Trainingstag isst du den Trainingsverbrauch (anteilig) zurück,
@@ -862,6 +871,41 @@ function multiTargets(a,bmr,td){
   const fat=Math.round(.9*a.weight);
   const mac=(k)=>({kcal:k,p:prot,f:fat,c:Math.max(0,Math.round((k-prot*4-fat*9)/4))});
   return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,recs,goals,dir,dirLabel,bmi:Math.round(bmi*10)/10};
+}
+// ---------- Adaptiver Kalorien-Abgleich (Memory): lernt aus der echten Gewichtskurve ----------
+// Vergleicht die gemessene Gewichtsänderung (Regressionsgerade über >=14 Tage) mit der
+// Ziel-Rate und justiert das Kalorienziel gedämpft nach — so wird es mit der Zeit
+// individuell exakt, statt nur auf einer Formel zu beruhen.
+function adaptiveCalorieCheck(){
+  try{
+    if(!S.profile) return;
+    const wl=(S.weightLog||[]).filter(x=>x&&x.t&&x.v).sort((a,b)=>a.t-b.t);
+    if(wl.length<4) return;
+    const spanDays=(wl[wl.length-1].t-wl[0].t)/dayMs;
+    if(spanDays<14) return;
+    if(Date.now()-(S.calAdjustAt||0) < 7*dayMs) return; // höchstens 1×/Woche
+    const n=wl.length; let sx=0,sy=0,sxx=0,sxy=0;
+    wl.forEach(p=>{const x=(p.t-wl[0].t)/dayMs; sx+=x;sy+=p.v;sxx+=x*x;sxy+=x*p.v;});
+    const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx);           // kg/Tag
+    if(!isFinite(slope)) return;
+    const observedKgWk=slope*7;
+    const w=S.profile.a.weight||80, dir=S.profile.tg.dir;
+    // Ziel-Rate aus Richtung & Körpergewicht (sichere, wirksame Korridore)
+    let targetKgWk = dir<=-0.18? -0.007*w : dir<0? -0.004*w : dir>0.05? 0.0025*w : dir>0? 0.0015*w : 0;
+    const errKgWk=observedKgWk-targetKgWk;             // >0: zu langsam ab / zu schnell zu
+    S.calAdjustAt=Date.now();
+    if(Math.abs(errKgWk)<0.12){ save(); return; }       // im Toleranzband — nichts tun
+    let step=Math.round(-errKgWk*1100*0.6/10)*10;       // 0,1 kg/Wo ≈ 110 kcal/Tag, gedämpft
+    step=Math.max(-150,Math.min(150,step));
+    const before=S.calAdjust||0, after=Math.max(-700,Math.min(700,before+step));
+    if(after!==before){
+      S.calAdjust=after;
+      const verb=after<before?"gesenkt":"erhöht";
+      S.calAdjustMsg=`Dein Gewicht ändert sich aktuell ${observedKgWk>=0?"+":""}${observedKgWk.toFixed(2)} kg/Woche (Ziel ${targetKgWk>=0?"+":""}${targetKgWk.toFixed(2)}). Ich habe dein Kalorienziel um ${Math.abs(step)} kcal ${verb} — abgestimmt auf deinen echten Stoffwechsel.`;
+      S.profile.tg=multiTargets(S.profile.a,S.profile.bmr,S.profile.td);
+    }
+    save();
+  }catch(e){}
 }
 function e1rm(w,reps,rpe){
   if(reps===1) return w;
@@ -1087,6 +1131,7 @@ S.lastLevel=S.lastLevel??1;
 S.planChat=S.planChat||[]; // Verlauf des Plan-Assistenten
 S.planUndo=S.planUndo||null; // letzter KI-Plan-Eingriff (Vorher-Schnappschuss für Rückgängig)
 S.monthOffset=S.monthOffset||0; // Monats-Überblick: 0 = aktueller Monat
+S.calAdjust=S.calAdjust||0; S.calAdjustAt=S.calAdjustAt||0; S.calAdjustMsg=S.calAdjustMsg||null; // adaptiver Kalorien-Abgleich (Memory)
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -2014,8 +2059,15 @@ function lineChart(series, fc){
     if(lbl===lastTick)return "";
     lastTick=lbl;
     return `<text x="${X(t)}" y="${H-2}" fill="var(--t3)" font-size="9" text-anchor="middle" font-family="Schibsted Grotesk,sans-serif">${lbl}</text>`;}).join("");
+  const gid="lc"+Math.random().toString(36).slice(2,7);
+  const fx=X(series[0].t).toFixed(1), lx=X(series[series.length-1].t).toFixed(1);
+  const area=`${line} L${lx},${H-P} L${fx},${H-P} Z`;
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;aspect-ratio:16/10;display:block" aria-hidden="true">
-    ${band}<path class="chartdraw" d="${line}" fill="none" stroke="var(--volt)" stroke-width="2"/>
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--volt)" stop-opacity=".32"/><stop offset="1" stop-color="var(--volt)" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${gid}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7FD7E0"/><stop offset="1" stop-color="#7E8BE8"/></linearGradient></defs>
+    <path d="${area}" fill="url(#${gid})" stroke="none"/>
+    ${band}<path class="chartdraw" d="${line}" fill="none" stroke="url(#${gid}s)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
     ${dash?`<path d="${dash}" fill="none" stroke="var(--volt)" stroke-width="1.5" stroke-dasharray="5 4"/>`:""}${ticks}</svg>`;
 }
 function donutSVG(parts,size=110){
@@ -2152,6 +2204,7 @@ function render(){
   clearTimeout(timerInt);
   if(typeof PB!=="undefined")PB.stop(); // Partikel-Animation beenden (nur Landing startet sie neu)
   if(S.tab!=="train"&&S.tab!=="player"){ trnSelDay=null; trnSelRot=null; } // Tag-Auswahl zurücksetzen
+  if(S.currentUser!=null&&S.screen!=="onboarding"&&S.profile)adaptiveCalorieCheck(); // selbstlernender Kalorien-Abgleich
   const inApp=(S.currentUser!=null)&&S.screen!=="onboarding";
   if(!inApp){
     appbarEl.innerHTML=""; tabbarEl.innerHTML=""; fabEl.innerHTML="";
@@ -3144,6 +3197,7 @@ function renderHome(){
     S.tab="player";S.playerType=tType;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
   A.q=(t)=>{S.tab=t;save();render();};
   A.openStatus=()=>openStatusSheet();
+  A.dismissCalMsg=()=>{S.calAdjustMsg=null;save();render();};
   A.howItWorks=()=>modal(`<p class="ct">${icon("brain",14)} So funktioniert METRICGYM</p>
     ${[["1. Du loggst — kurz und ehrlich","Training, Mahlzeiten und dein Tages-Status. Per Tippen, Sprechen oder Foto — keine 10 Sekunden."],
        ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt — berechnet aus deinen echten Daten, mit Konfidenz pro Aussage."],
@@ -3231,6 +3285,9 @@ function renderHome(){
         ${cta}
       </section>`;
     })()}
+
+    ${S.calAdjustMsg?`<button class="card row" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);border-color:rgba(157,180,240,.4)" onclick="A.dismissCalMsg()">
+      <span class="sm" style="flex:1"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Kalorienziel automatisch angepasst</b><br><span class="t2" style="line-height:1.5">${S.calAdjustMsg}</span></span><span class="t2" style="align-self:flex-start">✕</span></button>`:""}
 
     ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
       <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
@@ -4272,7 +4329,7 @@ function renderAnalytics(){
     html+=`<div class="card"><p class="ct">Dein Trainingsvolumen diese Woche</p>
       <div style="display:flex;align-items:flex-end;gap:10px;height:90px;padding:0 8px">
         ${wks.map((v,i)=>`<div style="flex:1;text-align:center">
-          <div style="height:${Math.max(3,v/maxW*76)}px;background:${i===3?"var(--volt)":"var(--t3)"};border-radius:4px 4px 0 0;opacity:.85"></div>
+          <div class="volbar" style="height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C2E6,#4A6FD8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(74,111,216,.45)":""};animation-delay:${i*0.08}s"></div>
           <p class="xs t2" style="margin-top:4px">W${i+1}</p><p class="metric xs">${v}</p></div>`).join("")}
       </div>
       <p class="xs t2 mt8">${volWhy}</p></div>`;
