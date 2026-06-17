@@ -849,7 +849,7 @@ function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ store.set(K
        using (auth.uid()=user_id) with check (auth.uid()=user_id);
    ===================================================================== */
 const SB={
-  client:null, ready:false, user:null, pushTimer:null,
+  client:null, ready:false, user:null, token:null, pushTimer:null,
   cfg(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.supabaseUrl&&c.supabaseAnonKey)?{url:c.supabaseUrl,key:c.supabaseAnonKey}:null; }catch{ return null; } },
   enabled(){ return !!SB.cfg(); },
   _load(){ return new Promise((res,rej)=>{
@@ -880,9 +880,9 @@ const SB={
   async signIn(email,password){
     await SB.init();
     const {data,error}=await SB.client.auth.signInWithPassword({email,password});
-    if(error) throw error; SB.user=data.user; return data;
+    if(error) throw error; SB.user=data.user; SB.token=data.session&&data.session.access_token; return data;
   },
-  async signOut(){ try{ if(SB.client)await SB.client.auth.signOut(); }catch(e){} SB.user=null; },
+  async signOut(){ try{ if(SB.client)await SB.client.auth.signOut(); }catch(e){} SB.user=null; SB.token=null; },
   async pull(){
     if(!SB.client||!SB.user) return null;
     const {data,error}=await SB.client.from("user_state").select("data").eq("user_id",SB.user.id).maybeSingle();
@@ -3864,7 +3864,16 @@ function planAnswer(q){
    Nutzung / Demo. Fällt die KI aus, greift die Regel-Engine als Fallback.
    ===================================================================== */
 const AI_MODEL="llama-3.3-70b-versatile";
-function aiActive(){ return !!(S.aiOn && S.aiKey && S.aiKey.length>20); }
+// Proxy-Modus: wenn config.useGroqProxy + supabaseUrl gesetzt, laufen alle KI-Aufrufe
+// über die Supabase Edge Function (Groq-Key liegt dann NUR serverseitig, nie im Browser).
+function aiProxy(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.useGroqProxy&&c.supabaseUrl)?(String(c.supabaseUrl).replace(/\/$/,"")+"/functions/v1/groq-proxy"):null; }catch{ return null; } }
+function aiEndpoint(){ return aiProxy()||"https://api.groq.com/openai/v1/chat/completions"; }
+function aiHeaders(){
+  if(aiProxy()){ const c=window.METRICGYM_CONFIG||{}; const tok=(typeof SB!=="undefined"&&SB.token)||c.supabaseAnonKey||"";
+    return {"Content-Type":"application/json","Authorization":"Bearer "+tok,"apikey":c.supabaseAnonKey||""}; }
+  return {"Content-Type":"application/json","Authorization":"Bearer "+S.aiKey};
+}
+function aiActive(){ return !!aiProxy() || !!(S.aiOn && S.aiKey && S.aiKey.length>20); }
 function aiPersona(){
   return `Du bist COACH METRIC — der persönliche Kraft- und Ernährungs-Coach der App METRICGYM.
 Persönlichkeit: wissenschaftlich fundiert, direkt, motivierend, auf Augenhöhe. Du klingst wie ein exzellenter Personal Trainer, nicht wie ein Lehrbuch.
@@ -3893,9 +3902,9 @@ function aiContext(){
 }
 async function aiStream(history,onDelta){
   const messages=[{role:"system",content:aiPersona()+"\n\n=== AKTUELLE NUTZERDATEN ===\n"+aiContext()}, ...history.slice(-10)];
-  const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+  const res=await fetch(aiEndpoint(),{
     method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.aiKey},
+    headers:aiHeaders(),
     body:JSON.stringify({model:AI_MODEL,messages,temperature:0.6,max_tokens:500,stream:true}),
   });
   if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("Groq "+res.status+(m?": "+m:"")); }
@@ -3913,8 +3922,8 @@ async function aiStream(history,onDelta){
 // Nicht-streamender Aufruf (für strukturierte/kurze Antworten)
 async function aiComplete(system,user,opts){
   opts=opts||{};
-  const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
-    method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.aiKey},
+  const res=await fetch(aiEndpoint(),{
+    method:"POST",headers:aiHeaders(),
     body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},{role:"user",content:user}],
       temperature:opts.temp??0.5,max_tokens:opts.max||500,...(opts.json?{response_format:{type:"json_object"}}:{})}),
   });
@@ -5402,7 +5411,7 @@ try{ render(); }catch(err){
     await SB.init();
     const {data}=await SB.client.auth.getSession();
     if(!data||!data.session) return;
-    SB.user=data.session.user;
+    SB.user=data.session.user; SB.token=data.session.access_token;
     let cloud=null; try{ cloud=await SB.pull(); }catch(e){}
     if(cloud) SB.hydrate(cloud);
     const fname=(SB.user.user_metadata&&SB.user.user_metadata.first_name)||((SB.user.email||"").split("@")[0]);
