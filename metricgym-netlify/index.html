@@ -835,7 +835,60 @@ const store={
   set(k,v){ try{ localStorage.setItem(k,v); }catch{ MEM[k]=v; } },
 };
 let saveTimer=null;
-function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>store.set(KEY,JSON.stringify(S)),100); }
+function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ store.set(KEY,JSON.stringify(S)); if(typeof SB!=="undefined"&&SB.user)SB.push(); },100); }
+
+/* =====================================================================
+   SUPABASE — Cloud-Sync pro Konto (Auth + ein jsonb-Datensatz je Nutzer).
+   LOCAL-FIRST: ohne config.js-Keys läuft die App unverändert lokal weiter.
+   Aktivierung: window.METRICGYM_CONFIG.supabaseUrl + .supabaseAnonKey setzen.
+   Tabelle (einmalig im Supabase-SQL-Editor anlegen):
+     create table user_state (user_id uuid primary key references auth.users(id),
+       data jsonb not null default '{}', updated_at timestamptz default now());
+     alter table user_state enable row level security;
+     create policy "own" on user_state for all
+       using (auth.uid()=user_id) with check (auth.uid()=user_id);
+   ===================================================================== */
+const SB={
+  client:null, ready:false, user:null, pushTimer:null,
+  cfg(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.supabaseUrl&&c.supabaseAnonKey)?{url:c.supabaseUrl,key:c.supabaseAnonKey}:null; }catch{ return null; } },
+  enabled(){ return !!SB.cfg(); },
+  _load(){ return new Promise((res,rej)=>{
+    if(window.supabase&&window.supabase.createClient) return res();
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+    s.onload=()=>res(); s.onerror=()=>rej(new Error("Supabase-Bibliothek konnte nicht geladen werden"));
+    document.head.appendChild(s);
+  });},
+  async init(){
+    if(SB.ready) return true; const c=SB.cfg(); if(!c) return false;
+    await SB._load();
+    SB.client=window.supabase.createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true}});
+    SB.ready=true; return true;
+  },
+  async signUp(email,password,firstName){
+    await SB.init();
+    const {data,error}=await SB.client.auth.signUp({email,password,options:{data:{first_name:firstName}}});
+    if(error) throw error; SB.user=data.user||null; return data; // session evtl. null (E-Mail-Bestätigung nötig)
+  },
+  async signIn(email,password){
+    await SB.init();
+    const {data,error}=await SB.client.auth.signInWithPassword({email,password});
+    if(error) throw error; SB.user=data.user; return data;
+  },
+  async signOut(){ try{ if(SB.client)await SB.client.auth.signOut(); }catch(e){} SB.user=null; },
+  async pull(){
+    if(!SB.client||!SB.user) return null;
+    const {data,error}=await SB.client.from("user_state").select("data").eq("user_id",SB.user.id).maybeSingle();
+    if(error) throw error; return data?data.data:null;
+  },
+  push(){ if(!SB.client||!SB.user) return; clearTimeout(SB.pushTimer);
+    SB.pushTimer=setTimeout(async()=>{ try{
+      await SB.client.from("user_state").upsert({user_id:SB.user.id,data:S,updated_at:new Date().toISOString()});
+    }catch(e){} },1400);
+  },
+  // Cloud-Daten in den laufenden State übernehmen (überlagert, behält neue Default-Felder)
+  hydrate(data){ if(!data||typeof data!=="object") return; for(const k in data) S[k]=data[k]; },
+};
 
 /* Foto-Speicher: Bilder liegen in IndexedDB (nicht im localStorage-State, der
    sonst die Quote sprengt) — in S stehen nur Metadaten. Komplett lokal. */
@@ -2322,7 +2375,7 @@ function renderAppbar(){
       visible.length?visible.map(i=>`<div class="msg ai" style="max-width:100%">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")
       :'<p class="sm t2">Noch keine Insights — sammle ein paar Tage Daten.</p>'}`);
   };
-  A.logoutMenu=()=>{menuOpen=false;S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
+  A.logoutMenu=()=>{menuOpen=false;if(typeof SB!=="undefined"&&SB.user)SB.signOut();S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
   appbarEl.innerHTML=`<header class="appbar"><div class="appbar-inner">
     <button class="logo-btn" onclick="A.goHome()" aria-label="Zur Startseite">
       ${logoSVG(20)}
@@ -2763,10 +2816,23 @@ function renderRegister(){
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)){err.textContent="Bitte gültige E-Mail-Adresse angeben.";return;}
     if(p.length<8){err.textContent="Passwort: mindestens 8 Zeichen.";return;}
     if(p!==p2){err.textContent="Passwörter stimmen nicht überein.";return;}
-    if(S.users.some(x=>x.email===e)){err.textContent="Diese E-Mail ist bereits registriert.";return;}
-    const pwHash=await hashPw(p);
-    S.users.push({username:u,email:e,pwHash});
-    S.currentUser=S.users.length-1; S.devMode=false; S.tier="free";
+    if(SB.enabled()){
+      err.textContent="Konto wird erstellt …";
+      try{
+        const res=await SB.signUp(e,p,u);
+        if(!res||!res.session){ // Supabase verlangt E-Mail-Bestätigung
+          err.textContent="";
+          modal(`<p class="ct">Fast geschafft</p><p class="sm t2" style="line-height:1.6">Wir haben eine Bestätigungs-Mail an <b>${e}</b> geschickt. Bestätige sie und melde dich dann an.</p>`);
+          S.screen="login"; save(); render(); return;
+        }
+      }catch(ex){ err.textContent="Registrierung fehlgeschlagen: "+(ex.message||ex); return; }
+      S.users=[{username:u,email:e,pwHash:""}]; S.currentUser=0; // Cloud-Konto, lokal gespiegelt
+    } else {
+      if(S.users.some(x=>x.email===e)){err.textContent="Diese E-Mail ist bereits registriert.";return;}
+      const pwHash=await hashPw(p);
+      S.users.push({username:u,email:e,pwHash}); S.currentUser=S.users.length-1;
+    }
+    S.devMode=false; S.tier="free";
     if(S.invitedBy){ S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs; setTimeout(()=>toast("Willkommensbonus: 14 Tage PERFORMANCE aktiv"),600); }
     // Garantiert leerer Start: keine synthetischen Daten außerhalb des Demo-Zugangs.
     S.liftLog={}; S.weightLog=[]; S.readinessHistory=[]; S.trainingHistory=[];
@@ -2802,6 +2868,22 @@ function renderLogin(){
     }
     const e=document.getElementById("l-mail").value.trim().toLowerCase();
     const p=document.getElementById("l-pw").value;
+    if(SB.enabled()){
+      err.textContent="Anmelden …";
+      try{ await SB.signIn(e,p); }
+      catch(ex){ S.loginAttempts=(S.loginAttempts||0)+1;
+        err.textContent=/confirm/i.test(ex.message||"")?"Bitte bestätige zuerst deine E-Mail.":"E-Mail oder Passwort falsch.";
+        save(); return; }
+      // Cloud-Daten dieses Kontos laden und übernehmen
+      let cloud=null; try{ cloud=await SB.pull(); }catch(ex){}
+      const fname=(SB.user&&SB.user.user_metadata&&SB.user.user_metadata.first_name)||(e.split("@")[0]);
+      if(cloud){ SB.hydrate(cloud); }
+      else { S.liftLog={};S.weightLog=[];S.readinessHistory=[];S.trainingHistory=[];S.nutritionLog={};S.chat=[];S.profile=null;S.plan=null;S.schedule=null; }
+      S.users=[{username:(cloud&&cloud.users&&cloud.users[0]&&cloud.users[0].username)||fname,email:e,pwHash:""}]; S.currentUser=0;
+      S.loginAttempts=0; S.lockoutUntil=null;
+      S.screen=S.profile?"app":"onboarding"; S.tab="home";
+      save(); render(); return;
+    }
     const idx=S.users.findIndex(x=>x.email===e);
     const hash=await hashPw(p);
     if(idx<0||S.users[idx].pwHash!==hash){
@@ -5050,7 +5132,7 @@ async function openPhotoCompare(aIdx,bIdx){
 let EP=null;
 function renderProfile(){
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
-  A.logout=()=>{S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
+  A.logout=()=>{if(typeof SB!=="undefined"&&SB.user)SB.signOut();S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
   A.setWearActive=()=>{ const el=document.getElementById("wear-k"); const v=parseInt(el&&el.value);
     if(isNaN(v)||v<0||v>4000){toast("Bitte Aktiv-Kalorien (0–4000) eingeben");return;}
     S.wearActive[todayKey()]=v; save(); toast("✓ Übernommen — Tagesziel an deinen echten Verbrauch angepasst"); render(); };
@@ -5306,6 +5388,23 @@ try{ render(); }catch(err){
   root.innerHTML=`<div style="padding:32px 0"><p style="font-weight:700;letter-spacing:2px;margin-bottom:12px">METRIC<span style="color:var(--volt)">GYM</span></p>
   <p class="sm t2" style="line-height:1.6" role="alert">Startfehler: ${String(err&&err.message||err)}<br><br>Öffne die Datei direkt in Chrome, Safari oder Firefox.</p></div>`;
 }
+// Supabase: bestehende Session wiederherstellen (geräteübergreifender Auto-Login + Cloud-Pull)
+(async()=>{
+  try{
+    if(!SB.enabled()) return;
+    await SB.init();
+    const {data}=await SB.client.auth.getSession();
+    if(!data||!data.session) return;
+    SB.user=data.session.user;
+    let cloud=null; try{ cloud=await SB.pull(); }catch(e){}
+    if(cloud) SB.hydrate(cloud);
+    const fname=(SB.user.user_metadata&&SB.user.user_metadata.first_name)||((SB.user.email||"").split("@")[0]);
+    if(!S.users||!S.users.length) S.users=[{username:fname,email:SB.user.email,pwHash:""}];
+    S.currentUser=0;
+    if(["landing","login","register"].includes(S.screen)||S.currentUser==null){ S.screen=S.profile?"app":"onboarding"; S.tab=S.tab||"home"; }
+    save(); render();
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
