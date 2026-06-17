@@ -796,7 +796,9 @@ function bmrCalc(a){ return a.bodyFat!=null?katch(a.weight,a.bodyFat):mifflin(a.
 const NEAT={sedentary:1.2,light:1.3,moderate:1.4,active:1.475,very_active:1.55};
 function tdeeCalc(bmr,act,w,len,days){
   const rest=Math.round(bmr*NEAT[act]);
-  const train=rest+Math.round(5.0*w*(len/60));
+  // Realistischer NETTO-Mehrverbrauch einer Krafteinheit (~4 kcal/kg/h über dem Alltag);
+  // bewusst konservativ, damit das Trainingstag-Ziel nicht überschätzt wird.
+  const train=rest+Math.round(4.0*w*(len/60));
   return {rest,train,avg:Math.round((train*days+rest*(7-days))/7)};
 }
 const GOAL_D={muscle_gain:[.1,.1],fat_loss:[-.2,-.2],recomp:[.1,-.1],strength:[.05,.05],general:[0,0],endurance:[0,0],mobility:[0,0]};
@@ -804,26 +806,39 @@ const GOAL_LABEL={muscle_gain:"Muskelaufbau",fat_loss:"Fettabbau",recomp:"Recomp
 function multiTargets(a,bmr,td){
   const goals=(a.goals&&a.goals.length?a.goals:[a.goal||"muscle_gain"]);
   const hasFat=goals.includes("fat_loss"), hasGain=goals.includes("muscle_gain");
-  const conflicts=[];
-  // Eine einzige kalorische Richtung — ein neutrales „Fitness/Ausdauer/Mobility"-Ziel
-  // verwässert NIEMALS ein Defizit/Surplus (man kann nicht zugleich ab- und aufbauen).
+  const bmi=a.weight/((a.height/100)**2);
+  const conflicts=[], recs=[];
+  // Eine einzige kalorische Richtung — BMI-bewusst: ein Aufbau-Überschuss bei hohem
+  // Körperfett setzt v. a. Fett an, daher überschreibt ein hoher BMI das Surplus.
   let dir, dirLabel;
   if(hasFat&&hasGain){ dir=-0.08; dirLabel="Recomp · leichtes Defizit";
     conflicts.push({type:"recomp",msg:"Muskelaufbau + Fettabbau = Recomp: leichtes Defizit (−8 %) bei hohem Protein.",bio:"Viel Protein schützt deine Muskeln im Defizit (Helms et al., 2014)."}); }
-  else if(hasFat){ dir=-0.20; dirLabel="Defizit −20 %"; }
-  else if(hasGain){ dir=0.10; dirLabel="Aufbau-Überschuss +10 %"; }
+  else if(hasFat){ dir=bmi>=30?-0.22:-0.20; dirLabel="Defizit "+(bmi>=30?"−22 %":"−20 %"); }
+  else if(hasGain){
+    if(bmi>=30){ dir=-0.12; dirLabel="Fettabbau-Phase (empfohlen)";
+      recs.push("Bei deinem aktuellen Körpergewicht würde ein Aufbau-Überschuss vor allem Fett ansetzen. Sinnvoller ist jetzt ein leichtes Defizit: Mit viel Protein hältst du deine Muskeln und schaffst die Basis für sauberen Aufbau."); }
+    else if(bmi>=27){ dir=0; dirLabel="Erhaltung · Lean-Gain-Start";
+      recs.push("Statt direktem Überschuss startest du am Erhaltungsbedarf — so baust du Muskeln auf, ohne unnötig Fett anzusetzen."); }
+    else { dir=0.10; dirLabel="Aufbau-Überschuss +10 %"; }
+  }
   else if(goals.includes("strength")){ dir=0.03; dirLabel="leichter Überschuss"; }
   else { dir=0; dirLabel="Erhaltung"; }
   if(goals.includes("strength")&&goals.includes("endurance")){
     conflicts.push({type:"interference",msg:"Kraft + Ausdauer: Interferenzeffekt. Kraft vor Ausdauer, mind. 6 h Abstand.",bio:"Concurrent Training dämpft mTOR-Signalwege (Wilson et al., 2012)."});
   }
+  // Gesundheits-/Cardio-Empfehlung jenseits der angeklickten Ziele
+  if(bmi>=30 && !hasFat){ recs.push("Bei deinem BMI senkt regelmäßiges Cardio (2–3×/Woche, lockeres Tempo) Gesundheitsrisiken und beschleunigt den Fettabbau — gelenkschonend per Rad, Crosstrainer oder zügigem Gehen."); }
+  else if(bmi>=27 && hasFat){ recs.push("2–3 lockere Cardio-Einheiten pro Woche zusätzlich zum Krafttraining beschleunigen deinen Fettabbau spürbar, ohne die Erholung zu stören."); }
   const days=Math.min(7,Math.max(1,a.days||4));
   const avgT=Math.round(td.avg*(1+dir));               // Ziel = Wochenschnitt
+  const trainBurn=Math.max(0, td.train-td.rest);       // echter Extra-Verbrauch je Einheit
   const floor=a.sex==="female"?1400:1600, warn=[];
-  // Kalorien-Cycling: Trainingstage etwas mehr, Ruhetage weniger — Schnitt bleibt das Ziel
-  let trainK=Math.round(avgT*1.08), restK;
+  // Eat-back-Cycling: am Trainingstag isst du den Trainingsverbrauch (anteilig) zurück,
+  // am Ruhetag die Basis. Wochenschnitt bleibt das Ziel. Trainierst du NICHT (oder lässt
+  // das Cardio aus), orientierst du dich am Ruhetag-Ziel.
+  let trainK, restK;
   if(days>=7){ trainK=avgT; restK=avgT; }
-  else { restK=Math.round((avgT*7-trainK*days)/(7-days)); }
+  else { trainK=Math.round(avgT+trainBurn*(7-days)/7); restK=Math.round(avgT-trainBurn*days/7); }
   const clamp=(v)=>{ if(v<floor){warn.push("floor");return floor;} return Math.round(v); };
   trainK=clamp(trainK); restK=clamp(restK);
   let prot;
@@ -831,7 +846,7 @@ function multiTargets(a,bmr,td){
   else prot=Math.round(1.8*Math.min(a.weight,25*(a.height/100)**2));
   const fat=Math.round(.9*a.weight);
   const mac=(k)=>({kcal:k,p:prot,f:fat,c:Math.max(0,Math.round((k-prot*4-fat*9)/4))});
-  return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,goals,dir,dirLabel};
+  return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,recs,goals,dir,dirLabel,bmi:Math.round(bmi*10)/10};
 }
 function e1rm(w,reps,rpe){
   if(reps===1) return w;
@@ -1423,9 +1438,14 @@ function generateOptimalSchedule(a){
   const types=SPLITS[days], pos=(POS[pref]||POS.consistent)[days];
   const sch=["rest","rest","rest","rest","rest","rest","rest"];
   types.forEach((t,i)=>{sch[pos[i]]=t;});
-  if(days<=4){
+  // Cardio-Tage nach Bedarf: hoher BMI -> 2 (Gesundheit/Fettabbau), Fettabbau/Ausdauer -> 1,
+  // sonst 1 bei <=4 Trainingstagen. Es bleibt immer mindestens 1 echter Ruhetag.
+  const goalsArr=a.goals||[], bmiV=(a.weight&&a.height)?a.weight/((a.height/100)**2):24;
+  let cardioNeed = bmiV>=30?2 : (goalsArr.includes("fat_loss")||goalsArr.includes("endurance"))?1 : (days<=4?1:0);
+  for(let c=0;c<cardioNeed;c++){
     const restIdx=sch.map((t,i)=>t==="rest"?i:null).filter(x=>x!=null);
-    if(restIdx.length>=2)sch[restIdx[Math.floor(restIdx.length/2)]]="cardio";
+    if(restIdx.length<=1)break; // letzten Ruhetag bewahren
+    sch[restIdx[Math.floor(restIdx.length/2)]]="cardio";
   }
   const splitTxt=fp==="upper"
     ? `${days} Einheiten mit Oberkörper-Schwerpunkt: Push und Pull liefern hohe Frequenz für Brust, Rücken, Schultern und Arme (statt alles in eine überladene Einheit zu packen), ein Bein-Tag hält die Beine über die Grundübungen stark.`
@@ -2835,6 +2855,7 @@ function renderReveal(){
     </div>
     <p class="xs t2 mt8">${tg.dirLabel} · ${splitName} · ${a.len} Min/Einheit</p>
     ${tg.conflicts.length?`<div class="warncard mt12" style="text-align:left" role="alert"><b>Hinweis:</b> ${tg.conflicts[0].msg}</div>`:""}
+    ${(tg.recs||[]).map(rmsg=>`<div class="card mt8" style="text-align:left;border-color:rgba(157,180,240,.35)"><p class="sm" style="line-height:1.55"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Empfehlung</b><br>${rmsg}</p></div>`).join("")}
     <button class="btn volt mt16" onclick="A.startApp()">Optimalen Plan übernehmen — los geht's</button>
     <button class="btn mt8" onclick="A.startAppCustom()">${icon("calendar",15)} Lieber meine Tage selbst festlegen</button>
     <button class="btn mt8" onclick="sharePlanPNG()">${icon("send",15)} Meinen Plan teilen</button>
@@ -4556,6 +4577,9 @@ function renderNutrition(){
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
         <button class="btn ${dayType==="rest"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('rest')">Ruhetag</button></div>
       ${energyBudget(sum,tg)}
+      <p class="xs t2" style="text-align:center;line-height:1.5;margin-top:4px">${dayType==="train"
+        ? `Trainingstag-Ziel — enthält die Kalorien, die du in der Einheit verbrennst (≈ ${nfi.format(Math.max(0,p.tg.train.kcal-p.tg.rest.kcal))} kcal mehr als am Ruhetag). <b style="color:var(--t1)">Trainierst du nicht oder lässt das Cardio aus, nimm das Ruhetag-Ziel.</b>`
+        : `Ruhetag-Ziel — die Basis ohne Trainingsverbrauch. An Trainingstagen darfst du entsprechend mehr essen.`}</p>
       <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px">
         ${nutritionStats(sum).map(([cls,v,l])=>`<div style="background:var(--s2);border-radius:12px;padding:11px 6px;text-align:center">
           <p class="${cls}" style="font-size:17px;font-weight:700">${v}</p><p class="xs t2" style="margin-top:2px">${l}</p></div>`).join("")}
