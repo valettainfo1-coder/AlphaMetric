@@ -204,7 +204,20 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Wiederverwendbare Gradient-Füllung mit Glow + Sheen + Wachstums-Animation (Oura-Look) */
   .gradfill{position:relative; box-shadow:0 0 10px rgba(120,140,235,.45); animation:barGrowX 1s cubic-bezier(.25,.8,.25,1);}
   .gradfill::after{content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.24)); mix-blend-mode:overlay;}
-  @media (prefers-reduced-motion:reduce){.gradfill{animation:none}}
+  /* ===== Futuristische Füll-Leiste: Glas-Track + Schimmer-Sweep + leuchtende Vorderkante ===== */
+  .fxtrack{position:relative; border-radius:999px; overflow:visible;
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.28));
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.05);}
+  .fxfill{position:relative; height:100%; border-radius:999px; overflow:hidden;
+    box-shadow:0 0 16px rgba(120,140,235,.5), inset 0 1px 0 rgba(255,255,255,.3);
+    transition:width .9s cubic-bezier(.25,.8,.25,1); animation:barGrowX 1s cubic-bezier(.25,.8,.25,1);}
+  .fxfill::before{content:""; position:absolute; inset:0;
+    background:linear-gradient(100deg, transparent 12%, rgba(255,255,255,.5) 50%, transparent 88%);
+    background-size:220% 100%; animation:fxshimmer 2.6s linear infinite;}
+  .fxedge{position:absolute; top:50%; transform:translate(-50%,-50%); width:8px; height:150%; border-radius:4px;
+    background:#EAF1FF; box-shadow:0 0 10px 3px rgba(170,200,255,.95), 0 0 24px 7px rgba(120,140,235,.6); pointer-events:none;}
+  @keyframes fxshimmer{0%{background-position:220% 0}100%{background-position:-120% 0}}
+  @media (prefers-reduced-motion:reduce){.gradfill,.fxfill{animation:none} .fxfill::before{animation:none}}
   .topbar{display:flex; align-items:center; gap:12px; margin-bottom:24px;}
   .back{background:none; border:none; color:var(--t2); font-size:22px; cursor:pointer; min-width:44px; min-height:44px;}
   input[type=range]{width:100%; height:44px; accent-color:var(--accent);}
@@ -397,8 +410,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .barrow .btrack{flex:1; height:13px; background:rgba(255,255,255,.06); border-radius:7px; overflow:hidden; box-shadow:inset 0 1px 2px rgba(0,0,0,.3);}
   .barrow .bfill{height:100%; border-radius:7px; position:relative; transition:width .9s cubic-bezier(.25,.8,.25,1);
     box-shadow:0 0 12px rgba(157,180,240,.4); animation:barGrowX 1s cubic-bezier(.25,.8,.25,1);}
-  .barrow .bfill::after{content:""; position:absolute; inset:0; border-radius:inherit;
-    background:linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.24)); mix-blend-mode:overlay;}
+  .barrow .bfill::after{content:""; position:absolute; inset:0; border-radius:inherit; overflow:hidden;
+    background:linear-gradient(100deg, transparent 12%, rgba(255,255,255,.45) 50%, transparent 88%);
+    background-size:220% 100%; animation:fxshimmer 2.8s linear infinite;}
   @keyframes barGrowX{from{width:0 !important}} /* greift visuell beim Einblenden */
   /* Oura-Style vertikale Balken (Volumen): Gradient + Wachstums-Animation von unten */
   .volbar{transform-origin:bottom; animation:barGrowY .85s var(--spring) both; border-radius:5px 5px 2px 2px;}
@@ -4504,9 +4518,10 @@ function macroBattery(label,cur,target,col,priority){
   return `<div style="margin-bottom:13px">
     <div class="row mb4"><span class="sm" style="font-weight:${priority?700:600}">${label}${priority?' <span class="xs" style="color:var(--hl);font-weight:700">· Priorität</span>':""}</span>
       <span class="metric xs ${over?"warn-txt":pct>=90?"volt-txt":"t2"}">${nfi.format(cur)} / ${nfi.format(target)} g</span></div>
-    <div style="position:relative;height:13px;border-radius:7px;background:rgba(255,255,255,.06);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)">
-      <div class="gradfill" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${over?"linear-gradient(90deg,#E0A24A,#D4574B)":priority?"linear-gradient(90deg,#A9C2E6,#4A6FD8)":"linear-gradient(90deg,#9DB4F0,#7E8BE8)"};border-radius:7px;transition:width .7s cubic-bezier(.25,.8,.25,1)"></div>
-      <div style="position:absolute;left:90%;top:-2px;bottom:-2px;width:2px;background:rgba(255,255,255,.25)"></div>
+    <div class="fxtrack" style="height:14px;border-radius:7px">
+      <div class="fxfill" style="width:${Math.max(pct,1.5)}%;border-radius:7px;background:${over?"linear-gradient(90deg,#E0A24A,#D4574B)":priority?"linear-gradient(90deg,#A9C2E6,#4A6FD8)":"linear-gradient(90deg,#9DB4F0,#7E8BE8)"}"></div>
+      ${pct>1&&pct<99?`<div class="fxedge" style="left:${pct}%;width:6px;box-shadow:0 0 8px 2px rgba(170,200,255,.9)"></div>`:""}
+      <div style="position:absolute;left:90%;top:-2px;bottom:-2px;width:2px;background:rgba(255,255,255,.3)"></div>
     </div></div>`;
 }
 // Energie-Budget: verbleibende kcal als Held + segmentierter Makro-Treibstoffbalken
@@ -4514,16 +4529,17 @@ function energyBudget(sum,tg){
   const remaining=tg.kcal-sum.k, over=remaining<0;
   const pk=sum.p*4,ck=sum.c*4,fk=sum.f*9, fuel=pk+ck+ffFix(fk)||1;
   const fillPct=Math.min(100,sum.k/tg.kcal*100);
-  const seg=(v,c)=>`<div style="width:${fuel?v/fuel*100:0}%;background:${c}"></div>`;
+  const seg=(v,grad)=>`<div style="width:${fuel?v/fuel*100:0}%;background:${grad}"></div>`;
   return `<div style="text-align:center;padding:6px 0 2px">
       <p class="hero-num" style="font-size:46px;line-height:1;${over?"color:var(--warn)":""}">${over?"+"+nfi.format(-remaining):nfi.format(remaining)}</p>
       <p class="xs t2" style="margin-top:2px">${over?"kcal über Ziel":"kcal übrig"} · ${nfi.format(sum.k)} von ${nfi.format(tg.kcal)} kcal</p>
     </div>
-    <div style="position:relative;height:18px;border-radius:9px;background:var(--s3);overflow:hidden;margin:12px 0 8px">
-      <div style="display:flex;height:100%;width:${fillPct}%;transition:width .7s cubic-bezier(.25,.8,.25,1)">
-        ${seg(pk,"var(--hl)")}${seg(ck,"#7D8CA3")}${seg(fk,"var(--warn)")}
+    <div class="fxtrack" style="height:20px;margin:14px 0 8px">
+      <div class="fxfill" style="display:flex;width:${Math.max(fillPct,1.5)}%;background:${over?"linear-gradient(90deg,#E0A24A,#D4574B)":""}">
+        ${over?"":seg(pk,"linear-gradient(180deg,#A9C2E6,#4A6FD8)")+seg(ck,"linear-gradient(180deg,#8FA0C0,#5B6B85)")+seg(fk,"linear-gradient(180deg,#E8B264,#C98A3D)")}
       </div>
-      <div style="position:absolute;right:0;top:0;bottom:0;width:3px;background:var(--t1);opacity:.25"></div>
+      ${fillPct>1&&fillPct<99.5?`<div class="fxedge" style="left:${fillPct}%"></div>`:""}
+      <div style="position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:rgba(255,255,255,.45);border-radius:2px"></div>
     </div>
     <div class="row" style="justify-content:center;gap:14px">
       <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--hl);display:inline-block"></span>Protein</span>
