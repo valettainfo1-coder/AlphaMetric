@@ -420,12 +420,23 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
   /* ===== Immersive Today-Hero (Oura/Apple-würdig): atmosphärische Szene + Score + Serif-Voice ===== */
   .today-hero{position:relative; margin:-70px -16px 20px; padding:80px 22px 30px; overflow:hidden; text-align:center;}
-  .today-hero .th-scene{position:absolute; inset:0; z-index:-1;
+  .today-hero .th-scene{position:absolute; inset:0; z-index:-1; overflow:hidden;
     background:
       radial-gradient(120% 78% at 50% -6%, #313F70 0%, #1A2342 36%, #0C1020 70%, var(--bg) 100%),
       radial-gradient(70% 44% at 50% 86%, rgba(125,160,240,.16), transparent 72%);}
-  .today-hero .th-scene::after{content:""; position:absolute; inset:0;
-    background:radial-gradient(78% 46% at 50% 16%, rgba(165,195,255,.14), transparent 60%);}
+  /* lebendige, langsam atmende Lichtschleier in der Hero-Szene (Oura-Feel) */
+  .today-hero .th-scene::before{content:""; position:absolute; inset:-20%; z-index:0; pointer-events:none; will-change:transform,opacity;
+    background:
+      radial-gradient(40% 36% at 30% 24%, rgba(120,150,255,.30), transparent 60%),
+      radial-gradient(38% 32% at 74% 30%, rgba(150,110,230,.24), transparent 62%),
+      radial-gradient(46% 30% at 56% 86%, rgba(86,200,220,.18), transparent 66%);
+    animation:heroDrift 18s ease-in-out infinite alternate;}
+  .today-hero .th-scene::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(78% 46% at 50% 16%, rgba(165,195,255,.16), transparent 60%);
+    animation:heroBreath 7s ease-in-out infinite;}
+  @keyframes heroDrift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4%,-3%,0) scale(1.12)}100%{transform:translate3d(-3%,2%,0) scale(1.06)}}
+  @keyframes heroBreath{0%,100%{opacity:.6}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.today-hero .th-scene::before,.today-hero .th-scene::after{animation:none}}
   .th-metrics{display:flex; justify-content:center; gap:26px; margin-bottom:14px;}
   .th-metric{background:none; border:none; font-family:inherit; cursor:pointer; color:inherit; padding:0;}
   .th-metric .m-ic{color:var(--hl); display:flex; justify-content:center; margin-bottom:5px; opacity:.92;}
@@ -2105,6 +2116,7 @@ let menuOpen=false;
 function render(){
   clearTimeout(timerInt);
   if(typeof PB!=="undefined")PB.stop(); // Partikel-Animation beenden (nur Landing startet sie neu)
+  if(S.tab!=="train"&&S.tab!=="player"){ trnSelDay=null; trnSelRot=null; } // Tag-Auswahl zurücksetzen
   const inApp=(S.currentUser!=null)&&S.screen!=="onboarding";
   if(!inApp){
     appbarEl.innerHTML=""; tabbarEl.innerHTML=""; fabEl.innerHTML="";
@@ -3256,6 +3268,7 @@ function renderHome(){
 // TRAINING (User owns schedule + Voice-Log)
 // =====================================================================
 let voicePreview=null;
+let trnSelDay=null, trnSelRot=null; // inline ausgewählter Trainingstag / Rotations-Index
 function openScheduleSheet(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; save(); openScheduleSheet(); };
@@ -3732,8 +3745,18 @@ function renderTrain(){
   };
   A.voiceApprove=()=>{ if(!voicePreview)return; logParsedWorkout(voicePreview); toast(`✓ ${voicePreview.name}: ${voicePreview.sets}×${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}`); voicePreview=null; renderTrain(); };
   A.voiceCancel=()=>{voicePreview=null;renderTrain();};
-  // Fokus-Session: im Rotations-Modus die nächste Einheit, sonst heute/nächster Tag
-  const focusType=rotMode?rotationNext():((sch[dow]!=="rest")?sch[dow]:nextTrainingType());
+  // Fokus-Session: im Rotations-Modus die nächste Einheit, sonst heute/nächster Tag.
+  // Tippt man oben einen Wochentag an, wird DESSEN Einheit INLINE hier gezeigt
+  // (kein aufpoppendes Fenster mehr) — selectedDay steuert die angezeigte Session.
+  A.selectDay=(i)=>{ trnSelDay=i; trnSelRot=null; renderTrain(); };
+  A.selectRot=(i)=>{ trnSelRot=i; trnSelDay=null; renderTrain(); };
+  const selectable=sch.map((t,i)=>t!=="rest"?i:-1).filter(i=>i>=0);
+  let focusDayIdx = (trnSelDay!=null && sch[trnSelDay] && sch[trnSelDay]!=="rest") ? trnSelDay
+    : (sch[dow]!=="rest" ? dow : (selectable.find(i=>i>dow)!=null?selectable.find(i=>i>dow):selectable[0]));
+  const focusType = rotMode
+    ? (trnSelRot!=null ? activeRotation()[trnSelRot] : rotationNext())
+    : (focusDayIdx!=null ? sch[focusDayIdx] : nextTrainingType());
+  const focusDayName = (!rotMode && focusDayIdx!=null) ? WD[focusDayIdx] : null;
   const rot=activeRotation();
   const others=rotMode
     ? rot.filter(t=>t!==focusType)
@@ -3757,19 +3780,21 @@ function renderTrain(){
   };
   const phaseAcc=(title,items)=>items&&items.length?`<details class="acc" style="background:rgba(255,255,255,.55)"><summary style="font-size:13px;padding:12px 14px">${title}<span class="chev">${icon("chevron",15)}</span></summary>
     <div class="accbody">${items.map(w=>`<p class="sm" style="padding:5px 0;font-weight:600">${w.n}</p><p class="xs t2" style="line-height:1.5;margin-bottom:6px">${w.why}</p>`).join("")}</div></details>`:"";
-  // Wochen-Strip: jeder Trainingstag ist antippbar → Vorschau (nichts gesperrt)
+  // Wochen-Strip: Tag antippen → DESSEN Einheit erscheint unten INLINE (kein Popup).
+  // Der aktuell gezeigte Tag ist hervorgehoben.
   const weekStrip=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
-    ${sch.map((t,i)=>{const train=t!=="rest";
-      return `<button ${train?`onclick="A.previewSession('${t}')"`:""} style="background:${i===dow?"var(--s2)":"none"};border:none;border-radius:10px;padding:6px 0;cursor:${train?"pointer":"default"};font-family:inherit;color:var(--t1)">
-        <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
+    ${sch.map((t,i)=>{const train=t!=="rest"; const sel=i===focusDayIdx;
+      return `<button ${train?`onclick="A.selectDay(${i})"`:""} style="background:${sel?"var(--accent-soft)":"none"};border:1px solid ${sel?"var(--hl)":"transparent"};border-radius:10px;padding:6px 0;cursor:${train?"pointer":"default"};font-family:inherit;color:var(--t1)">
+        <p class="xs" style="color:${sel?"var(--hl)":i===dow?"var(--t1)":"var(--t3)"};font-weight:${sel||i===dow?"700":"400"}">${WD[i]}</p>
         <p style="font-size:16px;margin:4px 0">${t==="rest"?"·":`<span style="display:inline-flex">${icon(TYPES[t].icon,15)}</span>`}</p>
         <p style="font-size:8.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
       </button>`;}).join("")}
   </div>`;
   // Rotations-Strip: Boxen pro Einheit, „Nächste" markiert, alle antippbar
+  const rotSelIdx=trnSelRot!=null?trnSelRot:(S.rotationPos||0)%rot.length;
   const rotStrip=`<div class="pills" style="margin-bottom:4px">
-    ${rot.map((t,i)=>{const isNext=i===(S.rotationPos||0)%rot.length;
-      return `<button class="pill ${isNext?"active":""}" style="flex-direction:column;height:auto;min-height:62px;padding:8px 12px;gap:3px" onclick="A.previewSession('${t}')">
+    ${rot.map((t,i)=>{const isNext=i===(S.rotationPos||0)%rot.length; const sel=i===rotSelIdx;
+      return `<button class="pill ${sel?"active":""}" style="flex-direction:column;height:auto;min-height:62px;padding:8px 12px;gap:3px" onclick="A.selectRot(${i})">
         <span style="display:inline-flex">${icon(TYPES[t].icon,16)}</span>
         <span style="font-size:11px;font-weight:700">${TYPES[t].label}</span>
         ${isNext?'<span style="font-size:8px;letter-spacing:.06em">NÄCHSTE</span>':""}</button>`;}).join("")}
@@ -3787,7 +3812,7 @@ function renderTrain(){
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
       </div>`)}
 
-    ${focusType?renderSection(rotMode?"Deine nächste Einheit":(sch[dow]!=="rest"?"Dein Training heute":"Dein nächstes Training"),
+    ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
         const head=`<div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(F.icon,18)} ${F.label}</p>
