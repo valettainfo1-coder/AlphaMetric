@@ -141,6 +141,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); display:block; margin:0 0 var(--sp-3) var(--sp-1);}
   .section{margin-bottom:var(--sp-7);}
   .hint{font-size:13px; color:var(--t2); margin-bottom:16px; line-height:1.55;}
+  /* Quiz-Empfehlung: kontextueller Coach-Hinweis (Gradient-Callout) */
+  .quiz-rec{display:flex; gap:9px; align-items:flex-start; margin:0 0 18px; padding:12px 14px; border-radius:14px;
+    background:linear-gradient(135deg, rgba(74,111,216,.16), rgba(126,139,232,.05)); border:1px solid rgba(157,180,240,.35);
+    font-size:12.5px; line-height:1.5; color:var(--t2); animation:fade .4s var(--spring) .05s backwards;}
+  .quiz-rec svg{color:var(--hl); flex-shrink:0; margin-top:1px;} .quiz-rec b{color:var(--t1);}
 
   /* ===== Liquid Glass (HELL): Basis für alle erhöhten Elemente ===== */
   /* FIX (v5/6A): .menu-sheet aus der 60%-Glass-Gruppe entfernt — eigene,
@@ -2850,8 +2855,31 @@ const STEPS=[
 ];
 const QCOUNT=STEPS.filter(s=>!["reveal"].includes(s.type)).length;
 
+// Kontextuelle Quiz-Empfehlung: schlägt anhand der bisherigen Antworten (BMI, Ziel,
+// Erfahrung, Alter) die für diesen Menschen beste Wahl vor — wie ein Coach im Funnel.
+function quizRec(st){
+  const a=S.a||{}; const bmi=(a.weight&&a.height)?a.weight/((a.height/100)**2):null;
+  const g=(a.goals&&a.goals[0])||null, ex=a.exp;
+  switch(st.id){
+    case "goals":
+      if(bmi&&bmi>=30) return "Bei deinem Ausgangsgewicht bringt <b>Fettabbau zuerst</b> am meisten — mit viel Protein hältst du dabei deine Muskeln.";
+      if(bmi&&bmi<20) return "<b>Muskelaufbau</b> legt bei dir die beste Basis — leichter Kalorienüberschuss, sauber aufgebaut.";
+      return "Dein <b>erstes</b> Ziel steuert die Kalorien am stärksten — setz es bewusst an erste Stelle.";
+    case "days":
+      if(ex==="beginner") return "<b>3 Tage</b> — genug Reiz und viel Erholung für einen starken Einstieg.";
+      if(g==="strength") return "<b>4 Tage</b> — ideal für Kraft mit voller Erholung zwischen den Einheiten.";
+      if(g==="fat_loss") return "<b>4 Tage</b> Kraft + Cardio an Ruhetagen — hält Muskeln, maximiert den Verbrauch.";
+      return "<b>4 Tage</b> — der Sweet Spot: jede Muskelgruppe 2×/Woche, gute Erholung.";
+    case "time": return "<b>60 Min</b> decken vollen Reiz ab. Weniger Zeit? Der Plan wird automatisch kompakter — gleich effektiv.";
+    case "focus": return "Wähl gezielt deine Schwachstellen — der Plan gibt ihnen automatisch mehr Volumen, ohne den Rest zu vernachlässigen.";
+    case "recovery": return (a.age&&a.age>=45)?"Ab ~45 oder bei wenig Schlaf ist <b>eher langsam</b> oft realistischer — schützt vor Übertraining.":"";
+    case "equipment": return "";
+    default: return "";
+  }
+}
 function renderOnboarding(){
   const st=STEPS[S.step]||STEPS[0];
+  const rec=quizRec(st); const recBox=rec?`<div class="quiz-rec">${icon("sparkle",13)}<span>${rec}</span></div>`:"";
   const qNum=Math.min(QCOUNT,S.step+1);
   const bar=`<div class="topbar">
     <button class="back" onclick="A.back()" aria-label="Zurück">‹</button>
@@ -2870,13 +2898,13 @@ function renderOnboarding(){
     S.a[k]=next; save(); render();
   };
   if(st.type==="single"){
-    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>
+    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>${recBox}
       ${st.opts.map(([v,l,sub])=>`<button class="opt ${S.a[st.key]===v?"sel":""}" onclick="A.pick('${st.key}',${typeof v==="string"?`'${v}'`:v})">${l}${sub?`<span class="sub">${sub}</span>`:""}</button>`).join("")}
       ${st.skip?`<button class="btn ghost" onclick="A.next()">Überspringen</button>`:""}</div>`;
   }
   else if(st.type==="multi"){
     const sel=S.a[st.key]||[];
-    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>
+    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>${recBox}
       ${st.opts.map(([v,l])=>`<button class="opt ${sel.includes(v)?"sel":""}" onclick="A.multi('${st.key}','${v}',${st.max})">
         ${sel.includes(v)?`<span class="metric xs" style="margin-right:6px">${sel.indexOf(v)+1}.</span>`:""}${l}</button>`).join("")}
       <button class="btn volt mt8" onclick="A.next()" ${sel.length===0&&!st.skip?"disabled":""}>Weiter${sel.length?` (${sel.length})`:""}</button>
@@ -2890,7 +2918,7 @@ function renderOnboarding(){
       <div class="mt16"><button class="btn volt" onclick="A.next()">Weiter</button></div></div>`;
   }
   else if(st.type==="cells"){
-    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>
+    root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint">${st.hint||""}</p>${recBox}
       <div class="grid5">
       ${st.opts.map(v=>`<button class="cell ${S.a[st.key]===v?"sel":""}" onclick="A.pick('${st.key}',${v})">${v}</button>`).join("")}</div>
       <p class="hint mt8" style="text-align:center">${st.unit}</p></div>`;
