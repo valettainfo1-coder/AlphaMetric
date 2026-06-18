@@ -892,7 +892,10 @@ const nfi = new Intl.NumberFormat("de-DE",{maximumFractionDigits:0});
 const df  = new Intl.DateTimeFormat("de-DE",{day:"2-digit",month:"2-digit"});
 const dfLong = new Intl.DateTimeFormat("de-DE",{weekday:"long", day:"numeric", month:"long"});
 const fmtKg=(v)=>nf.format(v)+" kg", fmtKcal=(v)=>nfi.format(v)+" kcal", fmtD=(d)=>df.format(d);
-const todayKey=()=>new Date().toISOString().slice(0,10);
+// LOKALER Tages-Schlüssel (YYYY-MM-DD) — NICHT UTC. Sonst landen abendliche/nächtliche
+// Einträge (z. B. in DE, UTC+1/+2) auf dem falschen Tag und der Kalender verrutscht.
+const dkey=(d)=>{ d=d||new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const todayKey=()=>dkey();
 const dayMs=864e5;
 
 /* ---------- Sprach-Ebene (v5/Phase 2) ----------
@@ -1284,16 +1287,16 @@ function buildDevSeed(){
   const readinessHistory=[]; for(let d=13;d>=0;d--){
     const sleep=2+Math.floor(rng()*4), energy=2+Math.floor(rng()*4), stress=1+Math.floor(rng()*3), sore=1+Math.floor(rng()*4);
     const r=statusScore(sleep,energy,stress,sore);
-    readinessHistory.push({date:new Date(now-d*dayMs).toISOString().slice(0,10),score:r.score,tier:r.tier,sleep,energy,stress,sore,sleepH:Math.round((5.5+rng()*3)*10)/10});
+    readinessHistory.push({date:dkey(new Date(now-d*dayMs)),score:r.score,tier:r.tier,sleep,energy,stress,sore,sleepH:Math.round((5.5+rng()*3)*10)/10});
   }
   const trainingHistory=[]; const labels=["push","pull","legs","upper"];
   for(let wk=0;wk<10;wk++){ for(let d=0;d<4;d++){
     if(rng()<.1) continue;
-    trainingHistory.push({date:new Date(now-(9.5*7-wk*7-d*1.5)*dayMs).toISOString().slice(0,10),
+    trainingHistory.push({date:dkey(new Date(now-(9.5*7-wk*7-d*1.5)*dayMs)),
       type:labels[d%4],sets:16+Math.floor(rng()*8),volume:Math.round(5200+rng()*3200),avgRpe:Math.round((7.2+rng()*1.6)*10)/10});
   }}
   const nutritionLog={}; for(let d=7;d>=1;d--){
-    const date=new Date(now-d*dayMs).toISOString().slice(0,10);
+    const date=dkey(new Date(now-d*dayMs));
     nutritionLog[date]={meals:[{n:"Demo-Tag (aggregiert)",g:0,k:Math.round(2300+(rng()-.4)*700),p:Math.round(130+rng()*60),c:Math.round(220+rng()*80),f:Math.round(60+rng()*30)}],water:Math.floor(4+rng()*7)};
   }
   return {liftLog,weightLog,readinessHistory,trainingHistory,nutritionLog};
@@ -3825,7 +3828,7 @@ function activityDays(){
 function engagementStats(){
   const days=activityDays();
   let streak=0;
-  for(let i=0;;i++){const key=new Date(Date.now()-i*dayMs).toISOString().slice(0,10);
+  for(let i=0;;i++){const key=dkey(new Date(Date.now()-i*dayMs));
     if(days.has(key))streak++; else if(i===0) continue; else break;}
   const activeToday=days.has(todayKey());
   const sessions=S.trainingHistory.filter(t=>t.type!=="rest").length;
@@ -3991,7 +3994,7 @@ function renderHome(){
     <span class="sm" style="flex:1;line-height:1.5"><b>Deine ${streak}-Tage-Serie steht heute auf dem Spiel.</b><br><span class="t2">Ein einziger Eintrag heute hält sie am Leben — sonst beginnt sie morgen wieder bei null.</span></span><span class="t2">→</span></button>`:"";
   const overtrain=ins.find(i=>i.risk&&/Übertrain/.test(i.t));
   // Wochen-Recap: beim Wochenwechsel als Banner vormerken (kein Auto-Modal)
-  const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);})();
+  const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return dkey(x);})();
   if(S.lastRecapWeek==null){S.lastRecapWeek=wkKey;save();}
   else if(S.lastRecapWeek!==wkKey){
     S.lastRecapWeek=wkKey;
@@ -4274,7 +4277,7 @@ function consistencyHeatmap(){
     let cells="";
     for(let r=0;r<7;r++){
       const d=new Date(monThis); d.setDate(monThis.getDate()-w*7+r);
-      const key=d.toISOString().slice(0,10);
+      const key=dkey(d);
       const future=d>today;
       const s=byDate[key]||0;
       cells+=`<div title="${key}: ${s} Sätze" style="width:12px;height:12px;border-radius:3px;background:${future?"transparent":shade(s)}"></div>`;
@@ -5021,7 +5024,7 @@ function renderSummary(){
 // zu DIR, nicht gegen eine Norm — genau wie Oura/Whoop.
 function hrvBaseline(){ const a=S.hrvLog.slice(-30).map(x=>x.v).sort((p,q)=>p-q); return a.length?a[Math.floor(a.length/2)]:null; }
 function rhrBaseline(){ const a=S.rhrLog.slice(-30).map(x=>x.v).sort((p,q)=>p-q); return a.length?a[Math.floor(a.length/2)]:null; }
-function rhrFor(dk){ return S.rhrLog.find(x=>new Date(x.t).toISOString().slice(0,10)===dk)||null; }
+function rhrFor(dk){ return S.rhrLog.find(x=>dkey(new Date(x.t))===dk)||null; }
 // Erholungs-Score 0..100 eines Tages aus gemessenen Werten; null wenn keine Daten.
 function healthDayScore(dateKey){
   const hrv=S.hrvLog.find(x=>x.date===dateKey);
@@ -5451,7 +5454,7 @@ function renderAnalytics(){
   // Ernährung
   const nutriDays=Object.keys(S.nutritionLog).filter(d=>(S.nutritionLog[d].meals||[]).length>0);
   if(nutriDays.length>=3){
-    const days7=[...Array(7)].map((_,i)=>new Date(Date.now()-(6-i)*dayMs).toISOString().slice(0,10));
+    const days7=[...Array(7)].map((_,i)=>dkey(new Date(Date.now()-(6-i)*dayMs)));
     const nutri7=days7.map(d=>{
       const log=S.nutritionLog[d];
       if(!log)return{d,k:0,p:0,c:0,f:0};
@@ -5566,10 +5569,10 @@ function nutritionStats(sum){
   const p=S.profile, bw=p.a.weight||80;
   // Ziel-Verhältnis (wissenschaftlich, ~1,8 g/kg) statt des verwirrenden Tages-Iststands
   const ppkg=Math.round(p.tg.train.p/bw*10)/10;
-  const last7=[...Array(7)].map((_,i)=>new Date(Date.now()-i*dayMs).toISOString().slice(0,10)).map(k=>S.nutritionLog[k]).filter(l=>l&&(l.meals||[]).length);
+  const last7=[...Array(7)].map((_,i)=>dkey(new Date(Date.now()-i*dayMs))).map(k=>S.nutritionLog[k]).filter(l=>l&&(l.meals||[]).length);
   const avgK=last7.length?Math.round(last7.reduce((s,l)=>s+l.meals.reduce((a,m)=>a+m.k,0),0)/last7.length):0;
   let streak=0;
-  for(let d=0;;d++){const key=new Date(Date.now()-d*dayMs).toISOString().slice(0,10);const l=S.nutritionLog[key];
+  for(let d=0;;d++){const key=dkey(new Date(Date.now()-d*dayMs));const l=S.nutritionLog[key];
     if(!l||!(l.meals||[]).length){if(d===0)continue;break;}
     if(l.meals.reduce((s,m)=>s+m.p,0)>=p.tg.train.p*0.9)streak++;else break;}
   return [["metric",ppkg.toString().replace(".",","),"g/kg Protein-Ziel"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Streak"]];
@@ -5843,7 +5846,7 @@ function parseAppleHealthExport(xml){
     } else if(type==="HKCategoryTypeIdentifierSleepAnalysis"){
       const s=Date.parse(attr("startDate")||""), e=Date.parse(attr("endDate")||""), val=attr("value")||"";
       if(isFinite(s)&&isFinite(e)&&e>s&&!/InBed/i.test(val)){
-        const d=new Date(s).toISOString().slice(0,10);
+        const d=dkey(new Date(s));
         out.sleepH[d]=(out.sleepH[d]||0)+(e-s)/36e5;
       }
     } else if(type==="HKQuantityTypeIdentifierRestingHeartRate"){
@@ -5861,8 +5864,8 @@ function importHealthData(text,fname){
   const mergeWeight=(arr)=>{
     for(const w of arr){
       if(!isFinite(w.t)||!isFinite(w.v)||w.v<20||w.v>400)continue;
-      const day=new Date(w.t).toISOString().slice(0,10);
-      if(!S.weightLog.some(x=>new Date(x.t).toISOString().slice(0,10)===day)){
+      const day=dkey(new Date(w.t));
+      if(!S.weightLog.some(x=>dkey(new Date(x.t))===day)){
         S.weightLog.push({t:w.t,v:Math.round(w.v*10)/10}); counts.weight++;
       }
     }
@@ -5886,7 +5889,7 @@ function importHealthData(text,fname){
     S.rhrLog.sort((a,b)=>a.t-b.t);
     // HRV (SDNN): pro Tag den Mittelwert behalten — robuster als Einzelmessungen.
     const hrvByDay={};
-    for(const h of p.hrv){ const d=new Date(h.t).toISOString().slice(0,10); (hrvByDay[d]=hrvByDay[d]||[]).push(h.v); }
+    for(const h of p.hrv){ const d=dkey(new Date(h.t)); (hrvByDay[d]=hrvByDay[d]||[]).push(h.v); }
     for(const [d,arr] of Object.entries(hrvByDay)){
       const v=Math.round(arr.reduce((s,x)=>s+x,0)/arr.length), t=Date.parse(d+"T08:00:00");
       if(!S.hrvLog.some(x=>x.date===d)){S.hrvLog.push({date:d,t,v}); counts.hrv++;}
@@ -6002,7 +6005,7 @@ function renderProfile(){
     S.plan=generateTrainingPlan(p); S.planB=generateTrainingPlan(p,"B"); S.rotation=null;
     const opt=generateOptimalSchedule(p.a); S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
     S.exOverrides={};
-    S.weightLog=S.weightLog.filter(x=>new Date(x.t).toISOString().slice(0,10)!==todayKey());
+    S.weightLog=S.weightLog.filter(x=>dkey(new Date(x.t))!==todayKey());
     S.weightLog.push({t:Date.now(),v:w});
     EP=null; overlay.innerHTML=""; save(); render();
     toast("Engine neu berechnet — Kalorien, Makros & Plan aktualisiert");
