@@ -2149,6 +2149,35 @@ function recommend(name){
   const deload=S.currentWeek===4?0.9:1;
   return {w:Math.round((last.w+inc)*deload/2.5)*2.5, reps:Math.max(5,last.reps)};
 }
+/* Startgewicht-Schätzung OHNE Historie: anteilig am Körpergewicht je Übung,
+   skaliert nach Erfahrung & Geschlecht. Bewusst konservativ (eher etwas leichter)
+   und klar als Schätzung markiert — ein sinnvoller Startpunkt statt fixer 20 kg.
+   Werte = einzutragende Last (Langhantel: gesamt · Kurzhantel: pro Hantel · Maschine: Stack). */
+const START_FRAC={
+  "Kniebeuge":0.65,"Beinpresse":1.4,"Kreuzheben":0.85,"Rumänisches Kreuzheben":0.6,"KH-Rumänisches Kreuzheben":0.35,
+  "Goblet Squat":0.28,"Bulgarian Split Squat":0.2,"Ausfallschritte":0.22,"Hip Thrust":0.85,"Beinbeuger":0.32,"Wadenheben":0.55,
+  "Bankdrücken":0.55,"Schrägbankdrücken":0.45,"KH-Bankdrücken":0.22,"KH-Fliegende":0.1,"KH-Schulterdrücken":0.16,
+  "Schulterdrücken":0.35,"Seitheben":0.06,"Face Pull":0.22,"Reverse Flys":0.06,"Band Pull-Apart":0,
+  "Langhantelrudern":0.5,"Latzug":0.5,"Kabelrudern":0.45,"Einarmiges KH-Rudern":0.22,
+  "Trizepsdrücken":0.25,"Bizeps-Curls":0.1,
+  // Körpergewichts-Übungen → 0 kg Zusatzlast
+  "Liegestütze":0,"Enge Liegestütze":0,"Klimmzug":0,"Unterstützter Klimmzug":0,"Negativ-Klimmzug":0,
+  "Kniebeuge (Körpergewicht)":0,"Plank":0,"Superman":0,"Dead Bug":0,"Pike Push-ups":0,"Rudern am Tisch":0,"Hyperextension":0,
+};
+function estimateStartWeight(name,a){
+  a=a||{}; const bw=a.weight||80, ex=EXDB[name]||{};
+  let frac=START_FRAC[name];
+  if(frac==null){
+    const m=ex.m||"";
+    if(ex.eq==="body"||ex.eq==="bar") frac=0;
+    else if(ex.compound) frac=({Beine:0.6,Brust:0.5,"Rücken":0.45,Schultern:0.3}[m]??0.4);
+    else frac=({Beine:0.3,Brust:0.12,"Rücken":0.2,Schultern:0.06,Arme:0.12,Core:0}[m]??0.12);
+  }
+  if(frac===0) return 0;
+  const expF={beginner:0.7,novice:0.85,intermediate:1.0,advanced:1.2}[a.exp]||0.85;
+  const sexF=(a.sex==="female")?0.65:1;
+  return Math.max(2.5, Math.round(bw*frac*expF*sexF/2.5)*2.5);
+}
 function e1Series(name){
   return liftHistory(name).filter(s=>s.w>0).map(s=>({t:s.t,v:e1rm(s.w,s.reps,s.rpe)}));
 }
@@ -4853,7 +4882,8 @@ function renderPlayer(){
   const [name,setsBase,repsRange,rest]=ex;
   pRestTotal=rest;
   const rec=recommend(name);
-  if(pw===null){pw=rec?rec.w:20;pr=rec?rec.reps:8;prpe=8;}
+  const startEst=estimateStartWeight(name,S.profile&&S.profile.a);
+  if(pw===null){ if(rec){pw=rec.w;pr=rec.reps;} else {pw=startEst;pr=8;} prpe=8; }
   const logged=S.logged.filter(l=>l.n===name);
   const targetSets=weekSets(name,setsBase);
   const isLast=S.exIdx>=day.ex.length-1;
@@ -4935,7 +4965,8 @@ function renderPlayer(){
       ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}</p>`:"";})()}
       ${rec?`<p class="sm volt-txt metric mb8">Letztes Mal: ${fmtKg(rec.w)} × ${rec.reps} — schon vorausgefüllt
         <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
-        :`<p class="xs t2 mb8">Erste Session — wähle dein Startgewicht selbst.</p>`}
+        :(startEst>0?`<p class="sm volt-txt metric mb8">Vorschlag: ${fmtKg(startEst)} × 8 <span class="xs t2" style="font-family:var(--font-ui)">— auf ${fmtKg((S.profile&&S.profile.a&&S.profile.a.weight)||80)} Körpergewicht geschätzt, einfach anpassen</span></p>`
+          :`<p class="sm volt-txt metric mb8">Körpergewicht <span class="xs t2" style="font-family:var(--font-ui)">— Zusatzlast bei Bedarf eintragen</span></p>`)}
       <div class="row mb12"><p class="ct" style="margin:0">Sätze</p>
         <div class="setdots" id="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:Math.max(targetSets,logged.length)},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
       <div class="row mb8"><span class="sm t2">Gewicht <span class="xs t3">(tippen)</span></span>
