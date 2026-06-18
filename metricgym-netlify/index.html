@@ -386,6 +386,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .stepper input.stepin{width:78px; min-width:78px; text-align:center; font-size:19px; background:var(--s2); color:var(--t1);
     border:1px solid var(--hairline); border-radius:12px; height:44px; font-family:var(--font-mono); -moz-appearance:textfield; appearance:textfield;}
   .stepper input.stepin:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+  .btn.cta-big{min-height:60px; font-size:18px; display:flex; flex-direction:column; gap:2px; line-height:1.1;}
+  .btn.cta-big .cta-sub{font-size:11.5px; font-weight:500; opacity:.72; letter-spacing:.01em;}
   .stepper input.stepin::-webkit-outer-spin-button,.stepper input.stepin::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   .scale{display:flex; gap:6px; flex-wrap:wrap;}
   .scale button{min-width:44px; height:44px; border-radius:999px; background:var(--surface); border:1px solid var(--hairline);
@@ -4854,11 +4856,20 @@ function renderPlayer(){
   if(pw===null){pw=rec?rec.w:20;pr=rec?rec.reps:8;prpe=8;}
   const logged=S.logged.filter(l=>l.n===name);
   const targetSets=weekSets(name,setsBase);
+  const isLast=S.exIdx>=day.ex.length-1;
+  const progFor=(c)=>Math.min(100,((S.exIdx)/day.ex.length+((Math.min(c,targetSets)/targetSets)/day.ex.length))*100);
+  const loggedRows=()=>S.logged.filter(x=>x.n===name).map((x,i)=>`<li><span class="metric">${fmtKg(x.w)} × ${x.reps}</span><span class="metric t2" style="font-size:12px">RPE ${x.rpe}</span><button class="iconbtn" style="min-width:30px;min-height:30px;font-size:13px;margin-left:auto" onclick="A.undoSet(${i})" aria-label="Satz löschen">✕</button></li>`).join("");
+  // Adaptive Haupt-Aktion: 1 Tipp loggt — sind alle Sätze drin, wird daraus „Nächste Übung", auf der letzten „Abschließen".
+  const ctaFor=(c)=>{ if(c<targetSets) return {l:"Satz loggen",s:`Satz ${c+1} von ${targetSets} · ${fmtKg(pw)} × ${pr}`,f:"A.log()"};
+    if(!isLast) return {l:"Nächste Übung →",s:(day.ex[S.exIdx+1]||["",])[0],f:"A.next()"};
+    return {l:"Training abschließen ✓",s:`${day.ex.length} Übungen erledigt`,f:"A.finish()"}; };
+  A.refreshCta=()=>{ const c=S.logged.filter(l=>l.n===name).length, d=ctaFor(c), btn=document.getElementById("primary-cta");
+    if(btn){ btn.setAttribute("onclick",d.f); btn.innerHTML=`<span>${d.l}</span><span class="cta-sub">${d.s}</span>`; } };
   // In-Place-Eingabe (kein Voll-Neuaufbau): Gewicht/Reps direkt tippbar + −/+ aktualisieren nur das Feld.
-  A.stepW=(d)=>{ pw=Math.max(0,Math.round((pw+d*2.5)*10)/10); const el=document.getElementById("pw-in"); if(el)el.value=pw; };
-  A.setW=(v)=>{ const x=parseFloat(String(v).replace(",",".")); if(isFinite(x))pw=Math.max(0,x); };
-  A.stepR=(d)=>{ pr=Math.max(1,pr+d); const el=document.getElementById("pr-in"); if(el)el.value=pr; };
-  A.setR=(v)=>{ const x=parseInt(v,10); if(isFinite(x))pr=Math.max(1,x); };
+  A.stepW=(d)=>{ pw=Math.max(0,Math.round((pw+d*2.5)*10)/10); const el=document.getElementById("pw-in"); if(el)el.value=pw; A.refreshCta(); };
+  A.setW=(v)=>{ const x=parseFloat(String(v).replace(",",".")); if(isFinite(x))pw=Math.max(0,x); A.refreshCta(); };
+  A.stepR=(d)=>{ pr=Math.max(1,pr+d); const el=document.getElementById("pr-in"); if(el)el.value=pr; A.refreshCta(); };
+  A.setR=(v)=>{ const x=parseInt(v,10); if(isFinite(x))pr=Math.max(1,x); A.refreshCta(); };
   A.rpe=(v)=>{ prpe=v; document.querySelectorAll(".scale button").forEach(b=>b.classList.toggle("sel",+b.dataset.v===v)); const d=document.getElementById("rpe-desc"); if(d)d.textContent=RPE_DESC[v]; };
   A.log=()=>{
     const wel=document.getElementById("pw-in"); if(wel)A.setW(wel.value);
@@ -4870,10 +4881,25 @@ function renderPlayer(){
     const prev=prevAll.reduce((m,s)=>s.w>0?Math.max(m,e1rm(s.w,s.reps,s.rpe)):m,0);
     if(prev>0&&e1>prev&&(!S.prToday||e1-prev>S.prToday.delta)) S.prToday={n:name,e1,delta:Math.round((e1-prev)*10)/10};
     if(rest>0)S.restEnd=Date.now()+rest*1000;
+    try{navigator.vibrate&&navigator.vibrate(18);}catch{}
+    save();
+    // In-Place-Feedback statt Voll-Neuaufbau: Punkte, Liste, Fortschritt, Button, Timer.
+    const cnt=S.logged.filter(l=>l.n===name).length;
+    const dots=document.getElementById("setdots"); if(dots)dots.innerHTML=Array.from({length:Math.max(targetSets,cnt)},(_,i)=>`<span class="dot ${i<cnt?"full":""}"></span>`).join("");
+    const ll=document.getElementById("logged-list"); if(ll){ll.innerHTML=loggedRows();ll.style.display="block";}
+    const prog=document.getElementById("prog"); if(prog)prog.style.width=progFor(cnt)+"%";
+    A.refreshCta(); playerRestTick();
+  };
+  A.undoSet=(i)=>{
+    const mine=S.logged.filter(l=>l.n===name), t=mine[i]; if(!t)return;
+    S.logged.splice(S.logged.indexOf(t),1);
+    if(S.liftLog[name]){ const j=S.liftLog[name].findIndex(x=>x.t===t.ts); if(j>=0)S.liftLog[name].splice(j,1); }
     save(); renderPlayer();
   };
+  A.next=()=>{ pw=null; S.restEnd=null; clearTimeout(timerInt);
+    if(S.exIdx<day.ex.length-1){ S.exIdx++; save(); renderPlayer(); } else A.finish(); };
   A.skipRest=()=>{S.restEnd=null;clearTimeout(timerInt);save();const s=document.getElementById("restslot");if(s)s.innerHTML="";};
-  A.jump=(i)=>{pw=null;S.exIdx=i;save();render();};
+  A.jump=(i)=>{pw=null;S.restEnd=null;clearTimeout(timerInt);S.exIdx=i;save();renderPlayer();};
   A.finish=()=>{
     pw=null;
     // Snapshot VOR der Mutation — erlaubt „Zurück & weiter loggen" ohne Doppelzählung.
@@ -4898,36 +4924,35 @@ function renderPlayer(){
     }
   };
   clearTimeout(timerInt); // alten Loop stoppen — der Timer läuft jetzt in-place
-  const progressPct=((S.exIdx)/day.ex.length+((logged.length/targetSets)/day.ex.length))*100;
+  const cta=ctaFor(logged.length);
   root.innerHTML=`
-    <div class="progress mb8" aria-label="Fortschritt"><div style="width:${Math.min(100,progressPct)}%"></div></div>
+    <div class="progress mb8" aria-label="Fortschritt"><div id="prog" style="width:${progFor(logged.length)}%"></div></div>
     <p class="ring-lbl mb8">${day.label} · Übung ${S.exIdx+1}/${day.ex.length}${S.currentWeek===4?" · "+LABELS.deload:""}</p>
     <div class="pills">${day.ex.map((e,i)=>`<button class="pill ${i===S.exIdx?"active":""}" onclick="A.jump(${i})">${e[0].length>16?e[0].slice(0,15)+"…":e[0]}</button>`).join("")}</div>
     <div class="card">
       <div class="row mb4"><h2 style="font-size:19px">${name}</h2>
-        <button class="iconbtn" onclick="A.exInfo('${name}')" aria-label="Info">ⓘ</button></div>
+        <div style="display:flex;gap:4px">${day.main&&day.main[S.exIdx]?`<button class="iconbtn" onclick="A.swapMenu('${type}',${S.exIdx})" aria-label="Übung tauschen">${icon("undo",15)}</button>`:""}<button class="iconbtn" onclick="A.exInfo('${name}')" aria-label="Info">ⓘ</button></div></div>
       ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}</p>`:"";})()}
-      ${rec?`<p class="sm volt-txt metric mb8">Empfehlung: ${fmtKg(rec.w)} × ${rec.reps}
+      ${rec?`<p class="sm volt-txt metric mb8">Letztes Mal: ${fmtKg(rec.w)} × ${rec.reps} — schon vorausgefüllt
         <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
         :`<p class="xs t2 mb8">Erste Session — wähle dein Startgewicht selbst.</p>`}
       <div class="row mb12"><p class="ct" style="margin:0">Sätze</p>
-        <div class="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:targetSets},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
-      <div class="row mb8"><span class="sm t2">Gewicht <span class="xs t3">(tippen zum Eingeben)</span></span>
+        <div class="setdots" id="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:Math.max(targetSets,logged.length)},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
+      <div class="row mb8"><span class="sm t2">Gewicht <span class="xs t3">(tippen)</span></span>
         <div class="stepper"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" class="stepin metric" type="number" inputmode="decimal" step="2.5" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div></div>
       <div class="row mb8"><span class="sm t2">Reps</span>
         <div class="stepper"><button onclick="A.stepR(-1)" aria-label="Reps verringern">−</button><input id="pr-in" class="stepin metric" type="number" inputmode="numeric" step="1" value="${pr}" onchange="A.setR(this.value)" onfocus="this.select()" aria-label="Wiederholungen"><button onclick="A.stepR(1)" aria-label="Reps erhöhen">+</button></div></div>
-      <div class="row mb8"><span class="sm t2">${LABELS.rpe} ${infoBtn("rpe")}</span>
+      <div class="row mb8"><span class="sm t2">${LABELS.rpe} <span class="xs t3">(optional)</span></span>
         <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
-      <p id="rpe-desc" class="xs t2 mb8" style="text-align:right">${RPE_DESC[prpe]}</p>
-      <button class="btn volt" onclick="A.log()">Set loggen</button>
-      ${logged.length?`<ul class="list mt16" style="border-top:1px solid var(--border);padding-top:10px">
-        ${logged.map(l=>`<li><span class="metric">${fmtKg(l.w)} × ${l.reps}</span><span class="metric">RPE ${l.rpe}</span></li>`).join("")}</ul>`:""}
+      <p id="rpe-desc" class="xs t2 mb12" style="text-align:right">${RPE_DESC[prpe]}</p>
+      <button id="primary-cta" class="btn volt cta-big" onclick="${cta.f}"><span>${cta.l}</span><span class="cta-sub">${cta.s}</span></button>
+      ${logged.length>=targetSets?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.log()">+ Noch ein Satz</button>`:""}
+      <ul id="logged-list" class="list mt16" style="border-top:1px solid var(--border);padding-top:10px;display:${logged.length?"block":"none"}">${loggedRows()}</ul>
     </div>
     <div id="restslot"></div>
     <div class="grid2 mb8">
       <button class="btn" ${S.exIdx===0?"disabled":""} onclick="A.jump(${S.exIdx-1})">‹ Vorherige</button>
-      <button class="btn" ${S.exIdx>=day.ex.length-1?"disabled":""} onclick="A.jump(${S.exIdx+1})">Nächste ›</button></div>
-    <button class="btn" onclick="A.finish()">Training abschließen</button>`;
+      <button class="btn" onclick="A.finish()">Abschließen</button></div>`;
   playerRestTick(); // Pausentimer in-place starten (kein Voll-Neuaufbau mehr)
 }
 
