@@ -131,6 +131,22 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     100%{transform:translate3d(3.5%,-3%,0) scale(1.16)}
   }
   @media (prefers-reduced-motion:reduce){ body::before,body::after{animation:none} }
+  /* ===== „Lebendiges KI-Feld" hinter Home: morphende, driftende Gradienten —
+     wirkt wie ein intelligentes System, das im Hintergrund rechnet/optimiert. ===== */
+  .ai-field{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;}
+  .ai-field::before{content:""; position:absolute; inset:-28%; will-change:transform;
+    background:
+      radial-gradient(33% 26% at 22% 20%, rgba(74,111,216,.34), transparent 64%),
+      radial-gradient(30% 24% at 82% 28%, rgba(126,139,232,.26), transparent 66%),
+      radial-gradient(42% 34% at 58% 86%, rgba(58,150,200,.22), transparent 68%);
+    filter:blur(18px); animation:aiDrift 26s ease-in-out infinite alternate;}
+  .ai-field::after{content:""; position:absolute; inset:-12%; will-change:transform,opacity; mix-blend-mode:screen;
+    background:radial-gradient(24% 20% at 50% 42%, rgba(157,180,240,.20), transparent 70%);
+    animation:aiPulse 8.5s ease-in-out infinite, aiOrbit 34s linear infinite;}
+  @keyframes aiDrift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(3.5%,2.5%,0) scale(1.09)}100%{transform:translate3d(-3%,-2%,0) scale(1.05)}}
+  @keyframes aiPulse{0%,100%{opacity:.45}50%{opacity:.92}}
+  @keyframes aiOrbit{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .ai-field::before,.ai-field::after{animation:none} }
   .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
   .hero-num{font-family:var(--font-hero); font-weight:800; letter-spacing:-0.03em;}
   .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:70px 16px 124px;}
@@ -446,9 +462,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
   .sheet{border-radius:28px 28px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom)); max-width:430px; width:100%; max-height:85dvh; overflow-y:auto; animation:sheetUp .45s var(--spring);}
   @keyframes sheetUp{from{transform:translateY(40px); opacity:0}to{transform:none; opacity:1}}
-  .tier-card{border-radius:22px; padding:var(--sp-5); margin-bottom:var(--sp-4); position:relative; overflow:hidden;}
+  .tier-card{border-radius:22px; padding:var(--sp-5); margin-bottom:var(--sp-4); position:relative;}
   .tier-card.featured{border:1.5px solid var(--accent); background:linear-gradient(165deg,rgba(74,111,216,.16),rgba(74,111,216,.03) 55%,transparent);}
-  .tier-card.featured::after{content:""; position:absolute; top:-40%; right:-30%; width:70%; height:120%; background:radial-gradient(circle,rgba(157,180,240,.22),transparent 70%); pointer-events:none;}
+  .tier-card.featured::after{content:""; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(120% 80% at 82% 0%,rgba(157,180,240,.20),transparent 58%); pointer-events:none;}
   .tier-feat{display:flex; gap:8px; font-size:13.5px; color:var(--t1); padding:5px 0; line-height:1.5;}
   .tier-feat span:first-child{color:var(--hl); flex-shrink:0; font-weight:700;}
   /* ===== Tiefenpsychologische Paywall — cinematisch, premium ===== */
@@ -1383,12 +1399,16 @@ function paywallForecast(){
 // CINEMATISCHE, KONTEXTBEZOGENE PAYWALL — feuert im „heißen" Moment (nach einem Win/Gate).
 // Hebel: Peak-State-Timing · Zukunfts-Ich · Verlustangst/Endowment · Ankerpreis (Tag) · Risk-Reversal (Trial).
 function showUpgradeTeaser(key){ openPaywall(key); }
+const GOAL_IDENTITY={muscle:"sichtbar mehr Muskeln aufzubauen",strength:"spürbar stärker zu werden",loss:"deinen Körperfettanteil zu senken",cut:"definierter zu werden",health:"langfristig fit & gesund zu bleiben",performance:"athletischer zu werden"};
 function openPaywall(key){
   S.paywallSeen=(S.paywallSeen||0)+1; save();
   const x=TEASER_TEXT[key]||{t:"Mehr Tiefe freischalten",b:"Diese Funktion ist Teil eines höheren Plans."};
   const tier=TEASER_TIER[key]||"pro";
   const b=S.billing||"yearly"; // Jahres-Anker als Default
   const fc=paywallForecast();
+  // Identität/Commitment: an das selbst gewählte Ziel erinnern (kognitive Konsistenz).
+  const g=(S.profile&&S.profile.a&&S.profile.a.goals&&S.profile.a.goals[0])||null;
+  const identityLine=g&&GOAL_IDENTITY[g]?`Du hast dir vorgenommen, <b style="color:var(--t1)">${GOAL_IDENTITY[g]}</b>. ${TIER_LABEL[tier]} ist der Plan, der genau dahin führt.`:null;
   const canTrial=!S.trialUsed && tier==="pro";
   const ctaPrimary=canTrial
     ? `<button class="btn volt" onclick="A.startTrial('${tier}')">${TRIAL_DAYS} Tage kostenlos starten</button>`
@@ -1398,7 +1418,8 @@ function openPaywall(key){
       <div class="pw-glow"></div>
       <p class="pw-eyebrow">${icon("lock",12)} ${TIER_LABEL[tier]}-Funktion</p>
       <p class="display-m" style="margin:2px 0 4px;line-height:1.15">${x.t}</p>
-      <p class="sm t2" style="line-height:1.55;margin-bottom:16px">${x.b}</p>
+      <p class="sm t2" style="line-height:1.55;margin-bottom:${identityLine?"12px":"16px"}">${x.b}</p>
+      ${identityLine?`<p class="sm" style="line-height:1.55;margin-bottom:16px">${identityLine}</p>`:""}
       ${fc?`<div class="pw-future">
         <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Dein Weg — schon berechnet</p>
         <div class="row" style="align-items:flex-end">
@@ -3728,6 +3749,11 @@ function renderHome(){
   // Trial-Countdown (Endowment/Verlustangst) — dezent, verstärkt zum Ende hin.
   const trialNudge=(trialActive()&&trialDaysLeft()<=3)?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left;border-color:rgba(157,180,240,.4)" onclick="A.q('pricing')">
     <span class="sm" style="flex:1;line-height:1.5"><b style="color:var(--hl)">${icon("zap",13)} Noch ${trialDaysLeft()} ${trialDaysLeft()===1?"Tag":"Tage"} Vollzugriff.</b> <span class="t2">Behalte deinen kompletten Pfad — sichere dir die Gründer-Kondition.</span></span><span class="t2">→</span></button>`:"";
+  // Konkrete Streak-Verlustangst: der stärkste Bindungs-Hebel — ein BESESSENES Gut,
+  // das heute verloren gehen kann (nur wenn echte Serie ≥3 und heute noch nichts geloggt).
+  const streakRisk=(streak>=3&&!eng.activeToday)?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left;border-color:rgba(224,162,74,.45)" onclick="A.openStatus()">
+    <span class="brief-orb" style="background:radial-gradient(circle at 35% 30%,#F0C58A,#E0A24A 70%);box-shadow:0 0 18px rgba(224,162,74,.5)">${icon("flame",22)}</span>
+    <span class="sm" style="flex:1;line-height:1.5"><b>Deine ${streak}-Tage-Serie steht heute auf dem Spiel.</b><br><span class="t2">Ein einziger Eintrag heute hält sie am Leben — sonst beginnt sie morgen wieder bei null.</span></span><span class="t2">→</span></button>`:"";
   const overtrain=ins.find(i=>i.risk&&/Übertrain/.test(i.t));
   // Wochen-Recap: beim Wochenwechsel als Banner vormerken (kein Auto-Modal)
   const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);})();
@@ -3755,6 +3781,7 @@ function renderHome(){
         <circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="var(--hl)" stroke-width="${st}" stroke-linecap="round" stroke-dasharray="${pct*cc} ${cc}"/></svg>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--hl)">${icon("flame",22)}</div></div>`;})();
   root.innerHTML=`
+    <div class="ai-field" aria-hidden="true"></div>
     <!-- IMMERSIVE TODAY-HERO (Oura/Apple-würdig): atmosphärische Szene, Score, Serif-Voice, USP-CTA -->
     ${(()=>{
       const isRest=tType==="rest", tLabel=(TYPE_META[tType]||{}).label||"Training";
@@ -3792,6 +3819,7 @@ function renderHome(){
     })()}
 
     ${briefingCard}
+    ${streakRisk}
     ${trialNudge}
 
     ${S.calAdjustMsg?`<button class="card row" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);border-color:rgba(157,180,240,.4)" onclick="A.dismissCalMsg()">
