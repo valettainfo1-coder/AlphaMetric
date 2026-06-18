@@ -31,6 +31,32 @@ create policy "user_state_own"
 Row-Level-Security stellt sicher, dass **jeder Nutzer nur seine eigene Zeile** sehen/ändern kann —
 auch mit dem öffentlichen anon-Key.
 
+## 2b. Empfehlungsprogramm (optional — „Freunde werben")
+Für geräteübergreifend **bestätigte** Einladungen eine kleine Tabelle + Zählfunktion anlegen.
+Einstufig & datensparsam: gespeichert wird nur, wer von welchem Code geworben wurde.
+```sql
+create table if not exists referrals (
+  referee_id    uuid primary key references auth.users(id) on delete cascade,
+  referrer_code text not null,
+  created_at    timestamptz not null default now()
+);
+alter table referrals enable row level security;
+
+-- Geworbener darf genau seine eigene Zeile anlegen:
+create policy "referrals_insert_own"
+  on referrals for insert
+  with check (auth.uid() = referee_id);
+
+-- Zählfunktion: gibt NUR eine Zahl zurück (keine Nutzerdaten) — sicher per security definer.
+create or replace function count_referrals(code text)
+returns integer
+language sql security definer set search_path = public as $$
+  select count(*)::int from referrals where referrer_code = code;
+$$;
+grant execute on function count_referrals(text) to anon, authenticated;
+```
+Ohne diese Tabelle läuft die App normal weiter — der Werber-Zähler bleibt dann bei 0.
+
 ## 3. Auth-Einstellungen
 - **Authentication → Providers → Email**: aktiv.
 - **E-Mail-Bestätigung**: Standardmäßig an. Dann muss der Nutzer nach der Registrierung

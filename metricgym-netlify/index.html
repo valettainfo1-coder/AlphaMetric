@@ -970,6 +970,18 @@ const SB={
   },
   // Cloud-Daten in den laufenden State übernehmen (überlagert, behält neue Default-Felder)
   hydrate(data){ if(!data||typeof data!=="object") return; for(const k in data) S[k]=data[k]; },
+  // Legales Empfehlungsprogramm: Einladung serverseitig festhalten (einstufig, 1 Zeile/Geworbenem).
+  async recordReferralIfNeeded(){
+    if(!SB.client||!SB.user||!S.invitedBy||S.referralInserted) return;
+    try{ await SB.client.from("referrals").insert({referee_id:SB.user.id, referrer_code:S.invitedBy}); }catch(e){}
+    S.referralInserted=true; save();
+  },
+  // Bestätigte DIREKTE Werbungen zählen (RPC liefert nur eine Zahl, keine Nutzerdaten).
+  async countReferrals(code){
+    if(!SB.client) return null;
+    try{ const {data,error}=await SB.client.rpc("count_referrals",{code}); if(error) throw error;
+      return typeof data==="number"?data:(Array.isArray(data)&&data[0]?(data[0].count||0):0); }catch(e){ return null; }
+  },
 };
 
 /* Foto-Speicher: Bilder liegen in IndexedDB (nicht im localStorage-State, der
@@ -1321,6 +1333,10 @@ S.rotationPos=S.rotationPos||0;
 // Wachstum: Referral-Code, Einlader, Pro-Bonus-Ablauf
 S.refCode=S.refCode||("MG"+Math.random().toString(36).slice(2,7).toUpperCase());
 S.invitedBy=S.invitedBy??null;
+// Legales Empfehlungsprogramm (einstufig, produktgekoppelt — KEIN Schneeballsystem):
+S.referralCount=S.referralCount||0;            // bestätigte DIREKTE Werbungen (vom Backend)
+S.refMilestonesClaimed=S.refMilestonesClaimed||[]; // eingelöste Belohnungsstufen
+S.referralInserted=S.referralInserted??false;  // serverseitig schon vermerkt?
 S.proBonusUntil=S.proBonusUntil??null;
 // Abo-/Paywall-Psychologie: Trial (Endowment + Risk-Reversal), Briefing-Loop (Zeigarnik)
 S.trialUntil=S.trialUntil??null;        // aktiver Gratis-Test (Endowment-Effekt)
@@ -1376,6 +1392,21 @@ const FOUNDING_OFFER=true;
 function trialActive(){ return !!(S.trialUntil&&Date.now()<S.trialUntil); }
 function trialDaysLeft(){ return trialActive()?Math.max(1,Math.ceil((S.trialUntil-Date.now())/dayMs)):0; }
 const TRIAL_DAYS=7;
+// --- Empfehlungsprogramm (einstufig, legal) -------------------------------
+// Belohnung NUR für eigene direkte Werbungen, gekoppelt an das echte Produkt
+// (geschenkte PERFORMANCE-Monate) — kein Verdienst aus den Werbungen Dritter,
+// keine Einkaufsgebühr. Das ist der rechtssichere Unterschied zum Schneeballsystem.
+const REFERRAL_TIERS=[
+  {n:1,  months:1,  label:"1 Freund"},
+  {n:3,  months:3,  label:"3 Freunde"},
+  {n:5,  months:6,  label:"5 Freunde"},
+  {n:10, months:12, label:"10 Freunde"},
+];
+function grantProMonths(months){
+  const base=Math.max(Date.now(), S.proBonusUntil||0);
+  S.proBonusUntil=base+months*30*dayMs;
+  if(TIER_RANK[S.tier] < TIER_RANK.pro) S.tier="pro";
+}
 const TEASER_TEXT={
   multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
   insights:{t:"Erweiterte Insights",b:"Dein Fortschrittstempo, Ernährungs-Treue und Warnungen zur Trainingsbelastung sind Teil von PERFORMANCE."},
@@ -3094,6 +3125,7 @@ function renderRegister(){
         }
       }catch(ex){ err.textContent="Registrierung fehlgeschlagen: "+(ex.message||ex); return; }
       S.users=[{username:u,email:e,pwHash:""}]; S.currentUser=0; // Cloud-Konto, lokal gespiegelt
+      SB.recordReferralIfNeeded();
     } else {
       if(S.users.some(x=>x.email===e)){err.textContent="Diese E-Mail ist bereits registriert.";return;}
       const pwHash=await hashPw(p);
@@ -3155,6 +3187,7 @@ function renderLogin(){
       else { S.liftLog={};S.weightLog=[];S.readinessHistory=[];S.trainingHistory=[];S.nutritionLog={};S.chat=[];S.profile=null;S.plan=null;S.schedule=null; }
       S.users=[{username:(cloud&&cloud.users&&cloud.users[0]&&cloud.users[0].username)||fname,email:e,pwHash:""}]; S.currentUser=0;
       S.loginAttempts=0; S.lockoutUntil=null;
+      SB.recordReferralIfNeeded();
       S.screen=S.profile?"app":"onboarding"; S.tab="home";
       save(); render(); return;
     }
@@ -5659,6 +5692,28 @@ function renderProfile(){
     S.invitedBy=code; S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs;
     save(); render(); toast("✓ 14 Tage PERFORMANCE freigeschaltet");
   };
+  // Belohnungsstufe einlösen — nur wenn genug BESTÄTIGTE direkte Werbungen vorliegen.
+  A.claimReferral=(n)=>{
+    const tdef=REFERRAL_TIERS.find(x=>x.n===n); if(!tdef) return;
+    if((S.referralCount||0)<n){ toast("Noch nicht genug bestätigte Einladungen"); return; }
+    if(S.refMilestonesClaimed.includes(n)) return;
+    S.refMilestonesClaimed.push(n); grantProMonths(tdef.months); save(); confetti(); render();
+    toast(`✓ ${tdef.months} Monate PERFORMANCE freigeschaltet`);
+  };
+  A.legalReferral=()=>modal(`<p class="ct">${icon("check",14)} Rechtlich sauber — kein Schneeballsystem</p>
+    <p class="sm t2" style="line-height:1.65">Ein verbotenes Schneeball-/Pyramidensystem (§ 16 Abs. 2 UWG) belohnt vor allem das <b style="color:var(--t1)">Anwerben weiterer Werber über mehrere Ebenen</b> und verlangt oft einen Einkauf zum Mitverdienen.</p>
+    <p class="sm t2 mt8" style="line-height:1.65">Dieses Programm ist ein klassisches <b style="color:var(--t1)">einstufiges Empfehlungsprogramm</b>:</p>
+    <div class="mt8">${[
+      "Du wirst nur für deine EIGENEN direkten Einladungen belohnt — nie für die Einladungen deiner Freunde (keine Ebenen).",
+      "Die Belohnung ist geschenkte Nutzungszeit am echten Produkt — kein ausgezahltes Geld.",
+      "Niemand muss etwas kaufen oder einzahlen, um teilzunehmen oder belohnt zu werden."
+    ].map(t=>`<p class="sm" style="line-height:1.55;display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--hl)">✓</span><span class="t2">${t}</span></p>`).join("")}</div>
+    <p class="xs t2 mt8">So machen es PayPal, Dropbox & Co. — virales Wachstum, aber rechtssicher. (Keine Rechtsberatung.)</p>`);
+  // Bestätigte Werbungen vom Backend holen (gedrosselt, fire-and-forget).
+  if(SB.enabled()&&SB.user&&Date.now()-(S._refFetchedAt||0)>20000){
+    S._refFetchedAt=Date.now();
+    SB.countReferrals(S.refCode).then(n=>{ if(typeof n==="number"&&n!==S.referralCount){ S.referralCount=n; save(); if(S.tab==="profile")render(); } });
+  }
   A.saveSnapshot=()=>{
     if(S.tier!=="elite"){showUpgradeTeaser("snapshots");return;}
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
@@ -5796,14 +5851,36 @@ function renderProfile(){
       <p class="xs t2 mt8" style="line-height:1.5">${icon("lock",12)} Dein Key bleibt <b style="color:var(--t1)">nur auf diesem Gerät</b> (lokal gespeichert, nie an uns gesendet). Hinweis: In einer Web-App ist der Key im Browser sichtbar — für den öffentlichen Launch gehört er hinter einen Server. Teile ihn nicht & rotiere ihn bei Verdacht.</p>
     </div>
 
-    <div class="card" style="border-color:rgba(96,140,230,.3)"><p class="ct">${icon("send",14)} Freunde einladen</p>
-      <p class="sm t2 mb12" style="line-height:1.6">Lade Freunde ein — <b style="color:var(--t1)">beide bekommen 14 Tage PERFORMANCE gratis</b>. Dein Code: <span class="metric" style="color:var(--hl)">${S.refCode}</span></p>
-      <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Einladungslink teilen</button>
-      <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
-        <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
-      ${S.proBonusUntil&&Date.now()<S.proBonusUntil?`<p class="xs volt-txt mt8">PERFORMANCE-Bonus aktiv bis ${fmtD(new Date(S.proBonusUntil))}.</p>`:""}
-      <p class="xs t2 mt8">Demo: Der Bonus wird lokal freigeschaltet. In der Vollversion über Account verifiziert.</p>
-    </div>
+    ${(()=>{
+      const cnt=S.referralCount||0;
+      const nextTier=REFERRAL_TIERS.find(t=>cnt<t.n);
+      const top=REFERRAL_TIERS[REFERRAL_TIERS.length-1].n;
+      const pct=Math.min(100,Math.round(cnt/top*100));
+      const ladder=REFERRAL_TIERS.map(t=>{
+        const reached=cnt>=t.n, claimed=S.refMilestonesClaimed.includes(t.n);
+        const claimable=reached&&!claimed;
+        return `<div class="row" style="padding:9px 0;border-top:1px solid var(--hairline);align-items:center">
+          <span style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:${reached?"var(--accent)":"var(--s3)"};color:${reached?"#fff":"var(--t2)"}">${claimed?"✓":t.n}</span>
+          <span class="sm" style="flex:1;margin-left:10px">${t.label}<br><span class="xs t2">${t.months} ${t.months===1?"Monat":"Monate"} PERFORMANCE gratis</span></span>
+          ${claimed?`<span class="xs volt-txt">eingelöst</span>`
+            :claimable?`<button class="btn volt" style="width:auto;padding:0 14px;min-height:36px" onclick="A.claimReferral(${t.n})">Einlösen</button>`
+            :`<span class="xs t2">${Math.max(0,t.n-cnt)} fehlen</span>`}</div>`;
+      }).join("");
+      return `<div class="card" style="border-color:rgba(96,140,230,.3)">
+        <p class="ct">${icon("send",14)} Freunde werben — beide profitieren</p>
+        <p class="sm t2 mb12" style="line-height:1.6">Dein Freund startet mit <b style="color:var(--t1)">14 Tagen PERFORMANCE gratis</b>. Für jede bestätigte Einladung schaltest du selbst <b style="color:var(--t1)">geschenkte PERFORMANCE-Monate</b> frei — je mehr Freunde, desto mehr.</p>
+        <div class="row mb4"><span class="xs t2">Bestätigte Einladungen</span><span class="metric xs">${cnt}${nextTier?` · noch ${nextTier.n-cnt} bis ${nextTier.months} Monate`:" · alle Stufen erreicht"}</span></div>
+        <div class="progress mb12" style="height:8px"><div style="width:${pct}%"></div></div>
+        <div style="background:var(--s2);border-radius:14px;padding:4px 14px 10px;margin-bottom:12px">${ladder}</div>
+        <p class="metric mb8" style="text-align:center">Dein Code: <span style="color:var(--hl)">${S.refCode}</span></p>
+        <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Einladungslink teilen</button>
+        <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
+          <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
+        ${S.proBonusUntil&&Date.now()<S.proBonusUntil?`<p class="xs volt-txt mt8">PERFORMANCE aktiv bis ${fmtD(new Date(S.proBonusUntil))}.</p>`:""}
+        <button class="btn ghost" style="min-height:34px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="A.legalReferral()">${icon("info",13)} Warum das legal ist (kein Schneeballsystem)</button>
+        ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen werden über dein Cloud-Konto gezählt — dafür Supabase aktivieren.</p>`}
+      </div>`;
+    })()}
 
     <div class="card"><p class="ct">Health-Daten importieren</p>
       <p class="xs t2 mb8" style="line-height:1.6">Apple-Health-Export (<span class="metric">export.xml</span>), CSV (<span class="metric">datum,gewicht</span>) oder JSON. Übernommen werden: Gewicht → Verlauf · <b style="color:var(--t1)">HRV, Ruhepuls & Schlaf → gemessene Erholung</b> (färbt deine Tage im Monats-Überblick).</p>
@@ -5858,6 +5935,7 @@ try{ render(); }catch(err){
     const fname=(SB.user.user_metadata&&SB.user.user_metadata.first_name)||((SB.user.email||"").split("@")[0]);
     if(!S.users||!S.users.length) S.users=[{username:fname,email:SB.user.email,pwHash:""}];
     S.currentUser=0;
+    SB.recordReferralIfNeeded();
     if(["landing","login","register"].includes(S.screen)||S.currentUser==null){ S.screen=S.profile?"app":"onboarding"; S.tab=S.tab||"home"; }
     save(); render();
   }catch(e){}
