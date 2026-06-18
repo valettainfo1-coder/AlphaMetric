@@ -1250,6 +1250,8 @@ S.precisionShown=S.precisionShown??false;
 S.scheduleRationale=S.scheduleRationale??null;
 S.exOverrides=S.exOverrides||{};
 S.rhrLog=S.rhrLog||[];
+S.hrvLog=S.hrvLog||[];        // Herzfrequenzvariabilität (SDNN, ms) — stärkstes Erholungssignal
+S.sleepLog=S.sleepLog||[];    // Schlafdauer je Tag (h) aus Health-Import, auch ohne manuellen Status-Check
 S.billing=S.billing||"monthly";
 // Körper-Fortschritt: Fotos (Metadaten; Bild in IndexedDB) + Maße
 S.photos=S.photos||[];   // [{id,t,weight}]
@@ -4435,6 +4437,27 @@ function renderSummary(){
 // =====================================================================
 // MONATS-ÜBERBLICK — Tagesbewertung (Adhärenz) + Kalender rot->grün + Cheat-Days
 // =====================================================================
+// ---------- Objektive Erholung aus Health-Daten (HRV / Ruhepuls / Schlaf) ----------
+// Persönliche Baseline = Median der letzten ~30 Messwerte. So bewerten wir relativ
+// zu DIR, nicht gegen eine Norm — genau wie Oura/Whoop.
+function hrvBaseline(){ const a=S.hrvLog.slice(-30).map(x=>x.v).sort((p,q)=>p-q); return a.length?a[Math.floor(a.length/2)]:null; }
+function rhrBaseline(){ const a=S.rhrLog.slice(-30).map(x=>x.v).sort((p,q)=>p-q); return a.length?a[Math.floor(a.length/2)]:null; }
+function rhrFor(dk){ return S.rhrLog.find(x=>new Date(x.t).toISOString().slice(0,10)===dk)||null; }
+// Erholungs-Score 0..100 eines Tages aus gemessenen Werten; null wenn keine Daten.
+function healthDayScore(dateKey){
+  const hrv=S.hrvLog.find(x=>x.date===dateKey);
+  const rhr=rhrFor(dateKey);
+  const sl=S.sleepLog.find(x=>x.date===dateKey);
+  if(!hrv&&!rhr&&!sl) return null;
+  const c01=(x)=>Math.max(0,Math.min(1,x));
+  const parts=[]; const hb=hrvBaseline(), rb=rhrBaseline();
+  if(hrv&&hb) parts.push([0.5, c01(0.5+(hrv.v-hb)/hb*1.2)]);   // HRV über Baseline = erholt
+  if(rhr&&rb) parts.push([0.3, c01(0.5+(rb-rhr.v)/rb*1.5)]);   // Ruhepuls unter Baseline = erholt
+  if(sl)      parts.push([0.2, c01((sl.v-5)/3)]);              // 5 h → 0, 8 h → 1
+  if(!parts.length) return sl?Math.round(c01((sl.v-5)/3)*100):null;
+  const wsum=parts.reduce((s,p)=>s+p[0],0);
+  return Math.round(parts.reduce((s,p)=>s+p[0]*p[1],0)/wsum*100);
+}
 const DAY_COLORS={green:"#5BC48A",orange:"#E0A24A",red:"#E56A5C",cheat:"#9B7CF0",
   empty:"rgba(255,255,255,.05)",future:"rgba(255,255,255,.025)"};
 const DAY_KIND_LBL={green:"Durchgezogen",orange:"Teilweise",red:"Verpasst",cheat:"Cheat Day",empty:"Keine Daten"};
@@ -4464,8 +4487,9 @@ function dayScore(dateKey){
   } else parts.nutri="none";
   max+=15;
   if(S.readinessHistory.some(r=>r.date===dateKey)){pts+=15;parts.status="done";}
+  else { const hs=healthDayScore(dateKey); if(hs!=null){pts+=15;parts.status="health";parts.healthScore=hs;} }
   const score=Math.round(pts/max*100);
-  const anyData=parts.train==="done"||parts.nutri==="ok"||parts.nutri==="cheat"||parts.status==="done";
+  const anyData=parts.train==="done"||parts.nutri==="ok"||parts.nutri==="cheat"||parts.status==="done"||parts.status==="health";
   let kind;
   if(!anyData) kind="empty"; else if(cheat) kind="cheat";
   else if(score>=75) kind="green"; else if(score>=50) kind="orange"; else kind="red";
@@ -4522,6 +4546,46 @@ function monthlyOverview(){
   </div>`;
 }
 
+// Sanfte Farbskala rot → orange → gelb → grün für einen 0..100-Score.
+function trendColor(s){
+  if(s>=85) return "#5BC48A"; if(s>=72) return "#9FCB6E";
+  if(s>=58) return "#E0C24A"; if(s>=42) return "#E0A24A"; return "#E56A5C";
+}
+// Entwicklung über Monate: ein Durchschnitts-Block pro Monat (rot→grün) +
+// Verlaufsrichtung. Beantwortet "wie entwickle ich mich" über die Zeit.
+function developmentTrend(){
+  const now=new Date(), months=[];
+  for(let m=5;m>=0;m--){
+    const base=new Date(now.getFullYear(), now.getMonth()-m, 1);
+    const y=base.getFullYear(), mo=base.getMonth(), dim=new Date(y,mo+1,0).getDate();
+    let sum=0,n=0;
+    for(let d=1;d<=dim;d++){
+      const dk=`${y}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const ds=dayScore(dk);
+      if(["green","orange","red","cheat"].includes(ds.kind)){sum+=ds.score||0;n++;}
+    }
+    months.push({mo,avg:n?Math.round(sum/n):null,days:n});
+  }
+  const scored=months.filter(m=>m.avg!=null);
+  if(scored.length<2) return ""; // erst ab 2 bewerteten Monaten aussagekräftig
+  const MA=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+  const first=scored[0].avg, last=scored[scored.length-1].avg, diff=last-first;
+  const dir=diff>=5?["▲","var(--good)","Aufwärtstrend — du wirst Monat für Monat konstanter."]
+    :diff<=-5?["▼","var(--warn)","Leicht rückläufig — ein paar grüne Tage mehr drehen das schnell."]
+    :["▬","var(--hl)","Stabil — du hältst dein Niveau."];
+  const blocks=months.map(m=>{
+    const has=m.avg!=null, col=has?trendColor(m.avg):"rgba(255,255,255,.05)";
+    return `<div style="flex:1;text-align:center">
+      <div style="aspect-ratio:1;border-radius:11px;background:${col};display:flex;align-items:center;justify-content:center;color:${has?"#0B0B0F":"var(--t3)"};font-family:var(--font-mono);font-weight:700;font-size:14px">${has?m.avg:"·"}</div>
+      <p class="xs t2" style="margin-top:5px">${MA[m.mo]}</p></div>`;
+  }).join("");
+  return `<div class="card">
+    <div class="row mb12"><p class="ct" style="margin:0">${icon("activity",13)} Deine Entwicklung · 6 Monate</p>
+      <span class="metric" style="font-size:15px;color:${dir[1]}">${dir[0]} ${diff>=0?"+":""}${diff}</span></div>
+    <div style="display:flex;gap:8px;align-items:flex-end">${blocks}</div>
+    <p class="sm t2 mt12" style="line-height:1.55">${dir[2]} Jeder Block ist dein Monatsschnitt aus Training, Ernährung & Erholung.</p>
+  </div>`;
+}
 // =====================================================================
 // ANALYTICS — niemals erfundene Werte, Daten-Gates pro Modul
 // =====================================================================
@@ -4577,16 +4641,20 @@ function renderAnalytics(){
     const P=ds.parts||{};
     const tr=P.train==="done"?"✓ Trainiert":P.train==="rest"?"Ruhetag (geplant)":"✗ Kein Training";
     const nu=P.nutri==="cheat"?`Cheat Day · ${P.kcal} kcal`:P.nutri==="ok"?`${P.kcal} kcal · ${P.prot} g Protein`:"Nicht geloggt";
-    const st=P.status==="done"?"✓ Check gemacht":"—";
+    const st=P.status==="done"?"✓ Check gemacht":P.status==="health"?`✓ Gemessen · Erholung ${P.healthScore}`:"—";
+    const hrv=S.hrvLog.find(x=>x.date===dk), rhr=rhrFor(dk), sl=S.sleepLog.find(x=>x.date===dk);
+    const healthBits=[hrv?`HRV ${hrv.v} ms`:null, rhr?`Ruhepuls ${rhr.v} bpm`:null, sl?`Schlaf ${sl.v.toFixed(1).replace(".",",")} h`:null].filter(Boolean);
     modal(`<p class="ct">${lbl}</p>
       ${ds.kind==="empty"?`<p class="sm t2">Für diesen Tag wurde nichts geloggt.</p>`
         :`<div style="text-align:center;margin:4px 0 10px"><p class="hero-num" style="font-size:44px;color:${DAY_COLORS[ds.kind]}">${ds.score}</p><p class="xs t2">${DAY_KIND_LBL[ds.kind]}</p></div>`}
-      ${row("Training",tr)}${row("Ernährung",nu)}${row("Status-Check",st)}`);
+      ${row("Training",tr)}${row("Ernährung",nu)}${row("Erholung",st)}
+      ${healthBits.length?row("Gemessen",healthBits.join(" · ")):""}`);
   };
   // Ganzseitiger Empty-State bei NULL Daten — unmissverständlich, nichts erfunden.
   const hasAnyData=S.trainingHistory.length>0
     ||Object.values(S.nutritionLog).some(l=>(l.meals||[]).length>0)
     ||S.readinessHistory.length>0
+    ||S.hrvLog.length>0||S.rhrLog.length>0||S.sleepLog.length>0
     ||Object.values(S.liftLog).some(x=>x.length>0);
   if(!hasAnyData){
     A.q=(t)=>{S.tab=t;save();render();};
@@ -4643,6 +4711,7 @@ function renderAnalytics(){
 
   // Monats-Überblick: Tagesbewertung als Kalender (rot->grün) + Cheat-Days + Monatsnote
   html+=`<p class="label" style="margin-top:4px">Monats-Überblick</p>`+monthlyOverview();
+  const devTrend=developmentTrend(); if(devTrend) html+=devTrend;
   html+=`<p class="label" style="margin-top:4px">Stoffwechsel & Kalorien</p>`+metabolismCard();
 
   html+=`
@@ -4778,19 +4847,26 @@ function renderAnalytics(){
       </div></div>`;
   } else html+=gateCard("Deine Körperentwicklung",3,S.weightLog.length,"Wiegungen","Gewicht eintragen","profile");
 
-  // Recovery
-  if(S.readinessHistory.length>=5){
+  // Recovery — öffnet bei manuellen Checks ODER gemessenen Health-Daten (HRV/Ruhepuls)
+  if(S.readinessHistory.length>=5 || S.hrvLog.length>=3 || S.rhrLog.length>=5){
     const r14=S.readinessHistory.slice(-14);
-    const debt=Math.round(r14.reduce((s,x)=>s+Math.max(0,8-(x.sleepH||7)),0)*10)/10;
-    html+=`<div class="card"><p class="ct">Deine Erholung im Blick · ${r14.length} Tage</p>
-      <div style="display:flex;align-items:flex-end;gap:3px;height:80px">
+    const debt=r14.length?Math.round(r14.reduce((s,x)=>s+Math.max(0,8-(x.sleepH||7)),0)*10)/10:null;
+    const hrvB=hrvBaseline(), rhrB=rhrBaseline();
+    const hrv7=S.hrvLog.slice(-7), rhr7=S.rhrLog.slice(-7);
+    const hrvAvg=hrv7.length?Math.round(hrv7.reduce((s,x)=>s+x.v,0)/hrv7.length):null;
+    const rhrAvg=rhr7.length?Math.round(rhr7.reduce((s,x)=>s+x.v,0)/rhr7.length):null;
+    html+=`<div class="card"><p class="ct">Deine Erholung im Blick${r14.length?` · ${r14.length} Tage`:""}</p>
+      ${r14.length?`<div style="display:flex;align-items:flex-end;gap:3px;height:80px">
         ${r14.map(x=>`<div style="flex:1" title="${x.date}: ${x.score}">
           <div style="height:${Math.max(3,x.score/100*76)}px;background:${x.score>=60?"var(--volt)":x.score>=40?"var(--info)":"var(--danger)"};border-radius:2px;opacity:.85"></div></div>`).join("")}
-      </div>
-      <div class="row mt8"><span class="sm t2">Schlaf-Defizit (vs. 8 h)</span>
-        <span class="metric ${debt>6?"danger-txt":debt>3?"warn-txt":"volt-txt"}">${nf.format(debt)} h</span></div>
-      ${S.rhrLog.length>=5?(()=>{const l7=S.rhrLog.slice(-7);const avg=Math.round(l7.reduce((s,x)=>s+x.v,0)/l7.length);
-        return `<div class="row mt8"><span class="sm t2">Ruhepuls (Health-Import)</span><span class="metric">${avg} bpm</span></div>`;})():""}</div>`;
+      </div>`:""}
+      ${debt!=null?`<div class="row mt8"><span class="sm t2">Schlaf-Defizit (vs. 8 h)</span>
+        <span class="metric ${debt>6?"danger-txt":debt>3?"warn-txt":"volt-txt"}">${nf.format(debt)} h</span></div>`:""}
+      ${hrvAvg!=null?`<div class="row mt8"><span class="sm t2">HRV Ø 7 Tage ${hrvB!=null?`(Baseline ${hrvB})`:""}</span>
+        <span class="metric ${hrvB!=null&&hrvAvg>=hrvB?"volt-txt":hrvB!=null?"warn-txt":""}">${hrvAvg} ms</span></div>`:""}
+      ${rhrAvg!=null?`<div class="row mt8"><span class="sm t2">Ruhepuls Ø 7 Tage ${rhrB!=null?`(Baseline ${rhrB})`:""}</span>
+        <span class="metric ${rhrB!=null&&rhrAvg<=rhrB?"volt-txt":rhrB!=null?"warn-txt":""}">${rhrAvg} bpm</span></div>`:""}
+      ${(hrvAvg!=null||rhrAvg!=null)?`<p class="xs t2 mt8" style="line-height:1.55">HRV über und Ruhepuls unter deiner Baseline = gut erholt. Diese Messwerte färben deine Tage im Monats-Überblick.</p>`:""}</div>`;
   } else html+=gateCard("Recovery","5",S.readinessHistory.length,"Status-Checks");
 
   // Ernährung
@@ -5159,7 +5235,7 @@ function renderPricing(){
    erfunden), Ruhepuls → Erholungs-Übersicht.
    ===================================================================== */
 function parseAppleHealthExport(xml){
-  const out={weight:[],sleepH:{},rhr:[]};
+  const out={weight:[],sleepH:{},rhr:[],hrv:[]};
   const tags=xml.match(/<Record\b[^>]*>/g)||[];
   for(const tag of tags){
     const attr=(n)=>{const m=tag.match(new RegExp(n+'="([^"]*)"'));return m?m[1]:null;};
@@ -5176,12 +5252,15 @@ function parseAppleHealthExport(xml){
     } else if(type==="HKQuantityTypeIdentifierRestingHeartRate"){
       const v=parseFloat(attr("value")), t=Date.parse(attr("startDate")||"");
       if(isFinite(v)&&isFinite(t)) out.rhr.push({t,v:Math.round(v)});
+    } else if(type==="HKQuantityTypeIdentifierHeartRateVariabilitySDNN"){
+      const v=parseFloat(attr("value")), t=Date.parse(attr("startDate")||"");
+      if(isFinite(v)&&isFinite(t)) out.hrv.push({t,v:Math.round(v)});
     }
   }
   return out;
 }
 function importHealthData(text,fname){
-  const counts={weight:0,sleep:0,rhr:0};
+  const counts={weight:0,sleep:0,rhr:0,hrv:0};
   const mergeWeight=(arr)=>{
     for(const w of arr){
       if(!isFinite(w.t)||!isFinite(w.v)||w.v<20||w.v>400)continue;
@@ -5196,13 +5275,26 @@ function importHealthData(text,fname){
   if(t.startsWith("<")||/\.xml$/i.test(fname)){
     const p=parseAppleHealthExport(t);
     mergeWeight(p.weight);
-    // Schlaf nur in VORHANDENE Status-Einträge mergen — Energie/Stress/Kater werden nie erfunden.
+    // Schlaf: in vorhandene Status-Einträge mergen UND als eigene gemessene Reihe sichern
+    // (damit ein Tag auch ohne manuellen Check Erholungsdaten hat).
     for(const [d,h] of Object.entries(p.sleepH)){
+      const hh=Math.round(Math.min(14,h)*10)/10;
       const ex=S.readinessHistory.find(r=>r.date===d);
-      if(ex){ex.sleepH=Math.round(Math.min(14,h)*10)/10; counts.sleep++;}
+      if(ex){ex.sleepH=hh; counts.sleep++;}
+      const t=Date.parse(d+"T08:00:00");
+      if(!S.sleepLog.some(x=>x.date===d)){S.sleepLog.push({date:d,t,v:hh}); if(!ex)counts.sleep++;}
     }
+    S.sleepLog.sort((a,b)=>a.t-b.t);
     for(const r of p.rhr){ if(!S.rhrLog.some(x=>x.t===r.t)){S.rhrLog.push(r); counts.rhr++;} }
     S.rhrLog.sort((a,b)=>a.t-b.t);
+    // HRV (SDNN): pro Tag den Mittelwert behalten — robuster als Einzelmessungen.
+    const hrvByDay={};
+    for(const h of p.hrv){ const d=new Date(h.t).toISOString().slice(0,10); (hrvByDay[d]=hrvByDay[d]||[]).push(h.v); }
+    for(const [d,arr] of Object.entries(hrvByDay)){
+      const v=Math.round(arr.reduce((s,x)=>s+x,0)/arr.length), t=Date.parse(d+"T08:00:00");
+      if(!S.hrvLog.some(x=>x.date===d)){S.hrvLog.push({date:d,t,v}); counts.hrv++;}
+    }
+    S.hrvLog.sort((a,b)=>a.t-b.t);
     return counts;
   }
   try{
@@ -5370,10 +5462,11 @@ function renderProfile(){
       modal(`<p class="ct">${icon("check",14)} Import abgeschlossen</p>
         <ul class="list mb8">
           <li><span>Gewichts-Einträge</span><span class="metric">${res.weight}</span></li>
-          <li><span>Schlaf-Daten (zu Status-Tagen)</span><span class="metric">${res.sleep}</span></li>
+          <li><span>Schlaf-Tage</span><span class="metric">${res.sleep}</span></li>
           <li><span>Ruhepuls-Werte</span><span class="metric">${res.rhr}</span></li>
+          <li><span>HRV-Tage (Erholung)</span><span class="metric">${res.hrv}</span></li>
         </ul>
-        <p class="xs t2" style="line-height:1.6">Schlafdaten ergänzen nur Tage, an denen du selbst einen Status-Check gemacht hast — so bleibt jeder Wert echt.</p>`);
+        <p class="xs t2" style="line-height:1.6">HRV, Ruhepuls & Schlaf fließen als <b style="color:var(--t1)">gemessene Erholung</b> direkt in deine Tagesfarbe im Monats-Überblick ein — relativ zu deiner persönlichen Baseline.</p>`);
     };
     reader.onerror=()=>toast("Datei konnte nicht gelesen werden");
     reader.readAsText(f);
@@ -5403,7 +5496,7 @@ function renderProfile(){
        schedule:null,scheduleSuggestion:null,scheduleRationale:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
        liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
-       viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],
+       viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],hrvLog:[],sleepLog:[],
        planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
        seenFeatures:false,precisionShown:false,billing:"monthly",
        calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null,consent:null};
@@ -5490,11 +5583,15 @@ function renderProfile(){
     </div>
 
     <div class="card"><p class="ct">Health-Daten importieren</p>
-      <p class="xs t2 mb8" style="line-height:1.6">Apple-Health-Export (<span class="metric">export.xml</span>), CSV (<span class="metric">datum,gewicht</span>) oder JSON. Übernommen werden: Gewicht → Verlauf · Schlafdauer → deine Status-Tage · Ruhepuls → Erholung.</p>
+      <p class="xs t2 mb8" style="line-height:1.6">Apple-Health-Export (<span class="metric">export.xml</span>), CSV (<span class="metric">datum,gewicht</span>) oder JSON. Übernommen werden: Gewicht → Verlauf · <b style="color:var(--t1)">HRV, Ruhepuls & Schlaf → gemessene Erholung</b> (färbt deine Tage im Monats-Überblick).</p>
       <button class="btn mb8" onclick="document.getElementById('health-file').click()">${icon("plus",15)} Datei wählen (.xml / .csv / .json)</button>
       <input type="file" id="health-file" accept=".xml,.csv,.json,text/xml,application/json,text/csv" style="display:none" onchange="A.healthFile(this)">
-      ${S.rhrLog.length?(()=>{const l7=S.rhrLog.slice(-7);const avg=Math.round(l7.reduce((s,x)=>s+x.v,0)/l7.length);
-        return `<p class="xs t2 mb8">${S.rhrLog.length} Ruhepuls-Werte importiert · Ø zuletzt <span class="metric">${avg} bpm</span></p>`;})():""}
+      ${(S.hrvLog.length||S.rhrLog.length||S.sleepLog.length)?(()=>{
+        const bits=[];
+        if(S.hrvLog.length){const l=S.hrvLog.slice(-7);bits.push(`HRV Ø <span class="metric">${Math.round(l.reduce((s,x)=>s+x.v,0)/l.length)} ms</span>`);}
+        if(S.rhrLog.length){const l=S.rhrLog.slice(-7);bits.push(`Ruhepuls Ø <span class="metric">${Math.round(l.reduce((s,x)=>s+x.v,0)/l.length)} bpm</span>`);}
+        if(S.sleepLog.length){const l=S.sleepLog.slice(-7);bits.push(`Schlaf Ø <span class="metric">${(l.reduce((s,x)=>s+x.v,0)/l.length).toFixed(1).replace(".",",")} h</span>`);}
+        return `<p class="xs t2 mb8">${bits.join(" · ")}</p>`;})():""}
       <p class="xs t2" style="line-height:1.6"><b style="color:var(--t1)">Ehrlich gesagt:</b> Eine Live-Synchronisation mit HealthKit oder Google Fit ist aus einer Browser-App technisch nicht möglich. Der Import liest deine exportierte Datei — komplett lokal, nichts verlässt dein Gerät.</p></div>
 
     ${S.devMode?`<div class="card"><p class="ct">Dev: Demo-Daten</p>
