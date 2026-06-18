@@ -446,10 +446,34 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
   .sheet{border-radius:28px 28px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom)); max-width:430px; width:100%; max-height:85dvh; overflow-y:auto; animation:sheetUp .45s var(--spring);}
   @keyframes sheetUp{from{transform:translateY(40px); opacity:0}to{transform:none; opacity:1}}
-  .tier-card{border-radius:22px; padding:var(--sp-5); margin-bottom:var(--sp-4);}
-  .tier-card.featured{border:2px solid var(--accent);}
+  .tier-card{border-radius:22px; padding:var(--sp-5); margin-bottom:var(--sp-4); position:relative; overflow:hidden;}
+  .tier-card.featured{border:1.5px solid var(--accent); background:linear-gradient(165deg,rgba(74,111,216,.16),rgba(74,111,216,.03) 55%,transparent);}
+  .tier-card.featured::after{content:""; position:absolute; top:-40%; right:-30%; width:70%; height:120%; background:radial-gradient(circle,rgba(157,180,240,.22),transparent 70%); pointer-events:none;}
   .tier-feat{display:flex; gap:8px; font-size:13.5px; color:var(--t1); padding:5px 0; line-height:1.5;}
   .tier-feat span:first-child{color:var(--hl); flex-shrink:0; font-weight:700;}
+  /* ===== Tiefenpsychologische Paywall — cinematisch, premium ===== */
+  .pw-sheet{position:relative; overflow:hidden;}
+  .pw-glow{position:absolute; top:-90px; left:50%; transform:translateX(-50%); width:280px; height:220px; pointer-events:none;
+    background:radial-gradient(ellipse at center,rgba(74,111,216,.45),rgba(126,139,232,.12) 45%,transparent 70%); filter:blur(8px); opacity:.9;}
+  .pw-eyebrow{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--hl); background:var(--accent-soft); border:1px solid rgba(157,180,240,.25); padding:5px 11px; border-radius:999px; margin-bottom:12px;}
+  .pw-future{position:relative; border:1px solid rgba(157,180,240,.22); border-radius:18px; padding:16px; margin-bottom:16px;
+    background:linear-gradient(160deg,rgba(74,111,216,.12),transparent 70%);}
+  .pw-price{display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--s2); border-radius:16px; padding:14px 16px; margin-bottom:12px;}
+  .pw-trial{display:flex; align-items:center; gap:10px; background:var(--accent-soft); border:1px solid rgba(157,180,240,.25); border-radius:14px; padding:11px 14px; margin-bottom:14px;}
+  .founding{display:flex; align-items:center; gap:10px; border:1px solid rgba(157,180,240,.3); border-radius:14px; padding:11px 14px; margin-bottom:16px;
+    background:linear-gradient(110deg,rgba(74,111,216,.14),transparent);}
+  /* ===== Tages-Briefing (Zeigarnik-Open-Loop) — versiegelte, leuchtende Karte ===== */
+  .brief-sealed{width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1); display:flex; align-items:center; gap:14px;
+    border:1px solid rgba(157,180,240,.32); background:linear-gradient(120deg,rgba(74,111,216,.18),rgba(126,139,232,.05) 60%,transparent); position:relative; overflow:hidden;}
+  .brief-sealed::before{content:""; position:absolute; inset:0; background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.10) 50%,transparent 70%);
+    transform:translateX(-100%); animation:briefSheen 3.6s ease-in-out infinite;}
+  @keyframes briefSheen{0%,100%{transform:translateX(-120%)}55%{transform:translateX(120%)}}
+  @media (prefers-reduced-motion:reduce){.brief-sealed::before{animation:none; display:none}}
+  .brief-orb{flex:none; width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff;
+    background:radial-gradient(circle at 35% 30%,#9DB4F0,#4A6FD8 70%); box-shadow:0 0 18px rgba(74,111,216,.55);}
+  .brief-dot{flex:none; width:9px; height:9px; border-radius:50%; background:var(--hl); box-shadow:0 0 0 0 rgba(157,180,240,.6); animation:briefPulse 1.8s infinite;}
+  @keyframes briefPulse{0%{box-shadow:0 0 0 0 rgba(157,180,240,.55)}70%{box-shadow:0 0 0 9px rgba(157,180,240,0)}100%{box-shadow:0 0 0 0 rgba(157,180,240,0)}}
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
   /* ===== Immersive Today-Hero (Oura/Apple-würdig): atmosphärische Szene + Score + Serif-Voice ===== */
@@ -1270,6 +1294,12 @@ S.rotationPos=S.rotationPos||0;
 S.refCode=S.refCode||("MG"+Math.random().toString(36).slice(2,7).toUpperCase());
 S.invitedBy=S.invitedBy??null;
 S.proBonusUntil=S.proBonusUntil??null;
+// Abo-/Paywall-Psychologie: Trial (Endowment + Risk-Reversal), Briefing-Loop (Zeigarnik)
+S.trialUntil=S.trialUntil??null;        // aktiver Gratis-Test (Endowment-Effekt)
+S.trialUsed=S.trialUsed??false;         // Trial nur einmal (ehrliche Knappheit)
+S.trialTier=S.trialTier??null;          // welcher Tier im Trial aktiv ist
+S.briefingDate=S.briefingDate??null;    // wann das Tages-Briefing zuletzt geöffnet wurde
+S.paywallSeen=S.paywallSeen??0;         // wie oft die Paywall erschien (Timing-Feintuning)
 // Engagement-/Bindungs-System (Streak, Level/XP, Meilensteine, gefeiert)
 S.celebrated=S.celebrated??null; // null = noch nicht initialisiert (Erstlauf seedet still)
 S.lastLevel=S.lastLevel??1;
@@ -1283,6 +1313,8 @@ S.consent=S.consent||null; // DSGVO-Einwilligung (AGB/Datenschutz + Gesundheitsd
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
 if(S.proBonusUntil&&Date.now()>S.proBonusUntil&&S.tier==="pro"){S.tier="free";S.proBonusUntil=null;}
+// Trial abgelaufen → sanft zurück auf Free (Endowment endet, Verlust wird spürbar)
+if(S.trialUntil&&Date.now()>S.trialUntil){ S.trialUntil=null; if(S.trialTier&&S.tier===S.trialTier)S.tier="free"; S.trialTier=null; }
 if(S.checkinDate&&S.checkinDate!==todayKey()){S.checkin=null;S.checkinDate=null;}
 
 // ---------- Tier-System (Good-Better-Better) ----------
@@ -1301,6 +1333,21 @@ const tierPriceLabel=(t,billing)=>{
 };
 const yearlySaving=(t)=>Math.round(TIER_PRICE[t].monthly*12-TIER_PRICE[t].yearly);
 function tierAtLeast(t){ return TIER_RANK[S.tier]>=TIER_RANK[t]; }
+// --- Preis-Psychologie -------------------------------------------------
+// Tages-Preis (Reframing: kleine, greifbare Einheit statt abstraktem Monatspreis).
+const perDayLabel=(t,billing)=>{
+  const p=TIER_PRICE[t][billing||"monthly"]; if(!p) return "";
+  const perDay=(billing==="yearly"?p/365:p/30);
+  return "≈ "+fmtEUR(Math.round(perDay*100)/100)+" / Tag";
+};
+// Wie viele Monate beim Jahresabo „geschenkt" sind (Anker statt nüchternem Rabatt).
+const freeMonths=(t)=>{ const m=TIER_PRICE[t].monthly,y=TIER_PRICE[t].yearly; if(!m)return 0; return Math.round((m*12-y)/m); };
+// Ethische Gründungs-Aktion: echte, einmalige Launch-Kondition (keine Fake-Timer).
+const FOUNDING_OFFER=true;
+// Trial-Status (Endowment): aktiv? wie viele Tage übrig?
+function trialActive(){ return !!(S.trialUntil&&Date.now()<S.trialUntil); }
+function trialDaysLeft(){ return trialActive()?Math.max(1,Math.ceil((S.trialUntil-Date.now())/dayMs)):0; }
+const TRIAL_DAYS=7;
 const TEASER_TEXT={
   multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
   insights:{t:"Erweiterte Insights",b:"Dein Fortschrittstempo, Ernährungs-Treue und Warnungen zur Trainingsbelastung sind Teil von PERFORMANCE."},
@@ -1311,11 +1358,65 @@ const TEASER_TEXT={
   snapshots:{t:"Profil-Snapshots",b:"Gespeicherte Profil-Stände zum Vorher/Nachher-Vergleich sind Teil von ELITE."},
   coach_history:{t:"Erweiterter Coach-Verlauf",b:"20 statt 6 sichtbare Coach-Nachrichten sind Teil von ELITE."},
 };
-function showUpgradeTeaser(key){
-  const x=TEASER_TEXT[key]||{t:"Premium-Funktion",b:"Diese Funktion ist Teil eines höheren Plans."};
-  modal(`<p class="ct">${icon("lock",13)} ${x.t}</p>
-    <p class="sm t2 mb16" style="line-height:1.6">${x.b}</p>
-    <button class="btn volt" onclick="overlay.innerHTML='';S.tab='pricing';save();render();">Pläne ansehen</button>`);
+// Welcher Tier schaltet welches Feature frei (für kontextbezogene Paywall).
+const TEASER_TIER={snapshots:"elite",coach_history:"elite"}; // alles andere: pro
+// Personalisierte „Zukunfts-Ich"-Projektion (ehrlich: Engine-Prognose, klar als solche markiert).
+function paywallForecast(){
+  const p=S.profile; if(!p) return null;
+  const goal=(p.a.goals&&p.a.goals[0])||"muscle";
+  // 1) Echte Lift-Prognose, wenn genug Daten da sind
+  try{
+    const lifts=Object.keys(S.liftLog||{}).map(n=>({n,s:e1Series(n)})).filter(x=>x.s.length>=3);
+    if(lifts.length){
+      lifts.sort((a,b)=>b.s.length-a.s.length); const L=lifts[0]; const fc=forecast12w(L.s);
+      if(fc){ const now=L.s[L.s.length-1].v;
+        return {kpi:fmtKg(fc[2].v), label:`${L.n} in 12 Wochen`, sub:`heute ${fmtKg(now)} · deine Prognose`}; }
+    }
+  }catch{}
+  // 2) Ziel-basierte, belegte Projektion
+  if(goal==="loss"||goal==="cut"){
+    const w=p.a.weight||82; const proj=Math.round((w-Math.min(6,w*0.06))*10)/10;
+    return {kpi:fmtKg(proj), label:"realistisches 12-Wochen-Ziel", sub:`heute ${fmtKg(w)} · ~0,5 kg/Woche`};
+  }
+  return {kpi:"+8–14 %", label:"Kraftzuwachs in 12 Wochen", sub:"typisch bei konstantem, progressivem Training"};
+}
+// CINEMATISCHE, KONTEXTBEZOGENE PAYWALL — feuert im „heißen" Moment (nach einem Win/Gate).
+// Hebel: Peak-State-Timing · Zukunfts-Ich · Verlustangst/Endowment · Ankerpreis (Tag) · Risk-Reversal (Trial).
+function showUpgradeTeaser(key){ openPaywall(key); }
+function openPaywall(key){
+  S.paywallSeen=(S.paywallSeen||0)+1; save();
+  const x=TEASER_TEXT[key]||{t:"Mehr Tiefe freischalten",b:"Diese Funktion ist Teil eines höheren Plans."};
+  const tier=TEASER_TIER[key]||"pro";
+  const b=S.billing||"yearly"; // Jahres-Anker als Default
+  const fc=paywallForecast();
+  const canTrial=!S.trialUsed && tier==="pro";
+  const ctaPrimary=canTrial
+    ? `<button class="btn volt" onclick="A.startTrial('${tier}')">${TRIAL_DAYS} Tage kostenlos starten</button>`
+    : `<button class="btn volt" onclick="A.upgrade('${tier}')">${TIER_LABEL[tier]} aktivieren</button>`;
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
+    <div class="sheet fade pw-sheet">
+      <div class="pw-glow"></div>
+      <p class="pw-eyebrow">${icon("lock",12)} ${TIER_LABEL[tier]}-Funktion</p>
+      <p class="display-m" style="margin:2px 0 4px;line-height:1.15">${x.t}</p>
+      <p class="sm t2" style="line-height:1.55;margin-bottom:16px">${x.b}</p>
+      ${fc?`<div class="pw-future">
+        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Dein Weg — schon berechnet</p>
+        <div class="row" style="align-items:flex-end">
+          <div><p class="hero-num" style="font-size:38px;line-height:1">${fc.kpi}</p>
+            <p class="xs t2" style="margin-top:3px">${fc.label}</p></div>
+          <p class="xs t2" style="text-align:right;max-width:140px;line-height:1.4">${fc.sub}</p>
+        </div>
+        <p class="xs t2" style="margin-top:10px;line-height:1.5">Die Engine kennt dein Ziel. ${TIER_LABEL[tier]} schaltet den vollständigen, mitlernenden Pfad dorthin frei — du verlierst sonst genau diese Präzision.</p>
+      </div>`:""}
+      <div class="pw-price">
+        <div><p class="metric" style="font-size:22px">${tierPriceLabel(tier,b)}</p>
+          <p class="xs volt-txt">${perDayLabel(tier,b)}${b==="yearly"?` · ${freeMonths(tier)} Monate geschenkt`:""}</p></div>
+        ${canTrial?`<span class="badge volt">${TRIAL_DAYS} Tage gratis</span>`:""}
+      </div>
+      ${ctaPrimary}
+      <button class="btn ghost" style="min-height:40px" onclick="overlay.innerHTML='';S.tab='pricing';save();render();">Alle Pläne vergleichen</button>
+      <p class="xs t2" style="text-align:center;line-height:1.6;margin-top:6px">${canTrial?"Keine Zahlung jetzt · ":""}Jederzeit kündbar · Datenexport in jedem Plan inklusive</p>
+    </div></div>`;
 }
 // (Upgrade-/Downgrade-Handler werden nach window.A={} in der Shell registriert.)
 
@@ -2344,17 +2445,30 @@ A.recWhy=(n)=>{const w=recWhy(n); if(w)modal(`<p class="ct">Warum diese Empfehlu
 // MOCK: Tier-Wechsel lokal in S.tier — TODO Real: Stripe Checkout / In-App-Purchase
 // + Webhook-basierte Tier-Synchronisation mit Backend-User-Record.
 A.upgrade=(t)=>{
-  const b=S.billing||"monthly";
-  modal(`<p class="ct">Upgrade auf ${TIER_LABEL[t]}</p>
-    <p class="sm t2 mb8">Demo-Modus: Kein echtes Zahlungssystem angebunden.</p>
-    <p class="metric" style="font-size:28px">${tierPriceLabel(t,b)}</p>
-    ${b==="yearly"?`<p class="xs volt-txt mt8">Du sparst ${fmtEUR(yearlySaving(t))} gegenüber monatlicher Zahlung.</p>`:""}
-    <p class="xs t2 mt8">Jederzeit kündbar. Keine versteckten Kosten.</p>
-    <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Demo-Upgrade aktivieren</button>`);
+  const b=S.billing||"yearly";
+  modal(`<p class="ct">${TIER_LABEL[t]} aktivieren</p>
+    <div class="pw-price" style="margin-top:4px">
+      <div><p class="metric" style="font-size:24px">${tierPriceLabel(t,b)}</p>
+        <p class="xs volt-txt">${perDayLabel(t,b)}${b==="yearly"?` · ${freeMonths(t)} Monate geschenkt`:""}</p></div></div>
+    ${b==="yearly"?`<p class="xs volt-txt">Du sparst ${fmtEUR(yearlySaving(t))} gegenüber monatlicher Zahlung.</p>`:""}
+    <p class="xs t2 mt8" style="line-height:1.6">Sichere Zahlung über Stripe (Anbindung folgt) · jederzeit kündbar · keine versteckten Kosten.</p>
+    <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Jetzt aktivieren</button>`);
 };
 A.confirmUpgrade=(t)=>{
   S.tier=t; save(); overlay.innerHTML=""; render();
   toast(`✓ ${TIER_LABEL[t]} aktiviert (Demo)`);
+};
+// Gratis-Test starten: Endowment-Effekt (Vollzugriff besitzen) + Risk-Reversal (keine Zahlung).
+A.startTrial=(t)=>{
+  if(S.trialUsed){ A.upgrade(t); return; }
+  S.trialUsed=true; S.trialTier=t; S.trialUntil=Date.now()+TRIAL_DAYS*dayMs; S.tier=t;
+  save(); overlay.innerHTML="";
+  confetti();
+  modal(`<div style="text-align:center;padding:4px 0">
+    <div style="width:70px;height:70px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">${icon("zap",36)}</div>
+    <p class="display-m mb8">${TIER_LABEL[t]} ist jetzt deins</p>
+    <p class="sm t2" style="line-height:1.6">${TRIAL_DAYS} Tage voller Zugriff — alle Insights, die volle Engine, dein kompletter Pfad. Wir erinnern dich rechtzeitig vor Ablauf. Keine Zahlung, jederzeit kündbar.</p></div>`);
+  setTimeout(()=>render(),50);
 };
 A.manageTier=()=>{
   const cur=S.tier;
@@ -3566,6 +3680,54 @@ function renderHome(){
   const ins=buildInsights();
   const dow=(new Date().getDay()+6)%7, sch=schedule();
   const eng=engagementStats(); const streak=eng.streak;
+  // --- Tages-Briefing (Zeigarnik-Open-Loop + variable Belohnung + Morgen-Hook) ---
+  const briefOpenedToday=S.briefingDate===todayKey();
+  const nextTrainHook=(()=>{
+    for(let k=1;k<=7;k++){ const t=sch[(dow+k)%7]; if(t&&t!=="rest"){ const lbl=(TYPE_META[t]||{}).label||"Training"; return {in:k,lbl}; } }
+    return null;
+  })();
+  const hookTxt=nextTrainHook?`${nextTrainHook.in===1?"Morgen":"In "+nextTrainHook.in+" Tagen"}: ${nextTrainHook.lbl} — dein Plan liegt bereit.`:null;
+  const briefInsight=(()=>{
+    if(ins.length){ const doy=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/dayMs); return ins[doy%ins.length].t; }
+    const fb=["Konstanz schlägt Intensität — der beste Plan ist der, den du durchziehst.","Dein nächster Satz baut auf dem letzten auf. Genau das ist Progression.","Erholung ist kein Stillstand — dort wird die Anpassung gebaut.","Protein gleichmäßig über den Tag verteilt schützt deine hart erarbeitete Muskulatur."];
+    return fb[Math.floor((Date.now()/dayMs))%fb.length];
+  })();
+  A.openBriefing=()=>{
+    S.briefingDate=todayKey(); save(); render();
+    const rr=S.checkin;
+    const verdict=rr?(rr.score>=80?"Heute ist dein Tag — geh ans Limit.":rr.score>=60?"Solide Form. Zieh deinen Plan sauber durch.":rr.score>=40?"Halb-Reserve. Heute kontrolliert, RPE 7.":"Dein Körper braucht heute Erholung."):"Starte mit dem 10-Sekunden-Check — dann weiß ich, was heute zählt.";
+    const focusLbl=(TYPE_META[tType]||{}).label||"Training";
+    overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
+      <div class="sheet fade pw-sheet">
+        <div class="pw-glow"></div>
+        <p class="pw-eyebrow">${icon("sparkle",12)} Dein Briefing · ${new Date().toLocaleDateString("de-DE",{weekday:"long"})}</p>
+        <p class="display-m" style="margin:2px 0 12px;line-height:1.2">${verdict}</p>
+        <div class="pw-future" style="margin-bottom:12px">
+          <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Heute für dich</p>
+          <p class="sm" style="line-height:1.55">${briefInsight}</p>
+        </div>
+        <div class="row" style="gap:10px;margin-bottom:14px">
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="hero-num" style="font-size:22px">${rr?rr.score:"–"}</p><p class="xs t2">Bereitschaft</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="hero-num" style="font-size:22px;color:var(--hl)">${streak}</p><p class="xs t2">Streak</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="metric" style="font-size:15px">${tType==="rest"?"Erholung":focusLbl}</p><p class="xs t2">Heute</p></div>
+        </div>
+        ${hookTxt?`<p class="sm t2" style="line-height:1.55;margin-bottom:14px">${icon("calendar",13)} ${hookTxt}</p>`:""}
+        ${tType==="rest"?`<button class="btn volt" onclick="A.closeModal()">Erholung annehmen</button>`
+          :S.checkin?`<button class="btn volt" onclick="A.closeModal();A.start()">${icon("play",15)} Training beginnen</button>`
+          :`<button class="btn volt" onclick="A.closeModal();A.openStatus()">${icon("activity",15)} Tages-Check starten</button>`}
+      </div></div>`;
+  };
+  const briefingCard=briefOpenedToday
+    ? (hookTxt?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="A.openBriefing()">
+        <span class="sm" style="flex:1;line-height:1.5"><b style="color:var(--hl)">${icon("calendar",13)} Briefing gelesen.</b> <span class="t2">${hookTxt}</span></span><span class="t2">→</span></button>`:"")
+    : `<button class="card brief-sealed" onclick="A.openBriefing()">
+        <div class="brief-orb">${icon("sparkle",22)}</div>
+        <div style="flex:1"><p class="sm" style="font-weight:700">Dein Tages-Briefing wartet</p>
+          <p class="xs t2" style="line-height:1.45">Eine Erkenntnis, dein Status & dein Plan für heute — in 10 Sekunden.</p></div>
+        <span class="brief-dot"></span></button>`;
+  // Trial-Countdown (Endowment/Verlustangst) — dezent, verstärkt zum Ende hin.
+  const trialNudge=(trialActive()&&trialDaysLeft()<=3)?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left;border-color:rgba(157,180,240,.4)" onclick="A.q('pricing')">
+    <span class="sm" style="flex:1;line-height:1.5"><b style="color:var(--hl)">${icon("zap",13)} Noch ${trialDaysLeft()} ${trialDaysLeft()===1?"Tag":"Tage"} Vollzugriff.</b> <span class="t2">Behalte deinen kompletten Pfad — sichere dir die Gründer-Kondition.</span></span><span class="t2">→</span></button>`:"";
   const overtrain=ins.find(i=>i.risk&&/Übertrain/.test(i.t));
   // Wochen-Recap: beim Wochenwechsel als Banner vormerken (kein Auto-Modal)
   const wkKey=(()=>{const x=new Date();x.setDate(x.getDate()-((x.getDay()+6)%7));return x.toISOString().slice(0,10);})();
@@ -3628,6 +3790,9 @@ function renderHome(){
         ${cta}
       </section>`;
     })()}
+
+    ${briefingCard}
+    ${trialNudge}
 
     ${S.calAdjustMsg?`<button class="card row" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);border-color:rgba(157,180,240,.4)" onclick="A.dismissCalMsg()">
       <span class="sm" style="flex:1"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Kalorienziel automatisch angepasst</b><br><span class="t2" style="line-height:1.5">${S.calAdjustMsg}</span></span><span class="t2" style="align-self:flex-start">✕</span></button>`:""}
@@ -5203,28 +5368,46 @@ function renderPricing(){
     pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Versorgst du deinen Körper richtig?","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
     elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Insights inkl. Kombi-Analysen","Early Access auf neue Engine-Module"],
   };
-  const b=S.billing||"monthly";
+  const b=S.billing||"yearly"; // Jahres-Anker als Default (Anchoring)
   A.billing=(x)=>{S.billing=x;save();render();};
-  const card=(t,featured)=>`<div class="tier-card ${featured?"featured":""}">
-    ${featured?'<span class="badge volt" style="position:absolute;top:-11px;left:20px">Empfohlen</span>':""}
-    <div class="row mb8" style="align-items:flex-start"><p class="display-m">${TIER_LABEL[t]}</p>
-      <div style="text-align:right"><p class="metric" style="font-size:20px;white-space:nowrap">${tierPriceLabel(t,b)}</p>
-      ${t!=="free"&&b==="yearly"?`<p class="xs volt-txt">Spare ${fmtEUR(yearlySaving(t))}</p>`:""}
-      ${t!=="free"&&b==="yearly"?`<p class="xs t2">≈ ${fmtEUR(Math.round(TIER_PRICE[t].yearly/12*100)/100)} / Monat</p>`:""}</div></div>
-    ${S.tier===t?'<p class="xs volt-txt mb8">✓ Dein aktueller Plan</p>':""}
-    ${feats[t].map(f=>`<div class="tier-feat"><span>${f.startsWith("Alles aus")?"":"✓"}</span><span style="${f.startsWith("Alles aus")?"color:var(--t2);font-weight:600":""}">${f}</span></div>`).join("")}
-    ${S.tier!==t?`<button class="btn ${featured?"volt":""} mt16" onclick="${TIER_RANK[t]>TIER_RANK[S.tier]?`A.upgrade('${t}')`:`A.confirmUpgrade('${t}')`}">${TIER_RANK[t]>TIER_RANK[S.tier]?"Upgrade":"Zurückstufen"}</button>`:""}
-  </div>`;
+  const upTo=!S.trialUsed; // Trial nur einmal
+  const card=(t,featured)=>{
+    const isUp=TIER_RANK[t]>TIER_RANK[S.tier];
+    const cta=t==="free"?(S.tier!=="free"?`<button class="btn mt16" onclick="A.confirmUpgrade('free')">Zurückstufen</button>`:`<p class="xs t2 mt16" style="text-align:center">✓ Immer kostenlos</p>`)
+      : S.tier===t?`<p class="xs volt-txt mt16" style="text-align:center">✓ Dein aktueller Plan${trialActive()&&S.trialTier===t?` · Test läuft (${trialDaysLeft()} Tg.)`:""}</p>`
+      : isUp?`<button class="btn ${featured?"volt":""} mt16" onclick="${upTo&&t==="pro"?`A.startTrial('${t}')`:`A.upgrade('${t}')`}">${upTo&&t==="pro"?`${TRIAL_DAYS} Tage kostenlos testen`:`Auf ${TIER_LABEL[t]} upgraden`}</button>`
+      : `<button class="btn mt16" onclick="A.confirmUpgrade('${t}')">Wechseln</button>`;
+    return `<div class="tier-card ${featured?"featured":""}">
+      ${featured?'<span class="badge volt" style="position:absolute;top:-11px;left:20px">Beliebteste Wahl</span>':""}
+      <div class="row mb8" style="align-items:flex-start"><p class="display-m">${TIER_LABEL[t]}</p>
+        <div style="text-align:right"><p class="metric" style="font-size:20px;white-space:nowrap">${tierPriceLabel(t,b)}</p>
+        ${t!=="free"?`<p class="xs volt-txt" style="white-space:nowrap">${perDayLabel(t,b)}</p>`:""}
+        ${t!=="free"&&b==="yearly"?`<p class="xs t2" style="white-space:nowrap">${freeMonths(t)} Monate geschenkt</p>`:""}</div></div>
+      ${feats[t].map(f=>`<div class="tier-feat"><span>${f.startsWith("Alles aus")?"":"✓"}</span><span style="${f.startsWith("Alles aus")?"color:var(--t2);font-weight:600":""}">${f}</span></div>`).join("")}
+      ${cta}
+    </div>`;
+  };
+  const founding=FOUNDING_OFFER&&S.tier==="free"?`<div class="founding">${icon("star",16)}
+    <div><p class="sm" style="font-weight:700">Gründer-Konditionen</p>
+      <p class="xs t2" style="line-height:1.45">Dieser Preis gilt für die erste Mitglieder-Generation — und bleibt für dich erhalten, solange dein Abo läuft.</p></div></div>`:"";
+  const trialBanner=trialActive()?`<div class="pw-trial">${icon("zap",16)}
+    <div><p class="sm" style="font-weight:700">${TIER_LABEL[S.trialTier]}-Test aktiv · noch ${trialDaysLeft()} Tage</p>
+      <p class="xs t2">Voller Zugriff. Du behältst alles, wenn du bis dahin bleibst.</p></div></div>`:"";
   root.innerHTML=`
-    <div class="heroband"><h2>Finde deinen Plan</h2>
-      <p class="sm t2" style="max-width:300px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Upgrades schalten die Tiefe der Adaptation Engine frei.</p></div>
+    <div class="heroband"><h2>Wähle deine Tiefe</h2>
+      <p class="sm t2" style="max-width:310px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Die höheren Pläne schalten frei, wie genau die Engine dich versteht — und wie weit sie dich bringt.</p></div>
+    ${trialBanner}${founding}
     <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
       <button class="btn ${b==="monthly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('monthly')">Monatlich</button>
-      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="margin-left:6px">−33 %</span></button></div>
+      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="margin-left:6px">2 Monate gratis</span></button></div>
     ${card("free",false)}
     ${card("pro",true)}
     ${card("elite",false)}
-    <p class="xs t2" style="text-align:center;line-height:1.7">Demo: kein echtes Zahlungssystem — Preispunkte werden vor Launch per A/B-Test feinjustiert.<br>Jederzeit kündbar · Downgrade genauso einfach wie Upgrade · Datenexport in jedem Plan.</p>`;
+    <div class="card" style="text-align:center">
+      <p class="sm" style="font-weight:600;line-height:1.6">Risikofrei testen</p>
+      <p class="xs t2" style="line-height:1.7;margin-top:4px">${upTo?`${TRIAL_DAYS} Tage voller Zugriff, keine Zahlung im Voraus. `:""}Jederzeit in einem Tippen kündbar. Dein Datenexport (DSGVO) ist in jedem Plan inklusive — du bist nie eingesperrt.</p>
+    </div>
+    <p class="xs t2" style="text-align:center;line-height:1.7">Sichere Zahlung über Stripe (Anbindung folgt vor Launch).</p>`;
 }
 
 /* =====================================================================
