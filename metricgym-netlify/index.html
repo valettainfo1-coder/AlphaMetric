@@ -1324,6 +1324,7 @@ S.dismissedBanners=S.dismissedBanners||[];
 S.viewMode=S.viewMode||{train:"list",nutrition:"list"};
 S.soreMode=S.soreMode||{};
 S.plan=S.plan||null;
+S.importedPlan=S.importedPlan||null; // per Bild importierter Fremdplan (Analyse-Ergebnis)
 // Additive Migration (v5): Feature-Übersicht, Plan-Präzision, Schedule-Begründung,
 // Übungs-Overrides (Long-Press-Tausch), Health-Import (Ruhepuls)
 S.seenFeatures=S.seenFeatures??false;
@@ -1574,6 +1575,10 @@ const EXDB={
     why:"Isolation nahe am Muskelversagen — bei Einsatzmuskeln mit geringer systemischer Ermüdung sicher (Robinson, 2024)."},
   "Klimmzug":{m:"Rücken",compound:true,eq:"bar",tempo:"2-0-1-1",rir:"1–2",alt:"Latzug (gleicher Zugwinkel, skalierbar)",
     why:"Vertikaler Zug mit voller Streckung — größte Lat-Dehnung unter Last."},
+  "Unterstützter Klimmzug":{m:"Rücken",compound:true,eq:"machine",tempo:"2-0-1-1",rir:"1–2",alt:"Latzug",
+    why:"Klimmzug mit Gegengewicht (Maschine/Band) — gleicher Zugweg, exakt auf dein aktuelles Niveau skaliert."},
+  "Negativ-Klimmzug":{m:"Rücken",compound:true,eq:"bar",tempo:"4-0-1-0",rir:"0–1",alt:"Unterstützter Klimmzug",
+    why:"Nur die langsame Exzentrik — starker Reiz, wenn der volle Klimmzug noch nicht geht (Brückenübung)."},
   "Latzug":{m:"Rücken",compound:true,eq:"machine",tempo:"2-0-1-1",rir:"1–2",alt:"Klimmzug",
     why:"Gleicher Zugwinkel wie der Klimmzug — über den Gewichtsblock fein dosierbar."},
   "Langhantelrudern":{m:"Rücken",compound:true,eq:"barbell",tempo:"2-1-1-0",rir:"1–2",alt:"Brustgestütztes Rudern",
@@ -1985,11 +1990,12 @@ function sessionDef(key){
   const sore=!!S.soreMode[key];
   const ov=(S.exOverrides&&S.exOverrides[key])||{};
   const main=d.main.map((e,i)=>{
-    // Nutzer-Tausch (Long-Press) hat Vorrang: Übung ersetzt, Sätze/Pausen bleiben
-    if(ov[i]&&EXDB[ov[i]]){
-      const nd=EXDB[ov[i]];
+    // Nutzer-Tausch hat Vorrang: Übung ersetzt, Sätze/Pausen bleiben. Auch EIGENE
+    // (freitext) Übungen erlaubt — dann übernehmen wir Tempo/RIR der Original-Übung.
+    if(ov[i]){
+      const nd=EXDB[ov[i]]||{};
       return {...e,n:ov[i],tempo:nd.tempo||e.tempo,rir:nd.rir||e.rir,m:nd.m||e.m,
-        why:nd.why||"",alt:nd.alt||null,lengthened:!!nd.lengthened,userSwap:true,orig:e.n};
+        why:nd.why||"",alt:nd.alt||null,lengthened:!!nd.lengthened,userSwap:true,orig:e.n,custom:!EXDB[ov[i]]};
     }
     if(sore&&e.alt)return {...e,n:e.alt.split(" (")[0],swapped:true,orig:e.n};
     return e;
@@ -2028,14 +2034,21 @@ function openSwapSheet(key,idx){
     save(); overlay.innerHTML=""; render();
     toast("Original-Übung wiederhergestellt");
   };
+  // Eigene Übung (freitext) — z. B. „Unterstützter Klimmzug", „Maschine XY".
+  A.swapCustom=()=>{ const el=document.getElementById("swap-custom"); const v=el&&el.value.trim();
+    if(!v){toast("Übungsname eingeben");return;} A.swapTo(v); };
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
     <p class="display-m mb4">${cur.n} tauschen</p>
-    <p class="sm t2 mb12" style="line-height:1.6">Gerät belegt oder nicht da? Alternativen für <b style="color:var(--t1)">${curM}</b>, sortiert nach Effizienz — Sätze und Pausen bleiben gleich.</p>
-    ${alts.length?alts.map(x=>`<button class="opt" onclick="A.swapTo('${x.n}')">
+    <p class="sm t2 mb12" style="line-height:1.6">Gerät belegt, nicht da oder zu schwer/leicht? Alternativen für <b style="color:var(--t1)">${curM}</b> — Sätze und Pausen bleiben gleich.</p>
+    <div class="field mb12"><label for="swap-custom" class="xs t2">Eigene Übung verwenden</label>
+      <div class="row" style="gap:8px"><input type="text" id="swap-custom" placeholder="z. B. Unterstützter Klimmzug" autocomplete="off" style="flex:1" onkeydown="if(event.key==='Enter')A.swapCustom()">
+      <button class="btn volt" style="width:auto;padding:0 16px" onclick="A.swapCustom()">Setzen</button></div></div>
+    <p class="label" style="margin:4px 0 6px">Vorschläge</p>
+    ${alts.length?alts.map(x=>`<button class="opt" onclick="A.swapTo('${x.n.replace(/'/g,"\\'")}')">
       <span style="display:flex;justify-content:space-between;align-items:center;gap:8px">${x.n}
         <span class="statchip" style="margin:0">${x.d.compound?"Sehr effizient":x.d.lengthened?"Effizient":"Gezielt"}</span></span>
       <span class="sub">${x.d.compound?"Mehrgelenksübung — viel Reiz pro Satz":x.d.lengthened?"Isolation mit Dehnungsreiz":"Gezielte Isolation"}${x.fits?"":" · braucht anderes Equipment"}</span>
-    </button>`).join(""):'<p class="sm t2 mb8">Keine passende Alternative in der Übungsdatenbank.</p>'}
+    </button>`).join(""):'<p class="sm t2 mb8">Keine passende DB-Alternative — nutze oben deine eigene Übung.</p>'}
     ${cur.userSwap?`<button class="btn mt8" onclick="A.swapReset()">${icon("undo",15)} Zurück zur Original-Übung (${cur.orig})</button>`:""}
   </div></div>`;
 }
@@ -2297,6 +2310,28 @@ const FOODS=[
   ["Milch (1,5%)",100,47,3.4,4.9,1.5],["Hafermilch",100,46,1,6.6,1.5],["Mandelmilch",100,24,0.5,3,1.1],
   ["Proteinriegel (1 Riegel)",60,214,20,21,7],["Müsli",50,180,5,32,3.5],["Granola",50,230,5,30,9],
   ["Pizza Margherita (1 Stück)",100,250,11,33,8],["Döner (1 Stück)",350,650,35,55,30],["Burger (1 Stück)",250,560,28,42,30],
+  // Erweiterung: häufige Lebensmittel (DACH) — geprüfte Werte je 100 g, soweit nicht anders vermerkt
+  ["Schweinekotelett",100,242,26,0,15],["Schweineschnitzel",100,165,21,0,9],["Hackfleisch (gemischt)",100,250,17,0,20],
+  ["Bratwurst",100,290,12,1,26],["Wiener Würstchen",100,250,12,1,22],["Salami",100,350,21,1,29],["Kochschinken",100,107,18,1,3],
+  ["Hähnchenkeule",100,180,24,0,9],["Entenbrust",100,200,19,0,14],["Forelle",100,119,20,0,4],["Hering",100,210,18,0,15],
+  ["Vollei (groß)",65,93,8,0.5,6.3],["Rührei (2 Eier)",130,200,14,1,15],
+  ["Frischkäse",100,250,6,3,24],["Frischkäse light",100,140,9,4,9],["Gouda",100,356,25,0,28],["Feta",100,264,14,1,21],["Parmesan",100,392,36,0,27],
+  ["Vollmilch (3,5%)",100,64,3.3,4.7,3.5],["Buttermilch",100,37,3.3,4,0.5],["Sahne (30%)",100,290,2.4,3,30],["Schmand",100,238,2.8,3,24],
+  ["Joghurt natur (3,5%)",100,61,3.5,4.7,3.3],["Proteinpudding",100,77,7,5,1.5],["Quark (40%)",100,150,11,3,11],
+  ["Kartoffelpüree",100,83,2,12,3],["Pommes",100,290,3.4,38,14],["Bratkartoffeln",100,150,2.5,20,6],["Gnocchi",100,160,4,33,1],
+  ["Spätzle (gekocht)",100,160,5,28,3],["Vollkornreis (roh)",100,350,7,72,2.7],["Basmatireis (gekocht)",100,121,2.5,25,0.4],
+  ["Brötchen (1 Stück)",60,160,5,30,2],["Croissant (1 Stück)",60,250,5,26,14],["Knäckebrot (1 Scheibe)",10,37,1,7,0.3],
+  ["Pumpernickel (1 Scheibe)",45,80,2.5,16,0.6],["Toastbrot (1 Scheibe)",25,66,2.2,12,0.9],
+  ["Marmelade (1 EL)",20,55,0.1,13,0],["Nutella (1 EL)",20,108,1.2,11,6.3],["Ahornsirup (1 EL)",20,52,0,13,0],
+  ["Ketchup (1 EL)",15,17,0.2,4,0],["Mayonnaise (1 EL)",15,100,0.2,0.5,11],["Senf (1 EL)",15,10,0.6,1,0.5],
+  ["Apfelsaft",100,46,0.1,11,0],["Orangensaft",100,45,0.7,10,0.2],["Cola",100,42,0,11,0],["Cola Zero",100,0.3,0,0,0],
+  ["Bier (0,5 l)",500,210,1.5,16,0],["Weißwein (0,2 l)",200,160,0.2,4,0],["Rotwein (0,2 l)",200,170,0.2,5,0],
+  ["Espresso",30,2,0.1,0,0],["Cappuccino",150,60,3,6,3],["Latte Macchiato",250,110,6,9,5],
+  ["Protein-Shake (Wasser)",330,130,26,3,2],["Reis-Cake-Riegel",60,214,20,21,7],
+  ["Hummus",100,177,8,15,9],["Falafel (1 Stück)",17,57,2,5,3],["Currywurst mit Pommes",300,600,18,45,38],
+  ["Lachsfilet geräuchert",100,180,18,0,12],["Sushi (1 Stück)",30,45,2,7,0.6],["Maultaschen",100,180,9,20,7],
+  ["Banane getrocknet",100,346,3.9,88,1.8],["Rosinen",100,299,3.1,79,0.5],["Studentenfutter",100,480,13,40,29],
+  ["Eiweißbrot (1 Scheibe)",50,130,11,6,6],["Magerquark mit Beeren",200,150,23,12,1],
 ];
 /* Levenshtein-Distanz für Tippfehler-tolerante Erkennung. */
 function lev(a,b){
@@ -4420,6 +4455,67 @@ async function aiJSON(system,user){
   const m=t.match(/\{[\s\S]*\}/); if(m){try{return JSON.parse(m[0]);}catch{}}
   return null;
 }
+// Übungsname (freitext) grob einer Muskelgruppe zuordnen — für den Plan-Import.
+function matchExerciseMuscle(s){
+  const t=String(s).toLowerCase();
+  for(const [n,d] of Object.entries(EXDB)){ const w=n.toLowerCase().split(/[\s(]/)[0]; if(w.length>=4&&t.includes(w))return d.m; }
+  if(/klimm|latz|rudern|\blat\b|rücken|kreuzheb|pull/.test(t))return "Rücken";
+  if(/bank|brust|liege|push|fly|fliege|chest|dip/.test(t))return "Brust";
+  if(/schulter|seitheb|shoulder|nacken|overhead/.test(t))return "Schultern";
+  if(/bizeps|trizeps|curl|biceps|triceps/.test(t))return "Arme";
+  if(/knie|squat|bein|beuger|ausfall|lunge|wade|hip|kreuz|leg|glute/.test(t))return "Beine";
+  if(/bauch|core|plank|crunch|abs/.test(t))return "Core";
+  return null;
+}
+function showImportedPlan(){
+  const j=S.importedPlan; if(!j)return;
+  const days=(j.days||[]).map(d=>`<div class="mb8"><p class="sm" style="font-weight:700">${d.name||"Tag"}</p>
+    <p class="xs t2" style="line-height:1.6">${(d.exercises||[]).join(" · ")||"—"}</p></div>`).join("");
+  const adopt=j.verdict==="adopt";
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="pw-eyebrow">${icon("sparkle",12)} Plan-Analyse</p>
+    <p class="display-m mb4">Dein importierter Plan</p>
+    <p class="sm t2 mb12" style="line-height:1.6">${j.summary||""}</p>
+    ${days?`<div class="card" style="margin:0 0 12px">${days}</div>`:""}
+    <div class="card" style="border-color:${adopt?"rgba(91,196,138,.4)":"rgba(157,180,240,.4)"};margin:0 0 12px">
+      <p class="ct">${icon(adopt?"check":"zap",14)} ${adopt?"Dieser Plan passt zu dir":"METRICGYM ist hier im Vorteil"}</p>
+      <p class="sm t2" style="line-height:1.6">${j.reasoning||""}</p></div>
+    <button class="btn volt mb8" onclick="A.adoptImported()">Übungen übernehmen</button>
+    <button class="btn" onclick="A.keepMetricgym()">Bei METRICGYM bleiben</button>
+    <p class="xs t2 mt8" style="line-height:1.5">Du kannst danach jede Übung weiter tauschen — nichts ist endgültig.</p>
+  </div></div>`;
+}
+// Vision: Bilder (Base64-Data-URLs) an ein multimodales Modell schicken (Groq Llama-4).
+const AI_VISION_MODEL="meta-llama/llama-4-scout-17b-16e-instruct";
+async function aiVision(system,userText,images,opts){
+  opts=opts||{};
+  const content=[{type:"text",text:userText}];
+  for(const url of (images||[])) content.push({type:"image_url",image_url:{url}});
+  const res=await fetch(aiEndpoint(),{method:"POST",headers:aiHeaders(),
+    body:JSON.stringify({model:AI_VISION_MODEL,messages:[{role:"system",content:system},{role:"user",content}],temperature:0.2,max_tokens:opts.max||1600})});
+  if(!res.ok)throw new Error("Groq "+res.status);
+  return (await res.json()).choices?.[0]?.message?.content||"";
+}
+async function aiVisionJSON(system,userText,images){
+  const raw=await aiVision(system,userText,images,{max:1800});
+  let t=String(raw).trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+  try{return JSON.parse(t);}catch{}
+  const m=t.match(/\{[\s\S]*\}/); if(m){try{return JSON.parse(m[0]);}catch{}}
+  return null;
+}
+// Bild herunterskalieren (max. Kante ~1100 px, JPEG) — hält die Vision-Payload klein.
+function downscaleImage(file,maxEdge){
+  maxEdge=maxEdge||1100;
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{ const img=new Image(); img.onload=()=>{
+      let{width:w,height:h}=img; const sc=Math.min(1,maxEdge/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc);
+      const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h);
+      res(c.toDataURL("image/jpeg",0.82));
+    }; img.onerror=rej; img.src=fr.result; };
+    fr.onerror=rej; fr.readAsDataURL(file);
+  });
+}
 /* Eine Chat-Runde: streamt in die letzte .msg.ai-Bubble des Containers;
    bei Fehler/kein Key → Fallback-Funktion. Persistiert in arr. */
 async function aiTurn(arr,chatId,fallbackFn){
@@ -4542,6 +4638,45 @@ function renderTrain(){
   A.editSchedule=()=>openScheduleSheet();
   A.startType=(t)=>{S.tab="player";S.playerType=t;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
   A.setPlanMode=(m)=>{S.planMode=m;if(m==="rotation"&&!S.rotation)S.rotation=generateRotation(S.profile.a);save();renderTrain();};
+  // --- Trainingsplan per Bild importieren (Vision) ---
+  A.planImportPick=()=>{ const el=document.getElementById("plan-import-file"); if(el)el.click(); };
+  A.planImportFiles=async(input)=>{
+    let files=[...(input.files||[])]; input.value="";
+    if(!files.length)return;
+    if(!aiActive()){ toast("Dafür den KI-Coach im Profil aktivieren"); return; }
+    if(files.length>8){ files=files.slice(0,8); toast("Maximal 8 Bilder — die ersten 8 werden genutzt"); }
+    modal(`<div style="text-align:center;padding:8px 0"><div class="spin" style="margin:0 auto 14px"></div>
+      <p class="ct">Coach Metric liest deinen Plan …</p><p class="sm t2" style="line-height:1.6">${files.length} ${files.length===1?"Bild":"Bilder"} werden analysiert und mit deinem METRICGYM-Plan verglichen.</p></div>`);
+    try{
+      const imgs=[]; for(const f of files){ try{ imgs.push(await downscaleImage(f)); }catch{} }
+      if(!imgs.length){ toast("Bilder konnten nicht gelesen werden"); A.closeModal(); return; }
+      const mgEx=(()=>{ try{ const t=rotMode?rotationNext():(schedule()[dow]); const d=t&&t!=="rest"?TYPES[t]:null;
+        return d?d.main.map(e=>e.n).join(", "):"Push/Pull/Beine-Split"; }catch{ return "wissenschaftlicher Split"; } })();
+      const g=(S.profile&&S.profile.a&&S.profile.a.goals&&S.profile.a.goals[0])||"muscle";
+      const sys='Du bist ein Sportwissenschaftler. Lies den fotografierten Trainingsplan aus den Bildern und vergleiche ihn fair mit dem METRICGYM-Plan. Antworte NUR mit JSON: {"found":true|false,"summary":"1-2 Sätze was der Plan ist","days":[{"name":"Tag/Split","exercises":["Übung Sätze×Wdh", ...]}],"verdict":"adopt"|"keep","reasoning":"2-4 Sätze, sachlich, warum übernehmen ODER warum METRICGYM überlegen ist (Volumen-Korridor, Frequenz 2x/Woche, Progression, Erholung)","adopt_exercises":["Übungsname", ...]}. Wenn keine Übungen erkennbar: found=false.';
+      const usr=`METRICGYM-Plan (Ziel: ${g}) enthält u. a.: ${mgEx}. Analysiere die Bilder.`;
+      const j=await aiVisionJSON(sys,usr,imgs);
+      A.closeModal();
+      if(!j||j.found===false){ modal(`<p class="ct">Kein Plan erkannt</p><p class="sm t2" style="line-height:1.6">Auf den Bildern war kein lesbarer Trainingsplan zu erkennen. Versuch es mit klareren Fotos (gute Beleuchtung, Übungen + Sätze/Wdh sichtbar).</p>`); return; }
+      S.importedPlan={...j,at:Date.now()}; save();
+      showImportedPlan();
+    }catch(e){ A.closeModal(); toast("Analyse fehlgeschlagen — bitte nochmal versuchen"); }
+  };
+  A.adoptImported=()=>{
+    const j=S.importedPlan; if(!j)return;
+    // Best-effort: erkannte Übungen in die passenden Sessions als Tausch übernehmen (Muskelgruppe-Match).
+    let applied=0; const want=(j.adopt_exercises||[]).slice(0,12);
+    for(const tk of TYPE_KEYS){ const base=parseTypeKey(tk).base; if(base==="cardio"||base==="rest")continue;
+      const d=sessionDef(tk); if(!d.main)continue;
+      d.main.forEach((e,i)=>{ const m=(EXDB[e.orig||e.n]||{}).m; if(!m)return;
+        const cand=want.find(w=>{ const wd=matchExerciseMuscle(w); return wd===m; });
+        if(cand){ S.exOverrides[tk]=S.exOverrides[tk]||{}; if(S.exOverrides[tk][i]==null){ S.exOverrides[tk][i]=cand.replace(/\s*\d+\s*[×x].*$/,"").trim(); applied++; want.splice(want.indexOf(cand),1);} }
+      });
+    }
+    save(); A.closeModal(); render();
+    toast(applied?`✓ ${applied} Übungen übernommen — du kannst alles weiter anpassen`:"Übernommen — Plan bleibt anpassbar");
+  };
+  A.keepMetricgym=()=>{ A.closeModal(); toast("Stark — du bleibst beim wissenschaftlich optimierten Plan"); };
   A.trainParse=()=>{
     const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
@@ -4616,6 +4751,13 @@ function renderTrain(){
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
         ${rotMode?rotStrip:weekStrip}
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
+        <div style="border-top:1px solid var(--hairline);margin-top:12px;padding-top:12px">
+          <p class="sm" style="font-weight:600">Eigenen Plan importieren</p>
+          <p class="xs t2 mb8" style="line-height:1.5">Fotografiere deinen aktuellen Plan (bis 8 Bilder). Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder erklärt, warum METRICGYM stärker ist.</p>
+          <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan per Bild importieren</button>
+          <input type="file" id="plan-import-file" accept="image/*" multiple capture="environment" style="display:none" onchange="A.planImportFiles(this)">
+          ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
+        </div>
       </div>`)}
 
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
@@ -5424,13 +5566,13 @@ function renderNutrition(){
   A.parseFood=()=>{
     const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
-    // KI aktiv → IMMER von der KI interpretieren lassen: korrigiert Tippfehler,
-    // erkennt mehrere Lebensmittel und schätzt unbekannte Mengen fehlerfrei.
-    if(aiActive()){A.aiEstimate();return;}
+    // DATENBANK ZUERST (bulletproof): geprüfte Nährwerte aus FOODS, korrekte Mengen.
+    // Die KI darf bekannte Lebensmittel NICHT überschreiben (sie halluziniert sonst Werte/Namen).
     const items=parseNutrition(el.value);
-    if(!items.some(i=>i.food)){
-      toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");return;}
-    pendingItems=items; renderNutrition();
+    if(items.some(i=>i.food)){ pendingItems=items; renderNutrition(); return; }
+    // Nichts in der Datenbank gefunden → KI nur als Schätzer für wirklich Unbekanntes.
+    if(aiActive()){ A.aiEstimate(); return; }
+    toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");
   };
   A.aiEstimate=()=>{
     const el=document.getElementById("quicklog-in"); const txt=(el&&el.value.trim())||"";
