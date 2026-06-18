@@ -1339,7 +1339,9 @@ S.refMilestonesClaimed=S.refMilestonesClaimed||[]; // (Legacy) eingelöste Stufe
 S.referralInserted=S.referralInserted??false;  // serverseitig schon vermerkt?
 // €-Wallet: echtes Guthaben. available=auszahlbar/anrechenbar, pending=zugesagt bis Freund zahlt.
 // accruedForCount = wie viele Werbungen bereits verbucht wurden (Idempotenz).
-S.wallet=S.wallet||{available:0,pending:0,ledger:[],accruedForCount:0,paidCount:0};
+S.wallet=S.wallet||{available:0,pending:0,ledger:[],accruedForCount:0,paidCount:0,lifetimeEarned:0};
+if(S.wallet.lifetimeEarned==null)S.wallet.lifetimeEarned=0;
+S.referralRankSeen=S.referralRankSeen??null;   // höchster gefeierter Botschafter-Rang
 S.proBonusUntil=S.proBonusUntil??null;
 // Abo-/Paywall-Psychologie: Trial (Endowment + Risk-Reversal), Briefing-Loop (Zeigarnik)
 S.trialUntil=S.trialUntil??null;        // aktiver Gratis-Test (Endowment-Effekt)
@@ -1400,30 +1402,53 @@ const TRIAL_DAYS=7;
 // Freund ein Abo ZAHLT. Da seine Zahlung > deine Gutschrift ist, kann dein Cashflow
 // nie negativ werden — er wird nur gepusht. Einstufig (nur eigene Werbungen),
 // produktgekoppelt, kein Einkaufszwang → kein Schneeballsystem (§16 UWG).
-const REFERRAL_CASH=10;            // € pro zahlendem geworbenem Freund
-const REFERRAL_BONUS={3:10,5:25,10:75}; // Meilenstein-Boni (€) für das „Schneeball"-Gefühl
-const REFERRAL_TIERS=[             // nur zur Visualisierung der Verdienst-Leiter
-  {n:1,  eur:REFERRAL_CASH},
-  {n:3,  eur:REFERRAL_CASH*3+REFERRAL_BONUS[3]},
-  {n:5,  eur:REFERRAL_CASH*5+REFERRAL_BONUS[5]},
-  {n:10, eur:REFERRAL_CASH*10+REFERRAL_BONUS[10]},
+// Botschafter-Ränge: Status-Aufstieg über die EIGENEN direkten Werbungen.
+// Mit jedem Rang steigt die Cashback-Rate je Freund — das legale Pendant zum
+// „je größer dein Netzwerk, desto mehr ist jede Werbung wert"-Gefühl (single-tier!).
+const REFERRAL_RANKS=[
+  {min:0,  name:"Bronze",  rate:10, color:"#C08457"},
+  {min:3,  name:"Silber",  rate:12, color:"#C2CCDA"},
+  {min:7,  name:"Gold",    rate:15, color:"#E0C24A"},
+  {min:15, name:"Platin",  rate:18, color:"#9DB4F0"},
+  {min:30, name:"Diamant", rate:25, color:"#6FE0D6"},
 ];
+const RANK_BONUS=20;               // einmaliger €-Bonus bei jedem Rang-Aufstieg (Anerkennung)
+function referralRank(c){ c=(c==null)?(S.referralCount||0):c; let r=REFERRAL_RANKS[0]; for(const x of REFERRAL_RANKS) if(c>=x.min) r=x; return r; }
+function nextReferralRank(){ const c=S.referralCount||0; return REFERRAL_RANKS.find(x=>x.min>c)||null; }
+const round2=(x)=>Math.round(x*100)/100;
 function walletLedger(type,amount,note){
   S.wallet.ledger=S.wallet.ledger||[];
   S.wallet.ledger.unshift({at:Date.now(),type,amount,note}); S.wallet.ledger=S.wallet.ledger.slice(0,30);
 }
 // Bei neuen bestätigten Werbungen Guthaben verbuchen (idempotent über accruedForCount).
-// Verbucht zunächst als „pending" — wird „available", sobald der Freund zahlt (Stripe).
+// Rate = Rang beim jeweiligen Freund → steigende Belohnung. Verbucht als „pending",
+// wird „available", sobald der Freund zahlt (Stripe). Aufstieg gibt Einmal-Bonus.
 function accrueReferralCash(){
   const c=S.referralCount||0, done=S.wallet.accruedForCount||0;
   if(c<=done) return false;
   for(let n=done+1;n<=c;n++){
-    let amt=REFERRAL_CASH; const bonus=REFERRAL_BONUS[n]||0;
-    if(bonus){ amt+=bonus; }
-    S.wallet.pending=Math.round((S.wallet.pending+amt)*100)/100;
-    walletLedger("referral",amt,bonus?`Freund #${n} + Meilenstein-Bonus`:`Freund #${n} geworben`);
+    const rk=referralRank(n);
+    S.wallet.pending=round2(S.wallet.pending+rk.rate);
+    S.wallet.lifetimeEarned=round2((S.wallet.lifetimeEarned||0)+rk.rate);
+    walletLedger("referral",rk.rate,`Freund #${n} · ${rk.name}-Rate`);
+    const up=REFERRAL_RANKS.find(x=>x.min===n&&x.min>0);
+    if(up){ S.wallet.pending=round2(S.wallet.pending+RANK_BONUS); S.wallet.lifetimeEarned=round2((S.wallet.lifetimeEarned||0)+RANK_BONUS);
+      walletLedger("rankbonus",RANK_BONUS,`Aufstieg zu ${up.name} — Bonus`); }
   }
   S.wallet.accruedForCount=c; return true;
+}
+// Rang-Aufstieg feiern (Status-Dopamin) — erster Lauf seedet still.
+function checkReferralRankUp(){
+  const cur=referralRank().name;
+  if(S.referralRankSeen==null){ S.referralRankSeen=cur; return; }
+  if(cur===S.referralRankSeen) return;
+  const was=REFERRAL_RANKS.findIndex(r=>r.name===S.referralRankSeen), now=REFERRAL_RANKS.findIndex(r=>r.name===cur);
+  S.referralRankSeen=cur;
+  if(now>was){ const r=REFERRAL_RANKS[now]; confetti();
+    modal(`<div style="text-align:center;padding:6px 0">
+      <div style="width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:${r.color}22;color:${r.color};border:2px solid ${r.color}">${icon("star",36)}</div>
+      <p class="display-m mb8">${r.name}-Botschafter</p>
+      <p class="sm t2" style="line-height:1.6">Aufstieg geschafft. Ab jetzt bekommst du <b style="color:var(--t1)">${fmtEUR(r.rate)} pro geworbenem Freund</b> — deine Werbungen sind jetzt mehr wert.</p></div>`); }
 }
 const TEASER_TEXT={
   multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
@@ -5734,8 +5759,8 @@ function renderProfile(){
   // Bestätigte Werbungen vom Backend holen + neues Guthaben verbuchen (gedrosselt).
   if(SB.enabled()&&SB.user&&Date.now()-(S._refFetchedAt||0)>20000){
     S._refFetchedAt=Date.now();
-    SB.countReferrals(S.refCode).then(n=>{ if(typeof n==="number"&&n!==S.referralCount){ S.referralCount=n; accrueReferralCash(); save(); if(S.tab==="profile")render(); } });
-  } else if(accrueReferralCash()){ save(); }
+    SB.countReferrals(S.refCode).then(n=>{ if(typeof n==="number"&&n!==S.referralCount){ S.referralCount=n; accrueReferralCash(); checkReferralRankUp(); save(); if(S.tab==="profile")render(); } });
+  } else { const ch=accrueReferralCash(); checkReferralRankUp(); if(ch)save(); }
   A.saveSnapshot=()=>{
     if(S.tier!=="elite"){showUpgradeTeaser("snapshots");return;}
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
@@ -5874,37 +5899,47 @@ function renderProfile(){
     </div>
 
     ${(()=>{
-      const cnt=S.referralCount||0, w=S.wallet||{available:0,pending:0,ledger:[]};
-      const top=REFERRAL_TIERS[REFERRAL_TIERS.length-1].n;
-      const pct=Math.min(100,Math.round(cnt/top*100));
-      const ladder=REFERRAL_TIERS.map(t=>{
-        const reached=cnt>=t.n;
+      const cnt=S.referralCount||0, w=S.wallet||{available:0,pending:0,ledger:[],lifetimeEarned:0};
+      const rank=referralRank(cnt), next=nextReferralRank();
+      const span=next?(next.min-rank.min):1, prog=next?Math.min(100,Math.round((cnt-rank.min)/span*100)):100;
+      // Netzwerk-Visual: wachsender Kreis aus DIREKTEN Werbungen (einstufig — kein Downline-Verdienst).
+      const orbs=[...Array(Math.min(cnt,18))].map((_,i)=>`<span style="width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#9DB4F0,#4A6FD8);box-shadow:0 0 7px rgba(74,111,216,.5);display:inline-block"></span>`).join("");
+      const ranks=REFERRAL_RANKS.map(r=>{
+        const at=cnt>=r.min, isCur=r.name===rank.name;
         return `<div class="row" style="padding:9px 0;border-top:1px solid var(--hairline);align-items:center">
-          <span style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:${reached?"var(--accent)":"var(--s3)"};color:${reached?"#fff":"var(--t2)"}">${reached?"✓":t.n}</span>
-          <span class="sm" style="flex:1;margin-left:10px">${t.n} ${t.n===1?"zahlender Freund":"zahlende Freunde"}<br><span class="xs t2">${fmtEUR(t.eur)} Guthaben gesamt</span></span>
-          <span class="xs ${reached?"volt-txt":"t2"}">${reached?"erreicht":Math.max(0,t.n-cnt)+" fehlen"}</span></div>`;
+          <span style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${at?r.color+"22":"var(--s3)"};border:1.5px solid ${at?r.color:"transparent"};color:${at?r.color:"var(--t2)"};font-size:11px;font-weight:800">${at?"★":r.min}</span>
+          <span class="sm" style="flex:1;margin-left:10px">${r.name}${isCur?' <span class="xs volt-txt">· dein Rang</span>':""}<br><span class="xs t2">ab ${r.min} Freunden · ${fmtEUR(r.rate)} pro Werbung</span></span>
+          ${at?`<span class="xs" style="color:${r.color}">erreicht</span>`:`<span class="xs t2">${r.min-cnt} fehlen</span>`}</div>`;
       }).join("");
       const led=(w.ledger||[]).slice(0,4).map(e=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--hairline)">
         <span class="xs t2" style="flex:1">${e.note}</span><span class="metric xs ${e.amount<0?"t2":"volt-txt"}">${e.amount<0?"−":"+"}${fmtEUR(Math.abs(e.amount))}</span></div>`).join("");
-      return `<div class="card" style="border-color:rgba(96,140,230,.3)">
-        <p class="ct">${icon("send",14)} Freunde werben — verdiene echtes Guthaben</p>
-        <p class="sm t2 mb12" style="line-height:1.6">Dein Freund startet mit <b style="color:var(--t1)">14 Tagen PERFORMANCE gratis</b>. Du bekommst <b style="color:var(--t1)">${fmtEUR(REFERRAL_CASH)} echtes Guthaben</b>, sobald er ein Abo abschließt — plus Meilenstein-Boni.</p>
+      return `<div class="card" style="border-color:${rank.color}55">
+        <p class="ct">${icon("send",14)} Botschafter-Programm — verdiene echtes Geld</p>
+        <div class="row" style="align-items:center;gap:12px;margin:4px 0 12px">
+          <span style="width:48px;height:48px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${rank.color}22;border:2px solid ${rank.color};color:${rank.color}">${icon("star",24)}</span>
+          <div style="flex:1"><p class="sm" style="font-weight:700">${rank.name}-Botschafter</p>
+            <p class="xs t2">Aktuell <b style="color:var(--t1)">${fmtEUR(rank.rate)}</b> pro geworbenem Freund</p></div>
+          <div style="text-align:right"><p class="metric" style="font-size:15px;color:var(--good)">${fmtEUR(w.lifetimeEarned||0)}</p><p class="xs t2">gesamt verdient</p></div>
+        </div>
+        ${next?`<div class="row mb4"><span class="xs t2">Noch ${next.min-cnt} bis ${next.name} (${fmtEUR(next.rate)}/Werbung)</span><span class="metric xs">${cnt}/${next.min}</span></div>
+          <div class="progress mb12" style="height:8px"><div style="width:${prog}%;background:${next.color}"></div></div>`
+          :`<p class="xs volt-txt mb12">Höchster Rang erreicht — ${fmtEUR(rank.rate)} pro Werbung. Respekt.</p>`}
+        ${cnt>0?`<p class="label" style="margin:0 0 6px">Dein Netzwerk · ${cnt}</p><div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">${orbs}${cnt>18?`<span class="xs t2" style="align-self:center">+${cnt-18}</span>`:""}</div>`:""}
         <div class="row" style="gap:10px;margin-bottom:12px">
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--good)">${fmtEUR(w.available||0)}</p><p class="xs t2">verfügbar</p></div>
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--hl)">${fmtEUR(w.pending||0)}</p><p class="xs t2">ausstehend</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px;text-align:center"><p class="hero-num" style="font-size:25px;color:var(--good)">${fmtEUR(w.available||0)}</p><p class="xs t2">verfügbar</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px;text-align:center"><p class="hero-num" style="font-size:25px;color:var(--hl)">${fmtEUR(w.pending||0)}</p><p class="xs t2">ausstehend</p></div>
         </div>
         <button class="btn ${(w.available||0)>=1?"volt":""} mb12" ${(w.available||0)>=1?"":'disabled style="opacity:.5"'} onclick="A.redeemWallet()">${icon("zap",15)} Guthaben auf Abo anrechnen</button>
-        <div class="row mb4"><span class="xs t2">Verdienst-Leiter</span><span class="metric xs">${cnt} ${cnt===1?"Freund":"Freunde"}</span></div>
-        <div class="progress mb8" style="height:8px"><div style="width:${pct}%"></div></div>
-        <div style="background:var(--s2);border-radius:14px;padding:4px 14px 10px;margin-bottom:12px">${ladder}</div>
+        <p class="label" style="margin:0 0 4px">Rang-Leiter</p>
+        <div style="background:var(--s2);border-radius:14px;padding:4px 14px 10px;margin-bottom:12px">${ranks}</div>
         ${led?`<p class="label" style="margin:4px 0 2px">Letzte Buchungen</p><div style="background:var(--s2);border-radius:14px;padding:4px 14px 8px;margin-bottom:12px">${led}</div>`:""}
         <p class="metric mb8" style="text-align:center">Dein Code: <span style="color:var(--hl)">${S.refCode}</span></p>
-        <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Einladungslink teilen</button>
+        <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Als ${rank.name}-Botschafter teilen</button>
         <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
           <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
         <p class="xs t2 mt8" style="line-height:1.5"><b style="color:var(--t1)">Cashflow-sicher:</b> Guthaben wird erst verfügbar, wenn dein Freund zahlt — finanziert aus seiner Zahlung.</p>
-        <button class="btn ghost" style="min-height:34px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="A.legalReferral()">${icon("info",13)} Echtes Guthaben & warum es legal ist</button>
-        ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen werden über dein Cloud-Konto gezählt — dafür Supabase aktivieren.</p>`}
+        <button class="btn ghost" style="min-height:34px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="A.legalReferral()">${icon("info",13)} Echtes Geld & warum es legal ist</button>
+        ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen zählt dein Cloud-Konto — dafür Supabase aktivieren.</p>`}
       </div>
 
       <div class="card"><p class="ct">${icon("star",14)} Cashback bei Partnern <span class="badge mute" style="margin-left:6px">bald</span></p>
