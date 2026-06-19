@@ -1356,7 +1356,7 @@ S.measure=S.measure||[]; // [{t, waist,chest,arm,thigh,hips}]
 S.aiKey=S.aiKey||"";
 S.aiOn=S.aiOn??false;
 // Auto-Aktivierung über optionale config.js (window.METRICGYM_CONFIG.groqKey)
-try{ if(window.METRICGYM_CONFIG&&window.METRICGYM_CONFIG.groqKey){ S.aiKey=window.METRICGYM_CONFIG.groqKey; S.aiOn=true; } }catch{}
+try{ const c=window.METRICGYM_CONFIG; if(c&&(c.groqKey||c.geminiKey)){ if(c.groqKey)S.aiKey=c.groqKey; S.aiOn=true; } }catch{}
 // Flexibler Plan: A/B-Varianten + Rotations-Modus (nicht an Wochentage gekoppelt)
 S.planB=S.planB||null;
 S.planMode=S.planMode||"week"; // "week" = Wochentage · "rotation" = fortlaufend
@@ -4642,7 +4642,92 @@ function aiHeaders(){
     return {"Content-Type":"application/json","Authorization":"Bearer "+tok,"apikey":c.supabaseAnonKey||""}; }
   return {"Content-Type":"application/json","Authorization":"Bearer "+S.aiKey};
 }
-function aiActive(){ return !!aiProxy() || !!(S.aiOn && S.aiKey && S.aiKey.length>20); }
+function groqOn(){ return !!aiProxy() || !!(S.aiOn && S.aiKey && S.aiKey.length>20); }
+// ===== Gemini (Google AI) — PRIMÄRE KI für die gesamte App; Groq ist Fallback =====
+function geminiKey(){ try{ return ((window.METRICGYM_CONFIG||{}).geminiKey)||""; }catch{ return ""; } }
+function geminiOn(){ return !!S.aiOn && geminiKey().length>20; }
+function aiActive(){ return geminiOn() || groqOn(); }
+const GEMINI_MODEL="gemini-flash-latest";
+function geminiURL(stream){ return "https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":"+(stream?"streamGenerateContent?alt=sse":"generateContent"); }
+// dataURL ("data:image/jpeg;base64,…") → Gemini inline_data-Part
+function dataURLpart(u){ const m=/^data:([^;]+);base64,(.*)$/.exec(u||""); return m?{inline_data:{mime_type:m[1],data:m[2]}}:null; }
+// Einzel-Antwort (Text oder JSON). user = String ODER {text, images:[dataURL]} für Vision.
+async function geminiGen(system,user,opts){
+  opts=opts||{};
+  const parts=[];
+  if(typeof user==="string"){ parts.push({text:user}); }
+  else { if(user.text)parts.push({text:user.text}); for(const u of (user.images||[])){ const p=dataURLpart(u); if(p)parts.push(p); } }
+  const body={ contents:[{role:"user",parts}],
+    generationConfig:{ temperature:opts.temp??0.5, maxOutputTokens:opts.max||600, ...(opts.json?{responseMimeType:"application/json"}:{}) } };
+  if(system) body.systemInstruction={parts:[{text:system}]};
+  const res=await fetch(geminiURL(false),{method:"POST",headers:{"Content-Type":"application/json","X-goog-api-key":geminiKey()},body:JSON.stringify(body)});
+  if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("Gemini "+res.status+(m?": "+m:"")); }
+  const j=await res.json();
+  return (j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("").trim();
+}
+// Streaming-Chat (SSE) für den Coach.
+async function geminiStream(system,history,onDelta){
+  const contents=history.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}));
+  const body={ contents, systemInstruction:{parts:[{text:system}]}, generationConfig:{temperature:0.6,maxOutputTokens:600} };
+  const res=await fetch(geminiURL(true),{method:"POST",headers:{"Content-Type":"application/json","X-goog-api-key":geminiKey()},body:JSON.stringify(body)});
+  if(!res.ok)throw new Error("Gemini "+res.status);
+  const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
+  while(true){ const {done,value}=await reader.read(); if(done)break;
+    buf+=dec.decode(value,{stream:true}); const lines=buf.split("\n"); buf=lines.pop();
+    for(const ln of lines){ const t=ln.trim(); if(!t.startsWith("data:"))continue; const d=t.slice(5).trim(); if(!d||d==="[DONE]")continue;
+      try{ const tok=(JSON.parse(d).candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join(""); if(tok){full+=tok;onDelta(full);} }catch{} } }
+  return full.trim();
+}
+// ===== OpenRouter — 2. Fallback (nach Gemini, vor Groq). OpenAI-kompatibles Format. =====
+function orKey(){ try{ return ((window.METRICGYM_CONFIG||{}).openrouterKey)||""; }catch{ return ""; } }
+function orOn(){ return !!S.aiOn && orKey().length>20; }
+const OR_MODEL=(()=>{ try{ return ((window.METRICGYM_CONFIG||{}).openrouterModel)||"openai/gpt-4o-mini"; }catch{ return "openai/gpt-4o-mini"; } })();
+function orHeaders(){ return {"Content-Type":"application/json","Authorization":"Bearer "+orKey(),"HTTP-Referer":"https://metricgym.app","X-Title":"METRICGYM"}; }
+function orMessages(system,user){
+  const messages=[{role:"system",content:system}];
+  if(typeof user==="string") messages.push({role:"user",content:user});
+  else { const content=[{type:"text",text:user.text||""}]; for(const u of (user.images||[])) content.push({type:"image_url",image_url:{url:u}}); messages.push({role:"user",content}); }
+  return messages;
+}
+async function orComplete(system,user,opts){
+  opts=opts||{};
+  const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:orHeaders(),
+    body:JSON.stringify({model:OR_MODEL,messages:orMessages(system,user),temperature:opts.temp??0.5,max_tokens:opts.max||600,...(opts.json?{response_format:{type:"json_object"}}:{})})});
+  if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("OpenRouter "+res.status+(m?": "+m:"")); }
+  return (await res.json()).choices?.[0]?.message?.content||"";
+}
+async function orStream(system,history,onDelta){
+  const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:orHeaders(),
+    body:JSON.stringify({model:OR_MODEL,messages:[{role:"system",content:system},...history],temperature:0.6,max_tokens:600,stream:true})});
+  if(!res.ok)throw new Error("OpenRouter "+res.status);
+  const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
+  while(true){ const {done,value}=await reader.read(); if(done)break;
+    buf+=dec.decode(value,{stream:true}); const lines=buf.split("\n"); buf=lines.pop();
+    for(const ln of lines){ const t=ln.trim(); if(!t.startsWith("data:"))continue; const d=t.slice(5).trim(); if(d==="[DONE]")continue;
+      try{ const tok=JSON.parse(d).choices?.[0]?.delta?.content||""; if(tok){full+=tok;onDelta(full);} }catch{} } }
+  return full.trim();
+}
+// ===== Groq — letzter Fallback. =====
+async function groqComplete(system,user,opts){
+  opts=opts||{};
+  const u=typeof user==="string"?user:(user.text||"");
+  const res=await fetch(aiEndpoint(),{method:"POST",headers:aiHeaders(),
+    body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},{role:"user",content:u}],
+      temperature:opts.temp??0.5,max_tokens:opts.max||600,...(opts.json?{response_format:{type:"json_object"}}:{})})});
+  if(!res.ok)throw new Error("Groq "+res.status);
+  return (await res.json()).choices?.[0]?.message?.content||"";
+}
+async function groqStream(system,history,onDelta){
+  const res=await fetch(aiEndpoint(),{method:"POST",headers:aiHeaders(),
+    body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},...history],temperature:0.6,max_tokens:500,stream:true})});
+  if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("Groq "+res.status+(m?": "+m:"")); }
+  const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
+  while(true){ const {done,value}=await reader.read(); if(done)break;
+    buf+=dec.decode(value,{stream:true}); const lines=buf.split("\n"); buf=lines.pop();
+    for(const ln of lines){ const t=ln.trim(); if(!t.startsWith("data:"))continue; const d=t.slice(5).trim(); if(d==="[DONE]")continue;
+      try{ const tok=JSON.parse(d).choices?.[0]?.delta?.content||""; if(tok){full+=tok;onDelta(full);} }catch{} } }
+  return full.trim();
+}
 function aiPersona(){
   return `Du bist COACH METRIC — der persönliche Kraft- und Ernährungs-Coach der App METRICGYM.
 Persönlichkeit: wissenschaftlich fundiert, direkt, motivierend, auf Augenhöhe. Du klingst wie ein exzellenter Personal Trainer, nicht wie ein Lehrbuch.
@@ -4669,35 +4754,30 @@ function aiContext(){
     ins?`Aktueller Insight: ${ins.t}`:"",
   ].filter(Boolean).join("\n");
 }
+// Provider-Kette: Gemini (primär) → OpenRouter → Groq. Jeder Schritt fällt bei Fehler
+// (z. B. 429-Quota) auf den nächsten zurück; erst wenn alle scheitern, wirft die Funktion.
+async function aiChain(runners){
+  let lastErr;
+  for(const run of runners){ if(!run.on)continue; try{ return await run.fn(); }catch(e){ lastErr=e; } }
+  throw lastErr||new Error("Keine KI verfügbar");
+}
 async function aiStream(history,onDelta){
-  const messages=[{role:"system",content:aiPersona()+"\n\n=== AKTUELLE NUTZERDATEN ===\n"+aiContext()}, ...history.slice(-10)];
-  const res=await fetch(aiEndpoint(),{
-    method:"POST",
-    headers:aiHeaders(),
-    body:JSON.stringify({model:AI_MODEL,messages,temperature:0.6,max_tokens:500,stream:true}),
-  });
-  if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("Groq "+res.status+(m?": "+m:"")); }
-  const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
-  while(true){
-    const {done,value}=await reader.read(); if(done)break;
-    buf+=dec.decode(value,{stream:true});
-    const parts=buf.split("\n"); buf=parts.pop();
-    for(const ln of parts){ const t=ln.trim(); if(!t.startsWith("data:"))continue;
-      const d=t.slice(5).trim(); if(d==="[DONE]")continue;
-      try{ const tok=JSON.parse(d).choices?.[0]?.delta?.content||""; if(tok){full+=tok;onDelta(full);} }catch{} }
-  }
-  return full.trim();
+  const sys=aiPersona()+"\n\n=== AKTUELLE NUTZERDATEN ===\n"+aiContext();
+  const h=history.slice(-10);
+  return aiChain([
+    {on:geminiOn(),fn:()=>geminiStream(sys,h,onDelta)},
+    {on:orOn(),    fn:()=>orStream(sys,h,onDelta)},
+    {on:groqOn(),  fn:()=>groqStream(sys,h,onDelta)},
+  ]);
 }
 // Nicht-streamender Aufruf (für strukturierte/kurze Antworten)
 async function aiComplete(system,user,opts){
   opts=opts||{};
-  const res=await fetch(aiEndpoint(),{
-    method:"POST",headers:aiHeaders(),
-    body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},{role:"user",content:user}],
-      temperature:opts.temp??0.5,max_tokens:opts.max||500,...(opts.json?{response_format:{type:"json_object"}}:{})}),
-  });
-  if(!res.ok){throw new Error("Groq "+res.status);}
-  return (await res.json()).choices?.[0]?.message?.content||"";
+  return aiChain([
+    {on:geminiOn(),fn:()=>geminiGen(system,user,opts)},
+    {on:orOn(),    fn:()=>orComplete(system,user,opts)},
+    {on:groqOn(),  fn:()=>groqComplete(system,user,opts)},
+  ]);
 }
 // Erwartet JSON-Objekt zurück; parst robust (Code-Fences/umgebenden Text entfernen)
 async function aiJSON(system,user){
@@ -4741,12 +4821,20 @@ function showImportedPlan(){
 const AI_VISION_MODEL="meta-llama/llama-4-scout-17b-16e-instruct";
 async function aiVision(system,userText,images,opts){
   opts=opts||{};
-  const content=[{type:"text",text:userText}];
-  for(const url of (images||[])) content.push({type:"image_url",image_url:{url}});
-  const res=await fetch(aiEndpoint(),{method:"POST",headers:aiHeaders(),
-    body:JSON.stringify({model:AI_VISION_MODEL,messages:[{role:"system",content:system},{role:"user",content}],temperature:0.2,max_tokens:opts.max||1600})});
-  if(!res.ok)throw new Error("Groq "+res.status);
-  return (await res.json()).choices?.[0]?.message?.content||"";
+  const u={text:userText,images:images||[]};
+  const groqVision=async()=>{
+    const content=[{type:"text",text:userText}];
+    for(const url of (images||[])) content.push({type:"image_url",image_url:{url}});
+    const res=await fetch(aiEndpoint(),{method:"POST",headers:aiHeaders(),
+      body:JSON.stringify({model:AI_VISION_MODEL,messages:[{role:"system",content:system},{role:"user",content}],temperature:0.2,max_tokens:opts.max||1600})});
+    if(!res.ok)throw new Error("Groq "+res.status);
+    return (await res.json()).choices?.[0]?.message?.content||"";
+  };
+  return aiChain([
+    {on:geminiOn(),fn:()=>geminiGen(system,u,{temp:0.2,max:opts.max||1600})},
+    {on:orOn(),    fn:()=>orComplete(system,u,{temp:0.2,max:opts.max||1600})},
+    {on:groqOn(),  fn:groqVision},
+  ]);
 }
 async function aiVisionJSON(system,userText,images){
   const raw=await aiVision(system,userText,images,{max:1800});
@@ -5900,11 +5988,25 @@ function renderNutrition(){
   A.quick=(i)=>{const e=addFood(FOODS[i],null);toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);renderNutrition();};
   // MOCK: Foto-Erkennung — wählt deterministisch (Dateigröße) ein Lebensmittel aus FOODS.
   // TODO Real: Vision-API (z. B. Claude/GPT-4V) für echte Lebensmittel-Erkennung + Mengenschätzung.
-  A.photoPick=(el)=>{
-    const f=el.files&&el.files[0]; if(!f)return;
-    const idx=f.size%FOODS.length;
-    pendingItems=[{raw:"Foto",food:FOODS[idx],gram:FOODS[idx][1],conf:0.5,photo:true}];
-    el.value=""; renderNutrition();
+  A.photoPick=async(el)=>{
+    const f=el.files&&el.files[0]; if(!f)return; el.value="";
+    if(!aiActive()){ // ohne KI: Foto-Erkennung nicht möglich → Hinweis
+      toast("Foto-Erkennung braucht die KI — sonst bitte per Text loggen"); return; }
+    pendingItems=[{loading:true}]; renderNutrition();
+    try{
+      const img=await downscaleImage(f,1100);
+      const sys='Du erkennst Essen/Getränke auf einem Foto und schätzt realistische Nährwerte. '
+        +'Liste alle erkennbaren Posten. Antworte NUR mit JSON: '
+        +'{"items":[{"name":"dt. Name","grams":<int g/ml>,"kcal":<int>,"p":<int>,"c":<int>,"f":<int>,"conf":<0..1>}]}. '
+        +'Wenn kein Essen erkennbar: {"items":[]}.';
+      const j=await aiVisionJSON(sys,"Was ist auf diesem Foto? Schätze die Portionen.",[img]);
+      const items=(((j&&j.items))||[]).filter(it=>it&&it.kcal>0).map(it=>({ai:true,photo:true,
+        name:String(it.name||"Foto").slice(0,60), gram:Math.max(0,Math.round(it.grams||0)),
+        kcal:Math.round(it.kcal), p:Math.round(it.p||0), c:Math.round(it.c||0), f:Math.round(it.f||0),
+        conf:Math.max(0.5,Math.min(0.97,it.conf||0.75))}));
+      if(!items.length){ pendingItems=null; renderNutrition(); toast("Auf dem Foto war kein Essen erkennbar"); return; }
+      pendingItems=items; renderNutrition();
+    }catch(e){ pendingItems=null; renderNutrition(); toast("Foto-Analyse fehlgeschlagen — versuch es nochmal"); }
   };
   A.explainSat=()=>A.explain("satiety");
   // Ein-Tipp-Favoriten: meistgeloggte Lebensmittel, sonst sinnvolle Defaults
@@ -5956,8 +6058,7 @@ function renderNutrition(){
           <div class="row" style="align-items:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div>
           <span class="sm t2">Coach Metric liest deinen Eintrag …</span></div></div>`
         :`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
-        ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
-        ${pendingItems.some(it=>it.ai)?`<p class="xs t2 mb8">${icon("sparkle",11)} Von der KI erkannt & geschätzt — vor dem Übernehmen kurz prüfen.</p>`:""}
+        ${pendingItems.some(it=>it.ai)?`<p class="xs t2 mb8">${icon("sparkle",11)} ${pendingItems.some(it=>it.photo)?"Vom Foto erkannt":"Von der KI erkannt"} & geschätzt — vor dem Übernehmen kurz prüfen.</p>`:""}
         ${pendingItems.map(it=>it.food?`
           <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${it.raw.trim()}" erkannt als</span> `:""}${it.food[0]} · <span class="metric">${it.gram} g</span></span>
           <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${Math.round(it.conf*100)} %</span></span></div>`
