@@ -4214,46 +4214,47 @@ function muscleBody(view,arg){
   const bg=`<rect x="0" y="0" width="130" height="240" rx="18" fill="url(#${fid}bg)"/>
     <ellipse cx="65" cy="106" rx="58" ry="94" fill="url(#${fid}a)" class="mg-aura"/>`;
   // Realistische Silhouette: Kopf, Hals, V-Taper-Rumpf, Arme (Ober-/Unterarm), Beine (Ober-/Unterschenkel).
-  const sil=`<g fill="url(#${fid}sk)" stroke="${ln}" stroke-width="0.5" stroke-linejoin="round">
-    <ellipse cx="65" cy="15.5" rx="10.5" ry="12.5"/>
-    <path d="M59 26 h12 v8 q-6 3 -12 0 z"/>
-    <path d="M43 40 Q65 36 87 40 Q98 44 100 56 Q102 70 97 86 L92 112 Q89 124 82 130 L48 130 Q41 124 38 112 L33 86 Q28 70 30 56 Q32 44 43 40 Z"/>
-    <path d="M32 53 Q24 58 22 78 L20 100 Q19 112 25 119 L31 117 Q34 105 33 92 L37 70 Q38 60 41 54 Z"/>
-    <path d="M98 53 Q106 58 108 78 L110 100 Q111 112 105 119 L99 117 Q96 105 97 92 L93 70 Q92 60 89 54 Z"/>
-    <path d="M47 129 Q42 156 46 180 L45 206 Q45 226 51 235 L59 235 Q63 226 61 206 L62 180 Q65 154 63 131 Q55 127 47 129 Z"/>
-    <path d="M83 129 Q88 156 84 180 L85 206 Q85 226 79 235 L71 235 Q67 226 69 206 L68 180 Q65 154 67 131 Q75 127 83 129 Z"/></g>`;
+  const sil=`<g fill="url(#${fid}sk)" stroke="${ln}" stroke-width="0.6" stroke-linejoin="round">
+    <ellipse cx="65" cy="13" rx="8.5" ry="10.5"/>
+    <path d="M60 22 h10 v7 q-5 2 -10 0 z"/>
+    <path d="M44 46 Q65 42 86 46 Q90 48 90 55 Q86 82 79 106 Q76 120 73 128 L57 128 Q54 120 51 106 Q44 82 40 55 Q40 48 44 46 Z"/>
+    <path d="M38 56 Q30 62 28 84 Q26 104 28 126 Q30 144 33 156 L40 155 Q37 142 37 124 Q37 104 40 84 Q42 66 44 58 Q41 55 38 56 Z"/>
+    <path d="M92 56 Q100 62 102 84 Q104 104 102 126 Q100 144 97 156 L90 155 Q93 142 93 124 Q93 104 90 84 Q88 66 86 58 Q89 55 92 56 Z"/>
+    <ellipse cx="34" cy="160" rx="4.5" ry="6"/><ellipse cx="96" cy="160" rx="4.5" ry="6"/>
+    <path d="M51 128 Q45 150 48 174 L48 196 Q49 218 53 233 L60 233 Q63 218 62 196 L62 174 Q65 150 64 129 Q57 126 51 128 Z"/>
+    <path d="M79 128 Q85 150 82 174 L82 196 Q81 218 77 233 L70 233 Q67 218 68 196 L68 174 Q65 150 66 129 Q73 126 79 128 Z"/></g>`;
   const front=`
-    <path d="M45 41 Q53 37 62 36 L60 45 Q51 45 45 50 Z" ${P('traps')}/>
-    <path d="M85 41 Q77 37 68 36 L70 45 Q79 45 85 50 Z" ${P('traps')}/>
-    <path d="M33 50 Q25 55 23 70 Q22 79 27 82 Q35 78 39 72 Q41 60 38 52 Q36 49 33 50 Z" ${P('delts')}/>
-    <path d="M97 50 Q105 55 107 70 Q108 79 103 82 Q95 78 91 72 Q89 60 92 52 Q94 49 97 50 Z" ${P('delts')}/>
-    <path d="M64 47 Q51 46 43 53 Q38 61 41 71 Q48 78 58 76 Q63 73 64 65 Z" ${P('chest')}/>
-    <path d="M66 47 Q79 46 87 53 Q92 61 89 71 Q82 78 72 76 Q67 73 66 65 Z" ${P('chest')}/>
-    <path d="M26 70 Q22 83 25 97 Q29 100 33 97 Q34 84 36 72 Q31 68 26 70 Z" ${P('biceps')}/>
-    <path d="M104 70 Q108 83 105 97 Q101 100 97 97 Q96 84 94 72 Q99 68 104 70 Z" ${P('biceps')}/>
-    <path d="M58 80 h6 v8 q-3 1 -6 0 z M66 80 h6 v8 q-3 1 -6 0 z M58 90 h6 v8 q-3 1 -6 0 z M66 90 h6 v8 q-3 1 -6 0 z M58 100 h6 v8 q-3 1 -6 0 z M66 100 h6 v8 q-3 1 -6 0 z M59 110 h5 v8 q-2 2 -5 1 z M66 110 h5 v9 q-3 1 -5 -1 z" ${P('abs')}/>
-    <path d="M51 80 Q47 96 53 114 L56 112 Q51 96 54 82 Z" ${P('obliques')}/>
-    <path d="M79 80 Q83 96 77 114 L74 112 Q79 96 76 82 Z" ${P('obliques')}/>
-    <path d="M48 132 Q43 156 48 178 Q54 182 59 178 Q61 156 59 134 Q53 130 48 132 Z" ${P('quads')}/>
-    <path d="M82 132 Q87 156 82 178 Q76 182 71 178 Q69 156 71 134 Q77 130 82 132 Z" ${P('quads')}/>
-    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.45"><path d="M65 48 v28"/><path d="M58 88 h14 M58 98 h14 M58 108 h13 M65 80 v39"/><path d="M53 156 Q54 168 53 178 M77 156 Q76 168 77 178"/></g>`;
+    <path d="M46 46 Q54 43 62 42 L61 49 Q53 49 48 53 Z" ${P('traps')}/>
+    <path d="M84 46 Q76 43 68 42 L69 49 Q77 49 82 53 Z" ${P('traps')}/>
+    <path d="M40 52 Q31 56 29 70 Q28 78 33 80 Q40 76 43 69 Q44 59 42 53 Q41 51 40 52 Z" ${P('delts')}/>
+    <path d="M90 52 Q99 56 101 70 Q102 78 97 80 Q90 76 87 69 Q86 59 88 53 Q89 51 90 52 Z" ${P('delts')}/>
+    <path d="M64 51 Q53 50 46 57 Q42 65 45 73 Q52 79 60 76 Q64 72 64 66 Z" ${P('chest')}/>
+    <path d="M66 51 Q77 50 84 57 Q88 65 85 73 Q78 79 70 76 Q66 72 66 66 Z" ${P('chest')}/>
+    <path d="M30 72 Q27 86 30 100 Q34 103 38 100 Q39 86 39 74 Q34 70 30 72 Z" ${P('biceps')}/>
+    <path d="M100 72 Q103 86 100 100 Q96 103 92 100 Q91 86 91 74 Q96 70 100 72 Z" ${P('biceps')}/>
+    <path d="M59 81 h5 v8 q-2.5 1 -5 0 z M66 81 h5 v8 q-2.5 1 -5 0 z M59 91 h5 v8 q-2.5 1 -5 0 z M66 91 h5 v8 q-2.5 1 -5 0 z M59 101 h5 v8 q-2.5 1 -5 0 z M66 101 h5 v8 q-2.5 1 -5 0 z M59 111 h5 v9 q-2.5 2 -5 1 z M66 111 h5 v9 q-2.5 1 -5 -1 z" ${P('abs')}/>
+    <path d="M54 82 Q50 98 55 116 L58 114 Q54 98 57 84 Z" ${P('obliques')}/>
+    <path d="M76 82 Q80 98 75 116 L72 114 Q76 98 73 84 Z" ${P('obliques')}/>
+    <path d="M51 130 Q46 154 50 176 Q55 180 60 176 Q62 154 60 132 Q55 128 51 130 Z" ${P('quads')}/>
+    <path d="M79 130 Q84 154 80 176 Q75 180 70 176 Q68 154 70 132 Q75 128 79 130 Z" ${P('quads')}/>
+    <g stroke="${ln}" stroke-width="0.55" fill="none" opacity="0.4"><path d="M65 51 v25"/><path d="M59 89 h12 M59 99 h12 M59 109 h12 M65 81 v39"/><path d="M55 134 Q56 156 55 176 M75 134 Q74 156 75 176"/></g>`;
   const back=`
-    <path d="M65 36 Q50 40 44 51 Q56 55 65 55 Q74 55 86 51 Q80 40 65 36 Z" ${P('traps')}/>
-    <path d="M49 55 Q56 72 65 80 Q74 72 81 55 Q73 59 65 59 Q57 59 49 55 Z" ${P('traps')}/>
-    <path d="M33 50 Q25 55 23 70 Q22 79 27 82 Q35 78 39 72 Q41 60 38 52 Q36 49 33 50 Z" ${P('reardelts')}/>
-    <path d="M97 50 Q105 55 107 70 Q108 79 103 82 Q95 78 91 72 Q89 60 92 52 Q94 49 97 50 Z" ${P('reardelts')}/>
-    <path d="M26 70 Q22 83 25 97 Q29 100 33 97 Q34 84 36 72 Q31 68 26 70 Z" ${P('triceps')}/>
-    <path d="M104 70 Q108 83 105 97 Q101 100 97 97 Q96 84 94 72 Q99 68 104 70 Z" ${P('triceps')}/>
-    <path d="M46 58 Q39 74 44 94 Q54 101 63 95 L63 60 Q54 55 46 58 Z" ${P('lats')}/>
-    <path d="M84 58 Q91 74 86 94 Q76 101 67 95 L67 60 Q76 55 84 58 Z" ${P('lats')}/>
-    <path d="M59 92 q3 2 6 0 l-1 26 q-2 1 -4 0 z M55 94 q3 1 5 0 l-1 22 q-2 1 -3 0 z M75 94 q-3 1 -5 0 l1 22 q2 1 3 0 z" ${P('lowerback')}/>
-    <path d="M47 120 Q42 131 47 144 Q55 149 63 143 Q65 131 63 121 Q55 117 47 120 Z" ${P('glutes')}/>
-    <path d="M83 120 Q88 131 83 144 Q75 149 67 143 Q65 131 67 121 Q75 117 83 120 Z" ${P('glutes')}/>
-    <path d="M48 148 Q45 170 49 192 Q55 196 61 192 Q62 170 60 150 Q54 145 48 148 Z" ${P('hams')}/>
-    <path d="M82 148 Q85 170 81 192 Q75 196 69 192 Q68 170 70 150 Q76 145 82 148 Z" ${P('hams')}/>
-    <path d="M50 198 Q46 212 50 228 Q54 231 58 228 Q60 212 58 200 Q54 196 50 198 Z" ${P('calves')}/>
-    <path d="M80 198 Q84 212 80 228 Q76 231 72 228 Q70 212 72 200 Q76 196 80 198 Z" ${P('calves')}/>
-    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.45"><path d="M65 40 v40"/><path d="M54 200 Q55 214 54 226 M76 200 Q75 214 76 226"/></g>`;
+    <path d="M65 42 Q51 46 47 56 Q56 60 65 60 Q74 60 83 56 Q79 46 65 42 Z" ${P('traps')}/>
+    <path d="M50 60 Q56 77 65 85 Q74 77 80 60 Q73 63 65 63 Q57 63 50 60 Z" ${P('traps')}/>
+    <path d="M40 52 Q31 56 29 70 Q28 78 33 80 Q40 76 43 69 Q44 59 42 53 Q41 51 40 52 Z" ${P('reardelts')}/>
+    <path d="M90 52 Q99 56 101 70 Q102 78 97 80 Q90 76 87 69 Q86 59 88 53 Q89 51 90 52 Z" ${P('reardelts')}/>
+    <path d="M30 72 Q27 86 30 100 Q34 103 38 100 Q39 86 39 74 Q34 70 30 72 Z" ${P('triceps')}/>
+    <path d="M100 72 Q103 86 100 100 Q96 103 92 100 Q91 86 91 74 Q96 70 100 72 Z" ${P('triceps')}/>
+    <path d="M48 60 Q41 78 46 98 Q55 104 64 97 L64 62 Q55 58 48 60 Z" ${P('lats')}/>
+    <path d="M82 60 Q89 78 84 98 Q75 104 66 97 L66 62 Q75 58 82 60 Z" ${P('lats')}/>
+    <path d="M60 90 q3 2 6 0 l-1 26 q-2 1 -4 0 z M55 93 q3 1 5 0 l-1 22 q-2 1 -3 0 z M75 93 q-3 1 -5 0 l1 22 q2 1 3 0 z" ${P('lowerback')}/>
+    <path d="M50 121 Q45 132 50 145 Q57 150 64 144 Q66 132 64 122 Q57 118 50 121 Z" ${P('glutes')}/>
+    <path d="M80 121 Q85 132 80 145 Q73 150 66 144 Q64 132 66 122 Q73 118 80 121 Z" ${P('glutes')}/>
+    <path d="M51 149 Q48 171 52 193 Q57 197 61 193 Q62 171 60 151 Q55 146 51 149 Z" ${P('hams')}/>
+    <path d="M79 149 Q82 171 78 193 Q73 197 69 193 Q68 171 70 151 Q75 146 79 149 Z" ${P('hams')}/>
+    <path d="M52 199 Q48 213 52 229 Q55 232 58 229 Q60 213 58 201 Q55 197 52 199 Z" ${P('calves')}/>
+    <path d="M78 199 Q82 213 78 229 Q75 232 72 229 Q70 213 72 201 Q75 197 78 199 Z" ${P('calves')}/>
+    <g stroke="${ln}" stroke-width="0.55" fill="none" opacity="0.4"><path d="M65 44 v42"/><path d="M55 201 Q56 215 55 227 M75 201 Q74 215 75 227"/></g>`;
   return `<div style="text-align:center">
     <svg class="mg-svg" viewBox="0 0 130 240" width="126" height="232" aria-hidden="true">${defs}${bg}${sil}${view==="front"?front:back}</svg>
     <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
