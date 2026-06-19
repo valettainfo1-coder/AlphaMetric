@@ -1900,12 +1900,19 @@ function generateOptimalSchedule(a){
     },
   };
   const SPLITS=SP[fp]||SP.balanced;
+  // Vom Nutzer im Quiz GEWÄHLTER Split hat Vorrang vor der automatischen Fokus-Logik
+  // (zyklische Wiederholung über die Trainingstage — keine Vermischung mehr).
+  const FORCED={
+    ppl:{2:["upper","lower"],3:["push","pull","legs"],4:["push","pull","legs","push"],5:["push","pull","legs","push","pull"],6:["push","pull","legs","push","pull","legs"]},
+    ul:{2:["upper","lower"],3:["upper","lower","upper"],4:["upper","lower","upper","lower"],5:["upper","lower","upper","lower","upper"],6:["upper","lower","upper","lower","upper","lower"]},
+  };
+  const chosenSplit=(a.split&&a.split!=="auto"&&FORCED[a.split])?a.split:null;
   const POS={
     consistent:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,4,5],6:[0,1,2,3,4,5]},
     weekday_strong:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4],6:[0,1,2,3,4,5]},
     weekend_strong:{2:[5,6],3:[2,5,6],4:[1,3,5,6],5:[1,3,4,5,6],6:[0,1,3,4,5,6]},
   };
-  const types=SPLITS[days], pos=(POS[pref]||POS.consistent)[days];
+  const types=(chosenSplit?FORCED[chosenSplit][days]:SPLITS[days]), pos=(POS[pref]||POS.consistent)[days];
   const sch=["rest","rest","rest","rest","rest","rest","rest"];
   types.forEach((t,i)=>{sch[pos[i]]=t;});
   // Cardio-Tage nach Bedarf: hoher BMI -> 2 (Gesundheit/Fettabbau), Fettabbau/Ausdauer -> 1,
@@ -1917,7 +1924,7 @@ function generateOptimalSchedule(a){
     if(restIdx.length<=1)break; // letzten Ruhetag bewahren
     sch[restIdx[Math.floor(restIdx.length/2)]]="cardio";
   }
-  const splitTxt=fp==="upper"
+  const autoSplitTxt=fp==="upper"
     ? `${days} Einheiten mit Oberkörper-Schwerpunkt: Push und Pull liefern hohe Frequenz für Brust, Rücken, Schultern und Arme (statt alles in eine überladene Einheit zu packen), ein Bein-Tag hält die Beine über die Grundübungen stark.`
     : fp==="lower"
     ? `${days} Einheiten mit Bein-Schwerpunkt: mehr Volumen für Beine und Po, der Oberkörper bleibt über kompakte Einheiten voll erhalten.`
@@ -1928,6 +1935,14 @@ function generateOptimalSchedule(a){
         5:"5 Einheiten — Push / Pull / Beine plus Oberkörper / Unterkörper: hohe Frequenz, klug verteilt.",
         6:rec==="slow"?"6 Einheiten mit eingebautem Cardio-Tag — Frequenz hoch, Belastung dosiert.":"6 Einheiten — doppelter Push/Pull/Beine-Durchlauf für maximale Trainingsfrequenz.",
       }[days];
+  // Begründung für einen vom Nutzer GEWÄHLTEN Split (überschreibt den Auto-Text).
+  const splitTxt = a.split==="ppl"
+    ? (days<3
+        ? `Du hast Push / Pull / Beine gewählt — bei nur ${days} Trainingstagen ist aber ein Ober-/Unterkörper-Wechsel klar effektiver (jede Muskelgruppe 2×/Woche). Ab 3 Tagen stellen wir auf echtes Push/Pull/Beine um.`
+        : `Dein gewählter Split: Push / Pull / Beine — Drücken, Ziehen und Beine sauber getrennt${days>=6?", doppelter Durchlauf für maximale Frequenz":days===5?", plus zweiter Push/Pull-Durchlauf":days===4?", mit zusätzlichem Push-Tag":""}.`)
+    : a.split==="ul"
+    ? `Dein gewählter Split: Oberkörper / Unterkörper im Wechsel — jede Muskelgruppe wird mehrfach pro Woche getroffen, der bewährte Sweet Spot für Muskelaufbau.`
+    : autoSplitTxt;
   const recTxt={
     fast:"Du erholst dich schnell — deine Einheiten dürfen dicht beieinander liegen.",
     average:"Zwischen harten Einheiten für dieselben Muskeln liegen mindestens 48 Stunden.",
@@ -3384,7 +3399,9 @@ const STEPS=[
    opts:[["beginner","Unter 1 Jahr"],["novice","1–2 Jahre"],["intermediate","2–4 Jahre"],["advanced","Über 4 Jahre"]]},
   {id:"injury",q:"Verletzungen oder Einschränkungen?",hint:"Optional — riskante Übungen werden im Plan markiert und Alternativen vorgeschlagen.",type:"multi",key:"injuries",max:3,skip:true,
    opts:[["knee","Knie",""],["back","Rücken / LWS",""],["shoulder","Schulter",""]]},
-  {id:"days",q:"Trainingstage pro Woche",hint:"Die Aufteilung jeder Einheit berechnet die Engine für dich.",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
+  {id:"days",q:"Trainingstage pro Woche",hint:"Wie viele Tage pro Woche willst du trainieren?",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
+  {id:"split",q:"Wie soll dein Plan aufgeteilt sein?",hint:"Wähl deinen Split — oder lass die Engine die beste Aufteilung für dich finden.",type:"single",key:"split",
+   opts:[["auto","Für mich optimieren","Empfohlen — die Engine wählt nach Tagen, Zielen & Erholung"],["ppl","Push / Pull / Beine","Drücken · Ziehen · Beine — klar getrennt"],["ul","Ober- / Unterkörper","Oberkörper- und Beintage im Wechsel"]]},
   {id:"time",q:"Wie viel Zeit pro Einheit?",hint:"Bestimmt mit, wie viele Übungen sinnvoll in deine Session passen — mehr Zeit = mehr Volumen, weniger Zeit = kompakter & effizienter.",type:"cells",key:"sessionTime",opts:[30,45,60,75,90],unit:"Min"},
   {id:"equipment",q:"Wo trainierst du?",hint:"Dein Plan enthält nur Übungen, die du wirklich machen kannst.",type:"single",key:"equipment",
    opts:[["gym_full","Gym — voll ausgestattet","Maschinen, Kabelzüge, Freihanteln"],["gym_basic","Gym ohne Maschinen","Langhantel, Kurzhanteln, Rack, Bank"],["home_full","Homegym","Kurzhanteln, Bank, Bänder"],["home_min","Zuhause — minimal","Kurzhanteln oder Bänder, ohne Bank"],["bodyweight","Nur Körpergewicht","Kein Equipment nötig"]]},
@@ -3416,6 +3433,13 @@ function quizRec(st){
       if(g==="strength") return "<b>4 Tage</b> — ideal für Kraft mit voller Erholung zwischen den Einheiten.";
       if(g==="fat_loss") return "<b>4 Tage</b> Kraft + Cardio an Ruhetagen — hält Muskeln, maximiert den Verbrauch.";
       return "<b>4 Tage</b> — der Sweet Spot: jede Muskelgruppe 2×/Woche, gute Erholung.";
+    case "split":{
+      const d=a.days||4;
+      if(d<=2) return "Bei 2 Tagen ist <b>Ober-/Unterkörper</b> am stärksten — jede Muskelgruppe 2×/Woche.";
+      if(d>=5) return "Ab 5 Tagen brilliert <b>Push / Pull / Beine</b> — viel Volumen, klar getrennt. Unsicher? Nimm „Für mich optimieren\".";
+      if(d===3) return "Bei 3 Tagen funktionieren beide gut: <b>Push / Pull / Beine</b> (getrennt) oder Ober-/Unterkörper.";
+      return "Unsicher? <b>„Für mich optimieren\"</b> trifft fast immer die beste Wahl für deine Tage & Ziele.";
+    }
     case "time": return "<b>60 Min</b> decken vollen Reiz ab. Weniger Zeit? Der Plan wird automatisch kompakter — gleich effektiv.";
     case "focus": return "Wähl gezielt deine Schwachstellen — der Plan gibt ihnen automatisch mehr Volumen, ohne den Rest zu vernachlässigen.";
     case "recovery": return (a.age&&a.age>=45)?"Ab ~45 oder bei wenig Schlaf ist <b>eher langsam</b> oft realistischer — schützt vor Übertraining.":"";
@@ -3482,7 +3506,7 @@ function renderOnboarding(){
     setTimeout(()=>{
       const a={...S.a,days:S.a.days||4,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
       if(!a.goals||!a.goals.length)a.goals=["muscle_gain"];
-      a.equipment=a.equipment||"gym_full"; a.focus=a.focus||[];
+      a.equipment=a.equipment||"gym_full"; a.focus=a.focus||[]; a.split=a.split||"auto";
       a.schedule_pref=a.schedule_pref||"consistent"; a.recovery_profile=a.recovery_profile||"average";
       // Session-Dauer wird BERECHNET (aus dem generierten Plan), nicht abgefragt.
       const plan=generateTrainingPlan({a});
