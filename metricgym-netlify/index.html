@@ -2422,9 +2422,20 @@ function levSub(needle,hay){
 /* Kombinierte Wort-Ähnlichkeit: wörtlich + phonetisch, mit längenabhängiger
    Toleranz. Gibt die Distanz zurück oder null, wenn zu unähnlich. */
 function fuzzyDist(t,w){
-  if(t===w||t.startsWith(w)||w.startsWith(t))return 0;
-  const tol=Math.max(1,Math.ceil(t.length/4)+(t.length>=8?1:0));
-  const d=Math.min(levSub(t,w),levSub(phon(t),phon(w))+0.5);
+  if(t===w)return 0;
+  // Echtes Teilwort — Überlappung muss ≥4 Zeichen sein: "quark"↔"magerquark", "nudeln"↔"vollkornnudeln".
+  // (≥4 verhindert, dass ein kurzes Wort wie "rot" in "brot" "gefunden" wird.)
+  if(Math.min(t.length,w.length)>=4&&(w.includes(t)||t.includes(w)))return 0;
+  // Deutsche Plural-/Beugungsendung: "eier"→"ei", "tomaten"→"tomate", "äpfel" bleibt fuzzy.
+  if(w.length>=2&&(t===w+"e"||t===w+"er"||t===w+"en"||t===w+"n"||t===w+"s"))return 0;
+  // Längen-Schranke: ein kurzes Wort darf NICHT zufällig im Ende eines langen "gefunden" werden
+  // (verhindert Fehltreffer wie "kuchen"→"maultaschen" oder "spritz"→"schweinefilet").
+  if(Math.abs(t.length-w.length)>Math.max(1,Math.ceil(Math.min(t.length,w.length)/3)))return null;
+  // Kurze Wörter (≤4) NUR exakt/phonetisch zulassen — 1 Tippfehler ist hier meist ein ANDERES
+  // Lebensmittel ("eier"≠"bier", "reis"≠"eis"). Erst ab 5 Zeichen echte Tippfehler-Toleranz.
+  const tol=Math.min(t.length,w.length)<=4?0:Math.floor(Math.min(t.length,w.length)/4);
+  // Volle Levenshtein-Distanz (kein freies Ende mehr) + phonetischer Vergleich für Hörfehler.
+  const d=Math.min(lev(t,w),phon(t)===phon(w)?0:lev(phon(t),phon(w))+0.5);
   return d<=tol?d:null;
 }
 /* Phonetische Normalisierung (deutsch): gleich klingende Schreibweisen werden
@@ -2440,14 +2451,21 @@ function phon(s){
 /* Liefert {f, dist}: dist 0 = exakter Treffer, >0 = Tippfehler-/Hörfehler-Korrektur. */
 function matchFood(segment){
   const tokens=segment.toLowerCase().replace(/[^a-zäöüß0-9\s]/g," ").split(/\s+/)
-    .filter(t=>t.length>=3&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute"].includes(t));
+    .filter(t=>t.length>=2&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute","zu","im","am","an","so","da","ja"].includes(t));
   let best=null;
   for(const f of FOODS){
-    const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=3);
+    const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=2);
     for(const w of words)for(const t of tokens){
       const dist=fuzzyDist(t,w);
-      if(dist!=null&&(!best||dist<best.dist||(dist===best.dist&&f[0].length<best.f[0].length)))
-        best={f,dist};
+      if(dist==null)continue;
+      const exact=(t===w);
+      // Rangfolge bei Gleichstand: kleinere Distanz → exakter Worttreffer ("reis"→"Reis"
+      // schlägt "Reis-Cake-Riegel") → kürzeres Trefferwort → kürzerer Name.
+      if(!best||dist<best.dist
+        ||(dist===best.dist&&exact&&!best.exact)
+        ||(dist===best.dist&&exact===best.exact&&w.length<best.w.length)
+        ||(dist===best.dist&&exact===best.exact&&w.length===best.w.length&&f[0].length<best.f[0].length))
+        best={f,dist,w,exact};
     }
   }
   return best;
@@ -2457,18 +2475,32 @@ function parseNutrition(input){
   const segments=input.trim().toLowerCase().split(/\s*(?:,|\bund\b|\+|danach)\s*/).filter(Boolean);
   const items=[];
   for(const seg of segments){
-    const hit=matchFood(seg);
-    if(!hit){items.push({raw:seg,food:null});continue;}
-    const food=hit.f;
     const gramMatch=seg.match(/(\d+)\s*(g|gramm)\b/);
     const countMatch=seg.match(/(\d+)\s*(stück|stk|x)\b/)||seg.match(/^(\d+)\s+/);
     const wordCount={ein:1,eine:1,einen:1,zwei:2,drei:3,vier:4,fünf:5}[seg.split(/\s+/)[0]];
+    const hit=matchFood(seg);
+    if(!hit){
+      // Reine Mengenangabe ("…, 150 g") ohne Lebensmittelwort → der vorherigen erkannten
+      // Position zuordnen, statt sie fälschlich als eigenen "nicht erkannt"-Eintrag abzuspalten.
+      const restWord=seg.replace(/\b\d+\s*(g|gramm|gr|stück|stk|x)?\b/g," ").split(/\s+/).some(t=>t.length>=3);
+      const last=items[items.length-1];
+      if((gramMatch||countMatch)&&!restWord&&last&&last.food&&!last._qty){
+        last.gram=gramMatch?parseInt(gramMatch[1]):last.food[1]*parseInt(countMatch[1]);
+        last._qty=true; last.conf=Math.min(0.97,(last.conf||0.55)+0.2);
+        continue;
+      }
+      items.push({raw:seg,food:null});continue;
+    }
+    const food=hit.f;
     const gram=gramMatch?parseInt(gramMatch[1]):null;
     const count=countMatch?parseInt(countMatch[1]):(wordCount||null);
     const g=gram??(count?food[1]*count:food[1]);
     let conf=0.55; if(gram||count)conf+=0.3; if(seg.includes(food[0].toLowerCase().split(" ")[0]))conf+=0.1;
-    conf-=hit.dist*0.08; // Tippfehler-Korrektur: ehrlich niedrigere Konfidenz
-    items.push({raw:seg,food,gram:g,fuzzy:hit.dist>0,conf:Math.max(0.4,Math.min(0.97,conf))});
+    conf-=hit.dist*0.1; conf=Math.max(0.2,Math.min(0.97,conf));
+    // Schwache Fuzzy-Treffer NICHT raten — lieber ehrlich "nicht erkannt" (manuell eintragbar),
+    // statt einem Wort ein falsches Lebensmittel zuzuordnen.
+    if(hit.dist>0&&conf<0.45){ items.push({raw:seg,food:null}); continue; }
+    items.push({raw:seg,food,gram:g,fuzzy:hit.dist>0,conf,_qty:!!(gram||count)});
   }
   return items;
 }
