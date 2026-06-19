@@ -1374,6 +1374,13 @@ S.referralInserted=S.referralInserted??false;  // serverseitig schon vermerkt?
 // accruedForCount = wie viele Werbungen bereits verbucht wurden (Idempotenz).
 S.wallet=S.wallet||{available:0,pending:0,ledger:[],accruedForCount:0,paidCount:0,lifetimeEarned:0};
 if(S.wallet.lifetimeEarned==null)S.wallet.lifetimeEarned=0;
+if(S.wallet.paidOut==null)S.wallet.paidOut=0;            // bereits aufs Konto ausgezahlt
+if(S.wallet.payoutMethod===undefined)S.wallet.payoutMethod=null; // PayPal/IBAN für Cash-Auszahlung
+const MIN_PAYOUT=25;                                     // Mindestauszahlung (senkt Gebühren & Betrug)
+// Elite-Perk (legal): zahlende Elite-Mitglieder verdienen den 1,5×-Satz pro Werbung.
+// WICHTIG: Verdienen ist NICHT an Zahlung gebunden (das wäre Pay-to-Play/Pyramide) —
+// jeder verdient, Elite verdient nur MEHR. Das macht den Unterschied legal vs. strafbar.
+function eliteRefMult(){ return S.tier==="elite"?1.5:1; }
 S.referralRankSeen=S.referralRankSeen??null;   // höchster gefeierter Botschafter-Rang
 S.proBonusUntil=S.proBonusUntil??null;
 // Abo-/Paywall-Psychologie: Trial (Endowment + Risk-Reversal), Briefing-Loop (Zeigarnik)
@@ -1466,14 +1473,23 @@ function accrueReferralCash(){
   if(c<=done) return false;
   for(let n=done+1;n<=c;n++){
     const rk=referralRank(n);
-    S.wallet.pending=round2(S.wallet.pending+rk.rate);
-    S.wallet.lifetimeEarned=round2((S.wallet.lifetimeEarned||0)+rk.rate);
-    walletLedger("referral",rk.rate,`Freund #${n} · ${rk.name}-Rate`);
+    const amt=round2(rk.rate*eliteRefMult());            // Elite-Mitglieder: 1,5×-Satz
+    S.wallet.pending=round2(S.wallet.pending+amt);
+    S.wallet.lifetimeEarned=round2((S.wallet.lifetimeEarned||0)+amt);
+    walletLedger("referral",amt,`Freund #${n} · ${rk.name}-Rate${eliteRefMult()>1?" (Elite ×1,5)":""}`);
     const up=REFERRAL_RANKS.find(x=>x.min===n&&x.min>0);
     if(up){ S.wallet.pending=round2(S.wallet.pending+RANK_BONUS); S.wallet.lifetimeEarned=round2((S.wallet.lifetimeEarned||0)+RANK_BONUS);
       walletLedger("rankbonus",RANK_BONUS,`Aufstieg zu ${up.name} — Bonus`); }
   }
   S.wallet.accruedForCount=c; return true;
+}
+// Settlement: zugesagtes Guthaben (pending) wird auszahlbar (available), sobald der geworbene
+// Freund tatsächlich ZAHLT. Produktion: ausgelöst vom Stripe-Payment-Webhook des Freundes.
+// Demo (kein echtes Payment): bestätigte Werbung gilt als eingelöst, damit der Flow testbar ist.
+function settleReferralCash(){
+  if((S.wallet.pending||0)<=0) return false;
+  S.wallet.available=round2((S.wallet.available||0)+S.wallet.pending);
+  S.wallet.pending=0; return true;
 }
 // Rang-Aufstieg feiern (Status-Dopamin) — erster Lauf seedet still.
 function checkReferralRankUp(){
@@ -6392,7 +6408,47 @@ function renderProfile(){
     S.wallet.available=0; save(); confetti(); render();
     toast(`✓ ${fmtEUR(avail)} auf dein Abo angerechnet`);
   };
-  A.legalReferral=()=>modal(`<p class="ct">${icon("check",14)} Echtes Guthaben — legal & cashflow-sicher</p>
+  // ECHTE Cash-Auszahlung aufs Konto (PayPal/IBAN). Geld bewegt ein Server (Stripe Connect/
+  // PayPal Payouts) — hier wird die Auszahlung sauber angefordert & verbucht.
+  A.cashOut=()=>{
+    const avail=round2(S.wallet.available||0);
+    if(avail<MIN_PAYOUT){ toast(`Mindestauszahlung ${fmtEUR(MIN_PAYOUT)} — noch ${fmtEUR(round2(MIN_PAYOUT-avail))} sammeln`); return; }
+    if(!S.wallet.payoutMethod){ A.payoutSetup(); return; }
+    A.requestPayout();
+  };
+  A.payoutSetup=()=>{
+    modal(`<p class="ct">${icon("send",14)} Auszahlung aufs Konto einrichten</p>
+      <p class="sm t2 mb12" style="line-height:1.6">Wohin sollen wir dein verdientes Guthaben auszahlen? <b style="color:var(--t1)">Echtes Geld</b>, keine Abo-Gutschrift.</p>
+      <label class="xs t2" for="payout-acc">PayPal-E-Mail oder IBAN</label>
+      <input type="text" id="payout-acc" placeholder="name@paypal.com  oder  DE12 3456 …" style="width:100%;margin-top:4px" autocomplete="off" value="${S.wallet.payoutMethod?(S.wallet.payoutMethod.raw||""):""}">
+      <button class="btn volt mt12" onclick="A.payoutSave()">Speichern & auszahlen</button>
+      <p class="xs t2 mt8" style="line-height:1.5">Abwicklung über Stripe Connect / PayPal Payouts. Empfehlungs-Einnahmen können steuerpflichtig sein — Beträge mit deinem Steuerberater klären. (Keine Steuerberatung.)</p>`);
+  };
+  A.payoutSave=()=>{
+    const v=((document.getElementById("payout-acc")||{}).value||"").trim();
+    const compact=v.replace(/\s/g,"").toUpperCase();
+    const isIban=/^[A-Z]{2}\d{2}[A-Z0-9]{10,}$/.test(compact);
+    const isMail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
+    if(!isIban&&!isMail){ toast("Gültige PayPal-E-Mail oder IBAN eingeben"); return; }
+    S.wallet.payoutMethod={type:isIban?"iban":"paypal",raw:v,label:isIban?(compact.slice(0,8)+"…"+compact.slice(-2)):v};
+    save(); A.closeModal(); A.requestPayout();
+  };
+  A.requestPayout=()=>{
+    const avail=round2(S.wallet.available||0);
+    if(avail<MIN_PAYOUT){ toast(`Mindestauszahlung ${fmtEUR(MIN_PAYOUT)}`); return; }
+    if(!S.wallet.payoutMethod){ A.payoutSetup(); return; }
+    S.wallet.available=0;
+    S.wallet.paidOut=round2((S.wallet.paidOut||0)+avail);
+    walletLedger("payout",-avail,`Auszahlung an ${S.wallet.payoutMethod.label}`);
+    save(); confetti(); render();
+    toast(`✓ ${fmtEUR(avail)} Auszahlung angefordert`);
+    modal(`<div style="text-align:center;padding:6px 0">
+      <div style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;background:var(--good)22;color:var(--good);border:2px solid var(--good)">${icon("check",30)}</div>
+      <p class="display-m mb8">${fmtEUR(avail)} unterwegs</p>
+      <p class="sm t2" style="line-height:1.6">Deine Auszahlung an <b style="color:var(--t1)">${S.wallet.payoutMethod.label}</b> ist angefordert und wird in 1–3 Werktagen gutgeschrieben.</p>
+      <p class="xs t2 mt8">Hinweis: Die tatsächliche Geldbewegung läuft über die Server-Auszahlung (Stripe Connect/PayPal) — vor dem Launch anzubinden.</p></div>`);
+  };
+  A.legalReferral=()=>modal(`<p class="ct">${icon("check",14)} Echtes Geld aufs Konto — legal & cashflow-sicher</p>`+`
     <p class="sm t2" style="line-height:1.65">Ein verbotenes Schneeball-/Pyramidensystem (§ 16 Abs. 2 UWG) belohnt vor allem das <b style="color:var(--t1)">Anwerben weiterer Werber über mehrere Ebenen</b> und verlangt oft einen Einkauf zum Mitverdienen.</p>
     <p class="sm t2 mt8" style="line-height:1.65">Hier bekommst du <b style="color:var(--t1)">echtes €-Guthaben</b> — und es bleibt trotzdem sauber:</p>
     <div class="mt8">${[
@@ -6405,8 +6461,8 @@ function renderProfile(){
   // Bestätigte Werbungen vom Backend holen + neues Guthaben verbuchen (gedrosselt).
   if(SB.enabled()&&SB.user&&Date.now()-(S._refFetchedAt||0)>20000){
     S._refFetchedAt=Date.now();
-    SB.countReferrals(S.refCode).then(n=>{ if(typeof n==="number"&&n!==S.referralCount){ S.referralCount=n; accrueReferralCash(); checkReferralRankUp(); save(); if(S.tab==="profile")render(); } });
-  } else { const ch=accrueReferralCash(); checkReferralRankUp(); if(ch)save(); }
+    SB.countReferrals(S.refCode).then(n=>{ if(typeof n==="number"&&n!==S.referralCount){ S.referralCount=n; accrueReferralCash(); settleReferralCash(); checkReferralRankUp(); save(); if(S.tab==="profile")render(); } });
+  } else { const ch=accrueReferralCash(); settleReferralCash(); checkReferralRankUp(); if(ch)save(); }
   A.saveSnapshot=()=>{
     if(S.tier!=="elite"){showUpgradeTeaser("snapshots");return;}
     S.snapshots.push({date:Date.now(),weight:p.a.weight,kcal:p.tg.train.kcal,p:p.tg.train.p,goals:[...(p.tg.goals||[])]});
@@ -6564,18 +6620,24 @@ function renderProfile(){
         <div class="row" style="align-items:center;gap:12px;margin:4px 0 12px">
           <span style="width:48px;height:48px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${rank.color}22;border:2px solid ${rank.color};color:${rank.color}">${icon("star",24)}</span>
           <div style="flex:1"><p class="sm" style="font-weight:700">${rank.name}-Botschafter</p>
-            <p class="xs t2">Aktuell <b style="color:var(--t1)">${fmtEUR(rank.rate)}</b> pro geworbenem Freund</p></div>
+            <p class="xs t2">Aktuell <b style="color:var(--t1)">${fmtEUR(round2(rank.rate*eliteRefMult()))}</b> pro geworbenem Freund${eliteRefMult()>1?' <span class="badge volt" style="font-size:8px">Elite ×1,5</span>':""}</p></div>
           <div style="text-align:right"><p class="metric" style="font-size:15px;color:var(--good)">${fmtEUR(w.lifetimeEarned||0)}</p><p class="xs t2">gesamt verdient</p></div>
         </div>
         ${next?`<div class="row mb4"><span class="xs t2">Noch ${next.min-cnt} bis ${next.name} (${fmtEUR(next.rate)}/Werbung)</span><span class="metric xs">${cnt}/${next.min}</span></div>
           <div class="progress mb12" style="height:8px"><div style="width:${prog}%;background:${next.color}"></div></div>`
           :`<p class="xs volt-txt mb12">Höchster Rang erreicht — ${fmtEUR(rank.rate)} pro Werbung. Respekt.</p>`}
         ${cnt>0?`<p class="label" style="margin:0 0 6px">Dein Netzwerk · ${cnt}</p><div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">${orbs}${cnt>18?`<span class="xs t2" style="align-self:center">+${cnt-18}</span>`:""}</div>`:""}
-        <div class="row" style="gap:10px;margin-bottom:12px">
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px;text-align:center"><p class="hero-num" style="font-size:25px;color:var(--good)">${fmtEUR(w.available||0)}</p><p class="xs t2">verfügbar</p></div>
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px;text-align:center"><p class="hero-num" style="font-size:25px;color:var(--hl)">${fmtEUR(w.pending||0)}</p><p class="xs t2">ausstehend</p></div>
+        <div class="row" style="gap:8px;margin-bottom:12px">
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:13px 6px;text-align:center"><p class="hero-num" style="font-size:23px;color:var(--good)">${fmtEUR(w.available||0)}</p><p class="xs t2">verfügbar</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:13px 6px;text-align:center"><p class="hero-num" style="font-size:23px;color:var(--hl)">${fmtEUR(w.pending||0)}</p><p class="xs t2">ausstehend</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:13px 6px;text-align:center"><p class="hero-num" style="font-size:23px">${fmtEUR(w.paidOut||0)}</p><p class="xs t2">ausgezahlt</p></div>
         </div>
-        <button class="btn ${(w.available||0)>=1?"volt":""} mb12" ${(w.available||0)>=1?"":'disabled style="opacity:.5"'} onclick="A.redeemWallet()">${icon("zap",15)} Guthaben auf Abo anrechnen</button>
+        <button class="btn ${(w.available||0)>=MIN_PAYOUT?"volt":""} mb8" ${(w.available||0)>=MIN_PAYOUT?"":'disabled style="opacity:.5"'} onclick="A.cashOut()">${icon("send",15)} ${fmtEUR(w.available||0)} aufs Konto auszahlen</button>
+        <div class="row" style="gap:8px;margin-bottom:12px">
+          <button class="btn ghost" style="min-height:38px;font-size:12.5px;flex:1" onclick="A.redeemWallet()">Stattdessen aufs Abo anrechnen</button>
+          ${S.wallet.payoutMethod?`<button class="btn ghost" style="min-height:38px;font-size:12.5px;width:auto;padding:0 12px" onclick="A.payoutSetup()">Konto ändern</button>`:""}
+        </div>
+        <p class="xs t2" style="text-align:center;margin:-4px 0 12px">Mindestauszahlung ${fmtEUR(MIN_PAYOUT)} · Auszahlung in 1–3 Werktagen</p>
         <p class="label" style="margin:0 0 4px">Rang-Leiter</p>
         <div style="background:var(--s2);border-radius:14px;padding:4px 14px 10px;margin-bottom:12px">${ranks}</div>
         ${led?`<p class="label" style="margin:4px 0 2px">Letzte Buchungen</p><div style="background:var(--s2);border-radius:14px;padding:4px 14px 8px;margin-bottom:12px">${led}</div>`:""}
