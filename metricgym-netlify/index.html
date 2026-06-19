@@ -1146,6 +1146,7 @@ function adaptiveCalorieCheck(){
   }catch(e){}
 }
 function e1rm(w,reps,rpe){
+  if(!isFinite(w)||!isFinite(reps)) return 0; // defensiv: keine NaN/Infinity in Kennzahlen
   if(reps===1) return w;
   const eff=reps+(10-(rpe??8));
   return Math.round(w*(1+eff/30)*10)/10;
@@ -2259,9 +2260,10 @@ function recommend(name){
   const h=liftHistory(name);
   if(!h.length) return null; // ehrlich: keine Daten, keine Empfehlung
   const last=h[h.length-1];
+  if(!isFinite(last.w)||last.w<0||!isFinite(last.reps)) return null; // defensiv: keine Müll-Empfehlung aus kaputter Historie
   const inc=(last.rpe??8)<=8?2.5:0;
   const deload=S.currentWeek===4?0.9:1;
-  return {w:Math.round((last.w+inc)*deload/2.5)*2.5, reps:Math.max(5,last.reps)};
+  return {w:Math.round((last.w+inc)*deload/2.5)*2.5, reps:Math.max(5,Math.round(last.reps))};
 }
 /* Startgewicht-Schätzung OHNE Historie: anteilig am Körpergewicht je Übung,
    skaliert nach Erfahrung & Geschlecht. Bewusst konservativ (eher etwas leichter)
@@ -2413,12 +2415,16 @@ function parseWorkout(input){
 }
 function logParsedWorkout(pw){
   const now=Date.now();
+  // Eingaben sanieren — verhindert NaN/Infinity in trainingHistory und absurde Satzzahlen.
+  const sets=Math.max(1,Math.min(20,Math.round(pw.sets)||1));
+  const reps=Math.max(1,Math.min(100,Math.round(pw.reps)||1));
+  const weight=Math.max(0,isFinite(pw.weight)?pw.weight:0);
   if(!S.liftLog[pw.name])S.liftLog[pw.name]=[];
-  for(let i=0;i<pw.sets;i++) S.liftLog[pw.name].push({t:now+i,w:pw.weight,reps:pw.reps,rpe:8});
-  const vol=Math.round(pw.weight*pw.reps*pw.sets);
+  for(let i=0;i<sets;i++) S.liftLog[pw.name].push({t:now+i,w:weight,reps,rpe:8});
+  const vol=Math.round(weight*reps*sets);
   const existing=S.trainingHistory.find(t=>t.date===todayKey());
-  if(existing){existing.sets+=pw.sets;existing.volume+=vol;}
-  else S.trainingHistory.push({date:todayKey(),type:todayType(),sets:pw.sets,volume:vol,avgRpe:8});
+  if(existing){existing.sets+=sets;existing.volume+=vol;}
+  else S.trainingHistory.push({date:todayKey(),type:todayType(),sets,volume:vol,avgRpe:8});
   save();
 }
 
