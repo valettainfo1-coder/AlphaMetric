@@ -1404,7 +1404,7 @@ const TIER_LABEL={free:"START",pro:"PERFORMANCE",elite:"ELITE"};
 const TIER_RANK={free:0,pro:1,elite:2};
 // Freischalt-Liste: diese Konten erhalten dauerhaft den höchsten Tier (ELITE), unabhängig
 // von Zahlung/Trial. Abgleich über die Konto-E-Mail (klein geschrieben).
-const COMP_ELITE=["lovisstumpfe@icloud.com"];
+const COMP_ELITE=["lovisstumpfe@icloud.com","lovisstumpfe@web.de"];
 function currentEmail(){ try{ return ((S.users&&S.currentUser!=null&&S.users[S.currentUser]&&S.users[S.currentUser].email)||"").toLowerCase().trim(); }catch{ return ""; } }
 function ensureCompTier(){ if(COMP_ELITE.includes(currentEmail())){ S.tier="elite"; S.compElite=true; } }
 /* v5/Phase 5: konkrete Preispunkte (monatlich/jährlich, Jahres-Abo ≈ −33 %).
