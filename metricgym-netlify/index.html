@@ -4209,64 +4209,95 @@ function muscleBody(view,arg,sex){
   const fid="mg"+Math.random().toString(36).slice(2,6);
   const P=(id)=>{const c=col(id);return c===MG_BODY?`fill="${c}"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;};
   const defs=`<defs>
-    <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <radialGradient id="${fid}bg" cx="50%" cy="30%" r="80%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
-    <radialGradient id="${fid}a" cx="50%" cy="40%" r="58%"><stop offset="0%" stop-color="#3F86FF" stop-opacity="0.5"/><stop offset="55%" stop-color="#5B8CFF" stop-opacity="0.12"/><stop offset="100%" stop-color="#5B8CFF" stop-opacity="0"/></radialGradient>
-    <linearGradient id="${fid}sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#B3BBCB"/><stop offset="100%" stop-color="#959EB0"/></linearGradient></defs>`;
-  const bg=`<rect x="20" y="6" width="120" height="350" rx="16" fill="url(#${fid}bg)"/>
-    <ellipse cx="80" cy="180" rx="64" ry="160" fill="url(#${fid}a)" class="mg-aura"/>`;
-  // ===== Anatomische Proportionen (8-Kopf-Kanon), geschlechtsspezifisch =====
+    <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="${fid}bg" cx="50%" cy="28%" r="80%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
+    <radialGradient id="${fid}a" cx="50%" cy="38%" r="55%"><stop offset="0%" stop-color="#3F86FF" stop-opacity="0.45"/><stop offset="55%" stop-color="#5B8CFF" stop-opacity="0.1"/><stop offset="100%" stop-color="#5B8CFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${fid}sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#AFB7C7"/><stop offset="100%" stop-color="#929BAD"/></linearGradient></defs>`;
+  const bg=`<rect x="6" y="4" width="148" height="352" rx="16" fill="url(#${fid}bg)"/>
+    <ellipse cx="80" cy="178" rx="62" ry="156" fill="url(#${fid}a)" class="mg-aura"/>`;
+  // ===== Anatomische Proportionen — gerade, kontinuierliche Silhouette (Kopf sitzt
+  // direkt auf dem Hals, Hüfte bleibt INNERHALB der Schulterbreite ± moderat,
+  // keine separat "schwebende" Gesäß-Form). Maße in Halbbreiten ab cx. =====
   const cx=80;
   const k = sf
-    ? {delt:36, sh:25, pec:24, waist:13, hip:41, thigh:20, knee:11, calf:12, head:14}
-    : {delt:49, sh:34, pec:34, waist:21, hip:29, thigh:19, knee:12, calf:14, head:16};
-  // Y-Landmarken: Schultern ~1.4 Köpfe, Brust 2, Bauchnabel 3, Becken 4, Knie 6, Knöchel ~7.6
-  const yShoulder=74, yNip=104, yChestB=120, yWaist=150, yHip=178, yCrotch=192, yKnee=270, yMidShin=312, yAnkle=344;
+    ? {sh:28, chest:25, waist:17, hip:32, neck:8, head:13, upArm:9, loArm:7, hand:6,
+       thighOut:28, thighIn:7, knee:14, calf:12, ankle:8}
+    : {sh:43, chest:37, waist:25, hip:29, neck:12, head:14, upArm:14, loArm:11, hand:8,
+       thighOut:26, thighIn:7, knee:16, calf:14, ankle:10};
+  // Y-Landmarken (Kopf→Fuß, durchgehend) — Kopf direkt auf Hals auf Schulter.
+  const yHeadTop=16, yHeadC=33, yHeadBot=50, yNeckBot=58, ySh=60, yChest=92, yWaist=130,
+        yHip=158, yCrotch=172, yKnee=246, yAnkle=320, yFoot=328, yWrist=yHip+6, yElbow=yWaist+2;
   const L=(d)=>cx-d, R=(d)=>cx+d;
-  // Realistische Silhouette: Kopf, Hals, V-Taper-Rumpf, Arme (Ober-/Unterarm), Beine (Ober-/Unterschenkel).
+  // ===== Eine durchgehende Rumpf-Silhouette: Schulter→Brust→Taille→Hüfte→Schritt,
+  // beide Seiten EIN Pfad (keine Naht, kein "Rock"-Sprung). Arme/Beine setzen exakt
+  // an den Rumpfpunkten an, damit nichts "schwebt".
+  const torso=`M${L(k.sh)} ${ySh} Q${L(k.sh+1)} ${yChest-8} ${L(k.chest)} ${yChest}
+    Q${L(k.chest-3)} ${yWaist-10} ${L(k.waist)} ${yWaist}
+    Q${L(k.hip-2)} ${yWaist+12} ${L(k.hip)} ${yHip}
+    Q${L(k.hip-3)} ${yCrotch-4} ${L(k.thighIn)} ${yCrotch}
+    L${R(k.thighIn)} ${yCrotch}
+    Q${R(k.hip-3)} ${yCrotch-4} ${R(k.hip)} ${yHip}
+    Q${R(k.hip-2)} ${yWaist+12} ${R(k.waist)} ${yWaist}
+    Q${R(k.chest-3)} ${yWaist-10} ${R(k.chest)} ${yChest}
+    Q${R(k.sh+1)} ${yChest-8} ${R(k.sh)} ${ySh}
+    Q${cx} ${ySh-9} ${L(k.sh)} ${ySh} Z`;
+  const neck=`M${L(k.neck)} ${yHeadBot-2} L${L(k.neck)} ${yNeckBot} Q${cx} ${yNeckBot+6} ${R(k.neck)} ${yNeckBot} L${R(k.neck)} ${yHeadBot-2} Q${cx} ${yHeadBot+3} ${L(k.neck)} ${yHeadBot-2} Z`;
+  const arm=(s)=>`M${s(k.sh-2)} ${ySh+1} Q${s(k.sh+k.upArm-6)} ${ySh+10} ${s(k.sh+k.upArm-4)} ${yElbow-14}
+    Q${s(k.sh+k.upArm-2)} ${yElbow} ${s(k.sh+k.loArm-2)} ${yElbow+4}
+    Q${s(k.sh+k.loArm)} ${yWrist-20} ${s(k.sh+k.loArm-1)} ${yWrist}
+    Q${s(k.sh+k.hand)} ${yWrist+10} ${s(k.sh+k.loArm-4)} ${yWrist+18}
+    Q${s(k.sh-1)} ${yWrist+8} ${s(k.sh-5)} ${yWrist}
+    Q${s(k.sh-7)} ${yElbow+2} ${s(k.sh-6)} ${yElbow-12}
+    Q${s(k.sh-5)} ${ySh+10} ${s(k.sh-4)} ${ySh+3} Z`;
+  const leg=(s)=>`M${s(k.thighIn)} ${yCrotch-1} Q${s(k.hip-1)} ${yCrotch+6} ${s(k.thighOut)} ${yCrotch+16}
+    Q${s(k.thighOut-1)} ${yWaist+86} ${s(k.knee+3)} ${yKnee-6}
+    Q${s(k.knee+4)} ${yKnee+6} ${s(k.knee+1)} ${yKnee+16}
+    Q${s(k.calf+1)} ${yAnkle-26} ${s(k.ankle+1)} ${yAnkle}
+    Q${s(k.ankle+5)} ${yFoot-4} ${s(k.ankle-3)} ${yFoot}
+    L${s(2)} ${yFoot-2}
+    Q${s(1)} ${yAnkle} ${s(1.5)} ${yAnkle-30}
+    Q${s(2)} ${yKnee+10} ${s(2)} ${yKnee-2}
+    Q${s(2)} ${yWaist+80} ${s(3)} ${yCrotch+10} Q${s(4)} ${yCrotch+2} ${s(k.thighIn)} ${yCrotch-1} Z`;
   const sil=`<g fill="url(#${fid}sk)" stroke="${ln}" stroke-width="0.7" stroke-linejoin="round">
-    <ellipse cx="${cx}" cy="34" rx="${k.head}" ry="${k.head+4}"/>
-    <path d="M${L(8)} 52 Q${L(9)} 64 ${L(10)} 70 L${R(10)} 70 Q${R(9)} 64 ${R(8)} 52 Q${cx} 58 ${L(8)} 52 Z"/>
-    <path d="M${L(12)} 66 L${L(k.sh)} ${yShoulder+3} Q${cx} ${yShoulder-7} ${R(k.sh)} ${yShoulder+3} L${R(12)} 66 Q${cx} 61 ${L(12)} 66 Z"/>
-    <path d="M${L(k.sh)} ${yShoulder} Q${L(k.sh+2)} ${yNip} ${L(k.waist+3)} ${yWaist} Q${L(k.hip-2)} ${yHip-6} ${L(k.hip)} ${yHip} Q${L(k.hip-1)} ${yCrotch-2} ${L(k.thigh+2)} ${yCrotch+2} L${R(k.thigh+2)} ${yCrotch+2} Q${R(k.hip-1)} ${yCrotch-2} ${R(k.hip)} ${yHip} Q${R(k.hip-2)} ${yHip-6} ${R(k.waist+3)} ${yWaist} Q${R(k.sh+2)} ${yNip} ${R(k.sh)} ${yShoulder} Q${cx} ${yShoulder-4} ${L(k.sh)} ${yShoulder} Z"/>
-    <path d="M${L(k.sh-1)} ${yShoulder} Q${L(k.delt)} ${yShoulder+8} ${L(k.delt-1)} ${yNip+4} Q${L(k.delt-2)} ${yWaist} ${L(k.delt+1)} ${yHip+8} Q${L(k.delt)} ${yCrotch+14} ${L(k.delt+3)} ${yCrotch+24} L${L(k.delt-8)} ${yCrotch+24} Q${L(k.delt-8)} ${yWaist+6} ${L(k.delt-6)} ${yNip} Q${L(k.delt-4)} ${yShoulder+8} ${L(k.sh-4)} ${yShoulder+4} Z"/>
-    <path d="M${R(k.sh-1)} ${yShoulder} Q${R(k.delt)} ${yShoulder+8} ${R(k.delt-1)} ${yNip+4} Q${R(k.delt-2)} ${yWaist} ${R(k.delt+1)} ${yHip+8} Q${R(k.delt)} ${yCrotch+14} ${R(k.delt+3)} ${yCrotch+24} L${R(k.delt-8)} ${yCrotch+24} Q${R(k.delt-8)} ${yWaist+6} ${R(k.delt-6)} ${yNip} Q${R(k.delt-4)} ${yShoulder+8} ${R(k.sh-4)} ${yShoulder+4} Z"/>
-    <ellipse cx="${L(k.delt-3)}" cy="${yCrotch+30}" rx="5.5" ry="7.5"/><ellipse cx="${R(k.delt-3)}" cy="${yCrotch+30}" rx="5.5" ry="7.5"/>
-    <path d="M${L(k.thigh+1)} ${yCrotch+2} Q${L(k.hip-3)} ${yWaist+92} ${L(k.knee+1)} ${yKnee} L${L(k.knee+2)} ${yKnee+18} Q${L(k.calf)} ${yMidShin} ${L(5)} ${yAnkle} L${L(0.5)} ${yAnkle} Q${L(1)} ${yMidShin} ${L(1.5)} ${yKnee+18} L${L(2)} ${yKnee} Q${L(3)} ${yWaist+92} ${L(3)} ${yCrotch+4} Z"/>
-    <path d="M${R(k.thigh+1)} ${yCrotch+2} Q${R(k.hip-3)} ${yWaist+92} ${R(k.knee+1)} ${yKnee} L${R(k.knee+2)} ${yKnee+18} Q${R(k.calf)} ${yMidShin} ${R(5)} ${yAnkle} L${R(0.5)} ${yAnkle} Q${R(1)} ${yMidShin} ${R(1.5)} ${yKnee+18} L${R(2)} ${yKnee} Q${R(3)} ${yWaist+92} ${R(3)} ${yCrotch+4} Z"/></g>`;
-  // Trapez-Yoke + Pec/Delt-Positionen relativ zu den Landmarken
+    <ellipse cx="${cx}" cy="${yHeadC}" rx="${k.head}" ry="${k.head+4}"/>
+    <path d="${neck}"/>
+    <path d="${arm(L)}"/><path d="${arm(R)}"/>
+    <path d="${leg(L)}"/><path d="${leg(R)}"/>
+    <path d="${torso}"/>
+    <ellipse cx="${L(k.sh+k.loArm-3)}" cy="${yWrist+13}" rx="4.4" ry="6.5"/><ellipse cx="${R(k.sh+k.loArm-3)}" cy="${yWrist+13}" rx="4.4" ry="6.5"/>
+  </g>`;
   const front=`
-    <path d="M${L(11)} 65 L${L(k.sh-2)} ${yShoulder+4} Q${cx} ${yShoulder-6} ${R(k.sh-2)} ${yShoulder+4} L${R(11)} 65 Q${cx} 61 ${L(11)} 65 Z" ${P('traps')}/>
-    <path d="M${L(k.sh-2)} ${yShoulder+1} Q${L(k.delt)} ${yShoulder+9} ${L(k.delt-1)} ${yNip-2} Q${L(k.delt)} ${yNip+8} ${L(k.sh-4)} ${yNip+5} Q${L(k.sh-6)} ${yNip-8} ${L(k.sh-3)} ${yShoulder+4} Z" ${P('delts')}/>
-    <path d="M${R(k.sh-2)} ${yShoulder+1} Q${R(k.delt)} ${yShoulder+9} ${R(k.delt-1)} ${yNip-2} Q${R(k.delt)} ${yNip+8} ${R(k.sh-4)} ${yNip+5} Q${R(k.sh-6)} ${yNip-8} ${R(k.sh-3)} ${yShoulder+4} Z" ${P('delts')}/>
-    <path d="M${cx-1} ${yShoulder+6} Q${L(k.pec-4)} ${yShoulder+4} ${L(k.pec)} ${yShoulder+16} Q${L(k.pec+2)} ${yNip} ${L(k.pec-8)} ${yNip+8} Q${L(8)} ${yNip+10} ${cx-1} ${yNip+2} Z" ${P('chest')}/>
-    <path d="M${cx+1} ${yShoulder+6} Q${R(k.pec-4)} ${yShoulder+4} ${R(k.pec)} ${yShoulder+16} Q${R(k.pec+2)} ${yNip} ${R(k.pec-8)} ${yNip+8} Q${R(8)} ${yNip+10} ${cx+1} ${yNip+2} Z" ${P('chest')}/>
-    <path d="M${L(k.delt-3)} ${yNip} Q${L(k.delt)} ${yWaist-8} ${L(k.delt-2)} ${yWaist+6} Q${L(k.delt-9)} ${yWaist+4} ${L(k.delt-8)} ${yNip+2} Q${L(k.delt-7)} ${yNip-6} ${L(k.delt-3)} ${yNip} Z" ${P('biceps')}/>
-    <path d="M${R(k.delt-3)} ${yNip} Q${R(k.delt)} ${yWaist-8} ${R(k.delt-2)} ${yWaist+6} Q${R(k.delt-9)} ${yWaist+4} ${R(k.delt-8)} ${yNip+2} Q${R(k.delt-7)} ${yNip-6} ${R(k.delt-3)} ${yNip} Z" ${P('biceps')}/>
-    <path d="M${cx-9} ${yNip+10} h7 v9 q-3.5 1 -7 0 z M${cx+2} ${yNip+10} h7 v9 q-3.5 1 -7 0 z M${cx-9} ${yNip+21} h7 v9 q-3.5 1 -7 0 z M${cx+2} ${yNip+21} h7 v9 q-3.5 1 -7 0 z M${cx-9} ${yNip+32} h7 v9 q-3.5 1 -7 0 z M${cx+2} ${yNip+32} h7 v9 q-3.5 1 -7 0 z M${cx-9} ${yNip+43} h7 v10 q-3.5 2 -7 1 z M${cx+2} ${yNip+43} h7 v10 q-3.5 1 -7 -1 z" ${P('abs')}/>
-    <path d="M${cx-12} ${yNip+8} Q${cx-16} ${yWaist-6} ${cx-11} ${yWaist+14} L${cx-7} ${yWaist+12} Q${cx-12} ${yWaist-6} ${cx-8} ${yNip+10} Z" ${P('obliques')}/>
-    <path d="M${cx+12} ${yNip+8} Q${cx+16} ${yWaist-6} ${cx+11} ${yWaist+14} L${cx+7} ${yWaist+12} Q${cx+12} ${yWaist-6} ${cx+8} ${yNip+10} Z" ${P('obliques')}/>
-    <path d="M${L(k.thigh-1)} ${yCrotch+6} Q${L(k.hip-5)} ${yWaist+86} ${L(k.knee+2)} ${yKnee-6} Q${L(3)} ${yKnee-2} ${L(2)} ${yKnee-8} Q${L(2)} ${yWaist+86} ${L(k.thigh-5)} ${yCrotch+8} Z" ${P('quads')}/>
-    <path d="M${R(k.thigh-1)} ${yCrotch+6} Q${R(k.hip-5)} ${yWaist+86} ${R(k.knee+2)} ${yKnee-6} Q${R(3)} ${yKnee-2} ${R(2)} ${yKnee-8} Q${R(2)} ${yWaist+86} ${R(k.thigh-5)} ${yCrotch+8} Z" ${P('quads')}/>
-    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.4"><path d="M${cx} ${yShoulder+8} V${yNip+2}"/><path d="M${cx-9} ${yNip+19} h18 M${cx-9} ${yNip+30} h18 M${cx-9} ${yNip+41} h18 M${cx} ${yNip+10} V${yWaist+14}"/><path d="M${L(k.thigh-7)} ${yCrotch+20} Q${L(k.thigh-9)} ${yWaist+60} ${L(k.knee+3)} ${yKnee-8} M${R(k.thigh-7)} ${yCrotch+20} Q${R(k.thigh-9)} ${yWaist+60} ${R(k.knee+3)} ${yKnee-8}"/></g>`;
+    <path d="M${L(k.neck-1)} ${yNeckBot-2} L${L(k.sh-3)} ${ySh+4} Q${cx} ${ySh-6} ${R(k.sh-3)} ${ySh+4} L${R(k.neck-1)} ${yNeckBot-2} Q${cx} ${yNeckBot+4} ${L(k.neck-1)} ${yNeckBot-2} Z" ${P('traps')}/>
+    <path d="${arm(L)}" ${P('biceps')}/>
+    <path d="${arm(R)}" ${P('biceps')}/>
+    <path d="M${L(k.sh-3)} ${ySh+1} Q${L(k.sh+5)} ${ySh+9} ${L(k.sh+2)} ${yChest-6} Q${L(k.sh-3)} ${yChest+2} ${L(k.sh-9)} ${yChest-4} Q${L(k.sh-10)} ${ySh+10} ${L(k.sh-5)} ${ySh+3} Z" ${P('delts')}/>
+    <path d="M${R(k.sh-3)} ${ySh+1} Q${R(k.sh+5)} ${ySh+9} ${R(k.sh+2)} ${yChest-6} Q${R(k.sh-3)} ${yChest+2} ${R(k.sh-9)} ${yChest-4} Q${R(k.sh-10)} ${ySh+10} ${R(k.sh-5)} ${ySh+3} Z" ${P('delts')}/>
+    <path d="M${cx-1} ${ySh+7} Q${L(k.chest-5)} ${ySh+5} ${L(k.chest)} ${ySh+18} Q${L(k.chest+1)} ${yChest+2} ${L(k.chest-9)} ${yChest+9} Q${cx-9} ${yChest+11} ${cx-1} ${yChest+2} Z" ${P('chest')}/>
+    <path d="M${cx+1} ${ySh+7} Q${R(k.chest-5)} ${ySh+5} ${R(k.chest)} ${ySh+18} Q${R(k.chest+1)} ${yChest+2} ${R(k.chest-9)} ${yChest+9} Q${cx+9} ${yChest+11} ${cx+1} ${yChest+2} Z" ${P('chest')}/>
+    <path d="M${cx-10} ${yChest+11} h8 v9 q-4 1 -8 0 z M${cx+2} ${yChest+11} h8 v9 q-4 1 -8 0 z M${cx-10} ${yChest+23} h8 v9 q-4 1 -8 0 z M${cx+2} ${yChest+23} h8 v9 q-4 1 -8 0 z M${cx-10} ${yChest+35} h8 v9 q-4 1 -8 0 z M${cx+2} ${yChest+35} h8 v9 q-4 1 -8 0 z M${cx-10} ${yChest+47} h8 v10 q-4 2 -8 1 z M${cx+2} ${yChest+47} h8 v10 q-4 1 -8 -1 z" ${P('abs')}/>
+    <path d="M${cx-13} ${yChest+9} Q${cx-18} ${yWaist-8} ${cx-12} ${yWaist+12} L${cx-7} ${yWaist+10} Q${cx-13} ${yWaist-8} ${cx-9} ${yChest+11} Z" ${P('obliques')}/>
+    <path d="M${cx+13} ${yChest+9} Q${cx+18} ${yWaist-8} ${cx+12} ${yWaist+12} L${cx+7} ${yWaist+10} Q${cx+13} ${yWaist-8} ${cx+9} ${yChest+11} Z" ${P('obliques')}/>
+    <path d="M${L(k.thighOut-2)} ${yCrotch+16} Q${L(k.thighOut-3)} ${yWaist+82} ${L(k.knee+4)} ${yKnee-10} Q${L(4)} ${yKnee-4} ${L(3)} ${yKnee-12} Q${L(3)} ${yWaist+82} ${L(k.thighIn+2)} ${yCrotch+12} Z" ${P('quads')}/>
+    <path d="M${R(k.thighOut-2)} ${yCrotch+16} Q${R(k.thighOut-3)} ${yWaist+82} ${R(k.knee+4)} ${yKnee-10} Q${R(4)} ${yKnee-4} ${R(3)} ${yKnee-12} Q${R(3)} ${yWaist+82} ${R(k.thighIn+2)} ${yCrotch+12} Z" ${P('quads')}/>
+    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.4"><path d="M${cx} ${ySh+9} V${yChest+2}"/><path d="M${cx-10} ${yChest+22} h20 M${cx-10} ${yChest+34} h20 M${cx-10} ${yChest+46} h20 M${cx} ${yChest+11} V${yWaist+15}"/><path d="M${L(k.thighOut-8)} ${yCrotch+24} Q${L(k.thighOut-10)} ${yWaist+55} ${L(k.knee+5)} ${yKnee-12} M${R(k.thighOut-8)} ${yCrotch+24} Q${R(k.thighOut-10)} ${yWaist+55} ${R(k.knee+5)} ${yKnee-12}"/></g>`;
   const back=`
-    <path d="M${cx} 64 Q${L(13)} 68 ${L(k.sh-3)} ${yShoulder+6} Q${L(10)} ${yNip-6} ${cx} ${yNip+2} Q${R(10)} ${yNip-6} ${R(k.sh-3)} ${yShoulder+6} Q${R(13)} 68 ${cx} 64 Z" ${P('traps')}/>
-    <path d="M${L(k.sh-2)} ${yShoulder+1} Q${L(k.delt)} ${yShoulder+9} ${L(k.delt-1)} ${yNip-2} Q${L(k.delt)} ${yNip+8} ${L(k.sh-4)} ${yNip+5} Q${L(k.sh-6)} ${yNip-8} ${L(k.sh-3)} ${yShoulder+4} Z" ${P('reardelts')}/>
-    <path d="M${R(k.sh-2)} ${yShoulder+1} Q${R(k.delt)} ${yShoulder+9} ${R(k.delt-1)} ${yNip-2} Q${R(k.delt)} ${yNip+8} ${R(k.sh-4)} ${yNip+5} Q${R(k.sh-6)} ${yNip-8} ${R(k.sh-3)} ${yShoulder+4} Z" ${P('reardelts')}/>
-    <path d="M${L(k.delt-3)} ${yNip} Q${L(k.delt)} ${yWaist-8} ${L(k.delt-2)} ${yWaist+6} Q${L(k.delt-9)} ${yWaist+4} ${L(k.delt-8)} ${yNip+2} Q${L(k.delt-7)} ${yNip-6} ${L(k.delt-3)} ${yNip} Z" ${P('triceps')}/>
-    <path d="M${R(k.delt-3)} ${yNip} Q${R(k.delt)} ${yWaist-8} ${R(k.delt-2)} ${yWaist+6} Q${R(k.delt-9)} ${yWaist+4} ${R(k.delt-8)} ${yNip+2} Q${R(k.delt-7)} ${yNip-6} ${R(k.delt-3)} ${yNip} Z" ${P('triceps')}/>
-    <path d="M${L(k.sh-3)} ${yNip-6} Q${L(k.sh+1)} ${yNip+18} ${L(k.waist+1)} ${yWaist} Q${L(8)} ${yWaist-6} ${cx-2} ${yNip+12} L${cx-2} ${yNip-4} Q${L(k.sh-8)} ${yNip-8} ${L(k.sh-3)} ${yNip-6} Z" ${P('lats')}/>
-    <path d="M${R(k.sh-3)} ${yNip-6} Q${R(k.sh+1)} ${yNip+18} ${R(k.waist+1)} ${yWaist} Q${R(8)} ${yWaist-6} ${cx+2} ${yNip+12} L${cx+2} ${yNip-4} Q${R(k.sh-8)} ${yNip-8} ${R(k.sh-3)} ${yNip-6} Z" ${P('lats')}/>
-    <path d="M${cx-1} ${yNip+14} q-3 1 -5 2 l1 24 q2 1 4 0 z M${cx+1} ${yNip+14} q3 1 5 2 l-1 24 q-2 1 -4 0 z" ${P('lowerback')}/>
-    <path d="M${L(k.hip-3)} ${yHip-4} Q${L(k.hip)} ${yCrotch+10} ${L(k.hip-8)} ${yCrotch+22} Q${cx-6} ${yCrotch+24} ${cx-2} ${yCrotch+10} L${cx-2} ${yHip-2} Q${L(k.hip-7)} ${yHip-8} ${L(k.hip-3)} ${yHip-4} Z" ${P('glutes')}/>
-    <path d="M${R(k.hip-3)} ${yHip-4} Q${R(k.hip)} ${yCrotch+10} ${R(k.hip-8)} ${yCrotch+22} Q${cx+6} ${yCrotch+24} ${cx+2} ${yCrotch+10} L${cx+2} ${yHip-2} Q${R(k.hip-7)} ${yHip-8} ${R(k.hip-3)} ${yHip-4} Z" ${P('glutes')}/>
-    <path d="M${L(k.thigh-1)} ${yCrotch+22} Q${L(k.hip-6)} ${yWaist+88} ${L(k.knee+2)} ${yKnee-4} Q${L(4)} ${yKnee} ${L(3)} ${yKnee-6} Q${L(3)} ${yWaist+88} ${L(k.thigh-6)} ${yCrotch+24} Z" ${P('hams')}/>
-    <path d="M${R(k.thigh-1)} ${yCrotch+22} Q${R(k.hip-6)} ${yWaist+88} ${R(k.knee+2)} ${yKnee-4} Q${R(4)} ${yKnee} ${R(3)} ${yKnee-6} Q${R(3)} ${yWaist+88} ${R(k.thigh-6)} ${yCrotch+24} Z" ${P('hams')}/>
-    <path d="M${L(k.knee)} ${yKnee+8} Q${L(k.calf+1)} ${yKnee+34} ${L(k.knee-2)} ${yMidShin+8} Q${L(4)} ${yMidShin+10} ${L(3)} ${yMidShin+2} Q${L(4)} ${yKnee+30} ${L(k.knee-3)} ${yKnee+10} Z" ${P('calves')}/>
-    <path d="M${R(k.knee)} ${yKnee+8} Q${R(k.calf+1)} ${yKnee+34} ${R(k.knee-2)} ${yMidShin+8} Q${R(4)} ${yMidShin+10} ${R(3)} ${yMidShin+2} Q${R(4)} ${yKnee+30} ${R(k.knee-3)} ${yKnee+10} Z" ${P('calves')}/>
-    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.4"><path d="M${cx} 66 V${yWaist}"/><path d="M${L(k.knee-4)} ${yKnee+14} Q${L(k.knee-5)} ${yMidShin} ${L(4)} ${yMidShin+6} M${R(k.knee-4)} ${yKnee+14} Q${R(k.knee-5)} ${yMidShin} ${R(4)} ${yMidShin+6}"/></g>`;
+    <path d="M${cx} ${yNeckBot-4} Q${L(k.neck+3)} ${ySh+2} ${L(k.sh-4)} ${yChest-10} Q${L(8)} ${yChest+2} ${cx} ${yChest+8} Q${R(8)} ${yChest+2} ${R(k.sh-4)} ${yChest-10} Q${R(k.neck+3)} ${ySh+2} ${cx} ${yNeckBot-4} Z" ${P('traps')}/>
+    <path d="${arm(L)}" ${P('triceps')}/>
+    <path d="${arm(R)}" ${P('triceps')}/>
+    <path d="M${L(k.sh-3)} ${ySh+1} Q${L(k.sh+5)} ${ySh+9} ${L(k.sh+2)} ${yChest-6} Q${L(k.sh-3)} ${yChest+2} ${L(k.sh-9)} ${yChest-4} Q${L(k.sh-10)} ${ySh+10} ${L(k.sh-5)} ${ySh+3} Z" ${P('reardelts')}/>
+    <path d="M${R(k.sh-3)} ${ySh+1} Q${R(k.sh+5)} ${ySh+9} ${R(k.sh+2)} ${yChest-6} Q${R(k.sh-3)} ${yChest+2} ${R(k.sh-9)} ${yChest-4} Q${R(k.sh-10)} ${ySh+10} ${R(k.sh-5)} ${ySh+3} Z" ${P('reardelts')}/>
+    <path d="M${L(k.sh-5)} ${yChest-10} Q${L(k.sh+1)} ${yChest+14} ${L(k.waist+3)} ${yWaist} Q${L(9)} ${yWaist-8} ${cx-3} ${yChest+10} L${cx-3} ${yChest-6} Q${L(k.sh-9)} ${yChest-9} ${L(k.sh-5)} ${yChest-10} Z" ${P('lats')}/>
+    <path d="M${R(k.sh-5)} ${yChest-10} Q${R(k.sh+1)} ${yChest+14} ${R(k.waist+3)} ${yWaist} Q${R(9)} ${yWaist-8} ${cx+3} ${yChest+10} L${cx+3} ${yChest-6} Q${R(k.sh-9)} ${yChest-9} ${R(k.sh-5)} ${yChest-10} Z" ${P('lats')}/>
+    <path d="M${cx-2} ${yChest+12} q-3 1 -4 3 l1 22 q1.5 1 3.5 0 z M${cx+2} ${yChest+12} q3 1 4 3 l-1 22 q-1.5 1 -3.5 0 z" ${P('lowerback')}/>
+    <path d="M${L(k.hip-6)} ${yWaist+18} Q${L(k.hip)} ${yWaist+30} ${L(k.hip-2)} ${yCrotch-2} Q${L(k.thighOut-4)} ${yCrotch+8} ${cx-5} ${yCrotch+6} Q${cx-6} ${yWaist+26} ${L(k.hip-6)} ${yWaist+18} Z" ${P('glutes')}/>
+    <path d="M${R(k.hip-6)} ${yWaist+18} Q${R(k.hip)} ${yWaist+30} ${R(k.hip-2)} ${yCrotch-2} Q${R(k.thighOut-4)} ${yCrotch+8} ${cx+5} ${yCrotch+6} Q${cx+6} ${yWaist+26} ${R(k.hip-6)} ${yWaist+18} Z" ${P('glutes')}/>
+    <path d="M${L(k.thighOut-2)} ${yCrotch+16} Q${L(k.thighOut-3)} ${yWaist+82} ${L(k.knee+4)} ${yKnee-6} Q${L(4)} ${yKnee} ${L(3)} ${yKnee-8} Q${L(3)} ${yWaist+82} ${L(k.thighIn+2)} ${yCrotch+12} Z" ${P('hams')}/>
+    <path d="M${R(k.thighOut-2)} ${yCrotch+16} Q${R(k.thighOut-3)} ${yWaist+82} ${R(k.knee+4)} ${yKnee-6} Q${R(4)} ${yKnee} ${R(3)} ${yKnee-8} Q${R(3)} ${yWaist+82} ${R(k.thighIn+2)} ${yCrotch+12} Z" ${P('hams')}/>
+    <path d="M${L(k.knee+1)} ${yKnee+10} Q${L(k.calf+1)} ${yKnee+36} ${L(k.knee-3)} ${yAnkle-14} Q${L(4)} ${yAnkle-12} ${L(3)} ${yAnkle-18} Q${L(4)} ${yKnee+30} ${L(k.knee-2)} ${yKnee+12} Z" ${P('calves')}/>
+    <path d="M${R(k.knee+1)} ${yKnee+10} Q${R(k.calf+1)} ${yKnee+36} ${R(k.knee-3)} ${yAnkle-14} Q${R(4)} ${yAnkle-12} ${R(3)} ${yAnkle-18} Q${R(4)} ${yKnee+30} ${R(k.knee-2)} ${yKnee+12} Z" ${P('calves')}/>
+    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.4"><path d="M${cx} ${yChest+6} V${yWaist}"/><path d="M${L(k.knee-2)} ${yKnee+16} Q${L(k.knee-4)} ${yAnkle-20} ${L(4)} ${yAnkle-16} M${R(k.knee-2)} ${yKnee+16} Q${R(k.knee-4)} ${yAnkle-20} ${R(4)} ${yAnkle-16}"/></g>`;
   return `<div style="text-align:center">
-    <svg class="mg-svg" viewBox="20 6 120 350" width="112" height="326" aria-hidden="true">${defs}${bg}${sil}${view==="front"?front:back}</svg>
+    <svg class="mg-svg" viewBox="6 4 148 352" width="118" height="280" aria-hidden="true">${defs}${bg}${sil}${view==="front"?front:back}</svg>
     <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
 }
 function bodyDiagram(act){
