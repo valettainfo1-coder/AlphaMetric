@@ -4781,7 +4781,7 @@ async function aiComplete(system,user,opts){
 }
 // Erwartet JSON-Objekt zurück; parst robust (Code-Fences/umgebenden Text entfernen)
 async function aiJSON(system,user){
-  const raw=await aiComplete(system,user,{json:true,temp:0.3,max:700});
+  const raw=await aiComplete(system,user,{json:true,temp:0.3,max:1024});
   let t=raw.trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
   try{return JSON.parse(t);}catch{}
   const m=t.match(/\{[\s\S]*\}/); if(m){try{return JSON.parse(m[0]);}catch{}}
@@ -5977,8 +5977,9 @@ function renderNutrition(){
   A.approveItems=()=>{
     let n=0;
     for(const it of (pendingItems||[])){
+      if(!it||typeof it!=="object"||it.loading) continue;       // defensiv: kaputte Posten überspringen
       if(it.food){ addFood(it.food,it.gram); n++; }
-      else if(it.ai){ nlogToday().meals.push({n:it.name+" (KI)",g:it.gram||0,k:it.kcal,p:it.p,c:it.c,f:it.f}); n++; }
+      else if(it.ai&&it.kcal>0){ nlogToday().meals.push({n:(it.name||"Eintrag")+" (KI)",g:it.gram||0,k:Math.round(it.kcal),p:Math.round(it.p||0),c:Math.round(it.c||0),f:Math.round(it.f||0)}); n++; }
     }
     save();
     const el=document.getElementById("quicklog-in"); if(el)el.value="";
