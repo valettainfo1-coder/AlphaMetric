@@ -5842,33 +5842,39 @@ function renderNutrition(){
   A.manualCancel=()=>{pendingManual=null;renderNutrition();};
   A.parseFood=()=>{
     const el=document.getElementById("quicklog-in");
-    if(!el||!el.value.trim())return;
-    // DATENBANK ZUERST (bulletproof): geprüfte Nährwerte aus FOODS, korrekte Mengen.
-    // Die KI darf bekannte Lebensmittel NICHT überschreiben (sie halluziniert sonst Werte/Namen).
-    const items=parseNutrition(el.value);
+    const txt=(el&&el.value.trim())||""; if(!txt)return;
+    // KI ZUERST: erkennt JEDES Gericht kontextuell (auch "Kaiserschmarrn mit Rosinen
+    // & Apfelmus"), korrigiert Tippfehler, schätzt Makros. Ohne KI → geprüfte Datenbank.
+    if(aiActive()){ A.aiParse(txt); return; }
+    const items=parseNutrition(txt);
     if(items.some(i=>i.food)){ pendingItems=items; renderNutrition(); return; }
-    // Nichts in der Datenbank gefunden → KI nur als Schätzer für wirklich Unbekanntes.
-    if(aiActive()){ A.aiEstimate(); return; }
     toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");
   };
-  A.aiEstimate=()=>{
-    const el=document.getElementById("quicklog-in"); const txt=(el&&el.value.trim())||"";
+  // KI-Parsing: ganze Eingabe → einzelne Posten mit geschätzten Nährwerten. Ergebnis wird
+  // als Vorschau gezeigt (Übernehmen/Verwerfen) — nichts wird blind geloggt.
+  A.aiParse=(txt)=>{
+    txt=txt||((document.getElementById("quicklog-in")||{}).value||"").trim();
     if(!txt){toast("Schreib zuerst, was du gegessen hast");return;}
-    if(!aiActive()){toast("KI-Coach im Profil aktivieren");return;}
-    toast("Coach Metric liest deinen Eintrag …");
-    const sys='Du interpretierst freie Lebensmittel-Eingaben (auch mit Tippfehlern, Umgangssprache, mehreren Posten) und schätzt realistische Nährwerte. Korrigiere Schreibfehler still. Antworte NUR mit JSON: {"items":[{"name":"sauberer Name","grams":<int>,"kcal":<int>,"p":<protein g int>,"c":<carbs g int>,"f":<fett g int>}]}.';
+    const dbFallback=(silentMsg)=>{ const db=parseNutrition(txt);
+      if(db.some(i=>i.food)){ pendingItems=db; renderNutrition(); if(silentMsg)toast(silentMsg); }
+      else { pendingItems=null; renderNutrition(); toast("Konnte nicht deuten — bitte etwas konkreter"); } };
+    if(!aiActive()){ dbFallback(); return; }
+    pendingItems=[{loading:true}]; renderNutrition();
+    const sys='Du bist ein Ernährungs-Experte. Zerlege die freie deutsche Eingabe in einzelne '
+      +'Lebensmittel/Gerichte/Getränke und schätze realistische Nährwerte (Hausmannskost, '
+      +'Restaurant, Marken, Cocktails). Erkenne Umgangssprache, Tippfehler und zusammengesetzte '
+      +'Gerichte wie "Kaiserschmarrn mit Rosinen und Apfelmus" als sinnvolle Posten. Fehlt eine '
+      +'Menge, nimm eine typische Portion. Antworte NUR mit JSON: '
+      +'{"items":[{"name":"sauberer dt. Name","grams":<int g/ml>,"kcal":<int>,"p":<int>,"c":<int>,"f":<int>,"conf":<0..1>}]}. '
+      +'Wenn es gar kein Essen/Getränk ist: {"items":[]}.';
     aiJSON(sys,'Eingabe: "'+txt+'"').then(j=>{
-      const valid=(((j&&j.items))||[]).filter(it=>it&&it.kcal);
-      if(!valid.length){toast("Konnte nicht deuten — bitte konkreter (z. B. '200 g Hähnchen')");return;}
-      valid.forEach(it=>nlogToday().meals.push({n:(it.name||txt)+" (KI)",g:it.grams||0,k:Math.round(it.kcal),p:Math.round(it.p||0),c:Math.round(it.c||0),f:Math.round(it.f||0)}));
-      if(el)el.value="";
-      save(); renderNutrition();
-      // Kein Modal mehr (kein Extra-Tippen): stiller Toast, die Einträge erscheinen direkt
-      // in der Liste „Heute gegessen" — dort sieht man, WAS die KI interpretiert hat.
-      const sumK=valid.reduce((s,it)=>s+Math.round(it.kcal),0), sumP=valid.reduce((s,it)=>s+Math.round(it.p||0),0);
-      const nm=valid.length===1?valid[0].name:`${valid.length} Einträge`;
-      toast(`✓ ${nm} · ${sumK} kcal · ${sumP} g Protein`);
-    }).catch(()=>toast("KI gerade nicht erreichbar — versuch es gleich nochmal"));
+      const items=(((j&&j.items))||[]).filter(it=>it&&it.kcal>0).map(it=>({ai:true,
+        name:String(it.name||txt).slice(0,60), gram:Math.max(0,Math.round(it.grams||0)),
+        kcal:Math.round(it.kcal), p:Math.round(it.p||0), c:Math.round(it.c||0), f:Math.round(it.f||0),
+        conf:Math.max(0.5,Math.min(0.97,it.conf||0.82))}));
+      if(!items.length){ dbFallback(); return; }
+      pendingItems=items; renderNutrition();
+    }).catch(()=>dbFallback("KI gerade offline — Datenbank-Erkennung genutzt"));
   };
   A.mealSuggest=()=>{
     if(!aiActive()){toast("KI-Coach im Profil aktivieren (Profil)");return;}
@@ -5882,8 +5888,13 @@ function renderNutrition(){
   };
   A.approveItems=()=>{
     let n=0;
-    for(const it of (pendingItems||[])){ if(it.food){addFood(it.food,it.gram);n++;} }
-    pendingItems=null; toast(`✓ ${n} Lebensmittel eingetragen`); renderNutrition();
+    for(const it of (pendingItems||[])){
+      if(it.food){ addFood(it.food,it.gram); n++; }
+      else if(it.ai){ nlogToday().meals.push({n:it.name+" (KI)",g:it.gram||0,k:it.kcal,p:it.p,c:it.c,f:it.f}); n++; }
+    }
+    save();
+    const el=document.getElementById("quicklog-in"); if(el)el.value="";
+    pendingItems=null; toast(`✓ ${n} ${n===1?"Eintrag":"Einträge"} eingetragen`); renderNutrition();
   };
   A.cancelItems=()=>{pendingItems=null;renderNutrition();};
   A.quick=(i)=>{const e=addFood(FOODS[i],null);toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);renderNutrition();};
@@ -5940,14 +5951,22 @@ function renderNutrition(){
         <button class="btn" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich essen?</button>
       </div>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
-      ${pendingItems?`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
+      ${pendingItems?(pendingItems[0]&&pendingItems[0].loading
+        ?`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
+          <div class="row" style="align-items:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div>
+          <span class="sm t2">Coach Metric liest deinen Eintrag …</span></div></div>`
+        :`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
         ${pendingItems.some(it=>it.photo)?`<p class="xs warn-txt mb8">Foto-Erkennung: Demo — in der Vollversion über Vision-API. Bitte prüfen.</p>`:""}
+        ${pendingItems.some(it=>it.ai)?`<p class="xs t2 mb8">${icon("sparkle",11)} Von der KI erkannt & geschätzt — vor dem Übernehmen kurz prüfen.</p>`:""}
         ${pendingItems.map(it=>it.food?`
           <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${it.raw.trim()}" erkannt als</span> `:""}${it.food[0]} · <span class="metric">${it.gram} g</span></span>
           <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${Math.round(it.conf*100)} %</span></span></div>`
+          :it.ai?`
+          <div class="row mb4"><span class="sm">${it.name} · <span class="metric">${it.gram?it.gram+" g":"Portion"}</span></span>
+          <span class="metric xs t2">${nfi.format(it.kcal)} kcal · ${it.p} g P</span></div>`
           :`<p class="xs danger-txt mb4">„${it.raw}" nicht erkannt — tipp es unten bei „Suche & manuell" ein</p>`).join("")}
         <div class="grid2 mt8"><button class="btn" onclick="A.cancelItems()">Verwerfen</button>
-        <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div></div>`:""}
+        <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div></div>`):""}
     </div>
 
     <details class="acc"><summary>Suche &amp; manuell eingeben<span class="chev">${icon("chevron",15)}</span></summary>
