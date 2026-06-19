@@ -5946,9 +5946,9 @@ function renderNutrition(){
       <p class="xs t2 mb12" style="line-height:1.5">Schreib oder sprich einfach, was du gegessen hast — auch mehrere Sachen, mit Tippfehlern. Die KI erkennt alles, rechnet Kalorien & Makros und trägt es ein.</p>
       ${quickLogField("z. B. „2 Eier, Haferflocken mit Banane und ein Proteinshake“","A.parseFood")}
       ${favIdx.length?`<p class="label" style="margin:16px 0 8px">Schnellzugriff</p><div class="chips mb4">${favIdx.map(i=>`<button class="chip" onclick="A.quick(${i})">+ ${FOODS[i][0].replace(/ \(.*\)$/,"")}</button>`).join("")}</div>`:""}
-      <div class="grid2 mt12" style="gap:8px">
-        <button class="btn" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto</button>
-        <button class="btn" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich essen?</button>
+      <div class="mt12" style="display:grid;grid-template-columns:auto 1fr;gap:8px">
+        <button class="btn" style="padding:0 22px;white-space:nowrap" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto</button>
+        <button class="btn" style="white-space:nowrap;font-size:14px" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich essen?</button>
       </div>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?(pendingItems[0]&&pendingItems[0].loading
