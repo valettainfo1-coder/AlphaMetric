@@ -1672,6 +1672,14 @@ const TYPE_META={
   lower:{label:"Unterkörper",icon:"lower",art:"linear-gradient(135deg,#E8E3EC,#DCD4E4)"},
   cardio:{label:"Cardio",icon:"cardio",art:"linear-gradient(135deg,#E3ECE6,#D2E0D7)"},
   rest:{label:"Erholung",icon:"rest",art:"linear-gradient(135deg,#EFEDE8,#E5E2DA)"},
+  // Zusätzliche Session-Typen für wählbare Splits (Ganzkörper, Arnold, Bro-Split).
+  full:{label:"Ganzkörper",icon:"upper",art:"linear-gradient(135deg,#EFE9DC,#E5DBC7)"},
+  chestback:{label:"Brust & Rücken",icon:"upper",art:"linear-gradient(135deg,#F4E8DC,#D3DAE4)"},
+  shoulderarms:{label:"Schultern & Arme",icon:"push",art:"linear-gradient(135deg,#EFE9DC,#E5DBC7)"},
+  chest:{label:"Brust",icon:"push",art:"linear-gradient(135deg,#F4E8DC,#EBD9C8)"},
+  back:{label:"Rücken",icon:"pull",art:"linear-gradient(135deg,#E2E6EC,#D3DAE4)"},
+  shoulders:{label:"Schultern",icon:"push",art:"linear-gradient(135deg,#EFE9DC,#E5DBC7)"},
+  arms:{label:"Arme",icon:"pull",art:"linear-gradient(135deg,#E2E6EC,#D3DAE4)"},
 };
 /* ---------- Equipment-Profile (v5/Phase 1) ---------- */
 const EQ_ALLOWED={
@@ -1722,8 +1730,56 @@ const SESSION_SLOTS={
          ["Ausfallschritte","Bulgarian Split Squat"],
          ["Wadenheben"],
          ["Hip Thrust","Goblet Squat"]],
+  // Ganzkörper: je ein Reiz pro Grundmuster (Beine, Druck, Zug, Hüfte, Schulter, Bi, Tri).
+  full:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
+        ["Bankdrücken","KH-Bankdrücken","Liegestütze"],
+        ["Langhantelrudern","Latzug","Einarmiges KH-Rudern"],
+        ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
+        ["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
+        ["Bizeps-Curls","Klimmzug"],
+        ["Trizepsdrücken","Enge Liegestütze"]],
+  // Arnold-Split Tag 1: Brust & Rücken im Wechsel.
+  chestback:[["Bankdrücken","KH-Bankdrücken","Liegestütze"],
+             ["Klimmzug","Latzug","Rudern am Tisch"],
+             ["Schrägbankdrücken","KH-Bankdrücken","Liegestütze"],
+             ["Langhantelrudern","Einarmiges KH-Rudern","Kabelrudern"],
+             ["KH-Fliegende","Liegestütze"],
+             ["Kabelrudern","Latzug","Superman"]],
+  // Arnold-Split Tag 2: Schultern & Arme.
+  shoulderarms:[["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
+                ["Seitheben","Band Pull-Apart","Reverse Flys"],
+                ["Bizeps-Curls","Klimmzug"],
+                ["Trizepsdrücken","Enge Liegestütze"],
+                ["Face Pull","Reverse Flys","Band Pull-Apart"],
+                ["Seitheben","Pike Push-ups"],
+                ["Bizeps-Curls","Band Pull-Apart"]],
+  // Bro-Split: einzelne Muskelgruppen pro Tag.
+  chest:[["Bankdrücken","KH-Bankdrücken","Liegestütze"],
+         ["Schrägbankdrücken","KH-Bankdrücken","Liegestütze"],
+         ["KH-Fliegende","Liegestütze"],
+         ["KH-Bankdrücken","Liegestütze"],
+         ["Enge Liegestütze","Trizepsdrücken"]],
+  back:[["Klimmzug","Latzug","Rudern am Tisch"],
+        ["Langhantelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
+        ["Latzug","Klimmzug","Einarmiges KH-Rudern"],
+        ["Kabelrudern","Einarmiges KH-Rudern","Superman"],
+        ["Face Pull","Band Pull-Apart","Reverse Flys"],
+        ["Superman","Reverse Flys"]],
+  shoulders:[["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
+             ["Seitheben","Band Pull-Apart"],
+             ["KH-Schulterdrücken","Pike Push-ups"],
+             ["Face Pull","Reverse Flys","Band Pull-Apart"],
+             ["Seitheben","Reverse Flys"],
+             ["Band Pull-Apart","Face Pull"]],
+  arms:[["Bizeps-Curls","Klimmzug","Latzug"],
+        ["Trizepsdrücken","Enge Liegestütze"],
+        ["Klimmzug","Latzug","Einarmiges KH-Rudern"],
+        ["Enge Liegestütze","Liegestütze"],
+        ["Bizeps-Curls","Band Pull-Apart"],
+        ["Face Pull","Reverse Flys"]],
 };
-const DAY_MUSCLES={push:["Brust","Schultern","Arme"],pull:["Rücken","Arme"],legs:["Beine","Core"],upper:["Brust","Rücken","Schultern","Arme"],lower:["Beine","Core"]};
+const DAY_MUSCLES={push:["Brust","Schultern","Arme"],pull:["Rücken","Arme"],legs:["Beine","Core"],upper:["Brust","Rücken","Schultern","Arme"],lower:["Beine","Core"],
+  full:["Brust","Rücken","Schultern","Arme","Beine","Core"],chestback:["Brust","Rücken"],shoulderarms:["Schultern","Arme"],chest:["Brust"],back:["Rücken"],shoulders:["Schultern"],arms:["Arme"]};
 /* Fokus-Bonus: eine Extra-Übung für den gewählten Schwerpunkt, früh platziert. */
 const FOCUS_EX={
   Brust:["KH-Fliegende","Liegestütze"],
@@ -1853,6 +1909,13 @@ function generateTrainingPlan(profile,variant){
     legs:day("legs",buildMain("legs"),true),
     upper:day("upper",buildMain("upper")),
     lower:day("lower",buildMain("lower"),true),
+    full:day("full",buildMain("full"),true),
+    chestback:day("chestback",buildMain("chestback")),
+    shoulderarms:day("shoulderarms",buildMain("shoulderarms")),
+    chest:day("chest",buildMain("chest")),
+    back:day("back",buildMain("back")),
+    shoulders:day("shoulders",buildMain("shoulders")),
+    arms:day("arms",buildMain("arms")),
     cardio:{...day("cardio",[mk("Zone-2 Cardio",1,"30–40 Min",0)]),est:35},
     rest:{key:"rest",...TYPE_META.rest,warmup:[],cooldown:[],main:[],abs:[],est:0},
   };
@@ -1905,6 +1968,9 @@ function generateOptimalSchedule(a){
   const FORCED={
     ppl:{2:["upper","lower"],3:["push","pull","legs"],4:["push","pull","legs","push"],5:["push","pull","legs","push","pull"],6:["push","pull","legs","push","pull","legs"]},
     ul:{2:["upper","lower"],3:["upper","lower","upper"],4:["upper","lower","upper","lower"],5:["upper","lower","upper","lower","upper"],6:["upper","lower","upper","lower","upper","lower"]},
+    full:{2:["full","full"],3:["full","full","full"],4:["full","full","full","full"],5:["full","full","full","full","full"],6:["full","full","full","full","full","full"]},
+    arnold:{2:["upper","lower"],3:["chestback","shoulderarms","legs"],4:["chestback","shoulderarms","legs","chestback"],5:["chestback","shoulderarms","legs","chestback","shoulderarms"],6:["chestback","shoulderarms","legs","chestback","shoulderarms","legs"]},
+    bro:{2:["upper","lower"],3:["push","pull","legs"],4:["chest","back","legs","arms"],5:["chest","back","shoulders","arms","legs"],6:["chest","back","shoulders","arms","legs","arms"]},
   };
   const chosenSplit=(a.split&&a.split!=="auto"&&FORCED[a.split])?a.split:null;
   const POS={
@@ -1942,6 +2008,16 @@ function generateOptimalSchedule(a){
         : `Dein gewählter Split: Push / Pull / Beine — Drücken, Ziehen und Beine sauber getrennt${days>=6?", doppelter Durchlauf für maximale Frequenz":days===5?", plus zweiter Push/Pull-Durchlauf":days===4?", mit zusätzlichem Push-Tag":""}.`)
     : a.split==="ul"
     ? `Dein gewählter Split: Oberkörper / Unterkörper im Wechsel — jede Muskelgruppe wird mehrfach pro Woche getroffen, der bewährte Sweet Spot für Muskelaufbau.`
+    : a.split==="full"
+    ? `Dein gewählter Split: Ganzkörper — jede Einheit trifft alle großen Muskelgruppen über die Grundübungen. Top für ${days<=3?"wenige Trainingstage und Einsteiger":"hohe Frequenz"}.`
+    : a.split==="arnold"
+    ? (days<3
+        ? `Du hast den Arnold-Split gewählt — der braucht aber mindestens 3 Tage (Brust&Rücken · Schultern&Arme · Beine). Bei ${days} Tagen ist Ober-/Unterkörper effektiver.`
+        : `Dein gewählter Split: Arnold — Brust & Rücken, Schultern & Arme, Beine. Hoher Pump durch antagonistisches Paaren von Druck- und Zugmuskeln.`)
+    : a.split==="bro"
+    ? (days<4
+        ? `Du hast den Bro-Split gewählt — der entfaltet sich erst ab 4–5 Tagen (eine Muskelgruppe pro Tag). Bei ${days} Tagen liefert ${days<3?"Ober-/Unterkörper":"Push/Pull/Beine"} mehr Frequenz und Fortschritt.`
+        : `Dein gewählter Split: Bro-Split — jede Muskelgruppe bekommt ihren eigenen Tag mit maximalem Volumen. Klassisch und motivierend${days>=6?", Arme 2× für mehr Reiz":""}.`)
     : autoSplitTxt;
   const recTxt={
     fast:"Du erholst dich schnell — deine Einheiten dürfen dicht beieinander liegen.",
@@ -2007,7 +2083,7 @@ function activePlanB(){
 /* Variantenschlüssel zerlegen: "pushB" → {base:"push", variant:"B"}.
    Basistypen (push/pull/legs/upper/lower/cardio/rest) enden nie auf A/B. */
 function parseTypeKey(key){
-  const m=/^(push|pull|legs|upper|lower)([AB])$/.exec(key||"");
+  const m=/^(push|pull|legs|upper|lower|full|chestback|shoulderarms|chest|back|shoulders|arms)([AB])$/.exec(key||"");
   return m?{base:m[1],variant:m[2]}:{base:key,variant:null};
 }
 /* TYPES: dynamische Sicht auf den Plan (inkl. Soreness-Modus, A/B-Varianten) —
@@ -2085,7 +2161,7 @@ let lpTimer=null, lpFired=false;
 // (A.lp*-Handler werden nach window.A={} in der Shell registriert.)
 const TYPES=new Proxy({},{get:(_,k)=>typeof k==="string"&&k!=="then"?sessionDef(k):undefined,
   ownKeys:()=>TYPE_KEYS,getOwnPropertyDescriptor:()=>({enumerable:true,configurable:true})});
-const TYPE_KEYS=["push","pull","legs","upper","lower","cardio","rest"];
+const TYPE_KEYS=["push","pull","legs","upper","lower","full","chestback","shoulderarms","chest","back","shoulders","arms","cardio","rest"];
 /* Muskelgruppen-Verteilung einer Session: Satz-Anteil je Muskelgruppe in % —
    berechnet aus dem echten Plan des Tages, nichts erfunden. */
 function muscleSplit(key){
@@ -2115,6 +2191,17 @@ function suggestSchedule(days){
   return generateOptimalSchedule({...(S.profile?S.profile.a:{}),days}).schedule;
 }
 function schedule(){ return S.schedule||["rest","rest","rest","rest","rest","rest","rest"]; }
+// Anzeigename des Splits: bevorzugt die Quiz-Wahl, sonst aus den Session-Typen abgeleitet.
+function splitLabel(a,set){
+  const M={ppl:"Push · Pull · Beine",ul:"Ober- & Unterkörper",full:"Ganzkörper",arnold:"Arnold-Split",bro:"Bro-Split"};
+  if(a&&a.split&&M[a.split])return M[a.split];
+  if(["chest","back","shoulders","arms"].some(k=>set.has(k)))return "Bro-Split";
+  if(set.has("chestback")||set.has("shoulderarms"))return "Arnold-Split";
+  if(set.has("full"))return "Ganzkörper";
+  if(set.has("push"))return "Push · Pull · Beine";
+  if(set.has("upper")||set.has("lower"))return "Ober- & Unterkörper";
+  return "Ganzkörper";
+}
 function todayType(){ const dow=(new Date().getDay()+6)%7; return schedule()[dow]; }
 function nextTrainingType(){
   const dow=(new Date().getDay()+6)%7, sch=schedule();
@@ -3433,7 +3520,7 @@ const STEPS=[
    opts:[["knee","Knie",""],["back","Rücken / LWS",""],["shoulder","Schulter",""]]},
   {id:"days",q:"Trainingstage pro Woche",hint:"Wie viele Tage pro Woche willst du trainieren?",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
   {id:"split",q:"Wie soll dein Plan aufgeteilt sein?",hint:"Wähl deinen Split — oder lass die Engine die beste Aufteilung für dich finden.",type:"single",key:"split",
-   opts:[["auto","Für mich optimieren","Empfohlen — die Engine wählt nach Tagen, Zielen & Erholung"],["ppl","Push / Pull / Beine","Drücken · Ziehen · Beine — klar getrennt"],["ul","Ober- / Unterkörper","Oberkörper- und Beintage im Wechsel"]]},
+   opts:[["auto","Für mich optimieren ★","Empfohlen — beste Aufteilung für deine Tage, Ziele & Erholung"],["full","Ganzkörper","Jede Einheit trifft den ganzen Körper. Top für 2–3 Tage & Einsteiger — hohe Frequenz, viel Erholung"],["ul","Ober- / Unterkörper","Bester Allrounder: jede Muskelgruppe 2×/Woche. Ideal bei 4 Tagen — der Sweet Spot für Muskelaufbau"],["ppl","Push / Pull / Beine","Drücken · Ziehen · Beine klar getrennt. Viel Volumen pro Gruppe — ideal bei 5–6 Tagen"],["arnold","Arnold-Split","Brust & Rücken · Schultern & Arme · Beine. Antagonisten gepaart = mehr Pump. Ab 3 Tagen"],["bro","Bro-Split","Eine Muskelgruppe pro Tag = maximaler Fokus & Volumen. Klassisch & motivierend. Ab 5 Tagen"]]},
   {id:"time",q:"Wie viel Zeit pro Einheit?",hint:"Bestimmt mit, wie viele Übungen sinnvoll in deine Session passen — mehr Zeit = mehr Volumen, weniger Zeit = kompakter & effizienter.",type:"cells",key:"sessionTime",opts:[30,45,60,75,90],unit:"Min"},
   {id:"equipment",q:"Wo trainierst du?",hint:"Dein Plan enthält nur Übungen, die du wirklich machen kannst.",type:"single",key:"equipment",
    opts:[["gym_full","Gym — voll ausgestattet","Maschinen, Kabelzüge, Freihanteln"],["gym_basic","Gym ohne Maschinen","Langhantel, Kurzhanteln, Rack, Bank"],["home_full","Homegym","Kurzhanteln, Bank, Bänder"],["home_min","Zuhause — minimal","Kurzhanteln oder Bänder, ohne Bank"],["bodyweight","Nur Körpergewicht","Kein Equipment nötig"]]},
@@ -3467,9 +3554,9 @@ function quizRec(st){
       return "<b>4 Tage</b> — der Sweet Spot: jede Muskelgruppe 2×/Woche, gute Erholung.";
     case "split":{
       const d=a.days||4;
-      if(d<=2) return "Bei 2 Tagen ist <b>Ober-/Unterkörper</b> am stärksten — jede Muskelgruppe 2×/Woche.";
-      if(d>=5) return "Ab 5 Tagen brilliert <b>Push / Pull / Beine</b> — viel Volumen, klar getrennt. Unsicher? Nimm „Für mich optimieren\".";
-      if(d===3) return "Bei 3 Tagen funktionieren beide gut: <b>Push / Pull / Beine</b> (getrennt) oder Ober-/Unterkörper.";
+      if(d<=2) return "Bei 2 Tagen sind <b>Ganzkörper</b> oder Ober-/Unterkörper am stärksten — jede Muskelgruppe mehrfach pro Woche.";
+      if(d===3) return "Bei 3 Tagen top: <b>Ganzkörper</b> oder Push / Pull / Beine — viel Reiz, gute Erholung.";
+      if(d>=5) return "Ab 5 Tagen brillieren <b>Push / Pull / Beine</b>, Arnold oder der Bro-Split. Unsicher? „Für mich optimieren\".";
       return "Unsicher? <b>„Für mich optimieren\"</b> trifft fast immer die beste Wahl für deine Tage & Ziele.";
     }
     case "time": return "<b>60 Min</b> decken vollen Reiz ab. Weniger Zeit? Der Plan wird automatisch kompakter — gleich effektiv.";
@@ -3595,7 +3682,7 @@ function renderReveal(){
   };
   const a=p.a, sug=S.scheduleSuggestion||[];
   const trainCount=sug.filter(t=>t!=="rest").length, set=new Set(sug);
-  const splitName=set.has("push")?"Push · Pull · Beine":(set.has("upper")||set.has("lower"))?"Ober- & Unterkörper":"Ganzkörper";
+  const splitName=splitLabel(a,set);
   // Dopamin: realistische 12-Wochen-Projektion + Identitäts-Hook
   const base={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[a.exp]||[12,22];
   const dFac=Math.min(1,0.55+(a.days||4)*0.11), pLo=Math.round(base[0]*dFac), pHi=Math.round(base[1]*dFac);
@@ -3781,7 +3868,7 @@ function shareRecapPNG(r){
 function sharePlanPNG(){
   try{
     const a=S.profile.a, set=new Set(activeRotation().map(k=>parseTypeKey(k).base));
-    const split=set.has("push")?"Push · Pull · Beine":(set.has("upper")||set.has("lower"))?"Ober- & Unterkörper":"Ganzkörper";
+    const split=splitLabel(a,set);
     const c=drawShareCard({eyebrow:"Mein Plan",hero:(a.days||4)+"×",heroLabel:"Trainingstage pro Woche",
       stats:[[(a.len||60)+" Min","pro Einheit"],[split,"Aufteilung",true]]});
     shareCanvas(c,"metricgym-plan.png","Mein wissenschaftlich gebauter Trainingsplan mit METRICGYM 💪");
