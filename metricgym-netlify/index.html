@@ -160,6 +160,15 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @keyframes aiPulse{0%,100%{opacity:.55}50%{opacity:1}}
   @keyframes aiOrbit{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion:reduce){ .ai-field::before,.ai-field::after{animation:none} }
+  /* ===== Anatomie-Glow (Oura-Stil): atmende Muskeln, weiche Aura, sanftes Aufleuchten ===== */
+  .mg-svg{animation:mgIgnite .55s cubic-bezier(.22,1,.36,1) both;}
+  .mg-on{animation:mgPulse 2.8s ease-in-out infinite;}
+  .mg-on.s2{animation-duration:3.4s; animation-delay:.5s;}
+  .mg-aura{animation:mgAura 4.5s ease-in-out infinite; transform-box:fill-box; transform-origin:center;}
+  @keyframes mgPulse{0%,100%{opacity:.78}50%{opacity:1}}
+  @keyframes mgAura{0%,100%{opacity:.30; transform:scale(.94)}50%{opacity:.62; transform:scale(1.05)}}
+  @keyframes mgIgnite{from{opacity:0; transform:translateY(6px) scale(.97)}to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){ .mg-svg,.mg-on,.mg-aura{animation:none} }
   .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
   .hero-num{font-family:var(--font-hero); font-weight:800; letter-spacing:-0.03em;}
   .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:70px 16px 124px;}
@@ -4191,15 +4200,19 @@ const EX_ACT={
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
 function muscleBody(view,arg){
   // arg ist entweder ein Aktivierungs-Objekt {p,s} ODER eine Farb-Funktion (id)=>color
-  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?"#5BB8FF":arg.s.includes(id)?"#C98BFF":"#2A2F3C");
+  const prim="#56C8FF", sec="#B98BFF";
+  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?prim:arg.s.includes(id)?sec:"#2A2F3C");
+  const isPrim=typeof arg==="function"?(id)=>col(id)===prim:(id)=>arg.p.includes(id);
   const ln="#5A6273";
   const fid="mg"+Math.random().toString(36).slice(2,6);
-  // Aktivierte Muskeln (nicht-neutral) leuchten neon — wie die anatomischen Reels.
-  const P=(id)=>{const c=col(id);return `fill="${c}"${c!=="#2A2F3C"?` filter="url(#${fid}g)"`:""}`;};
+  // Aktivierte Muskeln (nicht-neutral) leuchten neon und atmen — Oura-Stil.
+  const P=(id)=>{const c=col(id);return c==="#2A2F3C"?`fill="${c}"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;};
   const defs=`<defs>
-    <filter id="${fid}g" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <radialGradient id="${fid}bg" cx="50%" cy="34%" r="72%"><stop offset="0%" stop-color="#141A28"/><stop offset="100%" stop-color="#070A11"/></radialGradient></defs>`;
-  const bg=`<rect x="0" y="0" width="130" height="240" rx="16" fill="url(#${fid}bg)"/>`;
+    <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="${fid}bg" cx="50%" cy="32%" r="78%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
+    <radialGradient id="${fid}a" cx="50%" cy="40%" r="58%"><stop offset="0%" stop-color="#3F86FF" stop-opacity="0.5"/><stop offset="55%" stop-color="#5B8CFF" stop-opacity="0.12"/><stop offset="100%" stop-color="#5B8CFF" stop-opacity="0"/></radialGradient></defs>`;
+  const bg=`<rect x="0" y="0" width="130" height="240" rx="18" fill="url(#${fid}bg)"/>
+    <ellipse cx="65" cy="104" rx="58" ry="92" fill="url(#${fid}a)" class="mg-aura"/>`;
   const base=`<g fill="#AEB6C6" stroke="none">
     <path d="M40 48 H90 L82 122 Q65 130 48 122 Z"/>
     <path d="M28 54 Q22 96 28 134 L40 132 Q35 94 41 58 Z"/><path d="M102 54 Q108 96 102 134 L90 132 Q95 94 89 58 Z"/>
@@ -4235,15 +4248,15 @@ function muscleBody(view,arg){
     <path d="M52 196 q-5 18 0 32 q6 3 11 0 q2 -16 -1 -32 q-5 -2 -10 0 z" ${P('calves')}/>
     <path d="M78 196 q5 18 0 32 q-6 3 -11 0 q-2 -16 1 -32 q5 -2 10 0 z" ${P('calves')}/>`;
   return `<div style="text-align:center">
-    <svg viewBox="0 0 130 240" width="118" height="218" stroke="${ln}" stroke-width="0.6" aria-hidden="true">${defs}${bg}${base}${view==="front"?front:back}</svg>
-    <p class="xs t2" style="margin-top:2px">${view==="front"?"Vorderseite":"Rückseite"}</p></div>`;
+    <svg class="mg-svg" viewBox="0 0 130 240" width="126" height="232" stroke="${ln}" stroke-width="0.6" aria-hidden="true">${defs}${bg}${base}${view==="front"?front:back}</svg>
+    <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
 }
 function bodyDiagram(act){
   return `<div style="display:flex;justify-content:center;gap:14px;align-items:flex-start">
       ${muscleBody("front",act)}${muscleBody("back",act)}</div>
     <div class="row" style="justify-content:center;gap:16px;margin-top:6px">
-      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#5BB8FF;box-shadow:0 0 6px #5BB8FF;display:inline-block"></span>Primär</span>
-      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#C98BFF;box-shadow:0 0 6px #C98BFF;display:inline-block"></span>Sekundär</span></div>`;
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#56C8FF;box-shadow:0 0 7px #56C8FF;display:inline-block"></span>Primär</span>
+      <span class="xs t2" style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#B98BFF;box-shadow:0 0 7px #B98BFF;display:inline-block"></span>Sekundär</span></div>`;
 }
 /* Griff-/Varianten-Vergleich (der „one grip change"-Effekt): dieselbe Übung,
    andere Betonung — Muskelkarte leuchtet je nach Griff anders auf. */
