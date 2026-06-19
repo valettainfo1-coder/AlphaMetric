@@ -4198,57 +4198,64 @@ const EX_ACT={
 };
 // Anatomische Muskelkarte: Front-/Rückansicht mit echten Muskelgruppen-Formen.
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
+const MG_BODY="#A7AFC0"; // Grundton des Körpers (neutrale Muskeln blenden ein → nur aktive leuchten)
 function muscleBody(view,arg){
-  // arg ist entweder ein Aktivierungs-Objekt {p,s} ODER eine Farb-Funktion (id)=>color
   const prim="#56C8FF", sec="#B98BFF";
-  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?prim:arg.s.includes(id)?sec:"#2A2F3C");
+  const col=typeof arg==="function"?arg:((id)=>arg.p.includes(id)?prim:arg.s.includes(id)?sec:MG_BODY);
   const isPrim=typeof arg==="function"?(id)=>col(id)===prim:(id)=>arg.p.includes(id);
-  const ln="#5A6273";
+  const ln="#7E8698";
   const fid="mg"+Math.random().toString(36).slice(2,6);
-  // Aktivierte Muskeln (nicht-neutral) leuchten neon und atmen — Oura-Stil.
-  const P=(id)=>{const c=col(id);return c==="#2A2F3C"?`fill="${c}"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;};
+  const P=(id)=>{const c=col(id);return c===MG_BODY?`fill="${c}"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;};
   const defs=`<defs>
-    <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <radialGradient id="${fid}bg" cx="50%" cy="32%" r="78%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
-    <radialGradient id="${fid}a" cx="50%" cy="40%" r="58%"><stop offset="0%" stop-color="#3F86FF" stop-opacity="0.5"/><stop offset="55%" stop-color="#5B8CFF" stop-opacity="0.12"/><stop offset="100%" stop-color="#5B8CFF" stop-opacity="0"/></radialGradient></defs>`;
+    <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="${fid}bg" cx="50%" cy="30%" r="80%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
+    <radialGradient id="${fid}a" cx="50%" cy="40%" r="58%"><stop offset="0%" stop-color="#3F86FF" stop-opacity="0.5"/><stop offset="55%" stop-color="#5B8CFF" stop-opacity="0.12"/><stop offset="100%" stop-color="#5B8CFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${fid}sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#B3BBCB"/><stop offset="100%" stop-color="#959EB0"/></linearGradient></defs>`;
   const bg=`<rect x="0" y="0" width="130" height="240" rx="18" fill="url(#${fid}bg)"/>
-    <ellipse cx="65" cy="104" rx="58" ry="92" fill="url(#${fid}a)" class="mg-aura"/>`;
-  const base=`<g fill="#AEB6C6" stroke="none">
-    <path d="M40 48 H90 L82 122 Q65 130 48 122 Z"/>
-    <path d="M28 54 Q22 96 28 134 L40 132 Q35 94 41 58 Z"/><path d="M102 54 Q108 96 102 134 L90 132 Q95 94 89 58 Z"/>
-    <path d="M47 120 H64 L62 226 Q56 230 50 226 Z"/><path d="M66 120 H83 L80 226 Q74 230 68 226 Z"/></g>
-    <ellipse cx="65" cy="20" rx="13" ry="15" fill="#3A4150"/><path d="M58 33 h14 v7 q-7 4 -14 0 z" fill="#3A4150"/>`;
+    <ellipse cx="65" cy="106" rx="58" ry="94" fill="url(#${fid}a)" class="mg-aura"/>`;
+  // Realistische Silhouette: Kopf, Hals, V-Taper-Rumpf, Arme (Ober-/Unterarm), Beine (Ober-/Unterschenkel).
+  const sil=`<g fill="url(#${fid}sk)" stroke="${ln}" stroke-width="0.5" stroke-linejoin="round">
+    <ellipse cx="65" cy="15.5" rx="10.5" ry="12.5"/>
+    <path d="M59 26 h12 v8 q-6 3 -12 0 z"/>
+    <path d="M43 40 Q65 36 87 40 Q98 44 100 56 Q102 70 97 86 L92 112 Q89 124 82 130 L48 130 Q41 124 38 112 L33 86 Q28 70 30 56 Q32 44 43 40 Z"/>
+    <path d="M32 53 Q24 58 22 78 L20 100 Q19 112 25 119 L31 117 Q34 105 33 92 L37 70 Q38 60 41 54 Z"/>
+    <path d="M98 53 Q106 58 108 78 L110 100 Q111 112 105 119 L99 117 Q96 105 97 92 L93 70 Q92 60 89 54 Z"/>
+    <path d="M47 129 Q42 156 46 180 L45 206 Q45 226 51 235 L59 235 Q63 226 61 206 L62 180 Q65 154 63 131 Q55 127 47 129 Z"/>
+    <path d="M83 129 Q88 156 84 180 L85 206 Q85 226 79 235 L71 235 Q67 226 69 206 L68 180 Q65 154 67 131 Q75 127 83 129 Z"/></g>`;
   const front=`
-    <path d="M58 38 q-12 2 -20 10 q14 -2 20 -3 z M72 38 q12 2 20 10 q-14 -2 -20 -3 z" ${P('traps')}/>
-    <path d="M40 46 q-13 3 -15 18 q-1 8 3 12 q8 -4 14 -6 q2 -14 -2 -24 z" ${P('delts')}/>
-    <path d="M90 46 q13 3 15 18 q1 8 -3 12 q-8 -4 -14 -6 q-2 -14 2 -24 z" ${P('delts')}/>
-    <path d="M64 44 q-16 0 -22 6 q-3 12 2 22 q12 6 20 4 q1 -16 0 -32 z" ${P('chest')}/>
-    <path d="M66 44 q16 0 22 6 q3 12 -2 22 q-12 6 -20 4 q-1 -16 0 -32 z" ${P('chest')}/>
-    <path d="M26 64 q-6 18 -3 34 q5 3 10 1 q-1 -18 3 -32 q-5 -4 -10 -3 z" ${P('biceps')}/>
-    <path d="M104 64 q6 18 3 34 q-5 3 -10 1 q1 -18 -3 -32 q5 -4 10 -3 z" ${P('biceps')}/>
-    <path d="M54 74 q11 4 22 0 l-1 44 q-10 5 -20 0 z" ${P('abs')}/>
-    <path d="M54 86 h22 M54 98 h22 M54 110 h21 M65 74 v44" stroke="${ln}" stroke-width="0.8" fill="none" opacity="0.5"/>
-    <path d="M48 80 q-3 18 6 36 l3 -2 q-7 -16 -5 -33 z" ${P('obliques')}/>
-    <path d="M82 80 q3 18 -6 36 l-3 -2 q7 -16 5 -33 z" ${P('obliques')}/>
-    <path d="M50 124 q-7 26 -2 52 q7 4 13 1 q3 -28 1 -52 q-6 -3 -12 -1 z" ${P('quads')}/>
-    <path d="M80 124 q7 26 2 52 q-7 4 -13 1 q-3 -28 -1 -52 q6 -3 12 -1 z" ${P('quads')}/>`;
+    <path d="M45 41 Q53 37 62 36 L60 45 Q51 45 45 50 Z" ${P('traps')}/>
+    <path d="M85 41 Q77 37 68 36 L70 45 Q79 45 85 50 Z" ${P('traps')}/>
+    <path d="M33 50 Q25 55 23 70 Q22 79 27 82 Q35 78 39 72 Q41 60 38 52 Q36 49 33 50 Z" ${P('delts')}/>
+    <path d="M97 50 Q105 55 107 70 Q108 79 103 82 Q95 78 91 72 Q89 60 92 52 Q94 49 97 50 Z" ${P('delts')}/>
+    <path d="M64 47 Q51 46 43 53 Q38 61 41 71 Q48 78 58 76 Q63 73 64 65 Z" ${P('chest')}/>
+    <path d="M66 47 Q79 46 87 53 Q92 61 89 71 Q82 78 72 76 Q67 73 66 65 Z" ${P('chest')}/>
+    <path d="M26 70 Q22 83 25 97 Q29 100 33 97 Q34 84 36 72 Q31 68 26 70 Z" ${P('biceps')}/>
+    <path d="M104 70 Q108 83 105 97 Q101 100 97 97 Q96 84 94 72 Q99 68 104 70 Z" ${P('biceps')}/>
+    <path d="M58 80 h6 v8 q-3 1 -6 0 z M66 80 h6 v8 q-3 1 -6 0 z M58 90 h6 v8 q-3 1 -6 0 z M66 90 h6 v8 q-3 1 -6 0 z M58 100 h6 v8 q-3 1 -6 0 z M66 100 h6 v8 q-3 1 -6 0 z M59 110 h5 v8 q-2 2 -5 1 z M66 110 h5 v9 q-3 1 -5 -1 z" ${P('abs')}/>
+    <path d="M51 80 Q47 96 53 114 L56 112 Q51 96 54 82 Z" ${P('obliques')}/>
+    <path d="M79 80 Q83 96 77 114 L74 112 Q79 96 76 82 Z" ${P('obliques')}/>
+    <path d="M48 132 Q43 156 48 178 Q54 182 59 178 Q61 156 59 134 Q53 130 48 132 Z" ${P('quads')}/>
+    <path d="M82 132 Q87 156 82 178 Q76 182 71 178 Q69 156 71 134 Q77 130 82 132 Z" ${P('quads')}/>
+    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.45"><path d="M65 48 v28"/><path d="M58 88 h14 M58 98 h14 M58 108 h13 M65 80 v39"/><path d="M53 156 Q54 168 53 178 M77 156 Q76 168 77 178"/></g>`;
   const back=`
-    <path d="M65 38 q-22 4 -26 14 q10 4 26 4 q16 0 26 -4 q-4 -10 -26 -14 z M65 60 q-14 0 -22 -4 q6 18 22 22 q16 -4 22 -22 q-8 4 -22 4 z" ${P('traps')}/>
-    <path d="M40 46 q-13 3 -15 18 q-1 8 3 12 q8 -4 14 -6 q2 -14 -2 -24 z" ${P('reardelts')}/>
-    <path d="M90 46 q13 3 15 18 q1 8 -3 12 q-8 -4 -14 -6 q-2 -14 2 -24 z" ${P('reardelts')}/>
-    <path d="M26 64 q-6 18 -3 34 q5 3 10 1 q-1 -18 3 -32 q-5 -4 -10 -3 z" ${P('triceps')}/>
-    <path d="M104 64 q6 18 3 34 q-5 3 -10 1 q1 -18 -3 -32 q5 -4 10 -3 z" ${P('triceps')}/>
-    <path d="M48 60 q-8 14 -4 30 q10 6 18 4 l0 -36 q-8 -2 -14 2 z" ${P('lats')}/>
-    <path d="M82 60 q8 14 4 30 q-10 6 -18 4 l0 -36 q8 -2 14 2 z" ${P('lats')}/>
-    <path d="M56 92 q9 4 18 0 l-2 26 q-7 3 -14 0 z" ${P('lowerback')}/>
-    <path d="M64 120 q-16 -2 -20 12 q-2 12 8 18 q10 4 12 -6 z" ${P('glutes')}/>
-    <path d="M66 120 q16 -2 20 12 q2 12 -8 18 q-10 4 -12 -6 z" ${P('glutes')}/>
-    <path d="M50 150 q-6 22 -1 44 q7 4 13 1 q2 -24 0 -45 q-6 -3 -12 0 z" ${P('hams')}/>
-    <path d="M80 150 q6 22 1 44 q-7 4 -13 1 q-2 -24 0 -45 q6 -3 12 0 z" ${P('hams')}/>
-    <path d="M52 196 q-5 18 0 32 q6 3 11 0 q2 -16 -1 -32 q-5 -2 -10 0 z" ${P('calves')}/>
-    <path d="M78 196 q5 18 0 32 q-6 3 -11 0 q-2 -16 1 -32 q5 -2 10 0 z" ${P('calves')}/>`;
+    <path d="M65 36 Q50 40 44 51 Q56 55 65 55 Q74 55 86 51 Q80 40 65 36 Z" ${P('traps')}/>
+    <path d="M49 55 Q56 72 65 80 Q74 72 81 55 Q73 59 65 59 Q57 59 49 55 Z" ${P('traps')}/>
+    <path d="M33 50 Q25 55 23 70 Q22 79 27 82 Q35 78 39 72 Q41 60 38 52 Q36 49 33 50 Z" ${P('reardelts')}/>
+    <path d="M97 50 Q105 55 107 70 Q108 79 103 82 Q95 78 91 72 Q89 60 92 52 Q94 49 97 50 Z" ${P('reardelts')}/>
+    <path d="M26 70 Q22 83 25 97 Q29 100 33 97 Q34 84 36 72 Q31 68 26 70 Z" ${P('triceps')}/>
+    <path d="M104 70 Q108 83 105 97 Q101 100 97 97 Q96 84 94 72 Q99 68 104 70 Z" ${P('triceps')}/>
+    <path d="M46 58 Q39 74 44 94 Q54 101 63 95 L63 60 Q54 55 46 58 Z" ${P('lats')}/>
+    <path d="M84 58 Q91 74 86 94 Q76 101 67 95 L67 60 Q76 55 84 58 Z" ${P('lats')}/>
+    <path d="M59 92 q3 2 6 0 l-1 26 q-2 1 -4 0 z M55 94 q3 1 5 0 l-1 22 q-2 1 -3 0 z M75 94 q-3 1 -5 0 l1 22 q2 1 3 0 z" ${P('lowerback')}/>
+    <path d="M47 120 Q42 131 47 144 Q55 149 63 143 Q65 131 63 121 Q55 117 47 120 Z" ${P('glutes')}/>
+    <path d="M83 120 Q88 131 83 144 Q75 149 67 143 Q65 131 67 121 Q75 117 83 120 Z" ${P('glutes')}/>
+    <path d="M48 148 Q45 170 49 192 Q55 196 61 192 Q62 170 60 150 Q54 145 48 148 Z" ${P('hams')}/>
+    <path d="M82 148 Q85 170 81 192 Q75 196 69 192 Q68 170 70 150 Q76 145 82 148 Z" ${P('hams')}/>
+    <path d="M50 198 Q46 212 50 228 Q54 231 58 228 Q60 212 58 200 Q54 196 50 198 Z" ${P('calves')}/>
+    <path d="M80 198 Q84 212 80 228 Q76 231 72 228 Q70 212 72 200 Q76 196 80 198 Z" ${P('calves')}/>
+    <g stroke="${ln}" stroke-width="0.6" fill="none" opacity="0.45"><path d="M65 40 v40"/><path d="M54 200 Q55 214 54 226 M76 200 Q75 214 76 226"/></g>`;
   return `<div style="text-align:center">
-    <svg class="mg-svg" viewBox="0 0 130 240" width="126" height="232" stroke="${ln}" stroke-width="0.6" aria-hidden="true">${defs}${bg}${base}${view==="front"?front:back}</svg>
+    <svg class="mg-svg" viewBox="0 0 130 240" width="126" height="232" aria-hidden="true">${defs}${bg}${sil}${view==="front"?front:back}</svg>
     <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
 }
 function bodyDiagram(act){
@@ -4282,6 +4289,43 @@ const GRIP_VARIANTS={
     {n:"Seil",act:{p:["triceps"],s:[]},why:"Volle Streckung + Spreizen am Ende — langer Trizepskopf."},
     {n:"Gerade Stange",act:{p:["triceps"],s:[]},why:"Mehr Last möglich, Fokus seitlicher/medialer Kopf."},
   ],
+  "Bankdrücken":[
+    {n:"Flachbank",act:{p:["chest"],s:["delts","triceps"]},why:"Ganze Brust gleichmäßig — der Standard für Brustdicke."},
+    {n:"Schrägbank",act:{p:["chest"],s:["delts"]},why:"Betont die obere Brust & vordere Schulter."},
+    {n:"Enger Griff",act:{p:["triceps"],s:["chest"]},why:"Hände eng → Fokus wandert auf den Trizeps."},
+  ],
+  "KH-Bankdrücken":[
+    {n:"Flach",act:{p:["chest"],s:["delts","triceps"]},why:"Große Bewegungsamplitude — starke Brust-Dehnung."},
+    {n:"Schräg",act:{p:["chest"],s:["delts"]},why:"Obere Brust & vordere Schulter."},
+    {n:"Neutralgriff",act:{p:["chest"],s:["triceps"]},why:"Schulterschonend, innere Brust betont."},
+  ],
+  "Schulterdrücken":[
+    {n:"Frontal (Standard)",act:{p:["delts"],s:["triceps"]},why:"Vordere & mittlere Schulter, viel Last möglich."},
+    {n:"Neutralgriff",act:{p:["delts"],s:["triceps"]},why:"Schulterfreundlicher, etwas mehr vordere Schulter."},
+  ],
+  "Seitheben":[
+    {n:"Strikt seitlich",act:{p:["delts"],s:[]},why:"Maximale Isolation der seitlichen Schulter → Breite."},
+    {n:"Leicht vorgebeugt",act:{p:["reardelts"],s:["delts"]},why:"Verlagert den Reiz auf die hintere Schulter."},
+  ],
+  "Kniebeuge":[
+    {n:"Schulterbreit",act:{p:["quads"],s:["glutes","hams"]},why:"Ausgewogen — Quadrizeps & Gesäß zusammen."},
+    {n:"Enger Stand",act:{p:["quads"],s:["glutes"]},why:"Mehr äußerer Quadrizeps (Oberschenkel-Sweep)."},
+    {n:"Weiter Stand",act:{p:["glutes"],s:["quads","hams"]},why:"Mehr Gesäß & Innenseite, aufrechter Rücken."},
+  ],
+  "Beinpresse":[
+    {n:"Füße mittig",act:{p:["quads"],s:["glutes"]},why:"Quadrizeps-Fokus, ausgewogen."},
+    {n:"Füße hoch",act:{p:["glutes"],s:["hams"]},why:"Höhere Position → mehr Gesäß & Beinbeuger."},
+    {n:"Füße tief",act:{p:["quads"],s:[]},why:"Tiefe Position → maximaler Quadrizeps."},
+  ],
+  "Rumänisches Kreuzheben":[
+    {n:"Hüftbreit",act:{p:["hams"],s:["glutes","lowerback"]},why:"Beinbeuger-Dehnung, klassischer Hip-Hinge."},
+    {n:"Weiter Stand",act:{p:["glutes"],s:["hams"]},why:"Mehr Gesäß & Innenseite."},
+  ],
+  "Bizeps-Curls":[
+    {n:"Untergriff",act:{p:["biceps"],s:[]},why:"Voller Bizeps-Reiz, maximale Kontraktion."},
+    {n:"Hammer (neutral)",act:{p:["biceps"],s:[]},why:"Mehr Brachialis & Unterarm → dickerer Arm."},
+    {n:"Schrägbank",act:{p:["biceps"],s:[]},why:"Dehnung am langen Kopf → mehr Bizeps-Peak."},
+  ],
 };
 A.gripSel=(name,i)=>exDetailModal(name,i);
 /* Muskel-Heatmap: färbt den anatomischen Körper nach Wochenvolumen je Gruppe
@@ -4292,14 +4336,14 @@ function muscleHeatBody(){
   const r2c={}; const status={};
   for(const [g,[lo,hi]] of Object.entries(VOL_BANDS)){
     const n=w0[g]||0; let c,st;
-    if(n===0){c="#2A2F3C";st="—";}
+    if(n===0){c=MG_BODY;st="—";}
     else if(n<lo){c="rgba(96,140,230,.30)";st="zu wenig";}
     else if(n<=hi){const t=(n-lo)/(hi-lo||1);c=`rgba(96,140,230,${(0.55+t*0.4).toFixed(2)})`;st="optimal";}
     else{c="var(--danger)";st="zu viel";}
     status[g]={n,st,lo,hi};
     (GROUP2REGION[g]||[]).forEach(r=>r2c[r]=c);
   }
-  const col=(id)=>r2c[id]||"#2A2F3C";
+  const col=(id)=>r2c[id]||MG_BODY;
   const rows=Object.entries(status).map(([g,o])=>`<div class="row" style="padding:3px 0"><span class="sm">${g}</span>
     <span class="metric xs ${o.st==="optimal"?"volt-txt":o.st==="zu viel"?"danger-txt":"t2"}">${o.n} Sätze · ${o.st}</span></div>`).join("");
   return `<div style="display:flex;justify-content:center;gap:14px;align-items:flex-start">${muscleBody("front",col)}${muscleBody("back",col)}</div>
@@ -4350,7 +4394,7 @@ function exDetailModal(name,gi){
     ${isCardio
       ?`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px"><p class="label" style="margin-bottom:6px">Beansprucht</p><p class="sm t2" style="line-height:1.6">Herz-Kreislauf-System — stärkt deine Ausdauer und unterstützt die Erholung.</p></div>`
       :`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px">
-        <p class="label" style="margin-bottom:10px">${variants?"Griff wechseln — sieh, was sich ändert":"Beanspruchte Muskeln"}</p>
+        <p class="label" style="margin-bottom:10px">${variants?"Variante wählen — sieh, was sich ändert":"Beanspruchte Muskeln"}</p>
         ${variants?`<div class="pills" style="justify-content:center;margin-bottom:6px">${variants.map((v,i)=>`<button class="pill ${i===gi?"active":""}" onclick="A.gripSel('${name.replace(/'/g,"\\'")}',${i})">${v.n}</button>`).join("")}</div>`:""}
         ${bodyDiagram(act)}
         ${variants?`<p class="sm t2" style="text-align:center;line-height:1.55;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}</p>`
