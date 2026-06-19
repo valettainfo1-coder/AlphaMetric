@@ -4185,16 +4185,16 @@ const MOVE_TXT={horizPress:"Nach vorn/oben drücken, kontrolliert zurückführen
 // Muskel-Aktivierung je Übung (Region-IDs): p = primär, s = sekundär
 const EX_ACT={
   "Bankdrücken":{p:["chest"],s:["delts","triceps"]},"Schrägbankdrücken":{p:["chest"],s:["delts","triceps"]},"KH-Bankdrücken":{p:["chest"],s:["delts","triceps"]},
-  "KH-Fliegende":{p:["chest"],s:["delts"]},"Liegestütze":{p:["chest"],s:["delts","triceps","abs"]},"Enge Liegestütze":{p:["triceps"],s:["chest","delts"]},
-  "Schulterdrücken":{p:["delts"],s:["triceps"]},"KH-Schulterdrücken":{p:["delts"],s:["triceps"]},"Pike Push-ups":{p:["delts"],s:["triceps"]},
+  "KH-Fliegende":{p:["chest"],s:["delts"]},"Liegestütze":{p:["chest"],s:["delts","triceps","abs"]},"Enge Liegestütze":{p:["triceps"],s:["chest","delts","abs"]},
+  "Schulterdrücken":{p:["delts"],s:["triceps","traps"]},"KH-Schulterdrücken":{p:["delts"],s:["triceps","traps"]},"Pike Push-ups":{p:["delts"],s:["triceps"]},
   "Seitheben":{p:["delts"],s:[]},"Reverse Flys":{p:["reardelts"],s:["traps"]},"Band Pull-Apart":{p:["reardelts"],s:["traps"]},"Face Pull":{p:["reardelts"],s:["traps"]},
   "Trizepsdrücken":{p:["triceps"],s:[]},"Bizeps-Curls":{p:["biceps"],s:[]},
-  "Klimmzug":{p:["lats"],s:["biceps","traps"]},"Latzug":{p:["lats"],s:["biceps"]},
-  "Langhantelrudern":{p:["lats","traps"],s:["biceps","reardelts"]},"Kabelrudern":{p:["lats","traps"],s:["biceps"]},"Einarmiges KH-Rudern":{p:["lats"],s:["biceps","traps"]},"Rudern am Tisch":{p:["traps","lats"],s:["biceps"]},
-  "Kniebeuge":{p:["quads"],s:["glutes","hams"]},"Goblet Squat":{p:["quads"],s:["glutes"]},"Kniebeuge (Körpergewicht)":{p:["quads"],s:["glutes"]},"Beinpresse":{p:["quads"],s:["glutes"]},"Ausfallschritte":{p:["quads"],s:["glutes","hams"]},"Bulgarian Split Squat":{p:["quads"],s:["glutes"]},
-  "Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback"]},"KH-Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback"]},"Kreuzheben":{p:["hams","lowerback"],s:["glutes","traps","quads"]},"Hip Thrust":{p:["glutes"],s:["hams"]},
+  "Klimmzug":{p:["lats"],s:["biceps","traps"]},"Latzug":{p:["lats"],s:["biceps","traps"]},
+  "Langhantelrudern":{p:["lats","traps"],s:["biceps","reardelts","lowerback"]},"Kabelrudern":{p:["lats","traps"],s:["biceps","reardelts"]},"Einarmiges KH-Rudern":{p:["lats"],s:["biceps","traps","reardelts"]},"Rudern am Tisch":{p:["traps","lats"],s:["biceps","reardelts"]},
+  "Kniebeuge":{p:["quads"],s:["glutes","hams","lowerback"]},"Goblet Squat":{p:["quads"],s:["glutes","abs"]},"Kniebeuge (Körpergewicht)":{p:["quads"],s:["glutes"]},"Beinpresse":{p:["quads"],s:["glutes","hams"]},"Ausfallschritte":{p:["quads"],s:["glutes","hams"]},"Bulgarian Split Squat":{p:["quads"],s:["glutes","hams"]},
+  "Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback"]},"KH-Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback"]},"Kreuzheben":{p:["hams","lowerback"],s:["glutes","traps","quads","lats"]},"Hip Thrust":{p:["glutes"],s:["hams"]},
   "Beinbeuger":{p:["hams"],s:[]},"Wadenheben":{p:["calves"],s:[]},
-  "Plank":{p:["abs"],s:[]},"Dead Bug":{p:["abs"],s:[]},"Superman":{p:["lowerback"],s:["glutes"]},"Zone-2 Cardio":{p:[],s:[]},
+  "Plank":{p:["abs"],s:["obliques"]},"Dead Bug":{p:["abs"],s:["obliques"]},"Superman":{p:["lowerback"],s:["glutes","hams"]},"Zone-2 Cardio":{p:[],s:[]},
 };
 // Anatomische Muskelkarte: Front-/Rückansicht mit echten Muskelgruppen-Formen.
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
@@ -4250,8 +4250,8 @@ function bodyDiagram(act){
    andere Betonung — Muskelkarte leuchtet je nach Griff anders auf. */
 const GRIP_VARIANTS={
   "Latzug":[
-    {n:"Weiter Obergriff",act:{p:["lats"],s:["reardelts","traps"]},why:"Betont den äußeren, oberen Lat → mehr Rücken-Breite (V-Form)."},
-    {n:"Enger Untergriff",act:{p:["lats"],s:["biceps"]},why:"Mehr unterer Lat + stärkere Bizeps-Beteiligung, größere ROM."},
+    {n:"Weiter Obergriff",act:{p:["lats"],s:["reardelts","traps","biceps"]},why:"Betont den äußeren, oberen Lat → mehr Rücken-Breite (V-Form)."},
+    {n:"Enger Untergriff",act:{p:["lats"],s:["biceps","traps"]},why:"Mehr unterer Lat + stärkere Bizeps-Beteiligung, größere ROM."},
     {n:"Enger Neutralgriff",act:{p:["lats","traps"],s:["biceps"]},why:"Mehr mittlerer Rücken & Dicke, schulterfreundlich."},
   ],
   "Klimmzug":[
@@ -4259,11 +4259,11 @@ const GRIP_VARIANTS={
     {n:"Untergriff (Chin-up)",act:{p:["lats"],s:["biceps"]},why:"Stärkster Bizeps-Reiz, leichter zu ziehen."},
   ],
   "Langhantelrudern":[
-    {n:"Obergriff weit",act:{p:["traps","reardelts"],s:["lats"]},why:"Betont oberen Rücken & hintere Schulter (Haltung)."},
-    {n:"Untergriff eng",act:{p:["lats"],s:["biceps","traps"]},why:"Mehr Lat & Bizeps, Ellbogen eng am Körper."},
+    {n:"Obergriff weit",act:{p:["traps","reardelts"],s:["lats","lowerback"]},why:"Betont oberen Rücken & hintere Schulter (Haltung)."},
+    {n:"Untergriff eng",act:{p:["lats"],s:["biceps","traps","lowerback"]},why:"Mehr Lat & Bizeps, Ellbogen eng am Körper."},
   ],
   "Kabelrudern":[
-    {n:"Enger Neutralgriff",act:{p:["lats"],s:["biceps"]},why:"Tiefer Lat-Zug, lange Spannung."},
+    {n:"Enger Neutralgriff",act:{p:["lats"],s:["biceps","traps"]},why:"Tiefer Lat-Zug, lange Spannung."},
     {n:"Weiter Obergriff",act:{p:["traps","reardelts"],s:["lats"]},why:"Oberer Rücken & hintere Schulter, mehr Dicke."},
   ],
   "Trizepsdrücken":[
@@ -4273,7 +4273,7 @@ const GRIP_VARIANTS={
   "Bankdrücken":[
     {n:"Flachbank",act:{p:["chest"],s:["delts","triceps"]},why:"Ganze Brust gleichmäßig — der Standard für Brustdicke."},
     {n:"Schrägbank",act:{p:["chest"],s:["delts"]},why:"Betont die obere Brust & vordere Schulter."},
-    {n:"Enger Griff",act:{p:["triceps"],s:["chest"]},why:"Hände eng → Fokus wandert auf den Trizeps."},
+    {n:"Enger Griff",act:{p:["triceps"],s:["chest","delts"]},why:"Hände eng → Fokus wandert auf den Trizeps."},
   ],
   "KH-Bankdrücken":[
     {n:"Flach",act:{p:["chest"],s:["delts","triceps"]},why:"Große Bewegungsamplitude — starke Brust-Dehnung."},
@@ -4281,20 +4281,20 @@ const GRIP_VARIANTS={
     {n:"Neutralgriff",act:{p:["chest"],s:["triceps"]},why:"Schulterschonend, innere Brust betont."},
   ],
   "Schulterdrücken":[
-    {n:"Frontal (Standard)",act:{p:["delts"],s:["triceps"]},why:"Vordere & mittlere Schulter, viel Last möglich."},
-    {n:"Neutralgriff",act:{p:["delts"],s:["triceps"]},why:"Schulterfreundlicher, etwas mehr vordere Schulter."},
+    {n:"Frontal (Standard)",act:{p:["delts"],s:["triceps","traps"]},why:"Vordere & mittlere Schulter, viel Last möglich."},
+    {n:"Neutralgriff",act:{p:["delts"],s:["triceps","traps"]},why:"Schulterfreundlicher, etwas mehr vordere Schulter."},
   ],
   "Seitheben":[
     {n:"Strikt seitlich",act:{p:["delts"],s:[]},why:"Maximale Isolation der seitlichen Schulter → Breite."},
     {n:"Leicht vorgebeugt",act:{p:["reardelts"],s:["delts"]},why:"Verlagert den Reiz auf die hintere Schulter."},
   ],
   "Kniebeuge":[
-    {n:"Schulterbreit",act:{p:["quads"],s:["glutes","hams"]},why:"Ausgewogen — Quadrizeps & Gesäß zusammen."},
-    {n:"Enger Stand",act:{p:["quads"],s:["glutes"]},why:"Mehr äußerer Quadrizeps (Oberschenkel-Sweep)."},
-    {n:"Weiter Stand",act:{p:["glutes"],s:["quads","hams"]},why:"Mehr Gesäß & Innenseite, aufrechter Rücken."},
+    {n:"Schulterbreit",act:{p:["quads"],s:["glutes","hams","lowerback"]},why:"Ausgewogen — Quadrizeps & Gesäß zusammen."},
+    {n:"Enger Stand",act:{p:["quads"],s:["glutes","lowerback"]},why:"Mehr äußerer Quadrizeps (Oberschenkel-Sweep)."},
+    {n:"Weiter Stand",act:{p:["glutes"],s:["quads","hams","lowerback"]},why:"Mehr Gesäß & Innenseite, aufrechter Rücken."},
   ],
   "Beinpresse":[
-    {n:"Füße mittig",act:{p:["quads"],s:["glutes"]},why:"Quadrizeps-Fokus, ausgewogen."},
+    {n:"Füße mittig",act:{p:["quads"],s:["glutes","hams"]},why:"Quadrizeps-Fokus, ausgewogen."},
     {n:"Füße hoch",act:{p:["glutes"],s:["hams"]},why:"Höhere Position → mehr Gesäß & Beinbeuger."},
     {n:"Füße tief",act:{p:["quads"],s:[]},why:"Tiefe Position → maximaler Quadrizeps."},
   ],
