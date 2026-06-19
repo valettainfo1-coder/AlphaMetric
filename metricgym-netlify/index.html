@@ -4216,7 +4216,7 @@ function muscleBody(view,arg,sex){
   // Geschlechtsspezifische Statur: breitere Schultern/Brust beim Mann, fülligere Hüfte/Oberschenkel
   // bei der Frau — Ober-/Unterkörper unabhängig entlang X gestaucht/gestreckt, Muskelformen selbst
   // bleiben unverändert (die echten, anatomisch korrekten Polygone werden nur proportioniert).
-  const sxUp=sf?0.90:1.13, sxLo=sf?1.10:0.95;
+  const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95;
   const grp=(keys,sx,inner)=>`<g transform="translate(50,0) scale(${sx},1) translate(-50,0)">${inner}</g>`;
   const poly=(id,pts)=>{
     const c=col(id);
