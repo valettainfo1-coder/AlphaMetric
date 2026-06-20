@@ -1755,12 +1755,14 @@ const SESSION_SLOTS={
          ["Wadenheben"],
          ["Hip Thrust","Goblet Squat"]],
   // Ganzkörper: je ein Reiz pro Grundmuster (Beine, Druck, Zug, Hüfte, Schulter, Bi, Tri).
+  // WICHTIG: jeder Slot braucht eine Körpergewicht-/Band-Option, sonst fehlt die Gruppe bei
+  // Equipment "bodyweight" (Rudern am Tisch / Superman decken den Zug ohne Geräte ab).
   full:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
         ["Bankdrücken","KH-Bankdrücken","Liegestütze"],
-        ["Langhantelrudern","Latzug","Einarmiges KH-Rudern"],
+        ["Langhantelrudern","Latzug","Einarmiges KH-Rudern","Rudern am Tisch","Superman"],
         ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
         ["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
-        ["Bizeps-Curls","Klimmzug"],
+        ["Bizeps-Curls","Klimmzug","Rudern am Tisch"],
         ["Trizepsdrücken","Enge Liegestütze"]],
   // Arnold-Split Tag 1: Brust & Rücken im Wechsel.
   chestback:[["Bankdrücken","KH-Bankdrücken","Liegestütze"],
@@ -1913,8 +1915,11 @@ function generateTrainingPlan(profile,variant){
   // Variante B nimmt pro Slot — wo möglich — den ZWEITEN passenden Kandidaten.
   const buildMain=(key)=>{
     const chosen=[];
+    // Ganzkörper deckt jeder Slot eine andere Muskelgruppe ab → Mindestens 4 Übungen, damit
+    // Beine/Druck/Zug/Hüfte garantiert drin sind (sonst fehlen bei hohem BMI ganze Gruppen).
+    const cnt = key==="full" ? Math.max(count,4) : count;
     for(const slot of SESSION_SLOTS[key]){
-      if(chosen.length>=count)break;
+      if(chosen.length>=cnt)break;
       let fitting=slot.filter(x=>fits(x)&&!chosen.includes(x));
       if(PP.decon&&fitting.length>1) fitting=fitting.slice().sort((x,y)=>friendlyScore(y)-friendlyScore(x));
       const n=vB&&fitting.length>1?fitting[1]:fitting[0];
@@ -1926,7 +1931,7 @@ function generateTrainingPlan(profile,variant){
     for(const fm of focus){
       if(!(DAY_FOCUS[key]||[]).includes(fm))continue; // nur in biologisch passende Einheiten injizieren
       const bonus=(FOCUS_EX[fm]||[]).find(x=>fits(x)&&!chosen.includes(x));
-      if(bonus){chosen.splice(Math.min(2+added,chosen.length),0,bonus); added++; if(chosen.length>count+2)chosen.length=count+2; if(added>=2)break;}
+      if(bonus){chosen.splice(Math.min(2+added,chosen.length),0,bonus); added++; if(chosen.length>cnt+2)chosen.length=cnt+2; if(added>=2)break;}
     }
     return chosen.map((n,i)=>{
       const d=EXDB[n]||{};
@@ -2528,6 +2533,11 @@ const FOODS=[
   ["Lachsfilet geräuchert",100,180,18,0,12],["Sushi (1 Stück)",30,45,2,7,0.6],["Maultaschen",100,180,9,20,7],
   ["Banane getrocknet",100,346,3.9,88,1.8],["Rosinen",100,299,3.1,79,0.5],["Studentenfutter",100,480,13,40,29],
   ["Eiweißbrot (1 Scheibe)",50,130,11,6,6],["Magerquark mit Beeren",200,150,23,12,1],
+  // Getränke (häufig geloggt) — Werte je Portion
+  ["Kaffee (schwarz)",200,4,0.3,0,0],["Kaffee mit Milch",200,20,1.2,1.6,0.9],["Cappuccino",150,55,3,5,2.5],
+  ["Tee (ungesüßt)",200,1,0,0,0],["Cola",250,105,0,26,0],["Apfelsaft",250,115,0.3,27,0.1],
+  ["Orangensaft",250,112,1.8,25,0.5],["Bier (0,5 l)",500,210,1.6,16,0],["Weißbier (0,5 l)",500,250,2.5,20,0],
+  ["Aperol Spritz",200,180,0,18,0],["Rotwein (0,2 l)",200,170,0.2,5,0],["Energy Drink",250,113,0,28,0],
 ];
 /* Levenshtein-Distanz für Tippfehler-tolerante Erkennung. */
 function lev(a,b){
@@ -3181,16 +3191,29 @@ function renderAuth(){
    klar als Projektion gekennzeichnet — keine versprochenen Einzelresultate). */
 const LP={goal:"muscle_gain",days:4,exp:"novice"};
 function landingProjection(){
-  // Kraftzuwachs auf Grundübungen über 12 Wochen, %-Bereich nach Trainingsalter
-  // (Größenordnung gem. Literatur: Anfänger steigern am schnellsten).
-  const base={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[LP.exp]||[12,22];
+  const g=LP.goal;
   const dFac=Math.min(1,0.55+LP.days*0.11); // mehr Tage → näher ans obere Ende (mit Sättigung)
-  const lo=Math.round(base[0]*dFac), hi=Math.round(base[1]*dFac);
-  // Geschätzter Zeitaufwand/Woche aus Tagen × ~55 Min
   const minWk=LP.days*55;
-  // Magermasse-Aufbau-Tendenz (qualitativ, nicht als kg versprochen)
-  const muscle={muscle_gain:"deutlich",recomp:"moderat",strength:"gering, dafür viel Kraft",fat_loss:"erhalten im Defizit",general:"solide",endurance:"gering",mobility:"gering"}[LP.goal]||"solide";
-  return {lo,hi,minWk,muscle};
+  // Kraft-% (Maximalkraft/allgemein) — Anfänger steigern am schnellsten (Literatur-Größenordnung).
+  const sB={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[LP.exp]||[12,22];
+  const sLo=Math.max(1,Math.round(sB[0]*dFac)), sHi=Math.max(2,Math.round(sB[1]*dFac));
+  // Muskel-kg (Muskelaufbau) — realistischer Magermasse-Aufbau in 12 Wochen.
+  const mB={beginner:[3,5],novice:[2,4],intermediate:[1,3],advanced:[1,2]}[LP.exp]||[2,4];
+  const mLo=Math.max(1,Math.round(mB[0]*dFac)), mHi=Math.max(2,Math.round(mB[1]*dFac));
+  // Fett-kg (Fettabbau/Recomp) — mehr Trainingstage + Cardio stützen das Defizit.
+  const fLo=Math.round(3+LP.days*0.7), fHi=Math.round(5+LP.days*1.1);
+  // Magermasse-Tendenz (qualitativ, nicht als kg versprochen)
+  const muscle={muscle_gain:"deutlich",recomp:"moderat",strength:"gering, dafür viel Kraft",fat_loss:"erhalten im Defizit",general:"solide",endurance:"gering"}[g]||"solide";
+  // ZIEL-SPEZIFISCHE Kern-Projektion (Headline ändert sich mit der Zielauswahl).
+  const P={
+    muscle_gain:{lo:mLo,hi:mHi,prefix:"+",unit:"kg",label:"Muskeln in 12 Wochen",range:`+${mLo}–${mHi} kg`},
+    strength:  {lo:sLo,hi:sHi,prefix:"+",unit:"%",label:"mehr Kraft in 12 Wochen",range:`+${sLo}–${sHi}%`},
+    fat_loss:  {lo:fLo,hi:fHi,prefix:"−",unit:"kg",label:"Körperfett in 12 Wochen",range:`−${fLo}–${fHi} kg`},
+    recomp:    {lo:fLo,hi:fHi,prefix:"−",unit:"kg",label:"Fett runter, Kraft rauf",range:`−${fLo}–${fHi} kg Fett`},
+    general:   {lo:sLo,hi:sHi,prefix:"+",unit:"%",label:"mehr Fitness in 12 Wochen",range:`+${sLo}–${sHi}%`},
+    endurance: {lo:sLo,hi:Math.round(sHi*1.2),prefix:"+",unit:"%",label:"mehr Ausdauer in 12 Wochen",range:`+${sLo}–${Math.round(sHi*1.2)}%`},
+  }[g]||{lo:sLo,hi:sHi,prefix:"+",unit:"%",label:"mehr Kraft in 12 Wochen",range:`+${sLo}–${sHi}%`};
+  return {...P, minWk, muscle};
 }
 function projChart(lo,hi){
   // Sättigungskurve von 0 → Mittelwert über 12 Wochen, als Fläche
@@ -3208,8 +3231,8 @@ function projChart(lo,hi){
 function lpResultInner(){
   const pr=landingProjection();
   return `<div style="background:var(--s2);border-radius:16px;padding:18px;text-align:center">
-      <p class="hero-num volt-txt lp-res-pop" style="font-size:46px;line-height:1">+<span id="lp-res-num" data-to="${pr.hi}">${pr.hi}</span> %</p>
-      <p class="xs t2" style="margin-top:2px">mehr Kraft in 12 Wochen · realistisch +${pr.lo}–${pr.hi}%</p>
+      <p class="hero-num volt-txt lp-res-pop" style="font-size:46px;line-height:1">${pr.prefix}<span id="lp-res-num" data-to="${pr.hi}">${pr.hi}</span> ${pr.unit}</p>
+      <p class="xs t2" style="margin-top:2px">${pr.label} · realistisch ${pr.range}</p>
       <div style="margin-top:10px">${projChart(pr.lo,pr.hi)}</div>
       <div class="grid2 mt12" style="gap:10px">
         <div><p class="metric" style="font-size:16px">${pr.minWk} Min</p><p class="xs t2">Aufwand/Woche</p></div>
