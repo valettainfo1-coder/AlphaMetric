@@ -1804,6 +1804,23 @@ const SESSION_SLOTS={
 };
 const DAY_MUSCLES={push:["Brust","Schultern","Arme"],pull:["Rücken","Arme"],legs:["Beine","Core"],upper:["Brust","Rücken","Schultern","Arme"],lower:["Beine","Core"],
   full:["Brust","Rücken","Schultern","Arme","Beine","Core"],chestback:["Brust","Rücken"],shoulderarms:["Schultern","Arme"],chest:["Brust"],back:["Rücken"],shoulders:["Schultern"],arms:["Arme"]};
+// PRÄZISE Fokus-Zuordnung je Tag-Typ: welcher GRANULARE Fokus-Muskel darf in welche Einheit?
+// Kritisch: Bizeps NIE auf Push, Trizeps NIE auf Pull — sonst wird ein Armmuskel an Push- UND
+// Pull-Tagen gereizt (4×/Woche statt 2×). Das ersetzt die grobe "Arme"-Sammelgruppe.
+const DAY_FOCUS={
+  push:["Brust","Schultern","Seitl. Schulter","Trizeps"],
+  pull:["Rücken","Latissimus","Hintere Schulter","Bizeps"],
+  legs:["Beine","Quadrizeps","Beinbeuger","Gesäß","Waden","Core"],
+  upper:["Brust","Rücken","Latissimus","Schultern","Seitl. Schulter","Hintere Schulter","Bizeps","Trizeps","Arme"],
+  lower:["Beine","Quadrizeps","Beinbeuger","Gesäß","Waden","Core"],
+  full:["Brust","Rücken","Latissimus","Schultern","Seitl. Schulter","Hintere Schulter","Bizeps","Trizeps","Arme","Beine","Quadrizeps","Beinbeuger","Gesäß","Waden","Core"],
+  chestback:["Brust","Rücken","Latissimus"],
+  shoulderarms:["Schultern","Seitl. Schulter","Hintere Schulter","Bizeps","Trizeps","Arme"],
+  chest:["Brust"],
+  back:["Rücken","Latissimus"],
+  shoulders:["Schultern","Seitl. Schulter","Hintere Schulter"],
+  arms:["Bizeps","Trizeps","Arme"],
+};
 /* Fokus-Bonus: eine Extra-Übung für den gewählten Schwerpunkt, früh platziert. */
 const FOCUS_EX={
   Brust:["KH-Fliegende","Liegestütze"],
@@ -1907,8 +1924,7 @@ function generateTrainingPlan(profile,variant){
     // gewählten Fokus-Muskeln dürfen bis zu 2 Bonus-Übungen pro passender Session rein.
     let added=0;
     for(const fm of focus){
-      const parent=FOCUS_PARENT[fm]||fm;
-      if(!(DAY_MUSCLES[key]||[]).includes(parent))continue;
+      if(!(DAY_FOCUS[key]||[]).includes(fm))continue; // nur in biologisch passende Einheiten injizieren
       const bonus=(FOCUS_EX[fm]||[]).find(x=>fits(x)&&!chosen.includes(x));
       if(bonus){chosen.splice(Math.min(2+added,chosen.length),0,bonus); added++; if(chosen.length>count+2)chosen.length=count+2; if(added>=2)break;}
     }
@@ -2588,7 +2604,10 @@ function matchFood(segment){
 }
 function parseNutrition(input){
   // Multi-Item: "500g hähnchen und 300g reis, 2 tomaten"
-  const segments=input.trim().toLowerCase().split(/\s*(?:,|\bund\b|\+|danach)\s*/).filter(Boolean);
+  // Fehlt ein Komma zwischen zwei Posten ("200 g kartoffeln 100 gramm spätzle"), trennen wir
+  // automatisch VOR jeder neuen Mengenangabe, die auf einen Buchstaben folgt.
+  const pre=input.trim().toLowerCase().replace(/([a-zäöüß])\s+(?=\d+\s*(?:g|gramm|gr|stück|stk)\b)/g,"$1, ");
+  const segments=pre.split(/\s*(?:,|\bund\b|\+|danach)\s*/).filter(Boolean);
   const items=[];
   for(const seg of segments){
     const gramMatch=seg.match(/(\d+)\s*(g|gramm)\b/);
@@ -6084,10 +6103,10 @@ function renderNutrition(){
       </div>
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?(pendingItems[0]&&pendingItems[0].loading
-        ?`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
+        ?`<div class="warncard" style="margin-top:14px;border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
           <div class="row" style="align-items:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div>
           <span class="sm t2">Coach Metric liest deinen Eintrag …</span></div></div>`
-        :`<div class="warncard" style="border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
+        :`<div class="warncard" style="margin-top:14px;border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
         ${pendingItems.some(it=>it.ai)?`<p class="xs t2 mb8">${icon("sparkle",11)} ${pendingItems.some(it=>it.photo)?"Vom Foto erkannt":"Von der KI erkannt"} & geschätzt — vor dem Übernehmen kurz prüfen.</p>`:""}
         ${pendingItems.map(it=>it.food?`
           <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${it.raw.trim()}" erkannt als</span> `:""}${it.food[0]} · <span class="metric">${it.gram} g</span></span>
@@ -6179,12 +6198,12 @@ function renderPricing(){
     <div><p class="sm" style="font-weight:700">${TIER_LABEL[S.trialTier]}-Test aktiv · noch ${trialDaysLeft()} Tage</p>
       <p class="xs t2">Voller Zugriff. Du behältst alles, wenn du bis dahin bleibst.</p></div></div>`:"";
   root.innerHTML=`
-    <div class="heroband"><h2>Wähle deine Tiefe</h2>
+    <div class="heroband"><h2>Hol das Maximum aus deinem Training</h2>
       <p class="sm t2" style="max-width:310px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Die höheren Pläne schalten frei, wie genau die Engine dich versteht — und wie weit sie dich bringt.</p></div>
     ${trialBanner}${founding}
     <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
-      <button class="btn ${b==="monthly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('monthly')">Monatlich</button>
-      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="margin-left:6px">2 Monate gratis</span></button></div>
+      <button class="btn ${b==="monthly"?"volt":"ghost"}" style="min-height:40px;flex:1;white-space:nowrap" onclick="A.billing('monthly')">Monatlich</button>
+      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px;flex:1;white-space:nowrap;font-size:13.5px;gap:6px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="font-size:8.5px;padding:1px 6px">2 Monate gratis</span></button></div>
     ${card("free",false)}
     ${card("pro",true)}
     ${card("elite",false)}
