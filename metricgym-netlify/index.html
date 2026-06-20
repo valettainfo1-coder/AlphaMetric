@@ -205,6 +205,14 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .modal,.sheet{background:var(--glass-bg-strong); -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%);}
   /* Glass-Light für Listen (Perf: kein blur auf vielen Elementen) */
   .acc,.qcard,.lockcard,.warncard{-webkit-backdrop-filter:none; backdrop-filter:none; background:var(--surface);}
+  /* ===== Onboarding-Tour ===== */
+  .tour-bg{position:fixed; inset:0; z-index:9000; background:radial-gradient(120% 80% at 50% 100%, rgba(5,7,12,.78), rgba(5,7,12,.45)); display:flex; align-items:flex-end; justify-content:center; padding:14px;}
+  .tour-card{position:relative; width:100%; max-width:440px; background:var(--glass-bg-strong); -webkit-backdrop-filter:blur(32px) saturate(180%); backdrop-filter:blur(32px) saturate(180%); border:1px solid rgba(255,255,255,.12); border-radius:24px; padding:22px 20px 18px; box-shadow:0 -10px 50px rgba(0,0,0,.5); margin-bottom:calc(78px + env(safe-area-inset-bottom));}
+  .tour-ic{width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#5B7FE0,#4A6FD8); color:#fff; box-shadow:0 8px 22px rgba(74,111,216,.4);}
+  .tour-dots{display:flex; gap:6px; justify-content:center; margin-bottom:14px;}
+  .tour-dots span{width:7px; height:7px; border-radius:50%; background:var(--t3); transition:all .3s;}
+  .tour-dots span.on{width:22px; border-radius:4px; background:var(--volt);}
+  @media(min-width:900px){ .tour-bg{align-items:center;} .tour-card{margin-bottom:0;} }
 
   .ct{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); margin-bottom:12px;}
   .btn{
@@ -1343,6 +1351,7 @@ S.importedPlan=S.importedPlan||null; // per Bild importierter Fremdplan (Analyse
 // Additive Migration (v5): Feature-Übersicht, Plan-Präzision, Schedule-Begründung,
 // Übungs-Overrides (Long-Press-Tausch), Health-Import (Ruhepuls)
 S.seenFeatures=S.seenFeatures??false;
+S.tourDone=S.tourDone??false;        // Onboarding-Tour einmalig nach dem Quiz
 S.precisionShown=S.precisionShown??false;
 S.scheduleRationale=S.scheduleRationale??null;
 S.exOverrides=S.exOverrides||{};
@@ -2009,7 +2018,8 @@ function capWeeklyVolume(PLAN,a){
     // 2) Restliches Über-MRV per Satz-Reduktion (Floor 2)
     let w=weekly();
     for(const [g,band] of Object.entries(VOL_BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
-      for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.round(e.sets*scale)); } } }
+      // ABRUNDEN: nie über dem MRV landen (Aufrunden würde den Deckel verfehlen)
+      for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } } }
     // 3) Dauer (est) je betroffener Einheit neu berechnen
     for(const base of bases){ const d=PLAN[base];
       const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0);
@@ -2064,7 +2074,9 @@ function generateOptimalSchedule(a){
   const FORCED={
     ppl:{2:["upper","lower"],3:["push","pull","legs"],4:["push","pull","legs","push"],5:["push","pull","legs","push","pull"],6:["push","pull","legs","push","pull","legs"]},
     ul:{2:["upper","lower"],3:["upper","lower","upper"],4:["upper","lower","upper","lower"],5:["upper","lower","upper","lower","upper"],6:["upper","lower","upper","lower","upper","lower"]},
-    full:{2:["full","full"],3:["full","full","full"],4:["full","full","full","full"],5:["full","full","full","full","full"],6:["full","full","full","full","full","full"]},
+    // Ganzkörper max. 4× echte Einheiten — bei 6× wäre jeder Muskel 6×/Woche über dem MRV
+    // (Übertraining). Übrige Tage = lockeres Cardio (aktive Erholung), Volumen bleibt im Korridor.
+    full:{2:["full","full"],3:["full","full","full"],4:["full","full","full","full"],5:["full","full","full","full","cardio"],6:["full","full","full","full","cardio","cardio"]},
     arnold:{2:["upper","lower"],3:["chestback","shoulderarms","legs"],4:["chestback","shoulderarms","legs","chestback"],5:["chestback","shoulderarms","legs","chestback","shoulderarms"],6:["chestback","shoulderarms","legs","chestback","shoulderarms","legs"]},
     bro:{2:["upper","lower"],3:["push","pull","legs"],4:["chest","back","legs","arms"],5:["chest","back","shoulders","arms","legs"],6:["chest","back","shoulders","arms","legs","arms"]},
   };
@@ -2988,6 +3000,7 @@ function renderAppbar(){
   A.goHome=()=>{menuOpen=false;S.tab="home";save();render();};
   A.openMenu=()=>{menuOpen=!menuOpen;renderAppbar();};
   A.menuGo=(t)=>{menuOpen=false;S.tab=t;save();render();};
+  A.replayTour=()=>{menuOpen=false; startTour(0);};
   A.profileTab=()=>{menuOpen=false;S.tab="profile";save();render();};
   A.notif=()=>{
     menuOpen=false;renderAppbar();
@@ -3021,6 +3034,7 @@ function renderAppbar(){
     <div class="menu-divider"></div>
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr Tiefe freischalten":"Abo & Tier ändern","A.menuGo('pricing')")}
     ${item("sparkle","So funktioniert METRICGYM","Features & Engine im Überblick","A.menuGo('features')")}
+    ${item("play","Tour wiederholen","Geführte Durchführung der Funktionen","A.replayTour()")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
     ${item("info","Rechtliches & Datenschutz","Impressum · AGB · Datenschutz","openLegalIndex()")}
     <div class="menu-divider"></div>
@@ -3037,6 +3051,37 @@ function renderTabbar(){
   tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner">
     ${TABS.map(([id,ic,l],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${l}">
       <span class="ic" aria-hidden="true">${icon(ic,i===2?22:19)}</span>${l}</button>`).join("")}</div></nav>`;
+}
+/* ---------- Onboarding-Tour: geführte Durchführung der Hauptfunktionen ----------
+   Struktur statt Erschlag: 5 Stationen, jede zeigt die echte Ansicht + erklärt WAS möglich ist
+   und WARUM es (bio-)wissenschaftlich richtig ist. Wiederholbar über das Menü. */
+const TOUR=[
+  {tab:"home",icon:"home",t:"Heute — dein Tagesstart",b:"Mach den <b>10-Sekunden-Status-Check</b> (Schlaf, Energie, Stress, Muskelkater). Die App passt die Trainings­intensität an deinen <b>echten Zustand</b> an — das ist Autoregulation und schützt vor Übertraining (Helms et al.)."},
+  {tab:"train",icon:"dumbbell",t:"Training — wissenschaftlich geplant",b:"Dein Plan ist kein Zufall: jede Muskelgruppe <b>2×/Woche</b> (Schoenfeld 2016), Volumen im erholbaren Korridor (<b>MEV–MRV</b>, Israetel), Wiederholungen & Pausen exakt auf dein Ziel. <b>Tippe eine Übung</b> für Schritt-für-Schritt-Anleitung + Muskelkarte."},
+  {tab:"nutrition",icon:"utensils",t:"Ernährung — in 10 Sekunden geloggt",b:"<b>Tippe oder sprich</b> einfach, was du gegessen hast — die KI erkennt alles und rechnet Kalorien & Makros. Dein Tagesziel ist auf dein Ziel abgestimmt: <b>Defizit</b> beim Fettabbau, <b>Überschuss</b> beim Aufbau, viel Protein zum Muskelschutz (Morton et al.)."},
+  {tab:"analytics",icon:"chart",t:"Analytics — dein Fortschritt in Zahlen",b:"Kraftkurve, geschätztes <b>1RM</b>, Wochenvolumen und Konstanz — alles aus deinen echten Daten. So siehst du schwarz auf weiß, dass du wächst."},
+  {tab:"profile",icon:"user",t:"Profil — alles im Griff",b:"Ziele anpassen, Wochenplan editieren, <b>Freunde werben (echtes Guthaben)</b> und deine Daten exportieren. Du behältst die volle Kontrolle."},
+];
+function startTour(i){
+  i=i||0;
+  if(i>=TOUR.length){ S.tourDone=true; save(); overlay.innerHTML=""; document.body.classList.remove("overlay-open"); confetti&&confetti(); toast("Tour fertig — leg los! 💪"); return; }
+  const s=TOUR[i];
+  S.tab=s.tab; save(); render();
+  A.tourNext=()=>startTour(i+1);
+  A.tourSkip=()=>{ S.tourDone=true; save(); overlay.innerHTML=""; document.body.classList.remove("overlay-open"); };
+  document.body.classList.add("overlay-open");
+  overlay.innerHTML=`<div class="tour-bg" onclick="if(event.target===this)A.tourSkip()">
+    <div class="tour-card fade">
+      <div class="tour-dots">${TOUR.map((_,k)=>`<span class="${k===i?"on":""}"></span>`).join("")}</div>
+      <div class="tour-ic">${icon(s.icon,24)}</div>
+      <p class="display-m" style="margin:10px 0 6px">${s.t}</p>
+      <p class="sm t2" style="line-height:1.6">${s.b}</p>
+      <div class="row" style="gap:10px;margin-top:16px">
+        <button class="btn ghost" style="flex:1;min-height:46px" onclick="A.tourSkip()">${i===0?"Überspringen":"Schließen"}</button>
+        <button class="btn volt" style="flex:1.4;min-height:46px" onclick="A.tourNext()">${i===TOUR.length-1?"Fertig ✓":"Weiter"} ${i===TOUR.length-1?"":"→"}</button>
+      </div>
+      <p class="xs t2" style="text-align:center;margin-top:10px">Station ${i+1} von ${TOUR.length}</p>
+    </div></div>`;
 }
 
 // ---------- Floating Coach (kontextuell, kein eigener Tab) ----------
@@ -3800,7 +3845,7 @@ function renderReveal(){
     // Nur EINE Erklärungsfolie nach dem Quiz: direkt ins Programm (Feature-Übersicht
     // bleibt über das Menü erreichbar) — mit eleganter Beam-in-Animation.
     S.seenFeatures=true; save();
-    beamIntoApp(()=>{ S.screen="app"; S.tab="home"; save(); render(); });
+    beamIntoApp(()=>{ S.screen="app"; S.tab="home"; save(); render(); if(!S.tourDone) setTimeout(()=>startTour(0),520); });
   };
   // Alternative: Tage/Split selbst festlegen (statt den optimalen Vorschlag zu übernehmen).
   A.startAppCustom=()=>{
