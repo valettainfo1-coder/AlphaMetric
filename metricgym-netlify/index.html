@@ -1675,6 +1675,8 @@ const EXDB={
     why:"Pause in der Dehnung unten nimmt den Sehnen-Rebound raus — der Muskel arbeitet."},
   "Plank":{m:"Core",compound:false,eq:"body",tempo:"halten",rir:"–",alt:"Dead Bug",
     why:"Anti-Extension stabilisiert die Wirbelsäule unter den schweren Grundübungen."},
+  "Dead Bug":{m:"Core",compound:false,eq:"body",tempo:"2-1-1-1",rir:"–",alt:"Plank",
+    why:"Anti-Extension mit kontralateraler Bewegung — schult Rumpfstabilität ohne Wirbelsäulenlast."},
   "Zone-2 Cardio":{m:"Herz",compound:false,eq:"body",tempo:"locker",rir:"–",alt:"Radfahren / zügiges Gehen",
     why:"Aerobe Basis bei niedriger Ermüdung — unterstützt Erholung statt sie zu kosten (Seiler, 2010)."},
 };
@@ -1872,15 +1874,17 @@ function bmiOf(a){ const h=((a&&a.height)||180)/100; return (a&&a.weight)?a.weig
 // Zeitbudget × BMI × Erholung. Fortgeschrittene/Muskelaufbau/viel Zeit -> mehr (bis 8);
 // Einsteiger/hoher BMI/wenig Zeit -> schlanker (ab 3). So bekommt jeder das, was zu ihm passt.
 function sessionCount(a){
-  const exp=a.exp||"novice";
-  let n={beginner:4,novice:5,intermediate:6,advanced:7}[exp]||5;
+  // ZEIT-TREU: die Übungszahl wird so gewählt, dass die berechnete Dauer ≈ der angegebenen
+  // Trainingszeit entspricht (vorher wurde die Zeit faktisch ignoriert). Pro Übung kostet je
+  // nach Ziel unterschiedlich viel Zeit (Kraft = lange Pausen, Ausdauer = kurze).
   const g=(a.goals||["muscle_gain"])[0];
-  if(g==="strength")n-=1; else if(g==="muscle_gain"||g==="recomp")n+=1;
   const t=a.sessionTime||60;
-  if(t<=35)n-=2; else if(t<=45)n-=1; else if(t>=80)n+=1;
-  const bmi=bmiOf(a);
-  if(bmi>=35)n-=2; else if(bmi>=30)n-=1;
-  const r=a.recovery_profile; if(r==="slow")n-=1; else if(r==="fast")n+=1;
+  const perEx = g==="strength"?13 : g==="endurance"?6.5 : g==="fat_loss"?7.5 : 9; // Minuten/Übung inkl. Sätze+Pausen
+  let n=Math.round((t-13)/perEx); // 13 Min Auf-/Abwärmen abziehen
+  // Feinjustierung: Einsteiger/hoher BMI/langsame Erholung etwas schlanker.
+  if(a.exp==="beginner")n-=1;
+  const bmi=bmiOf(a); if(bmi>=35)n-=1;
+  if(a.recovery_profile==="slow")n-=1;
   return Math.max(3,Math.min(8,n));
 }
 // Ziel-/Zustands-abhängige Progressions-Parameter (Reps, Pausen, RIR).
@@ -1948,7 +1952,7 @@ function generateTrainingPlan(profile,variant){
     const est=Math.round((8+setMin+5)/5)*5;
     return {key,...TYPE_META[key],warmup:WARMUP_DEFAULT,cooldown:COOLDOWN_DEFAULT,main,abs:absEx,est};
   };
-  return {
+  const PLAN={
     push:day("push",buildMain("push")),
     pull:day("pull",buildMain("pull")),
     legs:day("legs",buildMain("legs"),true),
@@ -1964,6 +1968,53 @@ function generateTrainingPlan(profile,variant){
     cardio:{...day("cardio",[mk("Zone-2 Cardio",1,"30–40 Min",0)]),est:35},
     rest:{key:"rest",...TYPE_META.rest,warmup:[],cooldown:[],main:[],abs:[],est:0},
   };
+  capWeeklyVolume(PLAN,a);   // Übertraining vermeiden: Wochenvolumen je Muskel auf MRV deckeln
+  return PLAN;
+}
+/* WISSENSCHAFTLICHER VOLUMEN-DECKEL (Israetel MEV–MRV): Wird eine Muskelgruppe über mehrere
+   Trainingstage gestapelt (z. B. Beine 2× mit je 6 Übungen → 50+ Sätze/Woche), übersteigt das
+   die maximal erholbare Menge (MRV) deutlich = Übertraining. Wir kürzen die WOCHENspitze
+   (Woche 3) in den Korridor: erst überzählige Isolations-Übungen entfernen (Mehrgelenk bleibt),
+   dann Sätze feinjustieren — mind. 1 Übung je Gruppe je Einheit bleibt erhalten. */
+function capWeeklyVolume(PLAN,a){
+  try{
+    const GROUP={Brust:"Brust",Schultern:"Schultern","Rücken":"Rücken",Arme:"Arme",Beine:"Beine",Core:"Core"};
+    const grpOf=(n)=>GROUP[(EXDB[n]||{}).m];
+    const isCompound=(n)=>!!(EXDB[n]||{}).compound;
+    const peak=(e)=> e.sets + (isCompound(e.n)?2:1); // Woche-3-Spitze (vgl. weekSets)
+    const sch=generateOptimalSchedule(a).schedule.filter(t=>t!=="rest"&&t!=="cardio").map(t=>parseTypeKey(t).base);
+    if(!sch.length) return;
+    const bases=[...new Set(sch)];
+    const exesOf=(base)=>[...PLAN[base].main,...(PLAN[base].abs||[])];
+    const weekly=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+peak(e); } } return w; };
+    // 1) Übungen trimmen, solange über MRV. Abs-Block (Core, ergänzend) darf ganz weg;
+    //    in der Hauptliste bleibt ≥1 Übung je Gruppe je Einheit erhalten. Isolation zuerst.
+    for(const [g,band] of Object.entries(VOL_BANDS)){
+      const hi=band[1]; let guard=0, w=weekly();
+      while((w[g]||0)>hi && guard++<24){
+        let pick=null, pickScore=-1;
+        for(const base of bases){
+          for(const arr of ["main","abs"]){
+            const list=PLAN[base][arr]; if(!list)continue;
+            const gIdx=list.map((e,i)=>grpOf(e.n)===g?i:-1).filter(i=>i>=0);
+            if(arr==="main" && gIdx.length<=1)continue; // letzte Hauptübung der Gruppe behalten
+            for(const i of gIdx){ const s=(isCompound(list[i].n)?0:100)+(arr==="abs"?50:0)+gIdx.length; if(s>pickScore){ pickScore=s; pick=[base,arr,i]; } }
+          }
+        }
+        if(!pick)break;
+        PLAN[pick[0]][pick[1]].splice(pick[2],1);
+        w=weekly();
+      }
+    }
+    // 2) Restliches Über-MRV per Satz-Reduktion (Floor 2)
+    let w=weekly();
+    for(const [g,band] of Object.entries(VOL_BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
+      for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.round(e.sets*scale)); } } }
+    // 3) Dauer (est) je betroffener Einheit neu berechnen
+    for(const base of bases){ const d=PLAN[base];
+      const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0);
+      d.est=Math.round((8+sm+5)/5)*5; }
+  }catch(e){}
 }
 /* ---------- Optimaler Wochenplan (v5/Phase 1): Vorschlag + Begründung ----------
    Split nach Tagen + Erholungsprofil, Platzierung nach Wochen-Präferenz,
@@ -4723,7 +4774,22 @@ function groqOn(){ return !!aiProxy() || !!(S.aiOn && S.aiKey && S.aiKey.length>
 // ===== Gemini (Google AI) — PRIMÄRE KI für die gesamte App; Groq ist Fallback =====
 function geminiKey(){ try{ return ((window.METRICGYM_CONFIG||{}).geminiKey)||""; }catch{ return ""; } }
 function geminiOn(){ return !!S.aiOn && geminiKey().length>20; }
-function aiActive(){ return geminiOn() || groqOn(); }
+// ===== Server-Proxy (Supabase Edge Function ai-proxy): versteckt ALLE Keys serverseitig =====
+function aiProxyURL(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.useAiProxy&&c.supabaseUrl)?(String(c.supabaseUrl).replace(/\/$/,"")+"/functions/v1/ai-proxy"):null; }catch{ return null; } }
+function aiProxyOn(){ return !!S.aiOn && !!aiProxyURL(); }
+function aiProxyHeaders(){ const c=window.METRICGYM_CONFIG||{}; const tok=(typeof SB!=="undefined"&&SB.token)||c.supabaseAnonKey||""; return {"Content-Type":"application/json","Authorization":"Bearer "+tok,"apikey":c.supabaseAnonKey||""}; }
+async function proxyComplete(system,user,opts){ opts=opts||{};
+  const mode=(typeof user==="object"&&user&&user.images&&user.images.length)?"vision":"complete";
+  const r=await fetch(aiProxyURL(),{method:"POST",headers:aiProxyHeaders(),body:JSON.stringify({mode,system,user,json:!!opts.json,max:opts.max,temp:opts.temp})});
+  if(!r.ok)throw new Error("Proxy "+r.status); const j=await r.json(); if(j&&j.error)throw new Error(j.error.message||"Proxy"); return (j&&j.text)||""; }
+async function proxyStream(system,history,onDelta){
+  const r=await fetch(aiProxyURL(),{method:"POST",headers:aiProxyHeaders(),body:JSON.stringify({mode:"stream",system,history})});
+  if(!r.ok||!r.body)throw new Error("Proxy "+r.status);
+  const reader=r.body.getReader(),dec=new TextDecoder(); let buf="",full="";
+  while(true){ const {done,value}=await reader.read(); if(done)break; buf+=dec.decode(value,{stream:true}); const lines=buf.split("\n"); buf=lines.pop();
+    for(const ln of lines){ const t=ln.trim(); if(!t.startsWith("data:"))continue; const d=t.slice(5).trim(); if(!d||d==="[DONE]")continue; try{ const tok=JSON.parse(d).delta||""; if(tok){full+=tok;onDelta(full);} }catch{} } }
+  return full.trim(); }
+function aiActive(){ return aiProxyOn() || geminiOn() || groqOn(); }
 const GEMINI_MODEL="gemini-flash-latest";
 function geminiURL(stream){ return "https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":"+(stream?"streamGenerateContent?alt=sse":"generateContent"); }
 // dataURL ("data:image/jpeg;base64,…") → Gemini inline_data-Part
@@ -4745,7 +4811,7 @@ async function geminiGen(system,user,opts){
 // Streaming-Chat (SSE) für den Coach.
 async function geminiStream(system,history,onDelta){
   const contents=history.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}));
-  const body={ contents, systemInstruction:{parts:[{text:system}]}, generationConfig:{temperature:0.6,maxOutputTokens:600} };
+  const body={ contents, systemInstruction:{parts:[{text:system}]}, generationConfig:{temperature:0.6,maxOutputTokens:900} };
   const res=await fetch(geminiURL(true),{method:"POST",headers:{"Content-Type":"application/json","X-goog-api-key":geminiKey()},body:JSON.stringify(body)});
   if(!res.ok)throw new Error("Gemini "+res.status);
   const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
@@ -4775,7 +4841,7 @@ async function orComplete(system,user,opts){
 }
 async function orStream(system,history,onDelta){
   const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:orHeaders(),
-    body:JSON.stringify({model:OR_MODEL,messages:[{role:"system",content:system},...history],temperature:0.6,max_tokens:600,stream:true})});
+    body:JSON.stringify({model:OR_MODEL,messages:[{role:"system",content:system},...history],temperature:0.6,max_tokens:900,stream:true})});
   if(!res.ok)throw new Error("OpenRouter "+res.status);
   const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
   while(true){ const {done,value}=await reader.read(); if(done)break;
@@ -4796,7 +4862,7 @@ async function groqComplete(system,user,opts){
 }
 async function groqStream(system,history,onDelta){
   const res=await fetch(aiEndpoint(),{method:"POST",headers:aiHeaders(),
-    body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},...history],temperature:0.6,max_tokens:500,stream:true})});
+    body:JSON.stringify({model:AI_MODEL,messages:[{role:"system",content:system},...history],temperature:0.6,max_tokens:900,stream:true})});
   if(!res.ok){ let m=""; try{m=(await res.json()).error?.message||"";}catch{} throw new Error("Groq "+res.status+(m?": "+m:"")); }
   const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="";
   while(true){ const {done,value}=await reader.read(); if(done)break;
@@ -4842,6 +4908,7 @@ async function aiStream(history,onDelta){
   const sys=aiPersona()+"\n\n=== AKTUELLE NUTZERDATEN ===\n"+aiContext();
   const h=history.slice(-10);
   return aiChain([
+    {on:aiProxyOn(),fn:()=>proxyStream(sys,h,onDelta)},
     {on:geminiOn(),fn:()=>geminiStream(sys,h,onDelta)},
     {on:orOn(),    fn:()=>orStream(sys,h,onDelta)},
     {on:groqOn(),  fn:()=>groqStream(sys,h,onDelta)},
@@ -4851,6 +4918,7 @@ async function aiStream(history,onDelta){
 async function aiComplete(system,user,opts){
   opts=opts||{};
   return aiChain([
+    {on:aiProxyOn(),fn:()=>proxyComplete(system,user,opts)},
     {on:geminiOn(),fn:()=>geminiGen(system,user,opts)},
     {on:orOn(),    fn:()=>orComplete(system,user,opts)},
     {on:groqOn(),  fn:()=>groqComplete(system,user,opts)},
@@ -4908,6 +4976,7 @@ async function aiVision(system,userText,images,opts){
     return (await res.json()).choices?.[0]?.message?.content||"";
   };
   return aiChain([
+    {on:aiProxyOn(),fn:()=>proxyComplete(system,u,{temp:0.2,max:opts.max||1600})},
     {on:geminiOn(),fn:()=>geminiGen(system,u,{temp:0.2,max:opts.max||1600})},
     {on:orOn(),    fn:()=>orComplete(system,u,{temp:0.2,max:opts.max||1600})},
     {on:groqOn(),  fn:groqVision},
@@ -5636,7 +5705,8 @@ function renderAnalytics(){
   const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length>=3);
   const allSets=Object.values(S.liftLog).flat();
   const ins=buildInsights();
-  const today=S.checkin||(S.readinessHistory.length?{score:S.readinessHistory[S.readinessHistory.length-1].score,tier:S.readinessHistory[S.readinessHistory.length-1].tier}:null);
+  const _lastR=S.readinessHistory[S.readinessHistory.length-1];
+  const today=S.checkin||(_lastR&&_lastR.date===todayKey()?{score:_lastR.score,tier:_lastR.tier}:null); // nur HEUTIGER Status, kein Übertrag von gestern
 
   // ---------- Analytics-Übersicht: ein Kopf-Dashboard, das den Zustand bündelt ----------
   const nutriDaysAll=Object.keys(S.nutritionLog).filter(d=>(S.nutritionLog[d].meals||[]).length>0);
@@ -6742,6 +6812,24 @@ function renderProfile(){
 }
 
 // ---------- Boot ----------
+// Engine-Version: bei JEDER Engine-Änderung erhöhen → erzwingt Neuberechnung gespeicherter
+// Pläne, damit Fixes (Fokus/Frequenz/Bodyweight) auch auf BESTEHENDEN Accounts greifen.
+const ENGINE_VERSION=8;
+function migrateState(){
+  try{
+    // Tages-Status ist tagesaktuell — ein Check von gestern zählt NICHT für heute (auch nach Cloud-Pull).
+    if(S.checkinDate && S.checkinDate!==todayKey()){ S.checkin=null; S.checkinDate=null; }
+    // Gespeicherten Plan bei Engine-Update neu berechnen (behebt z. B. Bizeps an jedem Tag auf Alt-Accounts).
+    if(S.profile && (S.planVersion||0) < ENGINE_VERSION){
+      S.plan=generateTrainingPlan(S.profile);
+      S.planB=generateTrainingPlan(S.profile,"B");
+      if(S.rotation) S.rotation=generateRotation(S.profile.a);
+      try{ const opt=generateOptimalSchedule(S.profile.a); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale; }catch{}
+      S.planVersion=ENGINE_VERSION; save();
+    }
+  }catch(e){}
+}
+migrateState();
 window.addEventListener("error",(e)=>{
   if(!root.innerText.trim()){
     root.innerHTML=`<div style="padding:32px 0"><p style="font-weight:700;letter-spacing:2px;margin-bottom:12px">METRIC<span style="color:var(--volt)">GYM</span></p>
@@ -6762,6 +6850,7 @@ try{ render(); }catch(err){
     SB.user=data.session.user; SB.token=data.session.access_token;
     let cloud=null; try{ cloud=await SB.pull(); }catch(e){}
     if(cloud) SB.hydrate(cloud);
+    migrateState(); // nach Cloud-Pull: alten Status verwerfen + Plan ggf. neu berechnen
     const fname=(SB.user.user_metadata&&SB.user.user_metadata.first_name)||((SB.user.email||"").split("@")[0]);
     if(!S.users||!S.users.length) S.users=[{username:fname,email:SB.user.email,pwHash:""}];
     S.currentUser=0;
