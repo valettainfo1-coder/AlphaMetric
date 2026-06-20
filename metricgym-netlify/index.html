@@ -1416,7 +1416,7 @@ const TIER_LABEL={free:"START",pro:"PERFORMANCE",elite:"ELITE"};
 const TIER_RANK={free:0,pro:1,elite:2};
 // Freischalt-Liste: diese Konten erhalten dauerhaft den höchsten Tier (ELITE), unabhängig
 // von Zahlung/Trial. Abgleich über die Konto-E-Mail (klein geschrieben).
-const COMP_ELITE=["lovisstumpfe@icloud.com","lovisstumpfe@web.de"];
+const COMP_ELITE=["lovisstumpfe@icloud.com","lovisstumpfe@web.de","lovis.stumpfe1@web.de"];
 function currentEmail(){ try{ return ((S.users&&S.currentUser!=null&&S.users[S.currentUser]&&S.users[S.currentUser].email)||"").toLowerCase().trim(); }catch{ return ""; } }
 function ensureCompTier(){ if(COMP_ELITE.includes(currentEmail())){ S.tier="elite"; S.compElite=true; } }
 /* v5/Phase 5: konkrete Preispunkte (monatlich/jährlich, Jahres-Abo ≈ −33 %).
@@ -5167,6 +5167,13 @@ function renderTrain(){
   A.evShow=(i)=>{const e=planEvidence()[i]; if(!e)return; modal(`<p class="ct">${e.h}</p><p class="sm t2" style="line-height:1.65">${e.b}</p><p class="xs" style="color:var(--hl);margin-top:10px;font-weight:700;display:flex;align-items:center;gap:5px">${icon("info",13)} Quelle: ${e.c}</p>`);};
   const rotMode=S.planMode==="rotation";
   A.editSchedule=()=>openScheduleSheet();
+  // Plan nach der aktuellen, wissenschaftlich korrekten Engine neu berechnen (entfernt
+  // veraltete/kaputte Pläne — z. B. Bizeps auf Push). Eigene Übungs-Tausche bleiben erhalten.
+  A.regenPlan=()=>{
+    if(!S.profile){toast("Kein Profil");return;}
+    regenerateUserPlan(); save(); render();
+    toast("✓ Plan neu berechnet — wissenschaftlich korrekt");
+  };
   A.startType=(t)=>{S.tab="player";S.playerType=t;S.exIdx=0;S.logged=[];S.restEnd=null;S.prToday=null;save();render();};
   A.setPlanMode=(m)=>{S.planMode=m;if(m==="rotation"&&!S.rotation)S.rotation=generateRotation(S.profile.a);save();renderTrain();};
   // --- Trainingsplan per Bild importieren (Vision) ---
@@ -5287,6 +5294,8 @@ function renderTrain(){
           <p class="xs t2 mb8" style="line-height:1.5">Fotografiere deinen aktuellen Plan (bis 8 Bilder). Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder erklärt, warum METRICGYM stärker ist.</p>
           <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan per Bild importieren</button>
           <input type="file" id="plan-import-file" accept="image/*" multiple capture="environment" style="display:none" onchange="A.planImportFiles(this)">
+          <button class="btn ghost" style="min-height:40px;font-size:13px;margin-top:8px" onclick="A.regenPlan()">${icon("zap",14)} Plan neu berechnen (aktuelle Engine)</button>
+          <p class="xs t2" style="line-height:1.5;margin-top:4px">Setzt deinen Plan auf den aktuellen, wissenschaftlich korrekten Stand zurück (z. B. nach Engine-Updates). Deine eigenen Übungs-Tausche bleiben.</p>
           ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
         </div>
       </div>`)}
@@ -6859,18 +6868,36 @@ function renderProfile(){
 // ---------- Boot ----------
 // Engine-Version: bei JEDER Engine-Änderung erhöhen → erzwingt Neuberechnung gespeicherter
 // Pläne, damit Fixes (Fokus/Frequenz/Bodyweight) auch auf BESTEHENDEN Accounts greifen.
-const ENGINE_VERSION=8;
+const ENGINE_VERSION=9;
+// INHALTS-CHECK (bulletproof): erkennt einen biochemisch falschen Plan direkt — unabhängig von
+// der Versionsnummer. Damit wird ein kaputter Plan IMMER neu berechnet, selbst wenn er mit der
+// aktuellen Version in der Cloud gespeichert wurde.
+function planIsHealthy(p){
+  try{
+    p=p||S.plan; if(!p) return true;
+    const has=(base,name)=>p[base]&&Array.isArray(p[base].main)&&p[base].main.some(e=>e.n===name);
+    if(has("push","Bizeps-Curls")) return false;                 // Bizeps gehört NIE auf Push
+    if(has("pull","Trizepsdrücken")||has("pull","Enge Liegestütze")) return false; // Trizeps NIE auf Pull
+    return true;
+  }catch{ return true; }
+}
+function regenerateUserPlan(){
+  if(!S.profile) return false;
+  S.plan=generateTrainingPlan(S.profile);
+  S.planB=generateTrainingPlan(S.profile,"B");
+  if(S.rotation) S.rotation=generateRotation(S.profile.a);
+  try{ const opt=generateOptimalSchedule(S.profile.a); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale; }catch{}
+  S.planVersion=ENGINE_VERSION;
+  return true;
+}
 function migrateState(){
   try{
-    // Tages-Status ist tagesaktuell — ein Check von gestern zählt NICHT für heute (auch nach Cloud-Pull).
     if(S.checkinDate && S.checkinDate!==todayKey()){ S.checkin=null; S.checkinDate=null; }
-    // Gespeicherten Plan bei Engine-Update neu berechnen (behebt z. B. Bizeps an jedem Tag auf Alt-Accounts).
-    if(S.profile && (S.planVersion||0) < ENGINE_VERSION){
-      S.plan=generateTrainingPlan(S.profile);
-      S.planB=generateTrainingPlan(S.profile,"B");
-      if(S.rotation) S.rotation=generateRotation(S.profile.a);
-      try{ const opt=generateOptimalSchedule(S.profile.a); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale; }catch{}
-      S.planVersion=ENGINE_VERSION; save();
+    // Neu berechnen, wenn Engine veraltet ODER der gespeicherte Plan inhaltlich kaputt ist.
+    if(S.profile && ((S.planVersion||0) < ENGINE_VERSION || !planIsHealthy())){
+      regenerateUserPlan(); save();
+      // Korrigierten Plan auch in die Cloud schreiben, damit der nächste Pull nicht den alten zurückholt.
+      try{ if(typeof SB!=="undefined" && SB.user && SB.push) SB.push(); }catch{}
     }
   }catch(e){}
 }
