@@ -1206,6 +1206,36 @@ function volGroupOf(name){
   const m=(EXDB[name]||{}).m;
   return ({Brust:"Brust",Schultern:"Schultern","Rücken":"Rücken",Arme:"Arme",Beine:"Beine",Core:"Core"})[m]||null;
 }
+// AUTOREGULATION (Ernährung→Volumen): Defizit senkt das MRV; das MEV (Erhaltungsreiz) bleibt.
+function deficitFactor(a){ const g=((a&&a.goals)||[])[0]; return g==="fat_loss"?0.8 : g==="recomp"?0.9 : 1.0; }
+function deficitScaledBands(a){
+  const f=deficitFactor(a); if(f>=1) return VOL_BANDS;
+  const out={}; for(const k of Object.keys(VOL_BANDS)){ const [mev,mrv]=VOL_BANDS[k]; out[k]=[mev,Math.max(mev+2,Math.round(mrv*f))]; }
+  return out;
+}
+/* AUTOREGULATION (Tagesform): Kombiniert den subjektiven Status-Check mit OBJEKTIVEN
+   Wearable-Signalen (HRV & Ruhepuls vs. 30-Tage-Baseline). Sinkt die Erholung, empfiehlt
+   die Engine für HEUTE automatisch weniger Volumen und mehr Reserve (RIR) — unabhängig
+   davon, was der Plan „theoretisch" vorsieht (HRV-gesteuertes Training: Javaloyes 2019;
+   Vesterinen 2016). Gibt null zurück, wenn keinerlei Tagesdaten vorliegen. */
+function readinessToday(){
+  const ci=(S.checkin&&S.checkinDate===todayKey())?S.checkin:null;
+  const hb=hrvBaseline(), rb=rhrBaseline();
+  const hv=(S.hrvLog&&S.hrvLog.length)?S.hrvLog[S.hrvLog.length-1].v:null;
+  const rv=(S.rhrLog&&S.rhrLog.length)?S.rhrLog[S.rhrLog.length-1].v:null;
+  const parts=[];
+  let score=ci?ci.score:null, obj=0, objHas=false;
+  if(ci)parts.push("Status-Check "+ci.score);
+  if(hb&&hv!=null){ const d=(hv-hb)/hb; obj+=Math.max(-25,Math.min(15,d*100)); objHas=true; if(d<=-0.10)parts.push("HRV unter deinem Normal"); }
+  if(rb&&rv!=null){ const d=(rv-rb)/rb; obj-=Math.max(-15,Math.min(25,d*100)); objHas=true; if(d>=0.07)parts.push("Ruhepuls erhöht"); }
+  if(score==null && !objHas) return null;
+  if(score==null) score=65; // nur objektive Daten → neutraler Ausgangswert
+  const s=Math.max(0,Math.min(100,Math.round(score + obj*0.5)));
+  const tier=s>=78?"Stark":s>=58?"Gut":s>=40?"Mäßig":"Erholung";
+  const mult=tier==="Mäßig"?0.85:tier==="Erholung"?0.65:1.0;
+  const rir=tier==="Mäßig"?1:tier==="Erholung"?2:0;
+  return {score:s,tier,mult,rir,parts,objHas};
+}
 function weeklyMuscleSets(weeksBack){
   const from=Date.now()-(weeksBack+1)*7*dayMs, to=Date.now()-weeksBack*7*dayMs;
   const out={};
@@ -2024,6 +2054,11 @@ function capWeeklyVolume(PLAN,a,ctx){
     const grpOf=(n)=>volGroupOf(n);
     const isCompound=(n)=>!!(EXDB[n]||{}).compound;
     const peak=(e)=> e.sets + (isCompound(e.n)?2:1); // Woche-3-Spitze (vgl. weekSets)
+    // AUTOREGULATION (Ernährung): Im Kaloriendefizit sinkt das maximal erholbare Volumen (MRV)
+    // deutlich — der Körper hat weniger Ressourcen für Reparatur/Anpassung (Helms 2014, Israetel).
+    // Fettabbau ≈ −20 % MRV, Recomp ≈ −10 %. Das MEV (Mindestreiz zum Muskelerhalt) bleibt — so
+    // wird im Defizit weniger „totes" Volumen gefahren, das nur ermüdet, aber nicht erholt wird.
+    const BANDS=deficitScaledBands(a);
     const sch=generateOptimalSchedule(a).schedule.filter(t=>t!=="rest"&&t!=="cardio").map(t=>parseTypeKey(t).base);
     if(!sch.length) return;
     const bases=[...new Set(sch)];
@@ -2031,10 +2066,10 @@ function capWeeklyVolume(PLAN,a,ctx){
     const weekly=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+peak(e); } } return w; };
     // 1) SÄTZE senken (Floor 2) — hält die Übungszahl hoch und das Volumen mittig im Korridor.
     let w=weekly();
-    for(const [g,band] of Object.entries(VOL_BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
+    for(const [g,band] of Object.entries(BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
       for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } } }
     // 2) Falls TROTZ Floor-2 noch über MRV (extreme Frequenz): Isolation/Abs entfernen, ≥1 Hauptübung/Gruppe.
-    for(const [g,band] of Object.entries(VOL_BANDS)){
+    for(const [g,band] of Object.entries(BANDS)){
       const hi=band[1]; let guard=0; w=weekly();
       while((w[g]||0)>hi && guard++<24){
         let pick=null, pickScore=-1;
@@ -2075,7 +2110,7 @@ function capWeeklyVolume(PLAN,a,ctx){
             const addSets = dd.compound ? scheme.a : 2;
             // Diese Übung kommt f×/Woche vor; ihre Wochenspitze ist (Sätze + Compound-Bonus)·f.
             const addPeak = (addSets + (dd.compound?2:1)) * f;
-            if((wv[g]||0) + addPeak > VOL_BANDS[g][1]) continue; // niemals über MRV
+            if((wv[g]||0) + addPeak > BANDS[g][1]) continue; // niemals über (defizit-angepasstes) MRV
             const ex = dd.compound ? mk(cand,addSets,PP.sR,PP.sRest,rir)
                                    : mk(cand,addSets,(dd.lengthened?PP.lR:PP.iR),PP.iRest,rir);
             d.main.push(ex); addedEx=true; break;
@@ -2084,7 +2119,7 @@ function capWeeklyVolume(PLAN,a,ctx){
         if(addedEx) continue;
         // 3b) Sonst Sätze einer vorhandenen Übung erhöhen (Cap 5), Volumen breit verteilen.
         let pick=null, best=-1;
-        for(const e of d.main){ const g=grpOf(e.n); if(!g||e.sets>=5)continue; const head=VOL_BANDS[g][1]-(wv[g]||0);
+        for(const e of d.main){ const g=grpOf(e.n); if(!g||e.sets>=5)continue; const head=BANDS[g][1]-(wv[g]||0);
           if(head<f)continue; const sc=(isCompound(e.n)?3:0)+Math.min(head,8)-e.sets*2; if(sc>best){ best=sc; pick=e; } }
         if(!pick)break; pick.sets++;
       }
@@ -5467,11 +5502,24 @@ function renderTrain(){
             <button class="btn volt" onclick="A.startType('${focusType}')">${icon("play",15)} Einheit starten</button>
           </div>`;
         }
+        // AUTOREGULATION für HEUTE: nur für die heutige Einheit (nicht für Vorschauen anderer Tage).
+        const isToday = !rotMode && focusDayIdx===dow;
+        const R = isToday ? readinessToday() : null;
+        const reduce = !!(R && R.mult<1);
+        const autoBanner = (R && (reduce||R.tier==="Stark"))?`
+          <div class="card" style="margin:0 0 12px;background:${reduce?"rgba(245,166,35,.10)":"var(--accent-soft)"};border-color:${reduce?"rgba(245,166,35,.4)":"rgba(157,180,240,.4)"}">
+            <p class="sm" style="font-weight:700;display:flex;align-items:center;gap:7px">${icon(reduce?"activity":"flame",15)} Autoregulation · Tagesform ${R.score}/100 (${R.tier})</p>
+            <p class="xs t2" style="line-height:1.55;margin-top:5px">${reduce
+              ? `Deine Erholung ist heute reduziert${R.parts.length?` (${R.parts.join(", ")})`:""}. Die Engine senkt dein Volumen automatisch auf <b style="color:var(--t1)">~${Math.round(R.mult*100)} %</b> und empfiehlt <b style="color:var(--t1)">${R.rir} Wiederholung${R.rir>1?"en":""} mehr in Reserve</b> (RIR). So trainierst du heute produktiv, statt die Erholung noch tiefer zu graben — morgen wieder voll.`
+              : `Deine Erholung ist top${R.parts.length?` (${R.parts.join(", ")})`:""} — volle Sätze, geh ans Limit (RIR 0–1 auf der letzten Übung). Heute ist ein Tag für einen Rekord.`}</p>
+          </div>`:"";
+        const dispMain = reduce ? F.main.map(e=>({...e,sets:Math.max(1,Math.round(e.sets*R.mult))})) : F.main;
         return `<div class="card">${head}
           <button class="btn ghost" style="min-height:38px;font-size:12.5px;justify-content:flex-start;padding-left:0;margin-top:6px" onclick="explainSession('${focusType}')">${icon("info",14)} Warum genau diese Übungen & diese Länge?</button>
-          <div style="margin-top:22px" class="mb12">${muscleSplitBars(focusType)}</div>
-          <p class="label" style="margin-bottom:8px">Übungen</p>
-          ${F.main.map((e,i)=>exLine(e,focusType,i)).join("")}
+          ${autoBanner?`<div style="margin-top:14px">${autoBanner}</div>`:""}
+          <div style="margin-top:${autoBanner?"4px":"22px"}" class="mb12">${muscleSplitBars(focusType)}</div>
+          <p class="label" style="margin-bottom:8px">Übungen${reduce?` <span class="xs t2" style="font-weight:400">· heute autoreguliert</span>`:""}</p>
+          ${dispMain.map((e,i)=>exLine(e,focusType,i)).join("")}
           <p class="xs t2 mt8">Übung gedrückt halten, um eine Alternative zu wählen.</p>
           <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
           ${S.planUndo&&S.planUndo.typeKey===focusType?`<button class="btn ghost mt8" style="min-height:40px" onclick="planUndoRestore()">${icon("undo",14)} KI-Anpassung rückgängig machen</button>`:""}
