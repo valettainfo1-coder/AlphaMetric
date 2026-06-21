@@ -530,12 +530,12 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
   /* ===== Reveal-Hero (nach dem Quiz): Hauptziel groß, futuristisch, mit Verlauf ===== */
-  .reveal-hero{position:relative; overflow:hidden; border-radius:24px; padding:26px 20px 22px; margin-bottom:12px; text-align:center;
+  .reveal-hero{position:relative; overflow:hidden; border-radius:24px; padding:20px 20px 20px; margin-top:14px; margin-bottom:12px; text-align:center;
     background:linear-gradient(165deg,rgba(74,111,216,.20),rgba(126,139,232,.05) 60%,transparent), var(--glass-bg);
     border:1px solid rgba(157,180,240,.4);}
-  .reveal-orb{position:absolute; top:-70px; left:50%; transform:translateX(-50%); width:260px; height:210px; pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(74,111,216,.55), rgba(126,139,232,.14) 45%, transparent 70%);
-    filter:blur(10px); animation:aiPulse 6s ease-in-out infinite;}
+  .reveal-orb{position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:220px; height:120px; pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(74,111,216,.4), rgba(126,139,232,.1) 45%, transparent 70%);
+    filter:blur(12px); animation:aiPulse 6s ease-in-out infinite;}
   .reveal-hero>*{position:relative;}
   .reveal-traj{display:flex; align-items:flex-end; justify-content:center; gap:14px; margin-top:18px;}
   .reveal-bar{width:100%; max-width:42px; border-radius:8px 8px 3px 3px; background:linear-gradient(180deg,#9DB4F0,#4A6FD8);
@@ -1981,10 +1981,10 @@ function generateTrainingPlan(profile,variant){
   return PLAN;
 }
 /* WISSENSCHAFTLICHER VOLUMEN-DECKEL (Israetel MEV–MRV): Wird eine Muskelgruppe über mehrere
-   Trainingstage gestapelt (z. B. Beine 2× mit je 6 Übungen → 50+ Sätze/Woche), übersteigt das
-   die maximal erholbare Menge (MRV) deutlich = Übertraining. Wir kürzen die WOCHENspitze
-   (Woche 3) in den Korridor: erst überzählige Isolations-Übungen entfernen (Mehrgelenk bleibt),
-   dann Sätze feinjustieren — mind. 1 Übung je Gruppe je Einheit bleibt erhalten. */
+   Trainingstage gestapelt, übersteigt das die maximal erholbare Menge (MRV) = Übertraining.
+   Wir bringen die WOCHENspitze (Woche 3) in den Korridor — und zwar bevorzugt durch SATZ-Reduktion
+   (so bleiben mehr Übungen = mehr Abwechslung & volle Trainingszeit), erst im Extremfall durch
+   Entfernen von Isolations-Übungen. Mind. 1 Hauptübung je Gruppe je Einheit bleibt erhalten. */
 function capWeeklyVolume(PLAN,a){
   try{
     const GROUP={Brust:"Brust",Schultern:"Schultern","Rücken":"Rücken",Arme:"Arme",Beine:"Beine",Core:"Core"};
@@ -1996,17 +1996,20 @@ function capWeeklyVolume(PLAN,a){
     const bases=[...new Set(sch)];
     const exesOf=(base)=>[...PLAN[base].main,...(PLAN[base].abs||[])];
     const weekly=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+peak(e); } } return w; };
-    // 1) Übungen trimmen, solange über MRV. Abs-Block (Core, ergänzend) darf ganz weg;
-    //    in der Hauptliste bleibt ≥1 Übung je Gruppe je Einheit erhalten. Isolation zuerst.
+    // 1) SÄTZE senken (Floor 2) — hält die Übungszahl hoch und das Volumen mittig im Korridor.
+    let w=weekly();
+    for(const [g,band] of Object.entries(VOL_BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
+      for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } } }
+    // 2) Falls TROTZ Floor-2 noch über MRV (extreme Frequenz): Isolation/Abs entfernen, ≥1 Hauptübung/Gruppe.
     for(const [g,band] of Object.entries(VOL_BANDS)){
-      const hi=band[1]; let guard=0, w=weekly();
+      const hi=band[1]; let guard=0; w=weekly();
       while((w[g]||0)>hi && guard++<24){
         let pick=null, pickScore=-1;
         for(const base of bases){
           for(const arr of ["main","abs"]){
             const list=PLAN[base][arr]; if(!list)continue;
             const gIdx=list.map((e,i)=>grpOf(e.n)===g?i:-1).filter(i=>i>=0);
-            if(arr==="main" && gIdx.length<=1)continue; // letzte Hauptübung der Gruppe behalten
+            if(arr==="main" && gIdx.length<=1)continue;
             for(const i of gIdx){ const s=(isCompound(list[i].n)?0:100)+(arr==="abs"?50:0)+gIdx.length; if(s>pickScore){ pickScore=s; pick=[base,arr,i]; } }
           }
         }
@@ -2015,15 +2018,22 @@ function capWeeklyVolume(PLAN,a){
         w=weekly();
       }
     }
-    // 2) Restliches Über-MRV per Satz-Reduktion (Floor 2)
-    let w=weekly();
-    for(const [g,band] of Object.entries(VOL_BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
-      // ABRUNDEN: nie über dem MRV landen (Aufrunden würde den Deckel verfehlen)
-      for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } } }
-    // 3) Dauer (est) je betroffener Einheit neu berechnen
-    for(const base of bases){ const d=PLAN[base];
-      const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0);
-      d.est=Math.round((8+sm+5)/5)*5; }
+    // 3) ZEITBUDGET FÜLLEN: Sätze dort erhöhen, wo die Gruppe noch Luft bis zum MRV hat, bis die
+    //    Einheit ihre Zielzeit erreicht — NIE über MRV. So greifen Volumen UND Trainingszeit ineinander.
+    const budget=Math.max(30,a.sessionTime||60);
+    const freqOf={}; for(const base of sch) freqOf[base]=(freqOf[base]||0)+1; // wie oft eine Einheit/Woche vorkommt
+    const estOfBase=(base)=>{ const d=PLAN[base]; const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0); return Math.round((8+sm+5)/5)*5; };
+    for(const base of bases){ const d=PLAN[base]; let guard=0; const f=freqOf[base]||1;
+      while(estOfBase(base) < budget-6 && guard++<40){
+        const wv=weekly(); let pick=null, best=-1;
+        for(const e of d.main){ const g=grpOf(e.n); if(!g||e.sets>=6)continue; const head=VOL_BANDS[g][1]-(wv[g]||0);
+          // ein Satz mehr erhöht das WOCHENvolumen um f (Einheit kommt f× vor) → nur wenn genug Luft bis MRV
+          if(head<f)continue; const sc=head*10+(isCompound(e.n)?3:0)-e.sets; if(sc>best){ best=sc; pick=e; } }
+        if(!pick)break; pick.sets++;
+      }
+    }
+    // 4) Dauer (est) je Einheit final berechnen
+    for(const base of bases){ PLAN[base].est=estOfBase(base); }
   }catch(e){}
 }
 /* ---------- Optimaler Wochenplan (v5/Phase 1): Vorschlag + Begründung ----------
@@ -4460,21 +4470,30 @@ function renderHome(){
 // =====================================================================
 let voicePreview=null;
 let trnSelDay=null, trnSelRot=null; // inline ausgewählter Trainingstag / Rotations-Index
+let schEditDay=null; // welcher Tag im Wochenplan-Editor gerade aufgeklappt ist
 function openScheduleSheet(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
-  A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; save(); openScheduleSheet(); };
+  A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; schEditDay=null; save(); openScheduleSheet(); };
+  A.pickDay=(i)=>{ schEditDay=(schEditDay===i?null:i); openScheduleSheet(); };
   A.applySuggestion=()=>{ S.schedule=(S.scheduleSuggestion||suggestSchedule(S.profile.a.days)).slice(); save(); openScheduleSheet(); toast("KI-Vorschlag übernommen — frei anpassbar"); };
   A.week=(w)=>{S.currentWeek=w;save();openScheduleSheet();};
-  A.sheetDone=()=>{overlay.innerHTML="";render();};
+  A.sheetDone=()=>{schEditDay=null;overlay.innerHTML="";render();};
+  // Aufgeräumter Editor: pro Tag EINE Zeile mit der aktuellen Einheit; Antippen klappt die Auswahl auf.
+  const WDFULL=["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.sheetDone()">
     <div class="sheet fade">
-      <p class="display-m mb16">Wochenplan bearbeiten</p>
+      <p class="display-m mb4">Wochenplan bearbeiten</p>
+      <p class="xs t2 mb16">Tippe einen Tag, um die Einheit zu wählen.</p>
       ${!S.schedule&&S.scheduleSuggestion?`<button class="btn mb16" onclick="A.applySuggestion()">${icon("zap",14)} Vorschlag übernehmen (${S.profile.a.days} Tage)</button>`:""}
-      ${WD.map((d,i)=>`<div class="row mb8" style="align-items:flex-start">
-        <span class="sm ${i===dow?"volt-txt":"t2"}" style="width:30px;font-weight:${i===dow?"700":"400"}">${d}</span>
-        <div class="chips" style="flex:1">${TYPE_KEYS.map(t=>`
-          <button class="chip ${sch[i]===t?"sel":""}" style="padding:6px 10px;min-height:34px;font-size:11.5px" onclick="A.assign(${i},'${t}')">${TYPES[t].label}</button>`).join("")}</div>
-      </div>`).join("")}
+      ${WD.map((d,i)=>{ const cur=sch[i]||"rest"; const open=schEditDay===i; const meta=TYPE_META[cur]||TYPE_META.rest;
+        return `<div style="margin-bottom:8px">
+        <button class="row" style="width:100%;background:${open?"var(--s3)":"var(--s2)"};border:1px solid ${i===dow?"rgba(157,180,240,.5)":"var(--border)"};border-radius:13px;padding:11px 13px;cursor:pointer;font-family:inherit" onclick="A.pickDay(${i})">
+          <span class="sm ${i===dow?"volt-txt":"t2"}" style="width:88px;text-align:left;font-weight:${i===dow?"700":"600"}">${WDFULL[i]}</span>
+          <span class="sm" style="flex:1;text-align:left;display:flex;align-items:center;gap:7px;color:${cur==="rest"?"var(--t2)":"var(--t1)"};font-weight:600">${icon(meta.icon,15)} ${TYPES[cur].label}</span>
+          <span class="t3" style="transition:transform .2s;transform:rotate(${open?90:0}deg)">${icon("chevronR",15)}</span></button>
+        ${open?`<div class="chips" style="padding:9px 4px 3px;gap:6px">${TYPE_KEYS.map(t=>`
+          <button class="chip ${cur===t?"sel":""}" style="padding:6px 11px;min-height:34px;font-size:12px" onclick="A.assign(${i},'${t}')">${TYPES[t].label}</button>`).join("")}</div>`:""}
+      </div>`;}).join("")}
       <p class="label mt16">${LABELS.meso} ${infoBtn("deload")}</p>
       <div class="grid4 mb8">${[1,2,3,4].map(w=>`
         <button class="cell ${S.currentWeek===w?"sel":""} ${w===4?"dash":""}" onclick="A.week(${w})" aria-label="Woche ${w}">
@@ -5305,7 +5324,8 @@ function renderTrain(){
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
         const head=`<div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(F.icon,18)} ${F.label}</p>
           ${isCardio?"":`<button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button>`}</div>
-          <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · ruhiges Tempo":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>`;
+          <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · ruhiges Tempo":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>
+          ${(!isCardio && F.est && S.profile.a.sessionTime && F.est < S.profile.a.sessionTime-12)?`<p class="xs t2" style="line-height:1.5;margin-top:4px;display:flex;gap:6px"><span style="color:var(--hl)">${icon("info",12)}</span><span>Kürzer als deine ${S.profile.a.sessionTime} Min: Die Muskeln dieses Tages haben bei deiner Trainingsfrequenz ihr <b style="color:var(--t1)">optimales Wochenvolumen</b> erreicht — mehr Sätze wären kontraproduktiv (Übertraining). Für längere Einheiten: mehr Trainingstage oder „Für mich optimieren".</span></p>`:""}`;
         if(isCardio){
           return `<div class="card">${head}
             <div style="background:var(--s2);border-radius:16px;padding:18px;text-align:center;margin:14px 0">
@@ -5368,6 +5388,7 @@ function renderTrain(){
 // PLAYER
 // =====================================================================
 let pw=null,pr=null,prpe=8;
+let cardioMin=null; // Dauer der aktuellen Cardio-Einheit (Minuten) — Cardio ist NICHT satz-/gewichtsbasiert
 let pRestTotal=0; // Pausenlänge der aktuellen Übung (für den In-Place-Timer)
 // In-Place-Pausentimer: aktualisiert NUR das Timer-Element (kein Voll-Neuaufbau → kein Flackern).
 function playerRestTick(){
@@ -5390,6 +5411,38 @@ function renderPlayer(){
   if(!ex){S.tab="summary";save();render();return;}
   const [name,setsBase,repsRange,rest]=ex;
   pRestTotal=rest;
+  // ===== CARDIO: dauerbasierte Einheit (Minuten), KEIN Gewicht/Reps/Sätze =====
+  if((EXDB[name]||{}).m==="Herz" || parseTypeKey(type).base==="cardio"){
+    if(cardioMin===null){ const m=String(repsRange||"").match(/\d+/); cardioMin=m?parseInt(m[0]):30; }
+    A.cardioSet=(v)=>{ cardioMin=Math.max(5,Math.min(120,v)); renderPlayer(); };
+    A.cardioDone=()=>{
+      const kcal=Math.round(cardioMin*((S.profile&&S.profile.a&&S.profile.a.weight)||80)*0.08); // grobe Zone-2-Schätzung
+      const ex=S.trainingHistory.find(t=>t.date===todayKey()&&t.type==="cardio");
+      if(ex){ ex.minutes=(ex.minutes||0)+cardioMin; ex.volume=(ex.volume||0); }
+      else S.trainingHistory.push({date:todayKey(),type:"cardio",sets:0,volume:0,minutes:cardioMin,kcal,avgRpe:null});
+      if(S.planMode==="rotation"&&type===rotationNext()){ const r=activeRotation(); S.rotationPos=((S.rotationPos||0)+1)%r.length; }
+      cardioMin=null; S.tab="summary"; save(); render();
+    };
+    const presets=[20,30,40,45,60];
+    root.innerHTML=`
+      <p class="ring-lbl mb8">Cardio · lockeres Zone-2-Tempo</p>
+      <div class="card" style="text-align:center">
+        <div style="width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:6px auto 12px;background:linear-gradient(135deg,#3FA98C,#2E8E76);color:#fff">${icon("activity",30)}</div>
+        <h2 style="font-size:21px;margin-bottom:4px">${name}</h2>
+        <p class="sm t2" style="line-height:1.55;margin-bottom:18px">Gleichmäßiges, lockeres Tempo — Puls ca. 60–70 % (Nasenatmung möglich). Stärkt Herz-Kreislauf & Erholung, ohne deine Muskel-Erholung zu kosten.</p>
+        <p class="hero-num volt-txt" style="font-size:54px;line-height:1">${cardioMin}<span style="font-size:22px"> Min</span></p>
+        <div class="stepper" style="justify-content:center;margin:14px 0">
+          <button onclick="A.cardioSet(${cardioMin-5})" aria-label="weniger">−</button>
+          <span class="metric" style="min-width:70px;text-align:center;font-size:18px">${cardioMin} Min</span>
+          <button onclick="A.cardioSet(${cardioMin+5})" aria-label="mehr">+</button></div>
+        <div class="chips" style="justify-content:center;margin-bottom:6px">${presets.map(p=>`<button class="chip ${cardioMin===p?"sel":""}" onclick="A.cardioSet(${p})">${p} Min</button>`).join("")}</div>
+        <p class="xs t2 mt8">≈ ${Math.round(cardioMin*((S.profile&&S.profile.a&&S.profile.a.weight)||80)*0.08)} kcal · zählt als Cardio (kein Gewicht/Reps)</p>
+      </div>
+      <button class="btn volt cta-big" onclick="A.cardioDone()"><span>Cardio abschließen ✓</span><span class="cta-sub">${cardioMin} Min Zone-2 eintragen</span></button>
+      <div class="grid2 mb8 mt8"><button class="btn" onclick="S.tab='train';cardioMin=null;save();render()">Zurück</button>
+        <button class="btn" onclick="A.cardioDone()">Abschließen</button></div>`;
+    return;
+  }
   const rec=recommend(name);
   const startEst=estimateStartWeight(name,S.profile&&S.profile.a);
   if(pw===null){ if(rec){pw=rec.w;pr=rec.reps;} else {pw=startEst;pr=8;} prpe=8; }
