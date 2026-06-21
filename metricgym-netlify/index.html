@@ -3094,6 +3094,7 @@ function setAiField(on){
 function render(){
   clearTimeout(timerInt);
   ensureCompTier(); // Freischalt-Liste: dauerhaft ELITE für berechtigte Konten
+  if(rolloverDaily()) save(); // gestrigen Status-Check verwerfen (Daily-Refresh pro Tag)
   // KI-Feld auf allen In-App-Seiten + Onboarding/Reveal (nicht auf Landing/Login — die haben eigenen BG).
   setAiField(S.currentUser!=null && !["landing","login","register"].includes(S.screen));
   if(typeof PB!=="undefined")PB.stop(); // Partikel-Animation beenden (nur Landing startet sie neu)
@@ -4123,6 +4124,18 @@ function renderReveal(){
 // HOME — Redesign: 1 Hero-Ring, gestaffelte Sections (Oura/Whoop-Pattern)
 // =====================================================================
 let ci={sleep:0,energy:0,stress:0,sore:0};
+// TAGES-ROLLOVER: Der Status-Check gilt nur für HEUTE. Liegt ein Check von einem früheren
+// Tag vor (z. B. aus der Cloud nachgeladen, oder die App lag über Mitternacht offen), wird er
+// verworfen — sonst zeigt das Daily fälschlich den gestrigen Score (Bug: "wieder 75").
+function todayCheckin(){ return (S.checkin && S.checkinDate===todayKey()) ? S.checkin : null; }
+function rolloverDaily(){
+  if(S.checkinDate && S.checkinDate!==todayKey()){
+    S.checkin=null; S.checkinDate=null;
+    ci={sleep:0,energy:0,stress:0,sore:0};
+    return true;
+  }
+  return false;
+}
 let recapData=null;
 /* Teilbare Erfolgs-Karten (Canvas, 1080×1350 Story-Format) — der Kern des
    Product-led-Growth-Loops: jede Karte trägt Marke + Tagline + App-Link,
@@ -7146,6 +7159,8 @@ function migrateState(){
   }catch(e){}
 }
 migrateState();
+// App lag über Mitternacht offen → beim Zurückkehren den gestrigen Status-Check verwerfen.
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.currentUser!=null){ if(rolloverDaily())save(); render(); } });
 window.addEventListener("error",(e)=>{
   if(!root.innerText.trim()){
     root.innerHTML=`<div style="padding:32px 0"><p style="font-weight:700;letter-spacing:2px;margin-bottom:12px">METRIC<span style="color:var(--volt)">GYM</span></p>
