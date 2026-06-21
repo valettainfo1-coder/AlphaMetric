@@ -1774,6 +1774,17 @@ const COOLDOWN_DEFAULT=[
   {n:"3–5 Min Auslaufen / Gehen",why:"Unterstützt den Laktatabbau und senkt den Puls kontrolliert."},
   {n:"Statisches Dehnen der trainierten Muskeln",why:"Nach dem Training unkritisch für Kraft — und gut für die wahrgenommene Erholung."},
 ];
+// MOBILITÄTS-ROUTINE (wenn Ziel "Mobility"): gezielte Beweglichkeits-Drills für die größten
+// Bewegungseinschränkungen (Hüfte, Brustwirbelsäule, Schulter, Sprunggelenk). Belegt: aktive
+// Mobilität + endgradige Dehnung verbessert ROM nachhaltiger als passives Dehnen allein
+// (Behm 2016). 2× pro Seite/Position, ruhig & kontrolliert — kein Wettkampf.
+const MOBILITY_BLOCK=[
+  {n:"Hüftöffner 90/90 (2×30 s/Seite)",why:"Innen- & Außenrotation der Hüfte — Basis für tiefe Kniebeuge und schmerzfreien unteren Rücken."},
+  {n:"World's Greatest Stretch (2×5/Seite)",why:"Hüftbeuger, Brustwirbelsäule und Leiste in einer Bewegung — der effizienteste Ganzkörper-Mobility-Drill."},
+  {n:"Brustwirbel-Rotation im Vierfüßler (2×8/Seite)",why:"Mobilisiert die Brustwirbelsäule (T-Spine) — entlastet Schultern und unteren Rücken bei allen Drück-/Zugübungen."},
+  {n:"Schulter-Dislocates mit Band/Stab (2×10)",why:"Volle Schulter-Außenrotation & -Flexion — schützt das Gelenk und verbessert die Überkopf-Position."},
+  {n:"Sprunggelenk-Mobilisation an der Wand (2×10/Seite)",why:"Dorsalflexion fürs Knie über die Zehen — Voraussetzung für saubere Kniebeugen & Ausfallschritte."},
+];
 const ABS_BLOCK=[["Plank",2,"30–60s",60],["Dead Bug",2,"10–12",60]];
 // Core PROGRESSIV & BELADEN (für sichtbare, dicke Bauchmuskeln) — Plank baut keine Dicke.
 // Wählt das beste verfügbare Equipment: Kabel-Crunch / Hängendes Beinheben > Körpergewicht.
@@ -2056,12 +2067,14 @@ function generateTrainingPlan(profile,variant){
       return mk(n,scheme.i,d.lengthened?PP.lR:PP.iR,PP.iRest,rir);
     });
   };
+  const wantsMobility=(goals||[]).includes("mobility");
   const day=(key,main,abs)=>{
     const absEx=abs?absBlockFor(a).map(([n,st,rp,rs])=>mk(n,st,rp,rs)):[];
-    // Session-Dauer wird BERECHNET, nicht abgefragt: Aufwärmen + Sätze×(Arbeit+Pause) + Cool-down
+    // Session-Dauer: Aufwärmen + Sätze×(Arbeit+Pause) + Cool-down (+ ~6 Min Mobility, falls Ziel)
     const setMin=main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+absEx.reduce((s,e)=>s+e.sets*1.5,0);
-    const est=Math.round((8+setMin+5)/5)*5;
-    return {key,...TYPE_META[key],warmup:WARMUP_DEFAULT,cooldown:COOLDOWN_DEFAULT,main,abs:absEx,est};
+    const est=Math.round((8+setMin+5+(wantsMobility?6:0))/5)*5;
+    return {key,...TYPE_META[key],warmup:WARMUP_DEFAULT,cooldown:COOLDOWN_DEFAULT,
+      mobility:wantsMobility?MOBILITY_BLOCK:[],main,abs:absEx,est};
   };
   const PLAN={
     push:day("push",buildMain("push")),
@@ -2223,6 +2236,23 @@ function capWeeklyVolume(PLAN,a,ctx){
         for(const e of d.main){ const g=grpOf(e.n); if(!g||e.sets>=5)continue; const head=BANDS[g][1]-(wv[g]||0);
           if(head<f)continue; const sc=(isCompound(e.n)?3:0)+Math.min(head,8)-e.sets*2; if(sc>best){ best=sc; pick=e; } }
         if(!pick)break; pick.sets++;
+      }
+    }
+    // 3c) MAXIMAL-REIZ in der Spitzenwoche: Schnell erholende kleine Muskeln (Arme, Schultern,
+    //     Waden) vertragen mehr Frequenz/Volumen und liegen sonst unter ihrem MRV. Für
+    //     FORTGESCHRITTENE & INTERMEDIATE bringen wir sie an die MRV-Schwelle (maximaler
+    //     produktiver Reiz, „gerade noch nicht überreizt"). Einsteiger/Novizen NICHT — die
+    //     wachsen unter MRV und würden sonst überlastet (Israetel: MRV ist erfahrungsabhängig).
+    if(a.exp==="intermediate"||a.exp==="advanced"){
+      for(const g of ["Bizeps","Trizeps","Schultern"]){
+        let guard=0;
+        while((weekly()[g]||0) < BANDS[g][1]-1 && guard++<14){
+          let bumped=false;
+          for(const base of bases){ const d=PLAN[base]; const f=freqOf[base]||1;
+            const e=d.main.find(x=>grpOf(x.n)===g && !isCompound(x.n) && x.sets<5);
+            if(!e)continue; if((weekly()[g]||0)+f>BANDS[g][1])continue; e.sets++; bumped=true; break; }
+          if(!bumped)break;
+        }
       }
     }
     // 4) SICHERHEITS-DECKEL: Nach MEV-Garantie & Zeit-Füllung erneut hart auf MRV begrenzen —
@@ -5687,7 +5717,7 @@ function renderTrain(){
           <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
           ${S.planUndo&&S.planUndo.typeKey===focusType?`<button class="btn ghost mt8" style="min-height:40px" onclick="planUndoRestore()">${icon("undo",14)} KI-Anpassung rückgängig machen</button>`:""}
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:16px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
-          <div style="margin-top:18px">${phaseAcc("Aufwärmen",F.warmup)}${phaseAcc("Cool-down",F.cooldown)}</div>
+          <div style="margin-top:18px">${phaseAcc("Aufwärmen",F.warmup)}${F.mobility&&F.mobility.length?phaseAcc(icon("activity",14)+" Mobility-Routine",F.mobility):""}${phaseAcc("Cool-down",F.cooldown)}</div>
           <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
           <p class="label" style="margin:18px 0 8px">Schnell loggen</p>
           ${quickLogField("z. B. 'Bankdrücken 90 kg 3x8'","A.trainParse")}
