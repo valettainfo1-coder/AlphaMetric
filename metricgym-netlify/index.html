@@ -3974,7 +3974,9 @@ function renderOnboarding(){
     <button class="back" onclick="A.back()" aria-label="Zurück">‹</button>
     <div class="progress"><div style="width:${qNum/QCOUNT*100}%"></div></div>
     <span class="metric xs t2">${qNum}/${QCOUNT}</span></div>`;
-  A.back=()=>{ if(S.step>0){S.step--;save();render();} else {S.currentUser=null;S.screen="landing";save();render();} };
+  A.back=()=>{ if(S.step>0){S.step--;save();render();}
+    else if(S.requiz){ S.requiz=false; S.screen="app"; S.tab="profile"; save(); render(); } // Quiz-Wiederholung abbrechen → zurück ins Profil
+    else {S.currentUser=null;S.screen="landing";save();render();} };
   A.next=()=>{S.step++;save();render();};
   A.pick=(k,v)=>{ S.a[k]=v; save(); setTimeout(A.next,130); };
   A.dial=(k,v)=>{ S.a[k]=parseFloat(v); save(); const el=document.getElementById("dialv"); if(el)el.textContent=nf.format(S.a[k]); };
@@ -4046,10 +4048,12 @@ function renderOnboarding(){
       a.len=ests.length?Math.round(ests.reduce((s,x)=>s+x,0)/ests.length):60;
       const bmr=bmrCalc(a), td=tdeeCalc(bmr,a.act,effWeight(a),a.len,a.days);
       S.profile={a,bmr,td,tg:multiTargets(a,bmr,td)};
-      S.plan=plan;
+      S.plan=plan; S.planB=generateTrainingPlan({a},"B"); S.rotation=null;
       const opt=generateOptimalSchedule(a);
       S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
-      S.weightLog=[{t:Date.now(),v:a.weight}];
+      // Beim WIEDERHOLEN des Quiz Verläufe NICHT löschen — nur beim allerersten Mal anlegen.
+      if(!S.weightLog||!S.weightLog.length) S.weightLog=[{t:Date.now(),v:a.weight}];
+      if(S.requiz) S.schedule=opt.schedule.slice(); // neuen Wochenplan übernehmen
       save(); renderReveal();
     },1300);
   }
@@ -4106,8 +4110,10 @@ function renderReveal(){
     if(!S.schedule&&S.scheduleSuggestion)S.schedule=S.scheduleSuggestion.slice();
     // Nur EINE Erklärungsfolie nach dem Quiz: direkt ins Programm (Feature-Übersicht
     // bleibt über das Menü erreichbar) — mit eleganter Beam-in-Animation.
-    S.seenFeatures=true; save();
-    beamIntoApp(()=>{ S.screen="app"; S.tab="home"; save(); render(); if(!S.tourDone) setTimeout(()=>startTour(0),520); });
+    const wasRequiz=S.requiz; S.requiz=false; S.seenFeatures=true; save();
+    beamIntoApp(()=>{ S.screen="app"; S.tab="home"; save(); render();
+      if(wasRequiz) toast("✓ Plan aktualisiert — dein neues Ziel ist aktiv");
+      else if(!S.tourDone) setTimeout(()=>startTour(0),520); });
   };
   // Alternative: Tage/Split selbst festlegen (statt den optimalen Vorschlag zu übernehmen).
   A.startAppCustom=()=>{
@@ -6876,6 +6882,18 @@ function renderProfile(){
     if(isNaN(v)||v<0||v>4000){toast("Bitte Aktiv-Kalorien (0–4000) eingeben");return;}
     S.wearActive[todayKey()]=v; save(); toast("✓ Übernommen — Tagesziel an deinen echten Verbrauch angepasst"); render(); };
   A.editProfile=()=>{EP={weight:p.a.weight,goals:[...(p.tg.goals||[])],days:p.a.days||4,act:p.a.act||"light"};A.epRender();};
+  // Kompletten Quiz-Funnel ERNEUT durchlaufen (Ziele/Equipment/Tage etc. ändern → neuer Plan).
+  // Verläufe (Gewicht/Training/Ernährung) bleiben erhalten; bisherige Antworten sind vorausgewählt.
+  A.redoQuiz=()=>{
+    A.closeModal&&A.closeModal();
+    S.requiz=true; S.step=0; S.screen="onboarding"; save(); render();
+  };
+  A.confirmRedoQuiz=()=>{
+    modal(`<p class="ct">${icon("sparkle",14)} Quiz neu starten</p>
+      <p class="sm t2 mb12" style="line-height:1.6">Du durchläufst den Fragebogen erneut und kannst <b style="color:var(--t1)">Ziele, Equipment, Trainingstage und mehr ändern</b>. Daraus wird dein Plan neu berechnet.<br><br>Deine bisherigen Antworten sind vorausgewählt. <b style="color:var(--t1)">Deine Verläufe (Gewicht, Training, Ernährung) bleiben erhalten.</b></p>
+      <button class="btn volt" onclick="A.redoQuiz()">${icon("play",15)} Quiz jetzt starten</button>
+      <button class="btn ghost mt8" onclick="A.closeModal()">Abbrechen</button>`);
+  };
   A.epGoal=(g)=>{
     if(S.tier==="free"&&EP.goals.length>=1&&!EP.goals.includes(g)){overlay.innerHTML="";showUpgradeTeaser("multi_goal");return;}
     EP.goals=EP.goals.includes(g)?EP.goals.filter(x=>x!==g):(EP.goals.length<3?[...EP.goals,g]:EP.goals);
@@ -7101,7 +7119,9 @@ function renderProfile(){
         <div><p class="xs t2">Kalorienziel (Training) ${infoBtn("kcalTarget")}</p><p class="metric sm">${fmtKcal(p.tg.train.kcal)}</p></div>
         <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
       </div>
-      <button class="btn volt mt16" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button></div>`:""}
+      <button class="btn volt mt16" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button>
+      <button class="btn mt8" onclick="A.confirmRedoQuiz()">${icon("sparkle",15)} Quiz neu starten — Ziele & Plan komplett neu</button>
+      <p class="xs t2 mt8" style="line-height:1.5">Ganzen Fragebogen erneut durchlaufen (Ziele, Equipment, Tage …). Plan wird neu berechnet, deine Verläufe bleiben.</p></div>`:""}
 
     <p class="label" style="margin:24px 4px 8px">Körper & Erholung</p>
     <details class="acc card" style="padding:0"><summary style="padding:15px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("activity",14)} Wearable · Apple Watch${S.wearActive[todayKey()]!=null?` <span class="badge volt" style="font-size:8px">heute ${nfi.format(S.wearActive[todayKey()])} kcal</span>`:""}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
