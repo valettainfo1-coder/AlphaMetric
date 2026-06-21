@@ -533,10 +533,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
   /* ===== Reveal-Hero (nach dem Quiz): Hauptziel groß, futuristisch, mit Verlauf ===== */
-  .reveal-hero{position:relative; overflow:hidden; border-radius:24px; padding:20px 20px 20px; margin-top:14px; margin-bottom:12px; text-align:center;
+  .reveal-hero{position:relative; overflow:hidden; border-radius:24px; padding:18px 20px 20px; margin-top:8px; margin-bottom:12px; text-align:center;
     background:linear-gradient(165deg,rgba(74,111,216,.20),rgba(126,139,232,.05) 60%,transparent), var(--glass-bg);
     border:1px solid rgba(157,180,240,.4);}
-  .reveal-orb{position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:220px; height:120px; pointer-events:none;
+  .reveal-orb{position:absolute; top:-50px; left:50%; transform:translateX(-50%); width:220px; height:120px; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(74,111,216,.4), rgba(126,139,232,.1) 45%, transparent 70%);
     filter:blur(12px); animation:aiPulse 6s ease-in-out infinite;}
   .reveal-hero>*{position:relative;}
@@ -1481,7 +1481,7 @@ const TIER_LABEL={free:"START",pro:"PERFORMANCE",elite:"ELITE"};
 const TIER_RANK={free:0,pro:1,elite:2};
 // Freischalt-Liste: diese Konten erhalten dauerhaft den höchsten Tier (ELITE), unabhängig
 // von Zahlung/Trial. Abgleich über die Konto-E-Mail (klein geschrieben).
-const COMP_ELITE=["lovisstumpfe@icloud.com","lovisstumpfe@web.de","lovis.stumpfe1@web.de"];
+const COMP_ELITE=["lovisstumpfe@icloud.com","lovisstumpfe@web.de","lovis.stumpfe1@web.de","lstumpfe@lindt.com"];
 function currentEmail(){ try{ return ((S.users&&S.currentUser!=null&&S.users[S.currentUser]&&S.users[S.currentUser].email)||"").toLowerCase().trim(); }catch{ return ""; } }
 function ensureCompTier(){ if(COMP_ELITE.includes(currentEmail())){ S.tier="elite"; S.compElite=true; } }
 /* v5/Phase 5: konkrete Preispunkte (monatlich/jährlich, Jahres-Abo ≈ −33 %).
@@ -4022,11 +4022,10 @@ function renderReveal(){
     : `<p class="hero-num volt-txt" style="font-size:54px;line-height:1">${primary.prefix||""}<span data-count="${primary.lo}">0</span>–<span data-count="${primary.hi}">0</span><span style="font-size:28px"> ${primary.unit}</span></p>`;
   setTimeout(()=>{try{confetti();}catch{}},220);
   root.innerHTML=`<div class="fade" style="text-align:center">
-    <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:6px auto 14px">${icon("check",30)}</div>
-
-    <!-- PRIMÄR-HERO: Begrüßung + wichtigstes Ziel zusammen in EINER Box (kein Leerraum davor) -->
+    <!-- PRIMÄR-HERO: Haken + Begrüßung + wichtigstes Ziel zusammen in EINER Box (kein Leerraum) -->
     <div class="reveal-hero">
       <div class="reveal-orb" aria-hidden="true"></div>
+      <div style="width:46px;height:46px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">${icon("check",26)}</div>
       <p class="lp-eyebrow" style="display:block;margin-bottom:2px">Dein Plan steht</p>
       <h2 style="font-size:26px;margin-bottom:6px">Startklar, ${userName()}.</h2>
       <p class="sm t2" style="margin:0 auto 14px;max-width:300px;line-height:1.5">Deine Priorität: <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b> — genau darauf zielt dein Plan zuerst.</p>
@@ -4087,10 +4086,10 @@ function renderReveal(){
     <div class="card" style="margin-top:14px;text-align:left;background:linear-gradient(160deg,rgba(74,111,216,.12),rgba(126,139,232,.04)),var(--glass-bg);border-color:rgba(157,180,240,.4)">
       <p class="ct" style="margin-bottom:6px">${icon("zap",14)} „Mein alter Plan war doch gut" — die Fakten</p>
       <p class="xs t2 mb12" style="line-height:1.55">Bauchgefühl-Pläne lassen im Schnitt Ergebnisse liegen. Genau diese Hebel macht METRICGYM richtig — belegt durch Forschung:</p>
-      ${[["+25–48 %","mehr Hypertrophie durch korrektes Wochenvolumen im MEV–MRV-Korridor statt „so viel wie möglich“","Schoenfeld 2017 · Pelland 2025"],
-         ["≈ +2×","Muskelwachstum bei 2× statt 1× Frequenz pro Muskel/Woche — exakt, wie dein Split verteilt","Schoenfeld 2016"],
-         ["bis +9 %","stärkeres Wachstum durch gedehnte (lengthened) Isolation — in deinen Übungen verbaut","Wolf 2024"],
-         ["−0 % Muskel","Muskelerhalt im Defizit durch 1,8–2,2 g/kg Protein + RIR-Steuerung","Helms 2014 · Morton 2018"]]
+      ${[["+25–48 %","mehr Muskel, weil dein Wochenvolumen exakt im erholbaren Korridor (MEV–MRV) liegt — statt blind „so viel wie möglich“","Schoenfeld 2017 · Pelland 2025"],
+         ["2×/Woche","jeder Muskel wird doppelt so oft gereizt wie im klassischen Bro-Split — doppelt so viele Wachstumssignale pro Woche","Schoenfeld 2016"],
+         ["+9 %","extra Wachstum durch Übungen in voller Dehnung (lengthened) — gezielt in deinen Plan eingebaut","Wolf 2024"],
+         ["0 kg","Muskelverlust im Defizit: 2,0–2,4 g/kg Protein + RIR-Steuerung halten deine Muskeln — es verschwindet nur Fett","Helms 2014 · Morton 2018"]]
         .map(([n,t,c])=>`<div class="row" style="align-items:flex-start;gap:12px;padding:9px 0;border-top:1px solid var(--hairline)">
           <span class="hero-num volt-txt" style="font-size:20px;min-width:78px;line-height:1.1">${n}</span>
           <span style="flex:1"><span class="sm" style="line-height:1.45">${t}</span><br><span class="xs" style="color:var(--t3)">${c}</span></span></div>`).join("")}
@@ -5472,8 +5471,8 @@ function renderTrain(){
       </span>
     </button>`;
   };
-  const phaseAcc=(title,items)=>items&&items.length?`<details class="acc" style="background:rgba(255,255,255,.55)"><summary style="font-size:13px;padding:12px 14px">${title}<span class="chev">${icon("chevron",15)}</span></summary>
-    <div class="accbody">${items.map(w=>`<p class="sm" style="padding:5px 0;font-weight:600">${w.n}</p><p class="xs t2" style="line-height:1.5;margin-bottom:6px">${w.why}</p>`).join("")}</div></details>`:"";
+  const phaseAcc=(title,items)=>items&&items.length?`<details class="acc" style="background:var(--s2);border:1px solid var(--border)"><summary style="font-size:13px;padding:12px 14px;color:var(--t1);font-weight:600">${title}<span class="chev">${icon("chevron",15)}</span></summary>
+    <div class="accbody">${items.map(w=>`<p class="sm" style="padding:5px 0;font-weight:600;color:var(--t1)">${w.n}</p><p class="xs t2" style="line-height:1.5;margin-bottom:6px">${w.why}</p>`).join("")}</div></details>`:"";
   // Wochen-Strip: Tag antippen → DESSEN Einheit erscheint unten INLINE (kein Popup).
   // Der aktuell gezeigte Tag ist hervorgehoben.
   const weekStrip=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
@@ -6503,7 +6502,7 @@ function renderNutrition(){
       <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?(pendingItems[0]&&pendingItems[0].loading
         ?`<div class="warncard" style="margin-top:14px;border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
-          <div class="row" style="align-items:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div>
+          <div class="row" style="align-items:center;justify-content:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div>
           <span class="sm t2">Coach Metric liest deinen Eintrag …</span></div></div>`
         :`<div class="warncard" style="margin-top:14px;border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
         ${pendingItems.some(it=>it.ai)?`<p class="xs t2 mb8">${icon("sparkle",11)} ${pendingItems.some(it=>it.photo)?"Vom Foto erkannt":"Von der KI erkannt"} & geschätzt — vor dem Übernehmen kurz prüfen.</p>`:""}
