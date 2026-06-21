@@ -287,6 +287,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .fielderr{font-size:12px; color:var(--danger); margin-top:4px; min-height:14px;}
   .dial{text-align:center; font-size:46px; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; font-family:var(--font-hero);}
   .dial small{font-size:15px; color:var(--t2); font-weight:500; letter-spacing:0;}
+  .dial-row{display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:10px;}
+  .dial-pm{width:52px; height:52px; flex-shrink:0; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--t1); font-size:26px; font-weight:600; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .18s var(--spring);}
+  .dial-pm:active{transform:scale(.92); background:var(--s3);}
   .badge{display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid;}
   .badge.info{color:var(--info); border-color:rgba(125,140,163,.35); background:rgba(125,140,163,.1);}
   .badge.volt{color:#fff; border-color:var(--accent); background:var(--accent);}
@@ -3825,6 +3828,12 @@ function renderOnboarding(){
   A.next=()=>{S.step++;save();render();};
   A.pick=(k,v)=>{ S.a[k]=v; save(); setTimeout(A.next,130); };
   A.dial=(k,v)=>{ S.a[k]=parseFloat(v); save(); const el=document.getElementById("dialv"); if(el)el.textContent=nf.format(S.a[k]); };
+  A.dialStep=(k,dir,step,min,max)=>{
+    let nv=Math.round(((S.a[k]??min)+dir*step)*10)/10;
+    nv=Math.max(min,Math.min(max,nv)); S.a[k]=nv; save();
+    const el=document.getElementById("dialv"); if(el)el.textContent=nf.format(nv);
+    const r=document.getElementById("dialrange"); if(r)r.value=nv;
+  };
   A.multi=(k,v,max)=>{
     const cur=S.a[k]||[];
     const effMax=(k==="goals"&&S.tier==="free")?1:max;
@@ -3848,9 +3857,16 @@ function renderOnboarding(){
   }
   else if(st.type==="dial"){
     const v=S.a[st.key]??st.def; S.a[st.key]=v;
+    // −/+ Stepper für PRÄZISE Eingabe (der Schieberegler allein war zu sensibel — eine
+    // kleine Fingerbewegung sprang mehrere Einheiten). Slider = grob, Stepper = exakt.
     root.innerHTML=bar+`<div class="fade"><h2>${st.q}</h2><p class="hint"></p>
-      <p class="dial metric"><span id="dialv">${nf.format(v)}</span> <small>${st.unit}</small></p>
-      <input type="range" min="${st.min}" max="${st.max}" step="${st.step}" value="${v}" oninput="A.dial('${st.key}',this.value)" aria-label="${st.unit}">
+      <div class="dial-row">
+        <button class="dial-pm" onclick="A.dialStep('${st.key}',-1,${st.step},${st.min},${st.max})" aria-label="weniger">−</button>
+        <p class="dial metric" style="margin:0"><span id="dialv">${nf.format(v)}</span> <small>${st.unit}</small></p>
+        <button class="dial-pm" onclick="A.dialStep('${st.key}',1,${st.step},${st.min},${st.max})" aria-label="mehr">+</button>
+      </div>
+      <input type="range" min="${st.min}" max="${st.max}" step="${st.step}" value="${v}" oninput="A.dial('${st.key}',this.value)" id="dialrange" aria-label="${st.unit}">
+      <p class="xs t2" style="text-align:center;margin-top:6px">Fein justieren mit −/+ · grob mit dem Regler</p>
       <div class="mt16"><button class="btn volt" onclick="A.next()">Weiter</button></div></div>`;
   }
   else if(st.type==="cells"){
@@ -3952,14 +3968,15 @@ function renderReveal(){
     : `<p class="hero-num volt-txt" style="font-size:54px;line-height:1">${primary.prefix||""}<span data-count="${primary.lo}">0</span>–<span data-count="${primary.hi}">0</span><span style="font-size:28px"> ${primary.unit}</span></p>`;
   setTimeout(()=>{try{confetti();}catch{}},220);
   root.innerHTML=`<div class="fade" style="text-align:center">
-    <div style="width:62px;height:62px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:6px auto 12px">${icon("check",34)}</div>
-    <p class="lp-eyebrow" style="display:block">Dein Plan steht</p>
-    <h2 style="font-size:28px">Startklar, ${userName()}.</h2>
-    <p class="sm t2" style="margin:6px auto 16px">Deine Priorität: <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b>. Genau darauf zielt dein Plan zuerst.</p>
+    <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:6px auto 14px">${icon("check",30)}</div>
 
-    <!-- PRIMÄR-HERO: das wichtigste Ziel zuerst, groß & futuristisch -->
+    <!-- PRIMÄR-HERO: Begrüßung + wichtigstes Ziel zusammen in EINER Box (kein Leerraum davor) -->
     <div class="reveal-hero">
       <div class="reveal-orb" aria-hidden="true"></div>
+      <p class="lp-eyebrow" style="display:block;margin-bottom:2px">Dein Plan steht</p>
+      <h2 style="font-size:26px;margin-bottom:6px">Startklar, ${userName()}.</h2>
+      <p class="sm t2" style="margin:0 auto 14px;max-width:300px;line-height:1.5">Deine Priorität: <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b> — genau darauf zielt dein Plan zuerst.</p>
+      <div style="height:1px;background:var(--hairline);margin:0 auto 14px;max-width:160px"></div>
       <p class="xs" style="color:var(--hl);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">Ziel #1 · ${GOAL_LABEL[tg.goals[0]]}</p>
       ${bigNum}
       <p class="sm" style="font-weight:600;margin-top:6px">Du wirst <b style="color:var(--t1)">${primary.headline}</b></p>
@@ -5145,6 +5162,55 @@ async function aiTurn(arr,chatId,fallbackFn){
   }catch(err){ arr[arr.length-1].t=fallbackFn()+"\n\n_(KI gerade nicht erreichbar — Standard-Antwort. Details: "+String(err.message||err).slice(0,80)+")_"; }
   save(); renderFn&&renderFn();
 }
+/* WARUM SIEHT DIESE EINHEIT SO AUS? — ehrliche Erklärung, warum manche Tage weniger
+   Übungen / weniger Zeit haben: die trainierten Muskeln haben ihr optimales WOCHEN-
+   volumen (MEV–MRV) erreicht; mehr wäre kontraproduktiv. Faktenbasis wird deterministisch
+   berechnet (echte Sätze vs. MRV) und — wenn der KI-Coach aktiv ist — verständlich
+   ausformuliert. So sieht der Nutzer, dass er das Maximum aus dem Gym-Besuch geholt hat. */
+function explainSession(typeKey){
+  const {base}=parseTypeKey(typeKey);
+  const a=(S.profile&&S.profile.a)||{};
+  const F=sessionDef(typeKey);
+  const sch=((S.schedule&&S.schedule.length?S.schedule:(S.scheduleSuggestion||[]))).filter(t=>t&&t!=="rest"&&t!=="cardio");
+  const setsOf=(e)=>weekSets(e.orig||e.n,e.sets);
+  const weekly={}, freq={};
+  for(const t of sch){ const b=parseTypeKey(t).base; freq[b]=(freq[b]||0)+1; const d=sessionDef(t);
+    for(const e of [...d.main,...(d.abs||[])]){ const g=volGroupOf(e.n); if(g) weekly[g]=(weekly[g]||0)+setsOf(e); } }
+  const NICE={Bizeps:"Bizeps",Trizeps:"Trizeps",Brust:"Brust",Rücken:"Rücken",Schultern:"Schultern",Beine:"Beine",Core:"Core"};
+  const todayGroups=[...new Set([...F.main,...(F.abs||[])].map(e=>volGroupOf(e.n)).filter(Boolean))];
+  const rows=todayGroups.map(g=>{ const tot=weekly[g]||0, band=VOL_BANDS[g]||[0,99];
+    const pct=Math.min(100,Math.round(100*tot/band[1]));
+    const state=tot>=band[1]-1?"am Maximum":tot>=band[0]?"im optimalen Bereich":"im Aufbau";
+    return {g,tot,mev:band[0],mrv:band[1],pct,state,fr:freq[base]||1}; });
+  const factHTML=rows.map(r=>`<div style="margin:8px 0">
+      <div class="row" style="margin-bottom:4px"><span class="sm" style="font-weight:600">${NICE[r.g]||r.g}</span>
+        <span class="metric xs t2">${r.tot} / ${r.mrv} Sätze · Woche</span></div>
+      <div class="fxbar" style="height:7px;background:var(--s2);border-radius:999px;overflow:hidden">
+        <div style="height:100%;width:${r.pct}%;background:${r.state==="am Maximum"?"var(--hl)":"linear-gradient(90deg,#9DB4F0,#4A6FD8)"};border-radius:999px"></div></div>
+      <p class="xs t2" style="margin-top:3px">${r.state} (MEV ${r.mev}–MRV ${r.mrv}) · ${r.fr}× pro Woche trainiert</p></div>`).join("");
+  const maxed=rows.filter(r=>r.state==="am Maximum").map(r=>NICE[r.g]||r.g);
+  const det=`Diese Einheit trainiert ${todayGroups.map(g=>NICE[g]||g).join(", ")}. `+
+    (maxed.length?`${maxed.join(" & ")} ${maxed.length>1?"haben":"hat"} über deine Woche bereits das maximal erholbare Volumen (MRV) erreicht — jeder zusätzliche Satz hier wäre Übertraining und würde deinen Fortschritt bremsen, nicht beschleunigen. Genau deshalb ist die Einheit bewusst schlanker: Du hast das Optimum bereits geholt.`
+      :`Alle Muskeln dieses Tages liegen im optimalen Korridor (MEV–MRV). Mehr Übungen würden v. a. die Ermüdung erhöhen, nicht den Reiz.`)+
+    ` Wenn du mehr Volumen willst, ist der Hebel NICHT mehr Sätze pro Einheit, sondern mehr Trainingstage (höhere Frequenz) — dann verteilt sich das Volumen sicher.`;
+  A.explainAI=async()=>{
+    const box=document.getElementById("explain-ai"); if(!box)return;
+    box.innerHTML=`<div class="row" style="gap:8px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div><span class="xs t2">Coach Metric formuliert deine Zusammenfassung …</span></div>`;
+    const sys=`Du bist Coach Metric, ein evidenzbasierter Kraftsport-Coach. Erkläre motivierend, aber ehrlich und in DU-Form auf Deutsch, in maximal 5 Sätzen. Keine Floskeln, keine Emojis. Stütze dich auf MEV/MRV (Israetel) und 2× Frequenz (Schoenfeld).`;
+    const usr=`Erkläre dem Nutzer, warum seine ${F.label}-Einheit nur ${F.main.length} Übungen / ~${F.est} Min hat, obwohl er ${a.sessionTime||60} Min Zeit angegeben hat. Faktenbasis (Sätze pro Woche je Muskel vs. Maximum MRV): ${rows.map(r=>`${NICE[r.g]||r.g} ${r.tot}/${r.mrv} (${r.state})`).join("; ")}. Kernbotschaft: er hat das wissenschaftliche Optimum aus dem Gym-Besuch geholt; mehr Volumen geht nur über mehr Trainingstage, nicht mehr Sätze.`;
+    try{ const txt=await aiComplete(sys,usr,{temp:0.4,max:380}); box.innerHTML=`<p class="sm" style="line-height:1.6;white-space:pre-wrap">${(txt||det).replace(/</g,"&lt;")}</p>`; }
+    catch(e){ box.innerHTML=`<p class="sm" style="line-height:1.6">${det}</p>`; }
+  };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <div class="row mb4"><p class="display-m" style="display:flex;align-items:center;gap:8px;margin:0">${icon("info",18)} Warum sieht das so aus?</p>
+      <button class="iconbtn" onclick="A.closeModal()" aria-label="Schließen">${icon("x",18)}</button></div>
+    <p class="xs t2 mb12">Dein Wochenvolumen pro Muskel — und warum diese Einheit genau richtig dosiert ist.</p>
+    ${factHTML}
+    <div id="explain-ai" class="card" style="background:var(--s2);margin-top:12px"><p class="sm" style="line-height:1.6">${det}</p></div>
+    ${aiActive()?`<button class="btn volt mt12" onclick="A.explainAI()">${icon("sparkle",15)} Ausführlicher erklären <span class="badge volt" style="font-size:9px;margin-left:4px">KI</span></button>`
+      :`<p class="xs t2 mt12">Für eine noch ausführlichere, persönliche Erklärung aktiviere den KI-Coach im Profil.</p>`}
+  </div></div>`;
+}
 function openPlanCoach(){
   window["__rerender_pc-chat"]=openPlanCoach;
   const chips=["Warum ist dieser Plan perfekt für mich?","Kann ich mehr Volumen machen?","Wann steigere ich das Gewicht?","Was ist eine Erholungswoche?","Warum diese Reihenfolge?"];
@@ -5372,15 +5438,17 @@ function renderTrain(){
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
         ${rotMode?rotStrip:weekStrip}
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
-        <div style="border-top:1px solid var(--hairline);margin-top:12px;padding-top:12px">
-          <p class="sm" style="font-weight:600">Eigenen Plan importieren</p>
-          <p class="xs t2 mb8" style="line-height:1.5">Fotografiere deinen aktuellen Plan (bis 8 Bilder). Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder erklärt, warum METRICGYM stärker ist.</p>
-          <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan per Bild importieren</button>
-          <input type="file" id="plan-import-file" accept="image/*" multiple capture="environment" style="display:none" onchange="A.planImportFiles(this)">
-          <button class="btn ghost" style="min-height:40px;font-size:13px;margin-top:8px" onclick="A.regenPlan()">${icon("zap",14)} Plan neu berechnen (aktuelle Engine)</button>
-          <p class="xs t2" style="line-height:1.5;margin-top:4px">Setzt deinen Plan auf den aktuellen, wissenschaftlich korrekten Stand zurück (z. B. nach Engine-Updates). Deine eigenen Übungs-Tausche bleiben.</p>
-          ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
-        </div>
+        <details class="acc" style="margin-top:12px;border-top:1px solid var(--hairline);border-radius:0">
+          <summary style="font-size:13.5px;font-weight:600;padding:13px 2px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+          <div class="accbody" style="padding:0 2px 6px">
+            <p class="xs t2 mb8" style="line-height:1.5">Fotografiere deinen aktuellen Plan (bis 8 Bilder). Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder erklärt, warum METRICGYM stärker ist.</p>
+            <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan per Bild importieren</button>
+            <input type="file" id="plan-import-file" accept="image/*" multiple capture="environment" style="display:none" onchange="A.planImportFiles(this)">
+            <button class="btn ghost" style="min-height:40px;font-size:13px;margin-top:8px" onclick="A.regenPlan()">${icon("zap",14)} Plan neu berechnen (aktuelle Engine)</button>
+            <p class="xs t2" style="line-height:1.5;margin-top:4px">Setzt deinen Plan auf den aktuellen, wissenschaftlich korrekten Stand zurück (z. B. nach Engine-Updates). Deine eigenen Übungs-Tausche bleiben.</p>
+            ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
+          </div>
+        </details>
       </div>`)}
 
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
@@ -5400,7 +5468,8 @@ function renderTrain(){
           </div>`;
         }
         return `<div class="card">${head}
-          <div class="mt12 mb12">${muscleSplitBars(focusType)}</div>
+          <button class="btn ghost" style="min-height:38px;font-size:12.5px;justify-content:flex-start;padding-left:0;margin-top:6px" onclick="explainSession('${focusType}')">${icon("info",14)} Warum genau diese Übungen & diese Länge?</button>
+          <div style="margin-top:22px" class="mb12">${muscleSplitBars(focusType)}</div>
           <p class="label" style="margin-bottom:8px">Übungen</p>
           ${F.main.map((e,i)=>exLine(e,focusType,i)).join("")}
           <p class="xs t2 mt8">Übung gedrückt halten, um eine Alternative zu wählen.</p>
@@ -5420,25 +5489,6 @@ function renderTrain(){
       })())
     :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest, dann steht dein Plan bereit.</p>
       <button class="btn volt" onclick="A.editSchedule()">Wochenplan festlegen</button></div>`)}
-
-    ${others.length?renderSection("Deine weiteren Einheiten",
-      `<div class="row mb12"><span></span><div class="viewtoggle">
-        <button class="${S.viewMode.train==="list"?"sel":""}" onclick="A.vm('train','list')" aria-label="Listenansicht">${icon("rows",15)}</button>
-        <button class="${S.viewMode.train==="grid"?"sel":""}" onclick="A.vm('train','grid')" aria-label="Galerieansicht">${icon("grid",15)}</button></div></div>`+
-      (()=>{const sub=(t)=>rotMode?`${TYPES[t].main.length} Übungen`:`${TYPES[t].main.length} Übungen · ${sch.map((x,i)=>x===t?WD[i]:null).filter(Boolean).join(", ")}`;
-      return S.viewMode.train==="grid"
-        ?`<div class="tiles">${others.map(t=>`<button class="tile pop" onclick="A.startType('${t}')">
-            <div class="tart" style="background:${TYPES[t].art}"><span style="color:var(--t1);opacity:.7">${icon(TYPES[t].icon,30)}</span></div>
-            <div class="tbody"><b>${TYPES[t].label}</b><span>${sub(t)}</span></div>
-          </button>`).join("")}</div>`
-        :others.map(t=>`<details class="acc"><summary>
-            <span style="display:flex;align-items:center;gap:8px">${icon(TYPES[t].icon,15)} ${TYPES[t].label} · ${sub(t)}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
-          <div class="accbody">
-            ${muscleSplitBars(t)}
-            ${TYPES[t].main.map((e,i)=>exLine(e,t,i)).join("")}
-            <button class="btn mt8" onclick="A.startType('${t}')">Loslegen</button>
-          </div></details>`).join("");})())
-    :""}
 
     ${renderSection("Wissenschaft hinter deinem Plan",
       `<div class="card">
@@ -6827,6 +6877,7 @@ function renderProfile(){
   };
   root.innerHTML=`
     ${banner("profile","user","<b>Dein Profil, deine Präzision.</b> Aktuelles Gewicht und Ziele schärfen jede Empfehlung.")}
+    <p class="label" style="margin:8px 4px 8px">Konto</p>
     <div class="card row" style="justify-content:flex-start;gap:14px">
       <div class="avatar" style="width:52px;height:52px;font-size:20px">${u.username.slice(0,1).toUpperCase()}</div>
       <div><p style="font-weight:600">${u.username}
@@ -6847,7 +6898,9 @@ function renderProfile(){
       </div>
       <button class="btn volt mt16" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button></div>`:""}
 
-    <div class="card"><p class="ct">${icon("activity",14)} Wearable · Apple Watch</p>
+    <p class="label" style="margin:24px 4px 8px">Körper & Erholung</p>
+    <details class="acc card" style="padding:0"><summary style="padding:15px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("activity",14)} Wearable · Apple Watch${S.wearActive[todayKey()]!=null?` <span class="badge volt" style="font-size:8px">heute ${nfi.format(S.wearActive[todayKey()])} kcal</span>`:""}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+      <div class="accbody" style="padding:0 16px 14px">
       <p class="xs t2 mb12" style="line-height:1.55">Trag die <b style="color:var(--t1)">heute aktiv verbrannten Kalorien</b> von deiner Watch ein — dein Kalorienziel passt sich sofort an deinen echten Verbrauch an (statt der Schätzung).</p>
       <div class="row" style="gap:10px">
         <input type="number" id="wear-k" inputmode="numeric" placeholder="z. B. 480 kcal aktiv" value="${S.wearActive[todayKey()]??""}" style="flex:1">
@@ -6855,7 +6908,8 @@ function renderProfile(){
       </div>
       ${S.wearActive[todayKey()]!=null?`<p class="xs volt-txt mt8" style="display:flex;align-items:center;gap:5px">${icon("check",12)} ${nfi.format(S.wearActive[todayKey()])} kcal aktiv heute — Tagesziel angepasst.</p>`:""}
       <p class="xs t2 mt8" style="line-height:1.5">Automatischer Sync (Apple HealthKit / Google Fit) kommt mit der nativen Companion-App. Bis dahin liest du den Wert kurz von der Watch ab — die Anbindung an dein Tagesziel funktioniert bereits voll.</p>
-    </div>
+      </div>
+    </details>
     <div class="card"><p class="ct">${icon("camera",14)} Körper-Fortschritt</p>
       ${(()=>{const m=S.measure;const last=m[m.length-1],first=m[0];
         if(!last)return `<p class="sm t2 mb12">Tracke Maße & Fotos — dein sichtbarer Beweis, wie weit du kommst.</p>`;
@@ -6886,6 +6940,7 @@ function renderProfile(){
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('snapshots')">Mehr erfahren</button></div>`}
     </div>
 
+    <p class="label" style="margin:24px 4px 8px">Coach & Verdienen</p>
     <div class="card" style="border-color:rgba(96,140,230,.3)"><p class="ct">${icon("brain",14)} KI-Coach (Coach Metric)</p>
       ${aiActive()
         ? `<p class="sm mb8"><span class="badge volt">aktiv</span> Dein KI-Coach ist an — er kennt deine Daten und antwortet frei im Plan-Assistenten und im Coach-Chat.</p>
@@ -6946,14 +7001,18 @@ function renderProfile(){
         ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen zählt dein Cloud-Konto — dafür Supabase aktivieren.</p>`}
       </div>
 
-      <div class="card"><p class="ct">${icon("star",14)} Cashback bei Partnern <span class="badge mute" style="margin-left:6px">bald</span></p>
+      <details class="acc card" style="padding:0"><summary style="padding:15px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("star",14)} Cashback bei Partnern <span class="badge mute" style="font-size:8px">bald</span></span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+        <div class="accbody" style="padding:0 16px 14px">
         <p class="sm t2 mb8" style="line-height:1.6">Kaufst du Supplements, Equipment oder Sportkleidung über deinen METRICGYM-Link, fließt ein Teil als <b style="color:var(--t1)">echtes Guthaben</b> zurück — <b style="color:var(--t1)">bezahlt von der Marke</b>, nicht von dir. Reiner Bonus, kein Aufpreis.</p>
         <div class="chips">${["Supplements","Equipment","Sportkleidung","Wearables"].map(c=>`<span class="badge mute">${c}</span>`).join("")}</div>
         <p class="xs t2 mt8">Aktiv, sobald die Partnerprogramme angebunden sind.</p>
-      </div>`;
+        </div>
+      </details>`;
     })()}
 
-    <div class="card"><p class="ct">Health-Daten importieren</p>
+    <p class="label" style="margin:24px 4px 8px">Daten & Einstellungen</p>
+    <details class="acc card" style="padding:0"><summary style="padding:15px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("activity",14)} Health-Daten importieren${(S.hrvLog.length||S.rhrLog.length||S.sleepLog.length)?` <span class="badge volt" style="font-size:8px">verbunden</span>`:""}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+      <div class="accbody" style="padding:0 16px 14px">
       <p class="xs t2 mb8" style="line-height:1.6">Apple-Health-Export (<span class="metric">export.xml</span>), CSV (<span class="metric">datum,gewicht</span>) oder JSON. Übernommen werden: Gewicht → Verlauf · <b style="color:var(--t1)">HRV, Ruhepuls & Schlaf → gemessene Erholung</b> (färbt deine Tage im Monats-Überblick).</p>
       <button class="btn mb8" onclick="document.getElementById('health-file').click()">${icon("plus",15)} Datei wählen (.xml / .csv / .json)</button>
       <input type="file" id="health-file" accept=".xml,.csv,.json,text/xml,application/json,text/csv" style="display:none" onchange="A.healthFile(this)">
@@ -6963,7 +7022,9 @@ function renderProfile(){
         if(S.rhrLog.length){const l=S.rhrLog.slice(-7);bits.push(`Ruhepuls Ø <span class="metric">${Math.round(l.reduce((s,x)=>s+x.v,0)/l.length)} bpm</span>`);}
         if(S.sleepLog.length){const l=S.sleepLog.slice(-7);bits.push(`Schlaf Ø <span class="metric">${(l.reduce((s,x)=>s+x.v,0)/l.length).toFixed(1).replace(".",",")} h</span>`);}
         return `<p class="xs t2 mb8">${bits.join(" · ")}</p>`;})():""}
-      <p class="xs t2" style="line-height:1.6"><b style="color:var(--t1)">Ehrlich gesagt:</b> Eine Live-Synchronisation mit HealthKit oder Google Fit ist aus einer Browser-App technisch nicht möglich. Der Import liest deine exportierte Datei — komplett lokal, nichts verlässt dein Gerät.</p></div>
+      <p class="xs t2" style="line-height:1.6"><b style="color:var(--t1)">Ehrlich gesagt:</b> Eine Live-Synchronisation mit HealthKit oder Google Fit ist aus einer Browser-App technisch nicht möglich. Der Import liest deine exportierte Datei — komplett lokal, nichts verlässt dein Gerät.</p>
+      </div>
+    </details>
 
     ${S.devMode?`<div class="card"><p class="ct">Dev: Demo-Daten</p>
       <p class="xs t2 mb8">Synthetische 10-Wochen-Historie zum Testen aller Analytics-Module. Nur im Developer-Modus sichtbar — echte Konten starten immer leer.</p>
