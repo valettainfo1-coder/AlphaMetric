@@ -64,6 +64,24 @@ Ohne diese Tabelle läuft die App normal weiter — der Werber-Zähler bleibt da
   Für einen reibungslosen Demo-/Test-Flow kann „Confirm email" temporär deaktiviert werden.
 - (Optional) **URL Configuration**: deine Deploy-Domain als Site-URL eintragen.
 
+## 3b. Google-Login aktivieren (WICHTIG — sonst „Timeout/Error")
+Der „Mit Google fortfahren"-Button funktioniert NUR, wenn beides eingerichtet ist:
+1. **Google Cloud Console** → APIs & Dienste → Anmeldedaten → **OAuth-Client-ID** (Typ: Webanwendung) erstellen.
+   - **Autorisierte Weiterleitungs-URI** eintragen:
+     `https://DEINPROJEKT.supabase.co/auth/v1/callback`
+   - `Client ID` und `Client Secret` kopieren.
+2. **Supabase → Authentication → Providers → Google**: aktivieren, Client ID + Secret einfügen, speichern.
+3. **Supabase → Authentication → URL Configuration**:
+   - **Site URL**: deine Deploy-Domain, z. B. `https://deine-app.netlify.app`
+   - **Redirect URLs** (hinzufügen): deine Deploy-Domain **inkl. Pfad**, z. B.
+     `https://deine-app.netlify.app/` und `https://deine-app.netlify.app/index.html`
+     (Die App kehrt zu `origin + pfad` zurück — diese URL muss freigegeben sein, sonst Fehler.)
+
+Ohne Schritt 1–3 schlägt Google-Login fehl (Provider nicht aktiv / Redirect nicht erlaubt).
+Die App nutzt den **Implicit-Flow** mit `detectSessionInUrl` — kein Backend nötig, die Session
+wird beim Rücksprung automatisch aus der URL erkannt. E-Mail/Passwort-Login funktioniert immer
+auch ohne Google.
+
 ## Wie es funktioniert
 - **Registrierung** → Supabase-Auth (sicheres Passwort-Hashing, Sessions); Vorname als Metadaten.
 - **Login** → lädt die `user_state.data` des Kontos und füllt den App-State (Hydrate).

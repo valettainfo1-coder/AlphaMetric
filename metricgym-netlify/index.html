@@ -973,8 +973,11 @@ const SB={
   });},
   async init(){
     if(SB.ready) return true; const c=SB.cfg(); if(!c) return false;
-    await SB._load();
-    SB.client=window.supabase.createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true}});
+    // Bibliothek mit Timeout laden, damit der Login bei blockiertem CDN nicht ewig hängt.
+    await Promise.race([SB._load(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("Supabase-Timeout")),9000))]);
+    // detectSessionInUrl + implicit Flow: nötig, damit die Rückkehr vom Google-Login (Token im
+    // URL-Hash) zuverlässig als Session erkannt wird — ohne Backend/PKCE-Code-Verifier-Probleme.
+    SB.client=window.supabase.createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"implicit"}});
     SB.ready=true; return true;
   },
   async signUp(email,password,firstName){
@@ -993,8 +996,11 @@ const SB={
   async signOut(){ try{ if(SB.client)await SB.client.auth.signOut(); }catch(e){} SB.user=null; SB.token=null; },
   async signInOAuth(provider){
     await SB.init();
-    const redirectTo=(location.protocol==="http:"||location.protocol==="https:")?location.origin:undefined;
-    const {error}=await SB.client.auth.signInWithOAuth({provider, options:redirectTo?{redirectTo}:{}});
+    // Exakte Seite als Rückkehrziel (Origin + Pfad) — muss in Supabase unter
+    // Auth → URL Configuration → Redirect URLs eingetragen sein.
+    const redirectTo=(location.protocol==="http:"||location.protocol==="https:")?(location.origin+location.pathname):undefined;
+    const {error}=await SB.client.auth.signInWithOAuth({provider,
+      options:{ ...(redirectTo?{redirectTo}:{}), queryParams:{prompt:"select_account"} }});
     if(error) throw error; // leitet zum Anbieter weiter; Rückkehr -> Session-Restore beim Boot
   },
   async pull(){
@@ -2871,7 +2877,16 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
 A.oauth=async(p)=>{ if(!SB.enabled()){toast("Cloud-Login nicht konfiguriert");return;}
-  try{ await SB.signInOAuth(p); }catch(e){ toast((p==="google"?"Google":"Apple")+"-Login nicht aktiv — in Supabase freischalten"); } };
+  const name=(p==="google"?"Google":"Apple");
+  toast(name+"-Anmeldung wird geöffnet …");
+  try{ await SB.signInOAuth(p); /* leitet weiter — bei Erfolg kein Rücksprung hierher */ }
+  catch(e){
+    const msg=String(e&&e.message||e).toLowerCase();
+    if(msg.includes("timeout")||msg.includes("bibliothek")) toast("Verbindung zu langsam/blockiert — Internet prüfen und erneut versuchen");
+    else if(msg.includes("provider")||msg.includes("not enabled")||msg.includes("unsupported")) toast(name+"-Login ist in Supabase noch nicht aktiviert (Provider + Google-Cloud-Keys nötig)");
+    else if(msg.includes("redirect")||msg.includes("url")) toast("Diese Adresse ist in Supabase nicht als Redirect-URL freigegeben");
+    else toast(name+"-Login fehlgeschlagen: "+String(e&&e.message||e).slice(0,60));
+  } };
 // Wiederverwendbarer OAuth-Block (nur sichtbar, wenn Cloud-Sync konfiguriert ist).
 function oauthButtons(label){
   if(!SB.enabled()) return "";
@@ -5427,7 +5442,7 @@ function renderPlayer(){
     root.innerHTML=`
       <p class="ring-lbl mb8">Cardio · lockeres Zone-2-Tempo</p>
       <div class="card" style="text-align:center">
-        <div style="width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:6px auto 12px;background:linear-gradient(135deg,#3FA98C,#2E8E76);color:#fff">${icon("activity",30)}</div>
+        <div style="width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:6px auto 12px;background:var(--s2);border:1px solid var(--border);color:var(--hl)">${icon("activity",28)}</div>
         <h2 style="font-size:21px;margin-bottom:4px">${name}</h2>
         <p class="sm t2" style="line-height:1.55;margin-bottom:18px">Gleichmäßiges, lockeres Tempo — Puls ca. 60–70 % (Nasenatmung möglich). Stärkt Herz-Kreislauf & Erholung, ohne deine Muskel-Erholung zu kosten.</p>
         <p class="hero-num volt-txt" style="font-size:54px;line-height:1">${cardioMin}<span style="font-size:22px"> Min</span></p>
