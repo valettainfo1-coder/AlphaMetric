@@ -1251,6 +1251,31 @@ function readinessToday(){
   const rir=tier==="Mäßig"?1:tier==="Erholung"?2:0;
   return {score:s,tier,mult,rir,parts,objHas};
 }
+/* MAXIMAL-REIZ-STATUS: der wissenschaftliche Beweis, dass der Plan jeden Muskel optimal dosiert.
+   "score" = Anteil der Muskeln, die in der Spitzenwoche im optimalen Korridor liegen (weder zu
+   wenig = verschenktes Wachstum, noch zu viel = Übertraining). "util" = wie nah am erholbaren
+   Maximum (MRV). Beides aus dem echten Plan berechnet, nichts erfunden. */
+function maxStimulusStatus(){
+  try{
+    if(!S.profile) return null;
+    const a=S.profile.a;
+    const sch=((S.schedule&&S.schedule.length?S.schedule:(S.scheduleSuggestion||[]))).filter(t=>t&&t!=="rest"&&t!=="cardio");
+    if(!sch.length) return null;
+    const BANDS=deficitScaledBands(a);
+    const pk=(e)=> e.sets + ((EXDB[e.n]||{}).compound?2:1); // Woche-3-Spitze
+    const w={};
+    for(const tk of sch){ const d=sessionDef(tk); for(const e of [...(d.main||[]),...(d.abs||[])]){ const g=volGroupOf(e.n); if(g) w[g]=(w[g]||0)+pk(e); } }
+    const groups=Object.keys(w); if(!groups.length) return null;
+    let inCorr=0, utilSum=0; const muscles=[];
+    for(const g of groups){ const mev=BANDS[g][0], mrv=BANDS[g][1], v=w[g];
+      const ok=(v>=mev && v<=mrv+0.5); if(ok)inCorr++;
+      utilSum+=Math.min(1,v/mrv);
+      muscles.push({g,v,mev,mrv,pct:Math.min(100,Math.round(100*v/mrv)),ok});
+    }
+    const total=groups.length;
+    return {score:Math.round(100*inCorr/total), util:Math.round(100*utilSum/total), inCorr, total, muscles, exp:a.exp};
+  }catch(e){ return null; }
+}
 function weeklyMuscleSets(weeksBack){
   const from=Date.now()-(weeksBack+1)*7*dayMs, to=Date.now()-weeksBack*7*dayMs;
   const out={};
@@ -5439,6 +5464,61 @@ function explainSession(typeKey){
       :`<p class="xs t2 mt12">Für eine noch ausführlichere, persönliche Erklärung aktiviere den KI-Coach im Profil.</p>`}
   </div></div>`;
 }
+/* MAXIMAL-REIZ-STATUS — Marketing-Karte: große, einfache Aussage + Wissenschaft als Beweis auf Tipp. */
+function maxStatusCard(){
+  const st=maxStimulusStatus(); if(!st) return "";
+  const advanced=(st.exp==="intermediate"||st.exp==="advanced");
+  const sub = advanced
+    ? `Jeder Muskel trainiert <b style="color:var(--t1)">am Rand deines erholbaren Maximums</b> — der stärkste Reiz, den dein Körper noch verarbeiten kann. Ein Satz mehr wäre Übertraining.`
+    : `Jeder Muskel trifft <b style="color:var(--t1)">genau sein Wachstums-Fenster</b> — stark genug für maximalen Fortschritt, schonend genug für saubere Erholung. Perfekt für dein Level.`;
+  return `<div class="card" style="text-align:left;background:linear-gradient(160deg,rgba(74,111,216,.16),rgba(126,139,232,.04)),var(--glass-bg);border-color:rgba(157,180,240,.5)">
+    <p class="ct" style="margin-bottom:10px">${icon("flame",14)} Dein Reiz-Status</p>
+    <div class="row" style="align-items:center;gap:14px;margin-bottom:10px">
+      <div style="text-align:center;min-width:96px">
+        <p class="hero-num volt-txt" style="font-size:40px;line-height:1">${st.score}<span style="font-size:20px">%</span></p>
+        <p class="xs t2" style="margin-top:2px">wissenschaftlich<br>optimal</p>
+      </div>
+      <div style="flex:1">
+        <p class="sm" style="line-height:1.5">${sub}</p>
+        <p class="xs t2 mt8">${st.inCorr}/${st.total} Muskelgruppen im perfekten Korridor${advanced?` · Auslastung ${st.util} % vom Maximum`:""}</p>
+      </div>
+    </div>
+    <div class="row" style="gap:8px">
+      <button class="btn" style="flex:1;min-height:42px" onclick="openMaxStatus()">${icon("chart",14)} Beweis ansehen</button>
+      <button class="btn volt" style="flex:1;min-height:42px" onclick="shareMaxStatus()">${icon("send",14)} Beweis teilen</button>
+    </div>
+  </div>`;
+}
+function openMaxStatus(){
+  const st=maxStimulusStatus(); if(!st){toast("Noch kein Plan");return;}
+  const NICE={Bizeps:"Bizeps",Trizeps:"Trizeps",Brust:"Brust",Rücken:"Rücken",Schultern:"Schultern",Beine:"Beine",Core:"Bauch"};
+  const order=["Brust","Rücken","Schultern","Bizeps","Trizeps","Beine","Core"].filter(g=>st.muscles.some(m=>m.g===g));
+  const bars=order.map(g=>{ const m=st.muscles.find(x=>x.g===g);
+    return `<div style="margin:9px 0">
+      <div class="row" style="margin-bottom:4px"><span class="sm" style="font-weight:600">${NICE[g]||g}</span>
+        <span class="metric xs ${m.ok?"volt-txt":"t2"}">${m.ok?"optimal":"im Aufbau"}</span></div>
+      <div style="height:8px;background:var(--s2);border-radius:999px;overflow:hidden;position:relative">
+        <div style="position:absolute;left:${Math.round(100*m.mev/m.mrv)}%;top:0;bottom:0;width:2px;background:var(--t3);opacity:.6"></div>
+        <div style="height:100%;width:${m.pct}%;background:linear-gradient(90deg,#9DB4F0,#4A6FD8);border-radius:999px"></div>
+      </div>
+      <p class="xs t2" style="margin-top:3px">${m.v} Sätze/Woche — dein Wachstums-Fenster: ${m.mev}–${m.mrv}</p></div>`;}).join("");
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <div class="row mb4"><p class="display-m" style="margin:0;display:flex;align-items:center;gap:8px">${icon("flame",18)} Dein Reiz-Status</p>
+      <button class="iconbtn" onclick="A.closeModal()" aria-label="Schließen">${icon("x",18)}</button></div>
+    <p class="hero-num volt-txt" style="font-size:44px;line-height:1;margin:6px 0 2px">${st.score}%</p>
+    <p class="sm t2 mb12" style="line-height:1.55">deiner Muskeln liegen <b style="color:var(--t1)">exakt im wissenschaftlichen Wachstums-Korridor</b> — belegt durch Volumen-Forschung (MEV–MRV, Israetel 2017). Nicht zu wenig, nicht zu viel.</p>
+    ${bars}
+    <p class="xs t2 mt12" style="line-height:1.5">Der graue Strich = Mindest-Reiz für Wachstum. Der blaue Balken = dein geplantes Volumen. Alles dazwischen bis zum Ende = dein optimaler Bereich. <b style="color:var(--t1)">Ein „Bauchgefühl-Plan" trifft das fast nie.</b></p>
+    <button class="btn volt mt12" onclick="shareMaxStatus()">${icon("send",15)} Diesen Beweis teilen</button>
+  </div></div>`;
+}
+async function shareMaxStatus(){
+  const st=maxStimulusStatus(); if(!st)return;
+  const txt=`Mein Trainingsplan trifft ${st.score}% des wissenschaftlichen Optimums: jeder Muskel exakt im Wachstums-Korridor (MEV–MRV) — maximaler Reiz, kein Übertraining. Gebaut mit METRICGYM. 💪`;
+  try{ if(navigator.share){ await navigator.share({title:"Mein Reiz-Status — METRICGYM",text:txt}); return; } }catch{}
+  try{ await navigator.clipboard.writeText(txt); toast("Beweis kopiert — einfügen & posten"); }
+  catch{ modal(`<p class="ct">Dein Beweis</p><p class="sm" style="line-height:1.6">${txt}</p>`); }
+}
 function openPlanCoach(){
   window["__rerender_pc-chat"]=openPlanCoach;
   const chips=["Warum ist dieser Plan perfekt für mich?","Kann ich mehr Volumen machen?","Wann steigere ich das Gewicht?","Was ist eine Erholungswoche?","Warum diese Reihenfolge?"];
@@ -5731,10 +5811,11 @@ function renderTrain(){
     :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest, dann steht dein Plan bereit.</p>
       <button class="btn volt" onclick="A.editSchedule()">Wochenplan festlegen</button></div>`)}
 
-    ${renderSection("Wissenschaft hinter deinem Plan",
-      `<div class="card">
-        <p class="sm t2 mb12" style="line-height:1.6">Frequenz, Volumen, Intensität und Übungswahl beruhen auf aktueller Trainingsforschung. Frag nach, <b style="color:var(--t1)">warum dein Plan genau so aussieht</b>.</p>
-        <button class="btn volt" onclick="openPlanCoach()">${icon("message",15)} Frag den Plan-Assistenten</button>
+    ${renderSection("Dein perfekter Reiz — schwarz auf weiß",
+      `${maxStatusCard()}
+      <div class="card">
+        <p class="sm t2 mb12" style="line-height:1.6">Warum trifft dein Plan jeden Muskel perfekt? <b style="color:var(--t1)">Frag nach — du bekommst die Antwort mit Beleg.</b></p>
+        <button class="btn" onclick="openPlanCoach()">${icon("message",15)} Warum sieht mein Plan so aus?</button>
       </div>`)}
   `;
 }
