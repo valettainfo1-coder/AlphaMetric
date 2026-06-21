@@ -1124,8 +1124,10 @@ function multiTargets(a,bmr,td){
   // Protein höher im Defizit (Fettabbau & Recomp): schützt/baut Muskeln, wenn keine
   // überschüssige Energie da ist (Helms et al. 2014: bis 2,3–3,1 g/kg fettfreie Masse im Cut).
   let prot; const cut = dir<0;
-  if(a.bodyFat!=null) prot=Math.round((cut?2.4:2.2)*a.weight*(1-a.bodyFat/100));
-  else prot=Math.round((cut?2.0:1.8)*Math.min(a.weight,25*(a.height/100)**2));
+  // Cut/Recomp: 2,6 g/kg fettfreie Masse (≈ 2,0–2,3 g/kg Körpergewicht je nach KF-Anteil) —
+  // oberes Ende für maximalen Muskelschutz im Defizit. Erhaltung/Aufbau: 2,2 g/kg FFM.
+  if(a.bodyFat!=null) prot=Math.round((cut?2.6:2.2)*a.weight*(1-a.bodyFat/100));
+  else prot=Math.round((cut?2.1:1.8)*Math.min(a.weight,25*(a.height/100)**2));
   const fat=Math.round(.9*a.weight);
   const mac=(k)=>({kcal:k,p:prot,f:fat,c:Math.max(0,Math.round((k-prot*4-fat*9)/4))});
   return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,recs,goals,dir,dirLabel,bmi:Math.round(bmi*10)/10};
@@ -1754,6 +1756,12 @@ const EXDB={
     why:"Anti-Extension stabilisiert die Wirbelsäule unter den schweren Grundübungen."},
   "Dead Bug":{m:"Core",compound:false,eq:"body",tempo:"2-1-1-1",rir:"–",alt:"Plank",
     why:"Anti-Extension mit kontralateraler Bewegung — schult Rumpfstabilität ohne Wirbelsäulenlast."},
+  "Kabel-Crunch":{m:"Core",compound:false,eq:"cable",tempo:"2-0-1-1",rir:"0–1",lengthened:true,alt:"Crunch mit Gewicht auf der Brust",
+    why:"BELADENE Rumpfbeugung mit Dehnungsreiz — der einzige Weg zu DICKEREN, sichtbaren Bauchmuskeln. Plank baut keine Dicke (progressive Überladung des Rectus, Schoenfeld)."},
+  "Hängendes Beinheben":{m:"Core",compound:false,eq:"bar",tempo:"2-0-1-1",rir:"0–1",alt:"Liegendes Beinheben",
+    why:"Beugung gegen Schwerkraft mit langer Hebellast — trifft den unteren Rectus, der bei Crunches oft zu kurz kommt."},
+  "Liegendes Beinheben":{m:"Core",compound:false,eq:"body",tempo:"2-0-1-1",rir:"0–1",alt:"Käfer (Bicycle)",
+    why:"Untere Bauchmuskeln ohne Gerät — über Tempo und Beinwinkel progressiv skalierbar."},
   "Zone-2 Cardio":{m:"Herz",compound:false,eq:"body",tempo:"locker",rir:"–",alt:"Radfahren / zügiges Gehen",
     why:"Aerobe Basis bei niedriger Ermüdung — unterstützt Erholung statt sie zu kosten (Seiler, 2010)."},
 };
@@ -1767,6 +1775,16 @@ const COOLDOWN_DEFAULT=[
   {n:"Statisches Dehnen der trainierten Muskeln",why:"Nach dem Training unkritisch für Kraft — und gut für die wahrgenommene Erholung."},
 ];
 const ABS_BLOCK=[["Plank",2,"30–60s",60],["Dead Bug",2,"10–12",60]];
+// Core PROGRESSIV & BELADEN (für sichtbare, dicke Bauchmuskeln) — Plank baut keine Dicke.
+// Wählt das beste verfügbare Equipment: Kabel-Crunch / Hängendes Beinheben > Körpergewicht.
+function absBlockFor(a){
+  const eq=EQ_ALLOWED[a&&a.equipment]?a.equipment:"gym_full"; const allowed=EQ_ALLOWED[eq];
+  const has=(e)=>allowed.includes((EXDB[e]||{}).eq);
+  const out=[];
+  out.push(has("Kabel-Crunch")?["Kabel-Crunch",3,"10–15",60]:["Plank",2,"30–60s",60]);     // oberer/gesamter Rectus, beladen
+  out.push(has("Hängendes Beinheben")?["Hängendes Beinheben",3,"10–15",60]:["Liegendes Beinheben",3,"12–20",45]); // unterer Rectus
+  return out;
+}
 const TYPE_META={
   push:{label:"Push",icon:"push",art:"linear-gradient(135deg,#F4E8DC,#EBD9C8)"},
   pull:{label:"Pull",icon:"pull",art:"linear-gradient(135deg,#E2E6EC,#D3DAE4)"},
@@ -1819,13 +1837,15 @@ const SESSION_SLOTS={
         ["Ausfallschritte","Bulgarian Split Squat"],
         ["Wadenheben"],
         ["Hip Thrust","Goblet Squat"]],
+  // Reihenfolge so, dass bei 5 Übungen JEDER Oberkörpermuskel ≥1 direkten Reiz bekommt
+  // (Brust, Rücken, Schulter, Bizeps, Trizeps) — vorher fielen Arme/Seitschulter raus.
   upper:[["Bankdrücken","KH-Bankdrücken","Liegestütze"],
          ["Langhantelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
          ["Schulterdrücken","KH-Schulterdrücken","Pike Push-ups"],
+         ["Bizeps-Curls","Hammer-Curls","Band Pull-Apart"],
+         ["Trizepsdrücken","Enge Liegestütze"],
          ["Klimmzug","Latzug","Rudern am Tisch"],
-         ["Seitheben","Band Pull-Apart","Reverse Flys"],
-         ["Bizeps-Curls","Band Pull-Apart"],
-         ["Trizepsdrücken","Enge Liegestütze"]],
+         ["Seitheben","Band Pull-Apart","Reverse Flys"]],
   lower:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
          ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
          ["Beinpresse","Bulgarian Split Squat","Hip Thrust"],
@@ -2037,7 +2057,7 @@ function generateTrainingPlan(profile,variant){
     });
   };
   const day=(key,main,abs)=>{
-    const absEx=abs?ABS_BLOCK.map(([n,st,rp,rs])=>mk(n,st,rp,rs)):[];
+    const absEx=abs?absBlockFor(a).map(([n,st,rp,rs])=>mk(n,st,rp,rs)):[];
     // Session-Dauer wird BERECHNET, nicht abgefragt: Aufwärmen + Sätze×(Arbeit+Pause) + Cool-down
     const setMin=main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+absEx.reduce((s,e)=>s+e.sets*1.5,0);
     const est=Math.round((8+setMin+5)/5)*5;
@@ -2059,7 +2079,7 @@ function generateTrainingPlan(profile,variant){
     cardio:{...day("cardio",[mk("Zone-2 Cardio",1,"30–40 Min",0)]),est:35},
     rest:{key:"rest",...TYPE_META.rest,warmup:[],cooldown:[],main:[],abs:[],est:0},
   };
-  capWeeklyVolume(PLAN,a,{scheme,PP,mk,fits,SLOTS:SESSION_SLOTS});   // Übertraining vermeiden: Wochenvolumen je Muskel auf MRV deckeln
+  capWeeklyVolume(PLAN,a,{scheme,PP,mk,fits,SLOTS:SESSION_SLOTS,focus});   // MEV-Garantie + MRV-Deckel + Zeit füllen
   return PLAN;
 }
 /* WISSENSCHAFTLICHER VOLUMEN-DECKEL (Israetel MEV–MRV): Wird eine Muskelgruppe über mehrere
@@ -2105,6 +2125,68 @@ function capWeeklyVolume(PLAN,a,ctx){
         w=weekly();
       }
     }
+    // 2.5) MEV-GARANTIE: Jeder TRAINIERBARE Muskel erreicht sein (erfahrungsskaliertes) MEV.
+    //      Fehlt direktes Volumen (klassisch: Arme/Seitschulter auf Upper/Full), wird gezielt
+    //      EINE Isolation in eine biologisch passende Einheit injiziert. Fokus-Muskeln bekommen
+    //      garantiert ihr volles MEV. Beginner brauchen weniger (skaliert); Bodyweight kann
+    //      manche Muskeln (Bizeps) nicht isolieren → dann kein erzwungenes Volumen.
+    const MEV_INJECT={
+      Bizeps:{ex:["Bizeps-Curls","Hammer-Curls"],days:["pull","upper","full","arms","shoulderarms"]},
+      Trizeps:{ex:["Trizepsdrücken","Enge Liegestütze"],days:["push","upper","full","arms","shoulderarms"]},
+      Schultern:{ex:["Seitheben","Reverse Flys","Band Pull-Apart"],days:["push","upper","full","shoulders","shoulderarms"]},
+      Brust:{ex:["KH-Fliegende","Liegestütze"],days:["push","upper","full","chest","chestback"]},
+      "Rücken":{ex:["Kabelrudern","Einarmiges KH-Rudern","Reverse Flys"],days:["pull","upper","full","back","chestback"]},
+      Beine:{ex:["Beinbeuger","Ausfallschritte","Wadenheben"],days:["legs","lower","full"]},
+      Core:{ex:["Kabel-Crunch","Hängendes Beinheben","Liegendes Beinheben","Plank"],days:["legs","lower","full"]},
+    };
+    if(ctx.scheme&&ctx.PP&&ctx.mk&&ctx.fits){
+      const PP=ctx.PP, mk=ctx.mk, fits=ctx.fits;
+      const expF=a.exp==="beginner"?0.65:a.exp==="novice"?0.85:1.0;
+      const mevTarget=(g)=>Math.max(g==="Core"?4:6,Math.round(BANDS[g][0]*expF));
+      // Fokus auf die FEIN-Gruppen der MEV-Garantie abbilden: "Arme" deckt Bizeps UND Trizeps ab.
+      const focusSet=new Set();
+      for(const fm of (ctx.focus||[])){
+        if(fm==="Arme"){ focusSet.add("Bizeps"); focusSet.add("Trizeps"); }
+        else if(fm==="Bizeps"||fm==="Trizeps") focusSet.add(fm);
+        else focusSet.add(FOCUS_PARENT[fm]||fm);
+      }
+      const freqB={}; for(const b of sch) freqB[b]=(freqB[b]||0)+1;
+      const estB=(base)=>{ const d=PLAN[base]; const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0); return Math.round((8+sm+5)/5)*5; };
+      const budgetM=Math.max(30,a.sessionTime||60);
+      // Fokus-Muskeln zuerst, dann typisch fehlende Ästhetik-Muskeln (Seitschulter, Arme)
+      const order=["Schultern","Bizeps","Trizeps","Brust","Rücken","Core","Beine"]
+        .sort((x,y)=>(focusSet.has(y)?1:0)-(focusSet.has(x)?1:0));
+      for(const g of order){
+        const spec=MEV_INJECT[g]; if(!spec||!spec.ex.some(x=>fits(x)))continue; // nur trainierbare Muskeln
+        const target=focusSet.has(g)?Math.max(mevTarget(g),BANDS[g][0]):mevTarget(g); // Fokus → volles MEV
+        let guard=0;
+        while((weekly()[g]||0)<target && guard++<10){
+          let best=null,bestEst=1e9;
+          for(const base of bases){
+            if(!spec.days.includes(base))continue;
+            const d=PLAN[base]; if(d.main.length>=8)continue;
+            const present=new Set(d.main.map(e=>e.n));
+            const cand=spec.ex.find(x=>fits(x)&&!present.has(x)); if(!cand)continue;
+            const f=freqB[base]||1; if((weekly()[g]||0)+3*f>BANDS[g][1])continue;       // nie über MRV
+            const e0=estB(base); if(e0>budgetM+12 && !focusSet.has(g))continue;          // weiche Zeitgrenze
+            if(e0<bestEst){ bestEst=e0; best={base,cand}; }
+          }
+          if(!best)break;
+          const d=PLAN[best.base], dd=EXDB[best.cand]||{}, rir=PP.decon?PP.rir:undefined;
+          d.main.push(mk(best.cand,2,(dd.lengthened?PP.lR:PP.iR),PP.iRest,rir));
+        }
+        // Fallback: kann keine WEITERE eigene Übung ergänzt werden (Equipment-Limit, z. B. nur
+        // eine Trizeps-Isolation im Homegym), vorhandene Isolation aufstocken bis MEV (Cap 4 Sätze).
+        let g2=0;
+        while((weekly()[g]||0)<target && g2++<8){
+          let bumped=false;
+          for(const base of bases){ if(!spec.days.includes(base))continue; const d=PLAN[base]; const f=freqB[base]||1;
+            const e=d.main.find(x=>grpOf(x.n)===g && !isCompound(x.n) && x.sets<4);
+            if(!e)continue; if((weekly()[g]||0)+f>BANDS[g][1])continue; e.sets++; bumped=true; break; }
+          if(!bumped)break;
+        }
+      }
+    }
     // 3) ZEITBUDGET FÜLLEN — wie ein durchdachter PPL-Plan: PRIMÄR mit zusätzlichen ÜBUNGEN
     //    (mehr Winkel/Abwechslung, je ~2–3 Sätze), SEKUNDÄR mit mehr Sätzen auf vorhandene
     //    Übungen (Cap 5, damit Volumen breit verteilt wird statt 6 Sätze auf eine Isolation zu
@@ -2143,7 +2225,20 @@ function capWeeklyVolume(PLAN,a,ctx){
         if(!pick)break; pick.sets++;
       }
     }
-    // 4) Dauer (est) je Einheit final berechnen
+    // 4) SICHERHEITS-DECKEL: Nach MEV-Garantie & Zeit-Füllung erneut hart auf MRV begrenzen —
+    //    Injektion/Füllung dürfen NIE über das (defizit-angepasste) MRV schießen (Übertraining).
+    for(const [g,band] of Object.entries(BANDS)){ const hi=band[1]; let w2=weekly(); if((w2[g]||0)<=hi)continue;
+      const scale=hi/(w2[g]); for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } }
+      let guard=0; w2=weekly();
+      while((w2[g]||0)>hi && guard++<24){
+        let pick=null,ps=-1;
+        for(const base of bases){ for(const arr of ["main","abs"]){ const list=PLAN[base][arr]; if(!list)continue;
+          const gIdx=list.map((e,i)=>grpOf(e.n)===g?i:-1).filter(i=>i>=0); if(arr==="main"&&gIdx.length<=1)continue;
+          for(const i of gIdx){ const s=(isCompound(list[i].n)?0:100)+(arr==="abs"?50:0)+gIdx.length; if(s>ps){ps=s;pick=[base,arr,i];} } } }
+        if(!pick)break; PLAN[pick[0]][pick[1]].splice(pick[2],1); w2=weekly();
+      }
+    }
+    // 5) Dauer (est) je Einheit final berechnen
     for(const base of bases){ PLAN[base].est=estOfBase(base); }
   }catch(e){}
 }
@@ -3981,6 +4076,28 @@ function goalProjections(a,tg,pLo,pHi){
   if(!out.length) out.push({key:"strength",...D.strength});
   return out;
 }
+/* JAHRES-PERIODISIERUNG (Makro): aus aktuellem Körperfett + Ziel eine ehrliche Phasen-Sequenz
+   ableiten (Cut → Lean-Bulk usw.). Sichtbare Bauchmuskeln brauchen ~10–12 % (m) bzw. ~18–20 %
+   (w) KF — die Engine sagt das offen und plant den Weg dorthin statt falsche Versprechen. */
+function macroPhases(a,tg){
+  if(a.bodyFat==null) return null;
+  const male=a.sex!=="female", absBf=male?11:19, bf=a.bodyFat, w=a.weight;
+  const wkRate=0.0075*w;                                  // ~0,75 % KG/Woche realistischer Fettverlust
+  const phases=[];
+  if(bf>absBf+5){
+    const fatToLose=Math.max(0,(bf-absBf)/100*w);
+    const cutWk=Math.max(8,Math.min(40,Math.ceil(fatToLose/wkRate)));
+    phases.push({name:"Phase 1 · Cut",wk:cutWk,desc:`Defizit + hartes Training → ~${absBf}% KF. Muskeln halten durch ${tg.train.p} g Protein/Tag.`});
+    phases.push({name:"Phase 2 · Lean-Bulk",wk:Math.max(8,52-cutWk),desc:"Leichter Überschuss → Muskeln aufbauen, ohne das Sixpack zu verlieren."});
+  } else if(bf>absBf){
+    phases.push({name:"Phase 1 · Recomp / Mini-Cut",wk:16,desc:`Erhaltung bis leichtes Defizit → die letzten ~${Math.round(bf-absBf)} % KF runter, Bauchmuskeln werden sichtbar.`});
+    phases.push({name:"Phase 2 · Lean-Bulk",wk:36,desc:"Muskeln aufbauen bei kontrolliertem Körperfett."});
+  } else {
+    phases.push({name:"Phase 1 · Lean-Bulk",wk:40,desc:"Du bist bereits definiert — jetzt sauber Muskeln aufbauen."});
+    phases.push({name:"Phase 2 · Mini-Cut",wk:12,desc:"Kurz nachschärfen, um die Definition zu halten."});
+  }
+  return {absBf,male,phases,note:`Sichtbare Bauchmuskeln brauchen bei ${male?"Männern":"Frauen"} ~${absBf}% Körperfett${bf>absBf?` — du bist bei ~${bf} %.`:" — das hast du erreicht."}`};
+}
 function renderReveal(){
   const p=S.profile, tg=p.tg;
   // Nach dem Onboarding einmalig die Feature-Übersicht zeigen (v5/Phase 3).
@@ -4047,6 +4164,16 @@ function renderReveal(){
         <div style="color:var(--hl);display:flex;justify-content:center;margin-bottom:5px">${icon(s.icon,18)}</div>
         <p class="metric" style="font-size:15px">${s.hi==null?(s.word||"+"):`${s.prefix||""}${s.lo}–${s.hi} ${s.unit}`}</p>
         <p class="xs t2" style="margin-top:2px">auch ${s.headline}</p></div>`).join("")}</div>`:""}
+
+    <!-- JAHRES-PFAD: ehrliche Makro-Periodisierung aus Körperfett + Ziel -->
+    ${(()=>{ const mp=macroPhases(a,tg); if(!mp)return "";
+      return `<div class="card" style="text-align:left;border-color:rgba(157,180,240,.4)">
+        <p class="ct" style="margin-bottom:8px">${icon("calendar",14)} Dein 12-Monats-Pfad</p>
+        ${mp.phases.map((ph,i)=>`<div class="row" style="align-items:flex-start;gap:10px;padding:7px 0${i?";border-top:1px solid var(--hairline)":""}">
+          <span class="hero-num volt-txt" style="font-size:15px;min-width:64px;line-height:1.2">${ph.wk} Wo</span>
+          <span style="flex:1"><span class="sm" style="font-weight:600">${ph.name}</span><br><span class="xs t2" style="line-height:1.45">${ph.desc}</span></span></div>`).join("")}
+        <p class="xs t2 mt8" style="line-height:1.5">${icon("info",12)} ${mp.note}</p>
+      </div>`; })()}
 
     <!-- Progression: je besser du wirst, desto höher der Plan -->
     <div class="card" style="text-align:left;border-color:rgba(157,180,240,.35)">
@@ -4660,7 +4787,7 @@ const EX_PATTERN={
   "Kniebeuge":"squat","Goblet Squat":"squat","Kniebeuge (Körpergewicht)":"squat","Beinpresse":"squat","Ausfallschritte":"squat","Bulgarian Split Squat":"squat",
   "Rumänisches Kreuzheben":"hinge","KH-Rumänisches Kreuzheben":"hinge","Kreuzheben":"hinge","Hip Thrust":"hinge",
   "Beinbeuger":"legCurl","Wadenheben":"calf",
-  "Plank":"core","Dead Bug":"core","Superman":"core","Zone-2 Cardio":"cardio",
+  "Plank":"core","Dead Bug":"core","Kabel-Crunch":"core","Hängendes Beinheben":"core","Liegendes Beinheben":"core","Superman":"core","Zone-2 Cardio":"cardio",
 };
 const MOVE_TXT={horizPress:"Nach vorn/oben drücken, kontrolliert zurückführen.",vertPress:"Über Kopf drücken, langsam absenken.",raise:"Arme kontrolliert anheben, ohne Schwung.",curl:"Beugen, oben kurz halten, langsam senken.",triExt:"Bis zur vollen Streckung, dann kontrolliert beugen.",vertPull:"Hochziehen bis Kinn über den Griff, langsam ab.",horizPull:"Zum Körper ziehen, Schulterblätter zusammen.",squat:"Tief absenken, kraftvoll nach oben drücken.",hinge:"Hüfte nach hinten, Rücken gerade, dann aufrichten.",legCurl:"Fersen Richtung Gesäß, langsam zurück.",calf:"Hoch auf die Zehen, kurz halten, ab.",core:"Position halten, Körper als Linie, ruhig atmen.",cardio:"Gleichmäßiges, lockeres Tempo."};
 // Muskel-Aktivierung je Übung (Region-IDs): p = primär, s = sekundär
@@ -4675,7 +4802,7 @@ const EX_ACT={
   "Kniebeuge":{p:["quads"],s:["glutes","hams","lowerback","adductors"]},"Goblet Squat":{p:["quads"],s:["glutes","abs","adductors"]},"Kniebeuge (Körpergewicht)":{p:["quads"],s:["glutes","adductors"]},"Beinpresse":{p:["quads"],s:["glutes","hams","adductors"]},"Ausfallschritte":{p:["quads"],s:["glutes","hams","adductors"]},"Bulgarian Split Squat":{p:["quads"],s:["glutes","hams","adductors"]},
   "Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback","forearm"]},"KH-Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback","forearm"]},"Kreuzheben":{p:["hams","lowerback"],s:["glutes","traps","quads","lats","forearm"]},"Hip Thrust":{p:["glutes"],s:["hams","adductors"]},
   "Beinbeuger":{p:["hams"],s:["calves"]},"Wadenheben":{p:["calves"],s:[]},
-  "Plank":{p:["abs"],s:["obliques"]},"Dead Bug":{p:["abs"],s:["obliques"]},"Superman":{p:["lowerback"],s:["glutes","hams"]},"Zone-2 Cardio":{p:[],s:[]},
+  "Plank":{p:["abs"],s:["obliques"]},"Dead Bug":{p:["abs"],s:["obliques"]},"Kabel-Crunch":{p:["abs"],s:["obliques"]},"Hängendes Beinheben":{p:["abs"],s:["obliques","forearm"]},"Liegendes Beinheben":{p:["abs"],s:["obliques"]},"Superman":{p:["lowerback"],s:["glutes","hams"]},"Zone-2 Cardio":{p:[],s:[]},
 };
 // Anatomische Muskelkarte: Front-/Rückansicht mit echten Muskelgruppen-Formen.
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
