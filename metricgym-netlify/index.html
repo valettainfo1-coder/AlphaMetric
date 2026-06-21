@@ -5746,12 +5746,12 @@ function renderTrain(){
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
         ${rotMode?rotStrip:weekStrip}
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
-        <details class="acc" style="margin-top:12px;border-top:1px solid var(--hairline);border-radius:0">
-          <summary style="font-size:13.5px;font-weight:600;padding:13px 2px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
-          <div class="accbody" style="padding:0 2px 6px">
-            <p class="xs t2 mb8" style="line-height:1.5">Fotografiere deinen aktuellen Plan (bis 8 Bilder). Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder erklärt, warum METRICGYM stärker ist.</p>
-            <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan per Bild importieren</button>
-            <input type="file" id="plan-import-file" accept="image/*" multiple capture="environment" style="display:none" onchange="A.planImportFiles(this)">
+        <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:16px;background:var(--s2);overflow:hidden">
+          <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+          <div class="accbody" style="padding:0 14px 12px">
+            <p class="xs t2 mb8" style="line-height:1.5">Lade deinen aktuellen Plan hoch (bis 8 Bilder) — <b style="color:var(--t1)">Foto machen oder aus der Galerie wählen</b>. Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder zeigt dir, warum METRICGYM stärker ist.</p>
+            <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan-Bilder hochladen</button>
+            <input type="file" id="plan-import-file" accept="image/*" multiple style="display:none" onchange="A.planImportFiles(this)">
             <button class="btn ghost" style="min-height:40px;font-size:13px;margin-top:8px" onclick="A.regenPlan()">${icon("zap",14)} Plan neu berechnen (aktuelle Engine)</button>
             <p class="xs t2" style="line-height:1.5;margin-top:4px">Setzt deinen Plan auf den aktuellen, wissenschaftlich korrekten Stand zurück (z. B. nach Engine-Updates). Deine eigenen Übungs-Tausche bleiben.</p>
             ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
@@ -6743,7 +6743,7 @@ function renderNutrition(){
         <button class="btn" style="padding:0 22px;white-space:nowrap" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto</button>
         <button class="btn" style="white-space:nowrap;font-size:14px" onclick="A.mealSuggest()">${icon("message",15)} Was soll ich essen?</button>
       </div>
-      <input type="file" id="vf-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoPick(this)">
+      <input type="file" id="vf-file" accept="image/*" style="display:none" onchange="A.photoPick(this)">
       ${pendingItems?(pendingItems[0]&&pendingItems[0].loading
         ?`<div class="warncard" style="margin-top:14px;border-color:rgba(96,140,230,.4);background:rgba(96,140,230,.06)">
           <div class="row" style="align-items:center;justify-content:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px"></div>
@@ -7255,7 +7255,7 @@ function renderProfile(){
       <div class="grid2" style="gap:8px">
         <button class="btn" onclick="A.measOpen()">${icon("edit",14)} Maße eintragen</button>
         <button class="btn" onclick="document.getElementById('photo-file').click()">${icon("camera",14)} Foto hinzufügen</button></div>
-      <input type="file" id="photo-file" accept="image/*" capture="environment" style="display:none" onchange="A.photoAdd(this)">
+      <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="A.photoAdd(this)">
       ${S.photos.length?`<div class="row mt12" style="gap:6px;overflow-x:auto;padding-bottom:4px">
         ${S.photos.slice(-8).map(p=>`<div style="position:relative;flex-shrink:0">
           <div id="thumb-${p.id}" style="width:70px;height:90px;border-radius:10px;background:var(--s2);background-size:cover;background-position:center"></div>
