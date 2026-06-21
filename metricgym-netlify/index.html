@@ -1120,9 +1120,11 @@ function multiTargets(a,bmr,td){
   else { trainK=Math.round(avgT+trainBurn*(7-days)/7); restK=Math.round(avgT-trainBurn*days/7); }
   const clamp=(v)=>{ if(v<floor){warn.push("floor");return floor;} return Math.round(v); };
   trainK=clamp(trainK); restK=clamp(restK);
-  let prot;
-  if(a.bodyFat!=null) prot=Math.round(2.2*a.weight*(1-a.bodyFat/100));
-  else prot=Math.round(1.8*Math.min(a.weight,25*(a.height/100)**2));
+  // Protein höher im Defizit (Fettabbau & Recomp): schützt/baut Muskeln, wenn keine
+  // überschüssige Energie da ist (Helms et al. 2014: bis 2,3–3,1 g/kg fettfreie Masse im Cut).
+  let prot; const cut = dir<0;
+  if(a.bodyFat!=null) prot=Math.round((cut?2.4:2.2)*a.weight*(1-a.bodyFat/100));
+  else prot=Math.round((cut?2.0:1.8)*Math.min(a.weight,25*(a.height/100)**2));
   const fat=Math.round(.9*a.weight);
   const mac=(k)=>({kcal:k,p:prot,f:fat,c:Math.max(0,Math.round((k-prot*4-fat*9)/4))});
   return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,recs,goals,dir,dirLabel,bmi:Math.round(bmi*10)/10};
@@ -1207,7 +1209,17 @@ function volGroupOf(name){
   return ({Brust:"Brust",Schultern:"Schultern","Rücken":"Rücken",Arme:"Arme",Beine:"Beine",Core:"Core"})[m]||null;
 }
 // AUTOREGULATION (Ernährung→Volumen): Defizit senkt das MRV; das MEV (Erhaltungsreiz) bleibt.
-function deficitFactor(a){ const g=((a&&a.goals)||[])[0]; return g==="fat_loss"?0.8 : g==="recomp"?0.9 : 1.0; }
+// PRIMÄRZIEL fürs TRAINING: Fettabbau + Muskelaufbau zusammen = Recomp (eigene Logik).
+function primaryGoal(a){
+  const g=(a&&a.goals)||[];
+  if(g.includes("fat_loss")&&g.includes("muscle_gain")) return "recomp";
+  return g[0]||"muscle_gain";
+}
+// Recomp findet nahe am Erhaltungsbedarf statt (nur leichtes Defizit, −8 %): die Erholung ist
+// fast intakt, deshalb wird das Volumen NUR minimal gedrosselt (−5 %) — Recomp braucht einen
+// STARKEN Reiz (viel Volumen, hart trainiert), weil kein Kalorienüberschuss das Wachstum trägt.
+// Echtes Defizit (Fettabbau) drosselt deutlich (−20 %), weil die Erholung real eingeschränkt ist.
+function deficitFactor(a){ const g=primaryGoal(a); return g==="fat_loss"?0.8 : g==="recomp"?0.95 : 1.0; }
 function deficitScaledBands(a){
   const f=deficitFactor(a); if(f>=1) return VOL_BANDS;
   const out={}; for(const k of Object.keys(VOL_BANDS)){ const [mev,mrv]=VOL_BANDS[k]; out[k]=[mev,Math.max(mev+2,Math.round(mrv*f))]; }
@@ -1941,9 +1953,9 @@ function sessionCount(a){
   // ZEIT-TREU: die Übungszahl wird so gewählt, dass die berechnete Dauer ≈ der angegebenen
   // Trainingszeit entspricht (vorher wurde die Zeit faktisch ignoriert). Pro Übung kostet je
   // nach Ziel unterschiedlich viel Zeit (Kraft = lange Pausen, Ausdauer = kurze).
-  const g=(a.goals||["muscle_gain"])[0];
+  const g=primaryGoal(a);
   const t=a.sessionTime||60;
-  const perEx = g==="strength"?13 : g==="endurance"?6.5 : g==="fat_loss"?7.5 : 9; // Minuten/Übung inkl. Sätze+Pausen
+  const perEx = g==="strength"?13 : g==="endurance"?6.5 : g==="fat_loss"?7.5 : 9; // Minuten/Übung inkl. Sätze+Pausen (Recomp = wie Muskelaufbau: 9)
   let n=Math.round((t-13)/perEx); // 13 Min Auf-/Abwärmen abziehen
   // Feinjustierung: Einsteiger/hoher BMI/langsame Erholung etwas schlanker.
   if(a.exp==="beginner")n-=1;
@@ -1956,11 +1968,17 @@ function sessionCount(a){
 // Fettabbau/dekonditioniert (hoher BMI): höhere Reps, moderate Intensität (RIR 2–3),
 // gelenkschonend, kürzere Pausen (Dichte). Muskelaufbau: klassische Hypertrophie.
 function progParams(a){
-  const g=(a.goals||["muscle_gain"])[0], bmi=bmiOf(a);
+  const g=primaryGoal(a), bmi=bmiOf(a);
   const decon = bmi>=30 || (a.exp==="beginner" && bmi>=27);
   if(g==="strength")  return {decon,cR:"3–5",sR:"5–8",iR:"8–12",lR:"10–15",cRest:210,sRest:150,iRest:90,rir:"2–3"};
   if(g==="endurance") return {decon,cR:"12–15",sR:"12–20",iR:"15–25",lR:"15–25",cRest:75,sRest:60,iRest:45,rir:"2–3"};
-  if(decon||g==="fat_loss") return {decon,cR:"8–12",sR:"10–15",iR:"12–20",lR:"12–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
+  // Dekonditioniert/hoher BMI: gelenkschonend, moderate Intensität — Sicherheit vor allem.
+  if(decon) return {decon,cR:"8–12",sR:"10–15",iR:"12–20",lR:"12–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
+  // Fettabbau (echtes Defizit): etwas höhere Reps, RIR 2–3 — Erholung ist eingeschränkt.
+  if(g==="fat_loss") return {decon,cR:"8–12",sR:"10–15",iR:"12–20",lR:"12–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
+  // RECOMP & Muskelaufbau: HART trainieren (Hypertrophie, RIR 1–2). Recomp findet nahe Erhaltung
+  // statt — ohne Kalorienüberschuss MUSS der mechanische Reiz stark sein, sonst kein Muskelaufbau
+  // (hohe mechanische Spannung + viel Volumen + Nähe zum Versagen; Helms/Schoenfeld).
   return {decon,cR:"6–10",sR:"8–12",iR:"10–15",lR:"12–20",cRest:150,sRest:120,iRest:60,rir:"1–2"};
 }
 // Gelenkfreundlichkeit/Skalierbarkeit (für hohen BMI / Dekonditionierung): Maschinen &
@@ -6732,8 +6750,8 @@ function renderProfile(){
       <p class="xs t2 mb12" style="line-height:1.5">Ändere dein Ziel oder deinen Alltag — die Engine rechnet <b style="color:var(--t1)">Kalorien, Makros und Trainingsplan sofort neu</b> (Tagesbedarf + Langfrist-Ziel wie Fettabbau).</p>
       <div class="field"><label for="ep-w">Aktuelles Gewicht (kg)</label>
         <input type="number" id="ep-w" inputmode="decimal" value="${EP.weight}" min="30" max="250" step="0.1"></div>
-      <p class="xs t2 mb8">Ziele (max. 3, erstes = primär)</p>
-      <div class="chips mb12">${Object.entries(GOAL_LABEL).filter(([g])=>g!=="recomp").map(([g,l])=>`
+      <p class="xs t2 mb8">Ziele (max. 3, erstes = primär) · Recomp = Fett runter & Muskeln rauf zugleich</p>
+      <div class="chips mb12">${Object.entries(GOAL_LABEL).map(([g,l])=>`
         <button class="chip ${EP.goals.includes(g)?"sel":""}" onclick="A.epGoal('${g}')">${EP.goals.includes(g)?(EP.goals.indexOf(g)+1)+". ":""}${l}</button>`).join("")}</div>
       <p class="xs t2 mb8">Trainingstage pro Woche</p>
       <div class="chips mb12">${[2,3,4,5,6].map(d=>`<button class="chip ${EP.days===d?"sel":""}" onclick="A.epDays(${d})">${d}</button>`).join("")}</div>
