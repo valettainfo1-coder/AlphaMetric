@@ -1185,10 +1185,24 @@ function forecast12w(series){
 
 // ---------- Volumen-Toleranz je Muskelgruppe (MEV–MRV, Israetel et al., 2017) ----------
 const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Beine","Wadenheben":"Beine","Kreuzheben":"Beine","Rumänisches Kreuzheben":"Beine","Bankdrücken":"Brust","Schrägbankdrücken":"Brust","Schulterdrücken":"Schultern","Seitheben":"Schultern","Face Pull":"Schultern","Klimmzug":"Rücken","Langhantelrudern":"Rücken","Kabelrudern":"Rücken","Trizepsdrücken":"Arme","Plank":"Core",
-  "Liegestütze":"Brust","KH-Bankdrücken":"Brust","KH-Fliegende":"Brust","KH-Schulterdrücken":"Schultern","Pike Push-ups":"Schultern","Band Pull-Apart":"Schultern","Reverse Flys":"Schultern","Latzug":"Rücken","Einarmiges KH-Rudern":"Rücken","Rudern am Tisch":"Rücken","Superman":"Rücken","Enge Liegestütze":"Arme","Bizeps-Curls":"Arme","Goblet Squat":"Beine","Kniebeuge (Körpergewicht)":"Beine","Beinpresse":"Beine","KH-Rumänisches Kreuzheben":"Beine","Bulgarian Split Squat":"Beine","Hip Thrust":"Beine"};
+  "Liegestütze":"Brust","KH-Bankdrücken":"Brust","KH-Fliegende":"Brust","KH-Schulterdrücken":"Schultern","Pike Push-ups":"Schultern","Band Pull-Apart":"Schultern","Reverse Flys":"Schultern","Latzug":"Rücken","Einarmiges KH-Rudern":"Rücken","Rudern am Tisch":"Rücken","Superman":"Rücken","Enge Liegestütze":"Arme","Bizeps-Curls":"Arme","Hammer-Curls":"Arme","Goblet Squat":"Beine","Kniebeuge (Körpergewicht)":"Beine","Beinpresse":"Beine","KH-Rumänisches Kreuzheben":"Beine","Bulgarian Split Squat":"Beine","Hip Thrust":"Beine"};
 // MEV–MRV-Korridore (Israetel 2017). "Beine" ist eine Sammelgruppe (Quadrizeps +
 // Beinbeuger + Gesäß + Waden) und verträgt daher zusammengenommen mehr Sätze.
-const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Arme:[6,18],Core:[4,16]};
+// WICHTIG: Bizeps und Trizeps sind EIGENSTÄNDIGE Muskeln mit je eigenem Korridor —
+// sie als eine "Arme"-Gruppe zu deckeln halbiert faktisch das erlaubte Volumen und
+// führte dazu, dass auf Push (Trizeps) + Pull (Bizeps) zusammen sofort die Kappe
+// griff: Curls wurden auf 2 Sätze gestutzt, Übungen entfernt, und die Zielzeit
+// (z. B. 75 Min) konnte nicht mehr gefüllt werden. Getrennte Bänder beheben das.
+const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Bizeps:[8,20],Trizeps:[8,20],Arme:[10,22],Core:[4,16]};
+// Feines Volumen-Mapping: Arm-Isolation zählt auf den jeweils EIGENEN Muskel, nicht
+// auf eine Sammelgruppe. So bekommt der Bizeps am Pull-Tag sein volles Volumen (inkl.
+// 2. Übung) und der Trizeps am Push-Tag — ohne sich gegenseitig zu verdrängen.
+const VOL_SUBGROUP={"Bizeps-Curls":"Bizeps","Hammer-Curls":"Bizeps","Trizepsdrücken":"Trizeps","Enge Liegestütze":"Trizeps"};
+function volGroupOf(name){
+  if(VOL_SUBGROUP[name]) return VOL_SUBGROUP[name];
+  const m=(EXDB[name]||{}).m;
+  return ({Brust:"Brust",Schultern:"Schultern","Rücken":"Rücken",Arme:"Arme",Beine:"Beine",Core:"Core"})[m]||null;
+}
 function weeklyMuscleSets(weeksBack){
   const from=Date.now()-(weeksBack+1)*7*dayMs, to=Date.now()-weeksBack*7*dayMs;
   const out={};
@@ -1662,6 +1676,8 @@ const EXDB={
     why:"Enge Handposition verlagert die Last gezielt auf den Trizeps."},
   "Bizeps-Curls":{m:"Arme",compound:false,eq:"dumbbell",tempo:"2-0-1-0",rir:"0–1",alt:"Band-Curls",
     why:"Direkte Armarbeit — Grundübungen allein reizen den Bizeps selten maximal."},
+  "Hammer-Curls":{m:"Arme",compound:false,eq:"dumbbell",tempo:"2-0-1-0",rir:"0–1",alt:"Band-Curls (neutral)",
+    why:"Neutralgriff betont Brachialis und Unterarm — baut sichtbare Armdicke und ergänzt den klassischen Curl für volles Bizeps-Volumen (2. Übung)."},
   "Superman":{m:"Rücken",compound:false,eq:"body",tempo:"2-1-1-1",rir:"0–1",alt:"Hüftbeugen mit Band",
     why:"Rückenstrecker ohne Gerät — stabilisiert die Körpermitte für alles andere."},
   "Kniebeuge":{m:"Beine",compound:true,eq:"barbell",tempo:"3-1-1-0",rir:"1–2",alt:"Beinpresse (geringere axiale Last)",
@@ -1746,10 +1762,10 @@ const SESSION_SLOTS={
   pull:[["Klimmzug","Latzug","Rudern am Tisch"],
         ["Langhantelrudern","Einarmiges KH-Rudern","Rudern am Tisch"],
         ["Latzug","Klimmzug","Einarmiges KH-Rudern"],
-        ["Kabelrudern","Einarmiges KH-Rudern","Superman"],
+        ["Bizeps-Curls","Hammer-Curls","Band Pull-Apart"],
         ["Face Pull","Band Pull-Apart","Reverse Flys"],
-        ["Bizeps-Curls","Band Pull-Apart"],
-        ["Superman","Reverse Flys"]],
+        ["Hammer-Curls","Bizeps-Curls","Band Pull-Apart"],
+        ["Kabelrudern","Einarmiges KH-Rudern","Superman"]],
   legs:[["Kniebeuge","Goblet Squat","Kniebeuge (Körpergewicht)"],
         ["Rumänisches Kreuzheben","KH-Rumänisches Kreuzheben","Hip Thrust"],
         ["Beinpresse","Bulgarian Split Squat","Ausfallschritte"],
@@ -1849,7 +1865,7 @@ const FOCUS_EX={
   "Seitl. Schulter":["Seitheben"],
   "Hintere Schulter":["Reverse Flys","Face Pull"],
   Arme:["Bizeps-Curls","Enge Liegestütze"],
-  Bizeps:["Bizeps-Curls"],
+  Bizeps:["Bizeps-Curls","Hammer-Curls"],
   Trizeps:["Trizepsdrücken","Enge Liegestütze"],
   Beine:["Bulgarian Split Squat","Ausfallschritte"],
   Quadrizeps:["Bulgarian Split Squat","Ausfallschritte"],
@@ -1926,7 +1942,15 @@ function generateTrainingPlan(profile,variant){
   const allowed=EQ_ALLOWED[equipment], hasBench=EQ_BENCH[equipment];
   const focus=(a.focus||[]).filter(m=>FOCUS_EX[m]);
   const scheme=SETS_BY_EXP[exp]||SETS_BY_EXP.novice;
-  const PP=progParams(a);          // ziel-/zustands-abhängige Reps, Pausen, RIR
+  // Tägliche Periodisierung (DUP): Wird dieselbe Einheit 2×/Woche gemacht, ist A der
+  // schwere Kraft-Reiz (niedrige Reps, lange Pausen) und B der Volumen-/Hypertrophie-
+  // Reiz (höhere Reps, kürzere Pausen). Verschiedene Reize an verschiedenen Tagen bauen
+  // mehr Muskel als zweimal dasselbe (Zourdos 2016 DUP, Schoenfeld 2015) — genau so wie
+  // ein guter PPL-Plan „Push A · schwer" und „Push B · Volumen" trennt. Ausdauer bleibt
+  // durchgehend hochrepetitiv. Die Satzzahl (= Volumen) ändert sich NICHT, nur Reps/Pause.
+  const PP=(()=>{ const base=progParams(a); if(!vB||(goals[0]==="endurance")) return base;
+    return {...base, cR:"10–12", sR:"12–15", iR:"15–20", lR:"15–20",
+      cRest:Math.max(75,base.cRest-60), sRest:Math.max(60,base.sRest-45), iRest:Math.max(45,base.iRest-15)}; })();
   const count=sessionCount(a);     // individuelle Übungszahl statt fixem Wert
   const fits=(n)=>{const d=EXDB[n]; return d&&allowed.includes(d.eq)&&(!d.bench||hasBench);};
   const mk=(n,sets,reps,rest,rir)=>{const d=EXDB[n]||{};return {n,sets,reps,rest,tempo:d.tempo||"2-0-1-0",rir:rir||d.rir||"1–2",m:d.m||"—",why:d.why||"",alt:d.alt||null,lengthened:!!d.lengthened};};
@@ -1983,7 +2007,7 @@ function generateTrainingPlan(profile,variant){
     cardio:{...day("cardio",[mk("Zone-2 Cardio",1,"30–40 Min",0)]),est:35},
     rest:{key:"rest",...TYPE_META.rest,warmup:[],cooldown:[],main:[],abs:[],est:0},
   };
-  capWeeklyVolume(PLAN,a);   // Übertraining vermeiden: Wochenvolumen je Muskel auf MRV deckeln
+  capWeeklyVolume(PLAN,a,{scheme,PP,mk,fits,SLOTS:SESSION_SLOTS});   // Übertraining vermeiden: Wochenvolumen je Muskel auf MRV deckeln
   return PLAN;
 }
 /* WISSENSCHAFTLICHER VOLUMEN-DECKEL (Israetel MEV–MRV): Wird eine Muskelgruppe über mehrere
@@ -1991,10 +2015,10 @@ function generateTrainingPlan(profile,variant){
    Wir bringen die WOCHENspitze (Woche 3) in den Korridor — und zwar bevorzugt durch SATZ-Reduktion
    (so bleiben mehr Übungen = mehr Abwechslung & volle Trainingszeit), erst im Extremfall durch
    Entfernen von Isolations-Übungen. Mind. 1 Hauptübung je Gruppe je Einheit bleibt erhalten. */
-function capWeeklyVolume(PLAN,a){
+function capWeeklyVolume(PLAN,a,ctx){
   try{
-    const GROUP={Brust:"Brust",Schultern:"Schultern","Rücken":"Rücken",Arme:"Arme",Beine:"Beine",Core:"Core"};
-    const grpOf=(n)=>GROUP[(EXDB[n]||{}).m];
+    ctx=ctx||{};
+    const grpOf=(n)=>volGroupOf(n);
     const isCompound=(n)=>!!(EXDB[n]||{}).compound;
     const peak=(e)=> e.sets + (isCompound(e.n)?2:1); // Woche-3-Spitze (vgl. weekSets)
     const sch=generateOptimalSchedule(a).schedule.filter(t=>t!=="rest"&&t!=="cardio").map(t=>parseTypeKey(t).base);
@@ -2024,17 +2048,41 @@ function capWeeklyVolume(PLAN,a){
         w=weekly();
       }
     }
-    // 3) ZEITBUDGET FÜLLEN: Sätze dort erhöhen, wo die Gruppe noch Luft bis zum MRV hat, bis die
-    //    Einheit ihre Zielzeit erreicht — NIE über MRV. So greifen Volumen UND Trainingszeit ineinander.
+    // 3) ZEITBUDGET FÜLLEN — wie ein durchdachter PPL-Plan: PRIMÄR mit zusätzlichen ÜBUNGEN
+    //    (mehr Winkel/Abwechslung, je ~2–3 Sätze), SEKUNDÄR mit mehr Sätzen auf vorhandene
+    //    Übungen (Cap 5, damit Volumen breit verteilt wird statt 6 Sätze auf eine Isolation zu
+    //    stapeln). NIE über MRV — ein Satz mehr erhöht das WOCHENvolumen um die Frequenz f.
     const budget=Math.max(30,a.sessionTime||60);
     const freqOf={}; for(const base of sch) freqOf[base]=(freqOf[base]||0)+1; // wie oft eine Einheit/Woche vorkommt
     const estOfBase=(base)=>{ const d=PLAN[base]; const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0); return Math.round((8+sm+5)/5)*5; };
+    const scheme=ctx.scheme, PP=ctx.PP, mk=ctx.mk, fits=ctx.fits||(()=>false), SLOTS=ctx.SLOTS||{};
+    const canBuild=!!(scheme&&PP&&mk);
     for(const base of bases){ const d=PLAN[base]; let guard=0; const f=freqOf[base]||1;
-      while(estOfBase(base) < budget-6 && guard++<40){
-        const wv=weekly(); let pick=null, best=-1;
-        for(const e of d.main){ const g=grpOf(e.n); if(!g||e.sets>=6)continue; const head=VOL_BANDS[g][1]-(wv[g]||0);
-          // ein Satz mehr erhöht das WOCHENvolumen um f (Einheit kommt f× vor) → nur wenn genug Luft bis MRV
-          if(head<f)continue; const sc=head*10+(isCompound(e.n)?3:0)-e.sets; if(sc>best){ best=sc; pick=e; } }
+      while(estOfBase(base) < budget-6 && guard++<48){
+        const wv=weekly();
+        // 3a) Bevorzugt eine NEUE Übung aus dem Slot-Pool, deren Muskel noch Luft bis MRV hat.
+        //     Obergrenze 9 Übungen/Einheit — mehr erhöht v. a. Ermüdung, nicht den Reiz.
+        let addedEx=false;
+        if(canBuild && d.main.length<9){
+          const present=new Set(d.main.map(e=>e.n));
+          for(const slot of (SLOTS[base]||[])){
+            const cand=slot.find(x=>fits(x)&&!present.has(x)); if(!cand)continue;
+            const g=grpOf(cand); if(!g)continue;
+            const dd=EXDB[cand]||{}, rir=PP.decon?PP.rir:undefined;
+            const addSets = dd.compound ? scheme.a : 2;
+            // Diese Übung kommt f×/Woche vor; ihre Wochenspitze ist (Sätze + Compound-Bonus)·f.
+            const addPeak = (addSets + (dd.compound?2:1)) * f;
+            if((wv[g]||0) + addPeak > VOL_BANDS[g][1]) continue; // niemals über MRV
+            const ex = dd.compound ? mk(cand,addSets,PP.sR,PP.sRest,rir)
+                                   : mk(cand,addSets,(dd.lengthened?PP.lR:PP.iR),PP.iRest,rir);
+            d.main.push(ex); addedEx=true; break;
+          }
+        }
+        if(addedEx) continue;
+        // 3b) Sonst Sätze einer vorhandenen Übung erhöhen (Cap 5), Volumen breit verteilen.
+        let pick=null, best=-1;
+        for(const e of d.main){ const g=grpOf(e.n); if(!g||e.sets>=5)continue; const head=VOL_BANDS[g][1]-(wv[g]||0);
+          if(head<f)continue; const sc=(isCompound(e.n)?3:0)+Math.min(head,8)-e.sets*2; if(sc>best){ best=sc; pick=e; } }
         if(!pick)break; pick.sets++;
       }
     }
@@ -2370,6 +2418,7 @@ const EXINFO={
   "Einarmiges KH-Rudern":{prim:"Latissimus",sek:"Bizeps, hintere Schulter",cues:["Rücken gerade abstützen","Zug zur Hüfte","Schulterblatt aktiv bewegen"]},
   "Rudern am Tisch":{prim:"Mittlerer Rücken",sek:"Bizeps, Core",cues:["Körper als Linie","Brust zur Kante ziehen","Je flacher, desto schwerer"]},
   "Bizeps-Curls":{prim:"Bizeps",sek:"Unterarme",cues:["Ellbogen am Körper fixiert","Kein Schwung aus der Hüfte","Langsam absenken"]},
+  "Hammer-Curls":{prim:"Bizeps / Brachialis",sek:"Unterarme",cues:["Neutralgriff (Daumen oben)","Ellbogen fixiert","Langsam und kontrolliert absenken"]},
   "Superman":{prim:"Rückenstrecker",sek:"Gluteus",cues:["Arme und Beine gleichzeitig heben","Oben kurz halten","Blick zum Boden"]},
   "Goblet Squat":{prim:"Quadrizeps",sek:"Gluteus, Core",cues:["Hantel vor der Brust","Ellbogen innen an den Knien","Aufrecht bleiben"]},
   "Kniebeuge (Körpergewicht)":{prim:"Quadrizeps",sek:"Gluteus",cues:["Volle Tiefe anstreben","Langsames Tempo als Last","Knie folgen den Zehen"]},
@@ -4523,7 +4572,7 @@ const EX_PATTERN={
   "Bankdrücken":"horizPress","Schrägbankdrücken":"horizPress","KH-Bankdrücken":"horizPress","KH-Fliegende":"horizPress","Liegestütze":"horizPress","Enge Liegestütze":"triExt",
   "Schulterdrücken":"vertPress","KH-Schulterdrücken":"vertPress","Pike Push-ups":"vertPress",
   "Seitheben":"raise","Reverse Flys":"raise","Band Pull-Apart":"raise","Face Pull":"raise",
-  "Trizepsdrücken":"triExt","Bizeps-Curls":"curl",
+  "Trizepsdrücken":"triExt","Bizeps-Curls":"curl","Hammer-Curls":"curl",
   "Klimmzug":"vertPull","Latzug":"vertPull",
   "Langhantelrudern":"horizPull","Kabelrudern":"horizPull","Einarmiges KH-Rudern":"horizPull","Rudern am Tisch":"horizPull",
   "Kniebeuge":"squat","Goblet Squat":"squat","Kniebeuge (Körpergewicht)":"squat","Beinpresse":"squat","Ausfallschritte":"squat","Bulgarian Split Squat":"squat",
@@ -4538,7 +4587,7 @@ const EX_ACT={
   "KH-Fliegende":{p:["chest"],s:["delts"]},"Liegestütze":{p:["chest"],s:["delts","triceps","abs"]},"Enge Liegestütze":{p:["triceps"],s:["chest","delts","abs"]},
   "Schulterdrücken":{p:["delts"],s:["triceps","traps"]},"KH-Schulterdrücken":{p:["delts"],s:["triceps","traps"]},"Pike Push-ups":{p:["delts"],s:["triceps","traps","abs"]},
   "Seitheben":{p:["delts"],s:[]},"Reverse Flys":{p:["reardelts"],s:["traps"]},"Band Pull-Apart":{p:["reardelts"],s:["traps"]},"Face Pull":{p:["reardelts"],s:["traps"]},
-  "Trizepsdrücken":{p:["triceps"],s:[]},"Bizeps-Curls":{p:["biceps"],s:["forearm"]},
+  "Trizepsdrücken":{p:["triceps"],s:[]},"Bizeps-Curls":{p:["biceps"],s:["forearm"]},"Hammer-Curls":{p:["biceps"],s:["forearm"]},
   "Klimmzug":{p:["lats"],s:["biceps","traps","forearm"]},"Latzug":{p:["lats"],s:["biceps","traps","forearm"]},
   "Langhantelrudern":{p:["lats","traps"],s:["biceps","reardelts","lowerback","forearm"]},"Kabelrudern":{p:["lats","traps"],s:["biceps","reardelts","forearm"]},"Einarmiges KH-Rudern":{p:["lats"],s:["biceps","traps","reardelts","forearm"]},"Rudern am Tisch":{p:["traps","lats"],s:["biceps","reardelts","forearm"]},
   "Kniebeuge":{p:["quads"],s:["glutes","hams","lowerback","adductors"]},"Goblet Squat":{p:["quads"],s:["glutes","abs","adductors"]},"Kniebeuge (Körpergewicht)":{p:["quads"],s:["glutes","adductors"]},"Beinpresse":{p:["quads"],s:["glutes","hams","adductors"]},"Ausfallschritte":{p:["quads"],s:["glutes","hams","adductors"]},"Bulgarian Split Squat":{p:["quads"],s:["glutes","hams","adductors"]},
@@ -6936,7 +6985,7 @@ function renderProfile(){
 // ---------- Boot ----------
 // Engine-Version: bei JEDER Engine-Änderung erhöhen → erzwingt Neuberechnung gespeicherter
 // Pläne, damit Fixes (Fokus/Frequenz/Bodyweight) auch auf BESTEHENDEN Accounts greifen.
-const ENGINE_VERSION=9;
+const ENGINE_VERSION=10;
 // INHALTS-CHECK (bulletproof): erkennt einen biochemisch falschen Plan direkt — unabhängig von
 // der Versionsnummer. Damit wird ein kaputter Plan IMMER neu berechnet, selbst wenn er mit der
 // aktuellen Version in der Cloud gespeichert wurde.
