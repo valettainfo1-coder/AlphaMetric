@@ -533,13 +533,14 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lockcard{border:1px dashed var(--border); border-radius:16px; padding:14px 16px; margin-top:10px;}
   .heroband{padding:0 0 var(--sp-5); text-align:center;}
   /* ===== Reveal-Hero (nach dem Quiz): Hauptziel groß, futuristisch, mit Verlauf ===== */
-  .reveal-hero{position:relative; overflow:hidden; border-radius:24px; padding:18px 20px 20px; margin-top:8px; margin-bottom:12px; text-align:center;
+  .reveal-hero{position:relative; overflow:hidden; border-radius:24px; padding:14px 20px 20px; margin-top:6px; margin-bottom:12px; text-align:center;
     background:linear-gradient(165deg,rgba(74,111,216,.20),rgba(126,139,232,.05) 60%,transparent), var(--glass-bg);
     border:1px solid rgba(157,180,240,.4);}
-  .reveal-orb{position:absolute; top:-50px; left:50%; transform:translateX(-50%); width:220px; height:120px; pointer-events:none;
+  .reveal-orb{position:absolute !important; top:-50px; left:50%; transform:translateX(-50%); width:220px; height:120px; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(74,111,216,.4), rgba(126,139,232,.1) 45%, transparent 70%);
     filter:blur(12px); animation:aiPulse 6s ease-in-out infinite;}
-  .reveal-hero>*{position:relative;}
+  /* nur Inhalts-Elemente relativ stapeln — NICHT den Orb (sonst nimmt er 120px Flow-Höhe = Leerraum) */
+  .reveal-hero>*:not(.reveal-orb){position:relative;}
   .reveal-traj{display:flex; align-items:flex-end; justify-content:center; gap:14px; margin-top:18px;}
   .reveal-bar{width:100%; max-width:42px; border-radius:8px 8px 3px 3px; background:linear-gradient(180deg,#9DB4F0,#4A6FD8);
     box-shadow:0 0 16px rgba(74,111,216,.5); transform-origin:bottom; animation:barGrowY .7s var(--spring) both;}
@@ -4022,11 +4023,10 @@ function renderReveal(){
     : `<p class="hero-num volt-txt" style="font-size:54px;line-height:1">${primary.prefix||""}<span data-count="${primary.lo}">0</span>–<span data-count="${primary.hi}">0</span><span style="font-size:28px"> ${primary.unit}</span></p>`;
   setTimeout(()=>{try{confetti();}catch{}},220);
   root.innerHTML=`<div class="fade" style="text-align:center">
-    <!-- PRIMÄR-HERO: Haken + Begrüßung + wichtigstes Ziel zusammen in EINER Box (kein Leerraum) -->
+    <!-- PRIMÄR-HERO: Begrüßung GANZ OBEN in der Box (kein Leerraum, kein separater Haken) -->
     <div class="reveal-hero">
       <div class="reveal-orb" aria-hidden="true"></div>
-      <div style="width:46px;height:46px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">${icon("check",26)}</div>
-      <p class="lp-eyebrow" style="display:block;margin-bottom:2px">Dein Plan steht</p>
+      <p class="lp-eyebrow" style="display:block;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:6px">${icon("check",13)} Dein Plan steht</p>
       <h2 style="font-size:26px;margin-bottom:6px">Startklar, ${userName()}.</h2>
       <p class="sm t2" style="margin:0 auto 14px;max-width:300px;line-height:1.5">Deine Priorität: <b style="color:var(--t1)">${GOAL_LABEL[tg.goals[0]]}</b> — genau darauf zielt dein Plan zuerst.</p>
       <div style="height:1px;background:var(--hairline);margin:0 auto 14px;max-width:160px"></div>
