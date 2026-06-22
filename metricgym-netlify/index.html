@@ -5814,7 +5814,7 @@ function renderTrain(){
         ${isNext?'<span style="font-size:8px;letter-spacing:.06em;opacity:.85">NÄCHSTE</span>':""}</button>`;}).join("")}
   </div>`;
   root.innerHTML=`
-    ${banner("train","dumbbell","<b>Dein Plan, dein Tempo.</b> Abgestimmt auf deine Ziele, dein Level und dein Equipment.")}
+    ${banner("train","dumbbell","<b>Dein Plan. Maximal effizient.</b> Jede Übung exakt auf dein Ziel, dein Level und dein Equipment berechnet.")}
     ${renderSection("Dein Plan",
       `<div class="card">
         <div class="lp-seg mb12">
@@ -6335,7 +6335,7 @@ function renderAnalytics(){
     return;
   }
   const dp=dataProgress();
-  let html0=banner("analytics","chart","<b>Dein Fortschritt, schwarz auf weiß.</b> Belegt durch deine echten Daten.");
+  let html0=banner("analytics","chart","<b>Fortschritt, schwarz auf weiß.</b> Keine Schätzungen — nur deine echten Daten.");
   const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length>=3);
   const allSets=Object.values(S.liftLog).flat();
   const ins=buildInsights();
@@ -6799,7 +6799,7 @@ function renderNutrition(){
   favIdx=favIdx.slice(0,6);
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
-    ${banner("nutrition","utensils","<b>Loggen in 10 Sekunden.</b> Tippen oder einsprechen — Kalorien und Protein rechnet die Engine für dich.")}
+    ${banner("nutrition","utensils","<b>Tracking in 10 Sekunden.</b> Tippen oder sprechen — Kalorien und Protein rechnet die Engine.")}
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
@@ -7191,7 +7191,7 @@ function renderProfile(){
     modal(`<p class="ct">${icon("send",14)} Auszahlung aufs Konto einrichten</p>
       <p class="sm t2 mb12" style="line-height:1.6">Wohin sollen wir dein verdientes Guthaben auszahlen? <b style="color:var(--t1)">Echtes Geld</b>, keine Abo-Gutschrift.</p>
       <label class="xs t2" for="payout-acc">PayPal-E-Mail oder IBAN</label>
-      <input type="text" id="payout-acc" placeholder="name@paypal.com  oder  DE12 3456 …" style="width:100%;margin-top:4px" autocomplete="off" value="${S.wallet.payoutMethod?(S.wallet.payoutMethod.raw||""):""}">
+      <input type="text" id="payout-acc" placeholder="name@paypal.com oder DE12 3456 …" style="width:100%;margin-top:4px" autocomplete="off" value="${S.wallet.payoutMethod?(S.wallet.payoutMethod.raw||""):""}">
       <button class="btn volt mt12" onclick="A.payoutSave()">Speichern & auszahlen</button>
       <p class="xs t2 mt8" style="line-height:1.5">Abwicklung über Stripe Connect / PayPal Payouts. Empfehlungs-Einnahmen können steuerpflichtig sein — Beträge mit deinem Steuerberater klären. (Keine Steuerberatung.)</p>`);
   };
@@ -7301,7 +7301,7 @@ function renderProfile(){
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
   root.innerHTML=`
-    ${banner("profile","user","<b>Dein Profil, deine Präzision.</b> Aktuelles Gewicht und Ziele schärfen jede Empfehlung.")}
+    ${banner("profile","user","<b>Dein Profil. Deine Präzision.</b> Gewicht und Ziele schärfen jede Empfehlung.")}
     <p class="label" style="margin:8px 4px 8px">Konto</p>
     <div class="card row" style="justify-content:flex-start;gap:14px">
       <div class="avatar" style="width:52px;height:52px;font-size:20px">${u.username.slice(0,1).toUpperCase()}</div>
