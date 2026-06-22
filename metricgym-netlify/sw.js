@@ -1,7 +1,7 @@
 /* METRICGYM Service Worker — App-Shell offline + Installierbarkeit.
    Strategie: Navigationen network-first (frische Version), statische Assets
    cache-first. Fremde Hosts (Supabase/Groq/CDNs) werden NICHT angefasst. */
-const CACHE = "metricgym-v3";
+const CACHE = "metricgym-v4";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 

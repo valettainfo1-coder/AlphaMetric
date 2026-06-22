@@ -2469,7 +2469,14 @@ function generateOptimalSchedule(a){
     consistent:"Gleichmäßig über die Woche verteilt: konstanter Rhythmus, konstanter Fortschritt.",
   }[pref];
   const cardioTxt=sch.includes("cardio")?" Der lockere Cardio-Tag liegt auf einem Ruhetag — er fördert deine Erholung, statt sie zu kosten.":"";
-  return {schedule:sch,rationale:`${splitTxt} ${recTxt} ${prefTxt}${cardioTxt}`};
+  // UNDULATION: Kommt ein Trainings-Typ mehrfach pro Woche vor, wird die 2./3. Einheit zur
+  // Variante B (andere Übungsauswahl + DUP-Reps: A = schwer, B = Volumen). Verschiedene Reize
+  // an verschiedenen Tagen bauen mehr Muskel als zweimal exakt dasselbe (Zourdos 2016).
+  const tot={}; for(const t of sch){ if(t!=="rest"&&t!=="cardio") tot[t]=(tot[t]||0)+1; }
+  const occ={};
+  const schAB=sch.map(t=>{ if(t==="rest"||t==="cardio"||(tot[t]||0)<2) return t;
+    occ[t]=(occ[t]||0)+1; return t+(occ[t]%2===1?"A":"B"); });
+  return {schedule:schAB,rationale:`${splitTxt} ${recTxt} ${prefTxt}${cardioTxt}`};
 }
 /* Fortlaufende Rotation (nicht an Wochentage gekoppelt): eine Sequenz von
    Einheiten — du machst einfach die nächste, wann immer du im Gym bist.
@@ -3454,7 +3461,7 @@ function coachContext(){
   }
   return {chips:["Was sagt mein Status heute?","Wie baue ich am schnellsten Muskeln auf?"],
     answers:{
-      "Was sagt mein Status heute?":S.checkin?`Dein Status: ${S.checkin.score}/100 (${S.checkin.tier}). ${S.checkin.score>=60?"Training wie geplant.":"Heute Intensität deckeln (RPE 7)."}`:"Mach zuerst deinen Status-Check im Home-Tab — dauert 10 Sekunden.",
+      "Was sagt mein Status heute?":(function(){var c=todayCheckin();return c?`Dein Status: ${c.score}/100 (${c.tier}). ${c.score>=60?"Training wie geplant.":"Heute Intensität deckeln (RPE 7)."}`:"Mach zuerst deinen Status-Check im Home-Tab — dauert 10 Sekunden.";})(),
       "Wie baue ich am schnellsten Muskeln auf?":"Drei Hebel in dieser Reihenfolge: Progressive Überladung (jede Woche +Reps oder +2,5 kg), 1,8–2,2 g/kg Protein täglich, 7–9 h Schlaf. Alles andere ist Feintuning (Schoenfeld, 2017).",
     }};
 }
@@ -4383,7 +4390,7 @@ function renderReveal(){
           ${[["Protein",tg.train.p],["Carbs",tg.train.c],["Fett",tg.train.f]].map(([l,v])=>`<div style="background:var(--s2);border-radius:12px;padding:9px;text-align:center"><p class="metric" style="font-size:15px;font-weight:600">${nfi.format(v)} g</p><p class="xs t2">${l}</p></div>`).join("")}
         </div>
         <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
-          ${WD.map((d,i)=>{const t=sug[i]||"rest";const tr=t!=="rest";return `<div style="background:${tr?"var(--s2)":"none"};border-radius:8px;padding:5px 0"><p class="xs" style="color:var(--t3)">${d}</p><p style="font-size:13px;margin:3px 0">${tr?`<span style="display:inline-flex">${icon(TYPE_META[t].icon,13)}</span>`:'<span style="color:var(--t3)">·</span>'}</p></div>`;}).join("")}
+          ${WD.map((d,i)=>{const t=sug[i]||"rest";const tr=t!=="rest";return `<div style="background:${tr?"var(--s2)":"none"};border-radius:8px;padding:5px 0"><p class="xs" style="color:var(--t3)">${d}</p><p style="font-size:13px;margin:3px 0">${tr?`<span style="display:inline-flex">${icon((TYPE_META[parseTypeKey(t).base]||TYPE_META.rest).icon,13)}</span>`:'<span style="color:var(--t3)">·</span>'}</p></div>`;}).join("")}
         </div>
       </div></details></div>`;
   // Kino-Onboarding: Projektions-Zahlen zaehlen hoch
@@ -4694,7 +4701,7 @@ function renderHome(){
   // --- Tages-Briefing (Zeigarnik-Open-Loop + variable Belohnung + Morgen-Hook) ---
   const briefOpenedToday=S.briefingDate===todayKey();
   const nextTrainHook=(()=>{
-    for(let k=1;k<=7;k++){ const t=sch[(dow+k)%7]; if(t&&t!=="rest"){ const lbl=(TYPE_META[t]||{}).label||"Training"; return {in:k,lbl}; } }
+    for(let k=1;k<=7;k++){ const t=sch[(dow+k)%7]; if(t&&t!=="rest"){ const lbl=(TYPE_META[parseTypeKey(t).base]||{}).label||"Training"; return {in:k,lbl}; } }
     return null;
   })();
   const hookTxt=nextTrainHook?`${nextTrainHook.in===1?"Morgen":"In "+nextTrainHook.in+" Tagen"}: ${nextTrainHook.lbl} — dein Plan liegt bereit.`:null;
@@ -4705,7 +4712,7 @@ function renderHome(){
   })();
   A.openBriefing=()=>{
     S.briefingDate=todayKey(); save(); render();
-    const rr=S.checkin;
+    const rr=todayCheckin();
     const verdict=rr?(rr.score>=80?"Heute ist dein Tag — geh ans Limit.":rr.score>=60?"Solide Form. Zieh deinen Plan sauber durch.":rr.score>=40?"Halb-Reserve. Heute kontrolliert, RPE 7.":"Dein Körper braucht heute Erholung."):"Starte mit dem 10-Sekunden-Check — dann weiß ich, was heute zählt.";
     const focusLbl=(TYPE_META[tType]||{}).label||"Training";
     overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
@@ -4724,7 +4731,7 @@ function renderHome(){
         </div>
         ${hookTxt?`<p class="sm t2" style="line-height:1.55;margin-bottom:14px">${icon("calendar",13)} ${hookTxt}</p>`:""}
         ${tType==="rest"?`<button class="btn volt" onclick="A.closeModal()">Erholung annehmen</button>`
-          :S.checkin?`<button class="btn volt" onclick="A.closeModal();A.start()">${icon("play",15)} Training beginnen</button>`
+          :todayCheckin()?`<button class="btn volt" onclick="A.closeModal();A.start()">${icon("play",15)} Training beginnen</button>`
           :`<button class="btn volt" onclick="A.closeModal();A.openStatus()">${icon("activity",15)} Tages-Check starten</button>`}
       </div></div>`;
   };
@@ -4760,7 +4767,7 @@ function renderHome(){
   }
   const log=nlogToday(), sum=log.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p}),{k:0,p:0});
   const tg=p.tg.train;
-  const r=S.checkin;
+  const r=todayCheckin();
   const visIns=S.tier==="free"?ins.slice(0,1):ins.slice(0,S.tier==="elite"?8:5);
 
   setTimeout(checkCelebrations,400); // variable Belohnung: neue Meilensteine/Level feiern
@@ -4906,7 +4913,7 @@ function openScheduleSheet(){
       <p class="display-m mb4">Wochenplan bearbeiten</p>
       <p class="xs t2 mb16">Tippe einen Tag, um die Einheit zu wählen.</p>
       ${!S.schedule&&S.scheduleSuggestion?`<button class="btn mb16" onclick="A.applySuggestion()">${icon("zap",14)} Vorschlag übernehmen (${S.profile.a.days} Tage)</button>`:""}
-      ${WD.map((d,i)=>{ const cur=sch[i]||"rest"; const open=schEditDay===i; const meta=TYPE_META[cur]||TYPE_META.rest;
+      ${WD.map((d,i)=>{ const cur=sch[i]||"rest"; const open=schEditDay===i; const meta=TYPE_META[parseTypeKey(cur).base]||TYPE_META.rest;
         return `<div style="margin-bottom:8px">
         <button class="row" style="width:100%;background:${open?"var(--s3)":"var(--s2)"};border:1px solid ${i===dow?"rgba(157,180,240,.5)":"var(--border)"};border-radius:13px;padding:11px 13px;cursor:pointer;font-family:inherit" onclick="A.pickDay(${i})">
           <span class="sm ${i===dow?"volt-txt":"t2"}" style="width:88px;text-align:left;font-weight:${i===dow?"700":"600"}">${WDFULL[i]}</span>
@@ -5378,7 +5385,7 @@ function aiContext(){
     `Trainingsblock: Woche ${S.currentWeek}/4${S.currentWeek===4?" (Erholungswoche)":""} · Split ${S.planMode==="rotation"?"Rotation":"Wochentage"}`,
     `Beste Lifts: ${lifts}`,
     `Engagement: Streak ${eng.streak} Tage, Level ${eng.level}, ${eng.sessions} Einheiten gesamt`,
-    `Heutiger Status: ${S.checkin?S.checkin.score+"/100 ("+S.checkin.tier+")":"noch kein Check"}`,
+    `Heutiger Status: ${(function(){var c=todayCheckin();return c?c.score+"/100 ("+c.tier+")":"noch kein Check";})()}`,
     (()=>{const l=S.nutritionLog[todayKey()];if(!l||!(l.meals||[]).length)return "Ernährung heute: noch nichts geloggt";
       const su=l.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p}),{k:0,p:0});
       return `Ernährung heute: ${Math.round(su.k)}/${tg.train.kcal} kcal, ${Math.round(su.p)}/${tg.train.p} g Protein (noch ${Math.max(0,tg.train.kcal-Math.round(su.k))} kcal / ${Math.max(0,tg.train.p-Math.round(su.p))} g Protein offen)`;})(),
@@ -6399,7 +6406,7 @@ function renderAnalytics(){
   const allSets=Object.values(S.liftLog).flat();
   const ins=buildInsights();
   const _lastR=S.readinessHistory[S.readinessHistory.length-1];
-  const today=S.checkin||(_lastR&&_lastR.date===todayKey()?{score:_lastR.score,tier:_lastR.tier}:null); // nur HEUTIGER Status, kein Übertrag von gestern
+  const today=todayCheckin()||(_lastR&&_lastR.date===todayKey()?{score:_lastR.score,tier:_lastR.tier}:null); // nur HEUTIGER Status, kein Übertrag von gestern
 
   // ---------- Analytics-Übersicht: ein Kopf-Dashboard, das den Zustand bündelt ----------
   const nutriDaysAll=Object.keys(S.nutritionLog).filter(d=>(S.nutritionLog[d].meals||[]).length>0);
@@ -7532,16 +7539,20 @@ function renderProfile(){
 // ---------- Boot ----------
 // Engine-Version: bei JEDER Engine-Änderung erhöhen → erzwingt Neuberechnung gespeicherter
 // Pläne, damit Fixes (Fokus/Frequenz/Bodyweight) auch auf BESTEHENDEN Accounts greifen.
-const ENGINE_VERSION=10;
-// INHALTS-CHECK (bulletproof): erkennt einen biochemisch falschen Plan direkt — unabhängig von
-// der Versionsnummer. Damit wird ein kaputter Plan IMMER neu berechnet, selbst wenn er mit der
-// aktuellen Version in der Cloud gespeichert wurde.
+const ENGINE_VERSION=12;
+// INHALTS-CHECK (bulletproof): erkennt einen biochemisch falschen ODER veralteten/zu schlanken
+// Plan direkt — unabhängig von der Versionsnummer. So wird ein kaputter Plan IMMER neu berechnet.
 function planIsHealthy(p){
   try{
     p=p||S.plan; if(!p) return true;
     const has=(base,name)=>p[base]&&Array.isArray(p[base].main)&&p[base].main.some(e=>e.n===name);
     if(has("push","Bizeps-Curls")) return false;                 // Bizeps gehört NIE auf Push
     if(has("pull","Trizepsdrücken")||has("pull","Enge Liegestütze")) return false; // Trizeps NIE auf Pull
+    // ZU SCHLANK: Mit Gewichten ausgestattete Haupttage müssen mehrere Übungen haben (sonst alter Plan).
+    const a=(S.profile&&S.profile.a)||{}; const eq=a.equipment||"gym_full";
+    const weighted=["gym_full","gym_basic","home_full"].includes(eq);
+    if(weighted){ for(const b of ["push","pull","upper","legs"]){ const d=p[b];
+      if(d&&Array.isArray(d.main)&&d.main.length>0&&d.main.length<4) return false; } }
     return true;
   }catch{ return true; }
 }
@@ -7550,7 +7561,9 @@ function regenerateUserPlan(){
   S.plan=generateTrainingPlan(S.profile);
   S.planB=generateTrainingPlan(S.profile,"B");
   if(S.rotation) S.rotation=generateRotation(S.profile.a);
-  try{ const opt=generateOptimalSchedule(S.profile.a); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale; }catch{}
+  try{ const opt=generateOptimalSchedule(S.profile.a); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+    S.schedule=opt.schedule.slice(); // frischer Wochenplan inkl. A/B-Abwechslung (alter Plan war das Problem)
+  }catch{}
   S.planVersion=ENGINE_VERSION;
   return true;
 }
