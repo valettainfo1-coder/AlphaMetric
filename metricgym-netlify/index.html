@@ -1790,6 +1790,34 @@ const EXDB={
   "Zone-2 Cardio":{m:"Herz",compound:false,eq:"body",tempo:"locker",rir:"–",alt:"Radfahren / zügiges Gehen",
     why:"Aerobe Basis bei niedriger Ermüdung — unterstützt Erholung statt sie zu kosten (Seiler, 2010)."},
 };
+// AUSDAUER-PROTOKOLLE (evidenzbasiert): Reines Zone-2 baut nur die Basis. Echte Ausdauer-
+// leistung (VO₂max + Laktatschwelle) braucht POLARISIERTES Training: ~80 % locker (Zone 2)
+// + ~20 % hart (Intervalle/Schwelle). Damit verbessert sich auch ein Ausdauersportler messbar.
+const CARDIO_PROTOCOLS={
+  zone2:{key:"zone2",label:"Grundlage · Zone 2",icon:"activity",min:40,
+    desc:"Lockeres Dauertempo, bei dem du noch sprechen kannst (≈60–70 % max. Puls).",
+    steps:["Gleichmäßig & durchgehend","Rad, Lauf, Crosstrainer oder zügiges Gehen","Nasenatmung sollte möglich bleiben"],
+    why:"Baut die aerobe Basis: mehr Mitochondrien & Kapillaren, bessere Fettverbrennung und Laktat-Clearance — das Fundament jeder Ausdauerleistung.",
+    src:"Seiler 2010 · San-Millán & Brooks 2018"},
+  vo2:{key:"vo2",label:"VO₂max · 4×4-Intervalle",icon:"flame",min:35,
+    desc:"Norwegisches 4×4: 4 Min hart (≈90–95 % max. Puls), 3 Min locker — 4 Runden.",
+    steps:["10 Min locker einlaufen","4 × [4 Min hart · 3 Min locker]","5 Min auslaufen","„Hart“ = nur noch wenige Worte möglich"],
+    why:"Stärkster Reiz für die maximale Sauerstoffaufnahme (VO₂max) — der wichtigste Marker für Ausdauerleistung. Intervalle schlagen reines Dauertraining klar.",
+    src:"Helgerud 2007 · Bacon 2013 (Meta-Analyse)"},
+  threshold:{key:"threshold",label:"Schwelle · Tempo",icon:"zap",min:40,
+    desc:"Kontrolliert hartes Tempo an der Laktatschwelle (≈80–88 % max. Puls).",
+    steps:["10 Min locker einlaufen","3 × [8 Min an der Schwelle · 2 Min locker]","5 Min auslaufen","Schwelle = „komfortabel hart“, ganze Sätze fallen schwer"],
+    why:"Hebt die Laktatschwelle — das Tempo, das du lange durchhältst. Direkt leistungsbestimmend für Läufe und Wettkämpfe.",
+    src:"Laursen & Jenkins 2002 · Seiler 2010"},
+};
+// Polarisierte Verteilung: Ausdauer-Ziel rotiert Zone2/VO2/Schwelle (≈3:1:1, viel locker,
+// wenig hart). Andere Ziele: reines Zone 2 (Gesundheit, Fettabbau, Erholung).
+function cardioProtocol(a,idx){
+  const goals=(a&&a.goals)||[];
+  if(!goals.includes("endurance")) return CARDIO_PROTOCOLS.zone2;
+  const cycle=["zone2","vo2","zone2","threshold","zone2"];
+  return CARDIO_PROTOCOLS[cycle[((idx||0)%cycle.length)]];
+}
 const WARMUP_DEFAULT=[
   {n:"5 Min lockeres Cardio",why:"Erhöht Kerntemperatur und Durchblutung — Muskeln und Gelenke arbeiten geschmeidiger."},
   {n:"Dynamisches Mobilisieren (Zielmuskeln)",why:"Bereitet das Nervensystem auf die Bewegungsmuster vor."},
@@ -2367,7 +2395,10 @@ function generateOptimalSchedule(a){
   // Cardio-Tage nach Bedarf: hoher BMI -> 2 (Gesundheit/Fettabbau), Fettabbau/Ausdauer -> 1,
   // sonst 1 bei <=4 Trainingstagen. Es bleibt immer mindestens 1 echter Ruhetag.
   const goalsArr=a.goals||[], bmiV=(a.weight&&a.height)?a.weight/((a.height/100)**2):24;
-  let cardioNeed = bmiV>=30?2 : (goalsArr.includes("fat_loss")||goalsArr.includes("endurance"))?1 : (days<=4?1:0);
+  // Ausdauer-Ziel = polarisiert: möglichst viele Cardio-Einheiten (Zone 2 + Intervalle/Schwelle),
+  // damit VO₂max & Laktatschwelle wirklich steigen — nicht nur 1 lockere Einheit.
+  let cardioNeed = goalsArr.includes("endurance") ? Math.min(3, Math.max(1, 7-days-1))
+    : bmiV>=30?2 : goalsArr.includes("fat_loss")?1 : (days<=4?1:0);
   for(let c=0;c<cardioNeed;c++){
     const restIdx=sch.map((t,i)=>t==="rest"?i:null).filter(x=>x!=null);
     if(restIdx.length<=1)break; // letzten Ruhetag bewahren
@@ -5814,11 +5845,18 @@ function renderTrain(){
           <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · ruhiges Tempo":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>
           ${(!isCardio && F.est && S.profile.a.sessionTime && F.est < S.profile.a.sessionTime-12)?`<p class="xs t2" style="line-height:1.5;margin-top:4px;display:flex;gap:6px"><span style="color:var(--hl)">${icon("info",12)}</span><span>Kürzer als deine ${S.profile.a.sessionTime} Min: Die Muskeln dieses Tages haben bei deiner Trainingsfrequenz ihr <b style="color:var(--t1)">optimales Wochenvolumen</b> erreicht — mehr Sätze wären kontraproduktiv (Übertraining). Für längere Einheiten: mehr Trainingstage oder „Für mich optimieren".</span></p>`:""}`;
         if(isCardio){
+          const cIdx=(S.trainingHistory||[]).filter(t=>t.type==="cardio").length;
+          const proto=cardioProtocol(S.profile.a,cIdx);
+          const isEnd=((S.profile.a.goals||[]).includes("endurance"));
           return `<div class="card">${head}
-            <div style="background:var(--s2);border-radius:16px;padding:18px;text-align:center;margin:14px 0">
-              <p style="font-weight:700;font-size:16px;margin-bottom:4px">Zone-2 Cardio</p>
-              <p class="sm t2" style="line-height:1.6">30–40 Min im lockeren Tempo, bei dem du noch sprechen kannst. Stärkt dein Herz-Kreislauf-System und unterstützt deine Erholung.</p>
+            <div style="background:var(--s2);border-radius:16px;padding:16px;margin:14px 0">
+              <p style="font-weight:700;font-size:16px;margin-bottom:2px;display:flex;align-items:center;gap:8px">${icon(proto.icon,17)} ${proto.label}</p>
+              <p class="sm t2" style="line-height:1.55;margin-bottom:10px">${proto.desc}</p>
+              ${proto.steps.map(s=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:3px 0"><span style="color:var(--hl);flex-shrink:0">${icon("check",13)}</span><span class="sm">${s}</span></div>`).join("")}
+              <p class="xs t2" style="line-height:1.55;margin-top:10px"><b style="color:var(--t1)">Warum:</b> ${proto.why}</p>
+              <p class="xs" style="color:var(--t3);margin-top:6px">${icon("flame",10)} Beleg: ${proto.src}</p>
             </div>
+            ${isEnd?`<p class="xs t2 mb8" style="line-height:1.5">${icon("info",12)} Dein Ausdauer-Plan ist <b style="color:var(--t1)">polarisiert</b>: viel locker (Zone 2), gezielt wenig hart (Intervalle & Schwelle) — so steigt deine VO₂max und Schwelle messbar, nicht nur die Grundlage.</p>`:""}
             <button class="btn volt" onclick="A.startType('${focusType}')">${icon("play",15)} Einheit starten</button>
           </div>`;
         }
@@ -5896,32 +5934,38 @@ function renderPlayer(){
   pRestTotal=rest;
   // ===== CARDIO: dauerbasierte Einheit (Minuten), KEIN Gewicht/Reps/Sätze =====
   if((EXDB[name]||{}).m==="Herz" || parseTypeKey(type).base==="cardio"){
-    if(cardioMin===null){ const m=String(repsRange||"").match(/\d+/); cardioMin=m?parseInt(m[0]):30; }
+    const cIdx=(S.trainingHistory||[]).filter(t=>t.type==="cardio").length;
+    const proto=cardioProtocol((S.profile&&S.profile.a)||{},cIdx);
+    if(cardioMin===null){ cardioMin=proto.min; }
     A.cardioSet=(v)=>{ cardioMin=Math.max(5,Math.min(120,v)); renderPlayer(); };
     A.cardioDone=()=>{
-      const kcal=Math.round(cardioMin*((S.profile&&S.profile.a&&S.profile.a.weight)||80)*0.08); // grobe Zone-2-Schätzung
+      const kcal=Math.round(cardioMin*((S.profile&&S.profile.a&&S.profile.a.weight)||80)*0.08);
       const ex=S.trainingHistory.find(t=>t.date===todayKey()&&t.type==="cardio");
       if(ex){ ex.minutes=(ex.minutes||0)+cardioMin; ex.volume=(ex.volume||0); }
-      else S.trainingHistory.push({date:todayKey(),type:"cardio",sets:0,volume:0,minutes:cardioMin,kcal,avgRpe:null});
+      else S.trainingHistory.push({date:todayKey(),type:"cardio",sets:0,volume:0,minutes:cardioMin,kcal,avgRpe:null,proto:proto.key});
       if(S.planMode==="rotation"&&type===rotationNext()){ const r=activeRotation(); S.rotationPos=((S.rotationPos||0)+1)%r.length; }
       cardioMin=null; S.tab="summary"; save(); render();
     };
     const presets=[20,30,40,45,60];
     root.innerHTML=`
-      <p class="ring-lbl mb8">Cardio · lockeres Zone-2-Tempo</p>
+      <p class="ring-lbl mb8">Cardio · ${proto.label}</p>
       <div class="card" style="text-align:center">
-        <div style="width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:6px auto 12px;background:var(--s2);border:1px solid var(--border);color:var(--hl)">${icon("activity",28)}</div>
-        <h2 style="font-size:21px;margin-bottom:4px">${name}</h2>
-        <p class="sm t2" style="line-height:1.55;margin-bottom:18px">Gleichmäßiges, lockeres Tempo — Puls ca. 60–70 % (Nasenatmung möglich). Stärkt Herz-Kreislauf & Erholung, ohne deine Muskel-Erholung zu kosten.</p>
+        <div style="width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:6px auto 12px;background:var(--s2);border:1px solid var(--border);color:var(--hl)">${icon(proto.icon,28)}</div>
+        <h2 style="font-size:21px;margin-bottom:4px">${proto.label}</h2>
+        <p class="sm t2" style="line-height:1.55;margin-bottom:12px">${proto.desc}</p>
+        <div style="text-align:left;background:var(--s2);border-radius:14px;padding:12px 14px;margin-bottom:16px">
+          ${proto.steps.map(s=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:3px 0"><span style="color:var(--hl);flex-shrink:0">${icon("check",13)}</span><span class="sm">${s}</span></div>`).join("")}
+          <p class="xs" style="color:var(--t3);margin-top:8px">${icon("flame",10)} Beleg: ${proto.src}</p>
+        </div>
         <p class="hero-num volt-txt" style="font-size:54px;line-height:1">${cardioMin}<span style="font-size:22px"> Min</span></p>
         <div class="stepper" style="justify-content:center;margin:14px 0">
           <button onclick="A.cardioSet(${cardioMin-5})" aria-label="weniger">−</button>
           <span class="metric" style="min-width:70px;text-align:center;font-size:18px">${cardioMin} Min</span>
           <button onclick="A.cardioSet(${cardioMin+5})" aria-label="mehr">+</button></div>
         <div class="chips" style="justify-content:center;margin-bottom:6px">${presets.map(p=>`<button class="chip ${cardioMin===p?"sel":""}" onclick="A.cardioSet(${p})">${p} Min</button>`).join("")}</div>
-        <p class="xs t2 mt8">≈ ${Math.round(cardioMin*((S.profile&&S.profile.a&&S.profile.a.weight)||80)*0.08)} kcal · zählt als Cardio (kein Gewicht/Reps)</p>
+        <p class="xs t2 mt8">≈ ${Math.round(cardioMin*((S.profile&&S.profile.a&&S.profile.a.weight)||80)*0.08)} kcal · Gesamtdauer inkl. Ein-/Auslaufen</p>
       </div>
-      <button class="btn volt cta-big" onclick="A.cardioDone()"><span>Cardio abschließen ✓</span><span class="cta-sub">${cardioMin} Min Zone-2 eintragen</span></button>
+      <button class="btn volt cta-big" onclick="A.cardioDone()"><span>Cardio abschließen ✓</span><span class="cta-sub">${cardioMin} Min eintragen</span></button>
       <div class="grid2 mb8 mt8"><button class="btn" onclick="S.tab='train';cardioMin=null;save();render()">Zurück</button>
         <button class="btn" onclick="A.cardioDone()">Abschließen</button></div>`;
     return;
