@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* OBSIDIAN TERMINAL — semantic tokens. Dark-only, no theme toggle. */
+@theme {
+  --color-bg: #0a0a0b; /* app background */
+  --color-surface-1: #121214; /* base cards */
+  --color-surface-2: #1a1a1e; /* elevated cards */
+  --color-border: #26262b;
+  --color-volt: #c8ff2e; /* ONLY: primary actions, live metrics, positive deltas, PRs */
+  --color-info: #5b8cff;
+  --color-danger: #ff4d4d; /* negative deltas, overload warnings only */
+  --color-text-1: #f5f5f4;
+  --color-text-2: #9c9ca6; /* WCAG AA on dark */
+  --color-text-3: #6e6e78; /* decorative only — never for meaningful text */
+
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --radius-card: 12px;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text-1);
+    font-family: var(--font-sans);
+    /* Digits never jitter: tabular numerals globally. */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  /* Visible focus: volt ring, 2px offset — accessibility floor. */
+  :focus-visible {
+    outline: 2px solid var(--color-volt);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-volt) 30%, transparent);
+  }
+}
+
+@layer utilities {
+  /* Every number, weight, timer, metric renders in mono. */
+  .metric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Zero-CLS chart rule: fixed aspect, identical skeleton dimensions. */
+  .chart-frame {
+    aspect-ratio: 16 / 10;
+    width: 100%;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* 150-250ms ease-out micro-transitions, transform/opacity only. */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fade-in 200ms ease-out;
+  }
+  .slide-up {
+    animation: slide-up 220ms ease-out;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-volt {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.pulse-volt {
+  animation: pulse-volt 600ms ease-out infinite;
+}
