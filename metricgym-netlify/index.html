@@ -1622,7 +1622,7 @@ function checkReferralRankUp(){
 const TEASER_TEXT={
   multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
   insights:{t:"Erweiterte Insights",b:"Dein Fortschrittstempo, Ernährungs-Treue und Warnungen zur Trainingsbelastung sind Teil von PERFORMANCE."},
-  micro:{t:"Versorgst du deinen Körper richtig?",b:"Die Schätzung deiner Vitamine & Mineralstoffe aus geloggten Lebensmitteln ist Teil von PERFORMANCE."},
+  micro:{t:"Bekommt dein Körper, was er braucht?",b:"Die Schätzung deiner Vitamine & Mineralstoffe aus geloggten Lebensmitteln ist Teil von PERFORMANCE."},
   deload:{t:"Automatische Erholungswochen",b:"Erkennt Übertrainings-Signale und schlägt dir rechtzeitig eine Erholungswoche vor — Teil von PERFORMANCE."},
   trajectory:{t:"Multi-Lift-Trajectory",b:"Kraftprognosen für alle getrackten Übungen sind Teil von PERFORMANCE."},
   recap:{t:"Vollständiger Wochen-Recap",b:"Der komplette Recap mit Adhärenz und Status-Schnitt ist Teil von PERFORMANCE."},
@@ -3210,7 +3210,7 @@ const EXPLAIN={
   status:{t:"Status-Score",b:"Eine Zahl, die sagt, wie belastbar du heute bist — aus Schlaf (30 %), Energie (25 %), Muskelkater (25 %) und Stress (20 %). Je mehr Tage du checkst, desto besser erkennt die Engine deine Erholungsmuster.<br><br><span class='xs t2'>(Fachbegriff: Readiness-Score)</span>"},
   trajectory:{t:"Deine Kraft-Prognose",b:"Die Linie zeigt, wohin sich deine Kraft entwickelt, wenn du so weitermachst — eine vorsichtig gedämpfte Trendlinie deiner echten Trainingsdaten (max. +15 % in 12 Wochen). Jede Session macht die Prognose treffsicherer; ab ~12 Sessions wird sie deutlich stabiler.<br><br><span class='xs t2'>(Fachbegriff: e1RM-Forecast — geschätztes 1-Wiederholungs-Maximum)</span>"},
   satiety:{t:"Sättigungs-Check",b:"Zeigt dir, wie lange eine Mahlzeit satt macht: viel Eiweiß bei moderater Energiedichte hält lange vor — energiedichte, eiweißarme Mahlzeiten machen schnell wieder hungrig.<br><br><span class='xs t2'>(Fachbegriff: Sättigungsindex, Holt et al., 1995)</span>"},
-  micro:{t:"Versorgst du deinen Körper richtig?",b:"Eine Richtungsanzeige für Vitamine & Mineralstoffe (Vitamin D, B12, Eisen, Magnesium) — geschätzt nur aus Lebensmitteln, die du wirklich geloggt hast. Kein vollständiges Tracking, kein Raten.<br><br><span class='xs t2'>(Fachbegriff: Mikronährstoffe, Referenzwerte der DGE)</span>"},
+  micro:{t:"Bekommt dein Körper, was er braucht?",b:"Eine Richtungsanzeige für Vitamine & Mineralstoffe (Vitamin D, B12, Eisen, Magnesium) — geschätzt nur aus Lebensmitteln, die du wirklich geloggt hast. Kein vollständiges Tracking, kein Raten.<br><br><span class='xs t2'>(Fachbegriff: Mikronährstoffe, Referenzwerte der DGE)</span>"},
   e1rm:{t:"Geschätzte Maximalkraft",b:"Was du vermutlich für genau 1 Wiederholung schaffen würdest — berechnet aus Gewicht, Wiederholungen und Anstrengung deiner echten Sätze. So sind Sessions mit 5 oder 10 Wiederholungen direkt vergleichbar.<br><br><span class='xs t2'>(Fachbegriff: e1RM — estimated 1-Repetition-Maximum)</span>"},
   rpe:{t:"Anstrengung",b:"Wie hart ein Satz wirklich war, auf einer Skala bis 10: bei 8 hättest du noch 1–2 saubere Wiederholungen geschafft, bei 10 keine mehr. Die Engine steuert damit deine Gewichtssteigerungen.<br><br><span class='xs t2'>(Fachbegriff: RPE — Rating of Perceived Exertion)</span>"},
   volumeBand:{t:"Trainingsbelastung",b:"Wie viele harte Sätze pro Muskel und Woche sinnvoll sind: zu wenig = kaum Wachstumsreiz, zu viel = Erholung kommt nicht hinterher. Die Ampel zeigt dir, ob du im grünen Bereich liegst.<br><br><span class='xs t2'>(Fachbegriff: MEV–MRV-Korridor, Israetel et al., 2017)</span>"},
@@ -3754,7 +3754,7 @@ function renderLanding(){
       <div class="card" style="border-color:rgba(96,140,230,.3)">
         <p class="lp-eyebrow" style="margin-bottom:8px">${icon("sparkle",13)} Dein Potenzial</p>
         <h2 class="lp-h2" style="font-size:21px">Was ist für dich drin?</h2>
-        <p class="sm t2 mb16">Stell deinen Plan ein — die Projektion reagiert sofort.</p>
+        <p class="sm t2 mb16">Stell deinen Plan ein — die Prognose reagiert in Echtzeit.</p>
         <div id="lp-calc">${lpCalcInner()}</div>
         <button class="btn volt mt16" onclick="A.toRegister()">Diesen Plan kostenlos bekommen</button>
       </div>
@@ -5117,10 +5117,13 @@ function openSessionPreview(typeKey){
   A.previewStart=(t)=>{overlay.innerHTML="";A.startType(t);};
   let body;
   if(isCardio){
-    body=`<p class="sm t2 mb12">≈ ${d.est||35} Min · ruhiges Tempo</p>
-      <div style="background:var(--s2);border-radius:16px;padding:18px;text-align:center">
-        <p style="font-weight:700;font-size:16px;margin-bottom:4px">Zone-2 Cardio</p>
-        <p class="sm t2" style="line-height:1.6">30–40 Min im lockeren Tempo, bei dem du noch sprechen kannst. Stärkt dein Herz-Kreislauf-System und unterstützt deine Erholung.</p>
+    const _ci=(S.trainingHistory||[]).filter(t=>t.type==="cardio").length;
+    const _p=cardioProtocol((S.profile&&S.profile.a)||{},_ci);
+    body=`<p class="sm t2 mb12">≈ ${_p.min} Min · Ausdauer-Einheit</p>
+      <div style="background:var(--s2);border-radius:16px;padding:16px">
+        <p style="font-weight:700;font-size:16px;margin-bottom:2px;display:flex;align-items:center;gap:8px">${icon(_p.icon,16)} ${_p.label}</p>
+        <p class="sm t2" style="line-height:1.55">${_p.desc}</p>
+        <p class="xs" style="color:var(--t3);margin-top:8px">${icon("flame",10)} Beleg: ${_p.src}</p>
       </div>`;
   } else {
     const exHtml=(d.main||[]).map(e=>`<div class="exrow" style="border-top:1px solid var(--hairline);cursor:default">
@@ -5848,7 +5851,7 @@ function renderTrain(){
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
         const head=`<div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(F.icon,18)} ${F.label}</p>
           ${isCardio?"":`<button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button>`}</div>
-          <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · ruhiges Tempo":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>
+          <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · Ausdauer-Einheit":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>
           ${(!isCardio && F.est && S.profile.a.sessionTime && F.est < S.profile.a.sessionTime-12)?`<p class="xs t2" style="line-height:1.5;margin-top:4px;display:flex;gap:6px"><span style="color:var(--hl)">${icon("info",12)}</span><span>Kürzer als deine ${S.profile.a.sessionTime} Min: Die Muskeln dieses Tages haben bei deiner Trainingsfrequenz ihr <b style="color:var(--t1)">optimales Wochenvolumen</b> erreicht — mehr Sätze wären kontraproduktiv (Übertraining). Für längere Einheiten: mehr Trainingstage oder „Für mich optimieren".</span></p>`:""}`;
         if(isCardio){
           const cIdx=(S.trainingHistory||[]).filter(t=>t.type==="cardio").length;
@@ -5899,7 +5902,7 @@ function renderTrain(){
             <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
         </div>`;
       })())
-    :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest, dann steht dein Plan bereit.</p>
+    :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest — dein Plan steht sofort.</p>
       <button class="btn volt" onclick="A.editSchedule()">Wochenplan festlegen</button></div>`)}
 
     ${renderSection("Dein perfekter Reiz — schwarz auf weiß",
@@ -6335,7 +6338,7 @@ function renderAnalytics(){
     root.innerHTML=`<div class="center" style="min-height:70dvh">
       <div style="color:var(--t3)">${icon("chart",44)}</div>
       <p class="display-m">Noch keine Daten vorhanden</p>
-      <p class="sm t2" style="max-width:290px;line-height:1.7">Deine Analytics entstehen aus deinen echten Trainings- und Ernährungsdaten. <b style="color:var(--t1)">Jede Auswertung beruht auf deinen Werten.</b><br><br>Sobald du dein erstes Training loggst, erscheinen hier deine ersten Einblicke.</p>
+      <p class="sm t2" style="max-width:290px;line-height:1.7">Jede Auswertung kommt aus deinen echten Daten — nichts geschätzt, nichts geschönt. <b style="color:var(--t1)">Jede Auswertung beruht auf deinen Werten.</b><br><br>Sobald du dein erstes Training loggst, erscheinen hier deine ersten Einblicke.</p>
       <button class="btn volt" style="max-width:280px" onclick="A.q('train')">Jetzt dein erstes Training loggen</button>
     </div>`;
     return;
@@ -6369,7 +6372,7 @@ function renderAnalytics(){
 
   let html=html0+`
     <div class="card" style="border-color:rgba(26,26,26,.1)">
-      <div class="row mb12"><p class="ct" style="margin:0">${icon("sparkle",14)} Deine Analytics auf einen Blick</p>
+      <div class="row mb12"><p class="ct" style="margin:0">${icon("sparkle",14)} Alles Wichtige auf einen Blick</p>
         <span class="badge mute">${activeMods}/6 aktiv</span></div>
       <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px">
         ${[["Datenbasis",completeness+" %",completeness>=70?"volt-txt":completeness>=40?"":"t2"],
@@ -6575,9 +6578,9 @@ function renderAnalytics(){
           <span style="color:var(--t3)">●</span> Fett ${nfi.format(macroSum.f*9)} kcal</div></div></div>`;
   } else html+=gateCard("Ernährungs-Analytics","3",nutriDays.length,"Tage geloggt");
 
-  // Versorgst du deinen Körper richtig?: NUR aus tatsächlich geloggten Top-10-Lebensmitteln (PERFORMANCE)
+  // Bekommt dein Körper, was er braucht?: NUR aus tatsächlich geloggten Top-10-Lebensmitteln (PERFORMANCE)
   if(S.tier==="free"){
-    html+=`<div class="card"><p class="ct">Versorgst du deinen Körper richtig?</p>
+    html+=`<div class="card"><p class="ct">Bekommt dein Körper, was er braucht?</p>
       <div class="lockcard" style="margin-top:0"><p class="sm">${icon("lock",13)} Vitamin-D-, B12-, Eisen- und Magnesium-Schätzung aus deinen Logs — Teil von PERFORMANCE.</p>
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('micro')">Freischalten</button></div></div>`;
   } else if(nutriDays.length>=3){
@@ -6593,17 +6596,17 @@ function renderAnalytics(){
       }
     }
     if(hits>0){
-      html+=`<div class="card"><p class="ct">Versorgst du deinen Körper richtig? · 7 Tage ${infoBtn("micro")}</p>
+      html+=`<div class="card"><p class="ct">Bekommt dein Körper, was er braucht? · 7 Tage ${infoBtn("micro")}</p>
         ${MICRO_NAMES.map((nme,i)=>{const pc=Math.min(100,Math.round(sums[i]/(MICRO_REF[i]*7)*100));
           return `<div class="barrow"><span class="blbl">${nme}</span>
             <div class="btrack"><div class="bfill" style="width:${pc}%;background:${pc>=70?"var(--volt)":pc>=40?"var(--info)":"var(--warn)"}"></div></div>
             <span class="bval metric">${pc} %</span></div>`;}).join("")}
         <p class="xs t2 mt8">Geschätzt aus ${hits} geloggten Einträgen mit hinterlegten Werten — Richtungsanzeige, kein vollständiges Tracking.</p></div>`;
     } else {
-      html+=`<div class="card"><p class="ct">Versorgst du deinen Körper richtig? ${infoBtn("micro")}</p>
+      html+=`<div class="card"><p class="ct">Bekommt dein Körper, was er braucht? ${infoBtn("micro")}</p>
         <p class="sm t2">Noch keine Lebensmittel mit hinterlegten Mikronährwerten geloggt (z. B. Lachs, Eier, Haferflocken, Spinat).</p></div>`;
     }
-  } else html+=gateCard("Versorgst du deinen Körper richtig?",3,nutriDays.length,"Tage","Mahlzeit loggen","nutrition");
+  } else html+=gateCard("Bekommt dein Körper, was er braucht?",3,nutriDays.length,"Tage","Mahlzeit loggen","nutrition");
 
   // Insights — Tier-Slicing: Free 1 / Pro 5 / Elite 8, Lock-Card nennt Kategorien
   const insCap=S.tier==="free"?1:(S.tier==="elite"?8:5);
@@ -6614,7 +6617,7 @@ function renderAnalytics(){
     ${visIns.map(i=>`<div class="${i.risk?"warncard":"msg ai"}" style="max-width:100%;margin-bottom:8px">${i.t}<div class="conf mt8">Konfidenz ${i.conf} %</div></div>`).join("")}
     ${hiddenIns.length?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${hiddenIns.length} weitere ${hiddenIns.length===1?"Insight":"Insights"} verfügbar — ${hiddenCats.slice(0,3).join(", ")}.</p>
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">${TIER_LABEL[S.tier==="free"?"pro":"elite"]} freischalten</button></div>`:""}</div>`
-  :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Sobald deine Daten ein belastbares Muster zeigen, erklärt dir die Engine deinen Fortschritt.</p></div>`;
+  :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Sobald ein klares Muster da ist, erklärt dir die Engine deinen Fortschritt — in Klartext.</p></div>`;
 
   root.innerHTML=html;
 }
@@ -6908,7 +6911,7 @@ function renderNutrition(){
 function renderPricing(){
   const feats={
     free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Voice-/Foto-Logging unlimitiert","Status-Check + Streak","1 Engine-Insight pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
-    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Versorgst du deinen Körper richtig?","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
+    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Bekommt dein Körper, was er braucht?","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
     elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Insights inkl. Kombi-Analysen","Early Access auf neue Engine-Module"],
   };
   const b=S.billing||"yearly"; // Jahres-Anker als Default (Anchoring)
@@ -7345,7 +7348,7 @@ function renderProfile(){
     </details>
     <div class="card"><p class="ct">${icon("camera",14)} Körper-Fortschritt</p>
       ${(()=>{const m=S.measure;const last=m[m.length-1],first=m[0];
-        if(!last)return `<p class="sm t2 mb12">Tracke Maße & Fotos — dein sichtbarer Beweis, wie weit du kommst.</p>`;
+        if(!last)return `<p class="sm t2 mb12">Maße & Fotos festhalten — dein sichtbarer Beweis für jeden Fortschritt.</p>`;
         return `<div class="chips mb12">${MEASURE_FIELDS.filter(([k])=>last[k]!=null).map(([k,l])=>{
           const d=first&&first!==last&&first[k]!=null?last[k]-first[k]:null;
           return `<span class="statchip">${l} ${nf.format(last[k])} cm${d!=null&&Math.abs(d)>=0.1?` <span style="color:${d<0?"var(--hl)":"var(--t2)"}">(${d>0?"+":""}${nf.format(Math.round(d*10)/10)})</span>`:""}</span>`;}).join("")}</div>`;})()}
