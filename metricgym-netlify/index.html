@@ -1082,26 +1082,39 @@ function tdeeCalc(bmr,act,w,len,days){
 }
 const GOAL_D={muscle_gain:[.1,.1],fat_loss:[-.2,-.2],recomp:[.1,-.1],strength:[.05,.05],general:[0,0],endurance:[0,0],mobility:[0,0]};
 const GOAL_LABEL={muscle_gain:"Muskelaufbau",fat_loss:"Fettabbau",recomp:"Recomp",strength:"Maximalkraft",general:"Fitness",endurance:"Ausdauer",mobility:"Mobility"};
+// PRIORITÄTS-GESTEUERTE KALORIENRICHTUNG: Das ERSTE Ziel kippt die Strategie. Fettabbau und
+// Muskelaufbau sind energetisch gegensätzlich — beides gleichzeitig MAXIMAL geht nicht
+// (Slater et al. 2019; Helms 2014). Darum entscheidet die Reihenfolge:
+//   Fett zuerst  → moderates/echtes Defizit (Cut-Fokus, Muskeln halten)
+//   Muskel zuerst → Erhaltung bis leichter Überschuss (Lean-Bulk, Aufbau führt)
+//   Ausdauer zuerst → ausgewogen, Cardio dominiert. Protein bleibt überall hoch.
+function calorieDirection(a){
+  const goals=(a.goals&&a.goals.length?a.goals:[a.goal||"muscle_gain"]);
+  const g0=goals[0], hasFat=goals.includes("fat_loss"), hasGain=goals.includes("muscle_gain");
+  const bmi=a.weight/((a.height/100)**2);
+  if(hasFat&&hasGain){
+    if(g0==="muscle_gain") return {dir:bmi>=30?-0.10:bmi>=27?0:0.04, label:bmi>=27?"Recomp · Aufbau-Fokus (Erhaltung)":"Recomp · Aufbau-Fokus (leichter Überschuss)", mode:"recomp_gain"};
+    if(g0==="fat_loss")    return {dir:bmi>=30?-0.20:-0.15, label:"Recomp · Fettabbau-Fokus (moderates Defizit)", mode:"recomp_fat"};
+    return {dir:-0.08, label:"Recomp · ausgewogen (leichtes Defizit)", mode:"recomp_bal"};
+  }
+  if(hasFat) return {dir:bmi>=30?-0.22:-0.20, label:"Defizit "+(bmi>=30?"−22 %":"−20 %"), mode:"cut"};
+  if(hasGain){ if(bmi>=30)return{dir:-0.12,label:"Fettabbau-Phase (empfohlen)",mode:"gain_highbf"};
+    if(bmi>=27)return{dir:0,label:"Erhaltung · Lean-Gain-Start",mode:"leangain"};
+    return{dir:0.10,label:"Aufbau-Überschuss +10 %",mode:"bulk"}; }
+  if(goals.includes("strength")) return {dir:0.03,label:"leichter Überschuss",mode:"strength"};
+  return {dir:0,label:"Erhaltung",mode:"maintain"};
+}
 function multiTargets(a,bmr,td){
   const goals=(a.goals&&a.goals.length?a.goals:[a.goal||"muscle_gain"]);
   const hasFat=goals.includes("fat_loss"), hasGain=goals.includes("muscle_gain");
   const bmi=a.weight/((a.height/100)**2);
   const conflicts=[], recs=[];
-  // Eine einzige kalorische Richtung — BMI-bewusst: ein Aufbau-Überschuss bei hohem
-  // Körperfett setzt v. a. Fett an, daher überschreibt ein hoher BMI das Surplus.
-  let dir, dirLabel;
-  if(hasFat&&hasGain){ dir=-0.08; dirLabel="Recomp · leichtes Defizit";
-    conflicts.push({type:"recomp",msg:"Muskelaufbau + Fettabbau = Recomp: leichtes Defizit (−8 %) bei hohem Protein.",bio:"Viel Protein schützt deine Muskeln im Defizit (Helms et al., 2014)."}); }
-  else if(hasFat){ dir=bmi>=30?-0.22:-0.20; dirLabel="Defizit "+(bmi>=30?"−22 %":"−20 %"); }
-  else if(hasGain){
-    if(bmi>=30){ dir=-0.12; dirLabel="Fettabbau-Phase (empfohlen)";
-      recs.push("Bei deinem aktuellen Körpergewicht würde ein Aufbau-Überschuss vor allem Fett ansetzen. Sinnvoller ist jetzt ein leichtes Defizit: Mit viel Protein hältst du deine Muskeln und schaffst die Basis für sauberen Aufbau."); }
-    else if(bmi>=27){ dir=0; dirLabel="Erhaltung · Lean-Gain-Start";
-      recs.push("Statt direktem Überschuss startest du am Erhaltungsbedarf — so baust du Muskeln auf, ohne unnötig Fett anzusetzen."); }
-    else { dir=0.10; dirLabel="Aufbau-Überschuss +10 %"; }
-  }
-  else if(goals.includes("strength")){ dir=0.03; dirLabel="leichter Überschuss"; }
-  else { dir=0; dirLabel="Erhaltung"; }
+  const CD=calorieDirection(a); let dir=CD.dir, dirLabel=CD.label;
+  if(CD.mode==="recomp_fat") conflicts.push({type:"recomp",msg:"Fettabbau steht bei dir an erster Stelle → moderates Defizit bei hohem Protein. Fett fällt zügig, die Muskeln bleiben.",bio:"Hohes Protein schützt Muskeln im Defizit (Helms et al., 2014)."});
+  else if(CD.mode==="recomp_gain") recs.push("Muskelaufbau steht bei dir an erster Stelle → du isst auf Erhaltung bis leichtem Plus. Das Fett bleibt zunächst stabil, der Aufbau führt (Recomp mit Aufbau-Fokus).");
+  else if(CD.mode==="recomp_bal") conflicts.push({type:"recomp",msg:"Recomp: leichtes Defizit bei hohem Protein — Fett runter und Muskeln gleichzeitig halten/aufbauen.",bio:"Helms et al., 2014."});
+  else if(CD.mode==="gain_highbf") recs.push("Bei deinem aktuellen Körpergewicht würde ein Aufbau-Überschuss vor allem Fett ansetzen. Sinnvoller: ein leichtes Defizit mit viel Protein als saubere Basis.");
+  else if(CD.mode==="leangain") recs.push("Statt direktem Überschuss startest du am Erhaltungsbedarf — so baust du Muskeln auf, ohne unnötig Fett anzusetzen.");
   if(goals.includes("endurance")&&(goals.includes("strength")||goals.includes("muscle_gain"))){
     conflicts.push({type:"interference",msg:"Kraft/Muskeln + Ausdauer: Lege harte Cardio-Einheiten getrennt von Bein-Tagen (am besten anderer Tag oder ≥6 h Abstand) — so wächst der Muskel, und die Ausdauer steigt trotzdem.",bio:"Concurrent Training kann die mTOR-Signalwege dämpfen; zeitliche Trennung minimiert den Interferenzeffekt (Wilson et al., 2012; Schumann 2022)."});
   }
@@ -1228,7 +1241,10 @@ function primaryGoal(a){
 // fast intakt, deshalb wird das Volumen NUR minimal gedrosselt (−5 %) — Recomp braucht einen
 // STARKEN Reiz (viel Volumen, hart trainiert), weil kein Kalorienüberschuss das Wachstum trägt.
 // Echtes Defizit (Fettabbau) drosselt deutlich (−20 %), weil die Erholung real eingeschränkt ist.
-function deficitFactor(a){ const g=primaryGoal(a); return g==="fat_loss"?0.8 : g==="recomp"?0.95 : 1.0; }
+// MRV folgt der ECHTEN Energieverfügbarkeit (nicht nur dem Ziel-Label): je tiefer das Defizit,
+// desto weniger ist erholbar (Helms 2014, Israetel). So sinkt das Volumen bei "Fettabbau-Fokus"
+// stärker als bei "Aufbau-Fokus" — die Priorität wirkt sich direkt auf das Trainingsvolumen aus.
+function deficitFactor(a){ const d=calorieDirection(a).dir; return Math.max(0.78, Math.min(1, 1+d)); }
 function deficitScaledBands(a){
   const f=deficitFactor(a); if(f>=1) return VOL_BANDS;
   const out={}; for(const k of Object.keys(VOL_BANDS)){ const [mev,mrv]=VOL_BANDS[k]; out[k]=[mev,Math.max(mev+2,Math.round(mrv*f))]; }
