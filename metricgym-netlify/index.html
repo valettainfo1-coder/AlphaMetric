@@ -1466,6 +1466,7 @@ S.importedPlan=S.importedPlan||null; // per Bild importierter Fremdplan (Analyse
 // Additive Migration (v5): Feature-Übersicht, Plan-Präzision, Schedule-Begründung,
 // Übungs-Overrides (Long-Press-Tausch), Health-Import (Ruhepuls)
 S.seenFeatures=S.seenFeatures??false;
+S.seenCatalog=S.seenCatalog??false;   // Funktions-Katalog gesehen? (steuert die Home-Entdecken-Karte)
 S.tourDone=S.tourDone??false;        // Onboarding-Tour einmalig nach dem Quiz
 S.precisionShown=S.precisionShown??false;
 S.scheduleRationale=S.scheduleRationale??null;
@@ -3368,7 +3369,7 @@ function renderAppbar(){
     </button>
     <div class="menu-divider"></div>
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr Tiefe freischalten":"Abo & Tier ändern","A.menuGo('pricing')")}
-    ${item("sparkle","So funktioniert METRICGYM","Features & Engine im Überblick","A.menuGo('features')")}
+    ${item("sparkle","Alle Funktionen entdecken","Was die App alles kann — auf einen Blick","A.menuGo('features')")}
     ${item("play","Tour wiederholen","Geführte Durchführung der Funktionen","A.replayTour()")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
     ${item("info","Rechtliches & Datenschutz","Impressum · AGB · Datenschutz","openLegalIndex()")}
@@ -3516,20 +3517,49 @@ function renderApp(){
 // =====================================================================
 function renderFeatureOverview(){
   A.featDone=()=>{S.tab="home";save();render();};
-  // Bewusst minimal: 4 Zeilen, je ein Icon + eine kurze Aussage. Kein Fließtext.
-  const feats=[
-    ["dumbbell","Dein Plan","Wissenschaftlich auf dich gebaut — passt sich an, was du loggst."],
-    ["chart","Deine Analytics","Kraft, Muskeln, Erholung — schwarz auf weiß, alles aus echten Daten."],
-    ["utensils","Deine Ernährung","Tippen oder sprechen, in 10 Sekunden geloggt."],
-    ["flame","Dein Antrieb","Streak, Level & Meilensteine, die dich dranbleiben lassen."],
+  A.discoverGo=(js)=>{ S.seenCatalog=true; save(); try{ (new Function(js))(); }catch(e){ S.tab="home"; render(); } };
+  S.seenCatalog=true; // als gesehen markieren, sobald geöffnet
+  // Voller Funktions-Katalog: gruppiert, nutzenorientiert, jede Karte mit Direkt-Link zum
+  // Ausprobieren. So sieht der Nutzer auf einen Blick die ganze Bandbreite — kein Selbst-Entdecken.
+  const groups=[
+    ["Training, das mitdenkt","dumbbell",[
+      ["dumbbell","Dein wissenschaftlicher Plan","Jeder Muskel 2×/Woche, Volumen im optimalen Korridor — automatisch auf Ziel, Level & Equipment berechnet.","A.menuGo('train')"],
+      ["flame","Reiz-Status — der Beweis","Sieh schwarz auf weiß, dass dein Plan 100 % des wissenschaftlichen Optimums trifft. Teilbar.","A.menuGo('train');setTimeout(()=>{try{openMaxStatus()}catch(e){}},250)"],
+      ["activity","Autoregulation","Schlechte Nacht? Die App senkt heute automatisch das Volumen (HRV, Ruhepuls, Status-Check) — schützt vor Übertraining.","A.menuGo('home')"],
+      ["play","Übungs-Anleitung + Muskelkarte","Tippe eine Übung: Schritt-für-Schritt-Ausführung, Muskel-Map und passende Alternativen.","A.menuGo('train')"],
+      ["zap","Mobility & Cardio","Echte Mobilitäts-Routinen und polarisiertes Ausdauertraining (Zone 2 + Intervalle) — wenn deine Ziele es brauchen.","A.menuGo('train')"],
+    ]],
+    ["Ernährung ohne Aufwand","utensils",[
+      ["utensils","Loggen in 10 Sekunden","Tippe oder sprich, was du gegessen hast — die KI erkennt alles und rechnet Kalorien & Makros.","A.menuGo('nutrition')"],
+      ["sparkle","Ziele, die mitwachsen","Kalorien & Protein passen sich an dein Ziel und deinen echten Verbrauch an — selbstlernend.","A.menuGo('nutrition')"],
+    ]],
+    ["Dein Fortschritt, sichtbar","chart",[
+      ["chart","Kraftkurve & 1RM-Prognose","Sieh, wie du stärker wirst — geschätztes 1RM, Wochenvolumen, Konstanz, alles aus echten Daten.","A.menuGo('analytics')"],
+      ["camera","Körper-Fotos & Maße","Halte Vorher/Nachher fest — dein sichtbarer Beweis.","A.menuGo('profile')"],
+      ["calendar","Dein 12-Monats-Pfad","Ehrliche Phasen (Cut → Lean-Bulk) bis zu deinem Zielbild — kein 12-Wochen-Strohfeuer.","A.menuGo('profile')"],
+    ]],
+    ["Dein KI-Coach","brain",[
+      ["message","Coach Metric — fragt alles","Freie Fragen zu Training, Ernährung & Motivation — mit deinen Daten beantwortet, mit Quelle.","A.menuGo('train');setTimeout(()=>{try{openPlanCoach()}catch(e){}},250)"],
+      ["camera","Alten Plan importieren","Fotografiere deinen alten Plan — die App vergleicht ihn fair mit deinem METRICGYM-Plan.","A.menuGo('train')"],
+    ]],
+    ["Dranbleiben & verdienen","star",[
+      ["flame","Streak, Level & Meilensteine","Sichtbarer Fortschritt, der dich dranbleiben lässt.","A.menuGo('home')"],
+      ["send","Freunde werben — echtes Geld","Lade Freunde ein und verdiene echtes Guthaben (auszahlbar), nicht nur Rabatte.","A.menuGo('profile')"],
+      ["settings","Ziele jederzeit neu setzen","Quiz neu starten oder Ziele anpassen — der Plan rechnet sofort neu.","A.menuGo('profile')"],
+    ]],
   ];
   root.innerHTML=`
-    <div class="heroband fade" style="padding-top:8px"><h2>So funktioniert's</h2>
-      <p class="sm t2" style="max-width:280px;margin:6px auto 0">Vier Dinge — mehr brauchst du nicht.</p></div>
-    ${feats.map(([ic,t,b])=>`<div class="card" style="display:flex;gap:14px;align-items:center;padding:16px">
-      <span class="icon-circle" style="background:var(--accent);color:#fff">${icon(ic,20)}</span>
-      <div><p style="font-weight:700">${t}</p><p class="sm t2" style="line-height:1.45">${b}</p></div></div>`).join("")}
-    <button class="btn volt mt8" onclick="A.featDone()">Los geht's</button>`;
+    <div class="heroband fade" style="padding-top:8px"><h2>Alles, was METRICGYM kann</h2>
+      <p class="sm t2" style="max-width:300px;margin:6px auto 0">Dein ganzes Arsenal auf einen Blick — tippe auf eine Funktion, um sie direkt zu öffnen.</p></div>
+    <button class="btn volt mb16" onclick="A.replayTour()">${icon("play",15)} Geführte Tour starten (60 Sek.)</button>
+    ${groups.map(([gt,gic,items])=>`
+      <p class="label" style="margin:18px 4px 8px;display:flex;align-items:center;gap:7px">${icon(gic,14)} ${gt}</p>
+      ${items.map(([ic,t,b,act])=>`<button class="card" style="display:flex;gap:13px;align-items:center;padding:14px;width:100%;text-align:left;font-family:inherit;color:var(--t1);cursor:pointer" onclick="A.discoverGo(${JSON.stringify(act).replace(/"/g,'&quot;')})">
+        <span class="icon-circle" style="background:var(--s2);border:1px solid var(--border);color:var(--hl);flex-shrink:0">${icon(ic,19)}</span>
+        <span style="flex:1;min-width:0"><span style="font-weight:700;display:block">${t}</span><span class="xs t2" style="line-height:1.45;display:block">${b}</span></span>
+        <span class="t3" style="flex-shrink:0">${icon("chevronR",16)}</span></button>`).join("")}
+    `).join("")}
+    <button class="btn mt16" onclick="A.featDone()">Fertig — los geht's</button>`;
 }
 
 // ---------- Universelles Quick-Log-Feld (Text ODER iOS-Tastatur-Diktat) ----------
@@ -4778,6 +4808,10 @@ function renderHome(){
     })()}
 
     ${briefingCard}
+    ${!S.seenCatalog?`<button class="card row" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);border-color:rgba(157,180,240,.45);background:linear-gradient(160deg,rgba(74,111,216,.14),transparent)" onclick="A.menuGo('features')">
+      <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
+      <span class="sm" style="flex:1;line-height:1.5"><b>Entdecke, was METRICGYM alles kann.</b><br><span class="t2">KI-Coach, Reiz-Beweis, Autoregulation, Analytics & mehr — in 60 Sekunden.</span></span>
+      <span class="t2" style="align-self:center">→</span></button>`:""}
     ${streakRisk}
     ${trialNudge}
 
@@ -7321,7 +7355,7 @@ function renderProfile(){
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],hrvLog:[],sleepLog:[],
        planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
-       seenFeatures:false,precisionShown:false,billing:"monthly",
+       seenFeatures:false,seenCatalog:false,precisionShown:false,billing:"monthly",
        calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null,consent:null};
     coachOpen=false; overlay.innerHTML=""; save(); render();
   };
