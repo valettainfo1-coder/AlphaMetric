@@ -3524,12 +3524,16 @@ function renderApp(){
 // =====================================================================
 // FEATURE-ÜBERSICHT (v5/Phase 3) — nach dem Onboarding & über das Menü
 // =====================================================================
+let catStep=0;
 function renderFeatureOverview(){
-  A.featDone=()=>{S.tab="home";save();render();};
+  A.featDone=()=>{catStep=0;S.tab="home";save();render();};
   A.discoverGo=(js)=>{ S.seenCatalog=true; save(); try{ (new Function(js))(); }catch(e){ S.tab="home"; render(); } };
+  A.catNext=()=>{ catStep++; renderFeatureOverview(); try{navigator.vibrate&&navigator.vibrate(12);}catch{} };
+  A.catPrev=()=>{ catStep=Math.max(0,catStep-1); renderFeatureOverview(); };
   S.seenCatalog=true; // als gesehen markieren, sobald geöffnet
-  // Voller Funktions-Katalog: gruppiert, nutzenorientiert, jede Karte mit Direkt-Link zum
-  // Ausprobieren. So sieht der Nutzer auf einen Blick die ganze Bandbreite — kein Selbst-Entdecken.
+  // DOPAMIN-ETAPPEN: EINE Kategorie pro Schritt (kurze Häppchen statt Wall-of-Text), mit
+  // Fortschrittsbalken (Zeigarnik-Effekt = Drang, ihn vollzumachen), „freigeschaltet"-Belohnung
+  // pro Etappe und Konfetti am Ende. Hält die kurze Aufmerksamkeitsspanne bei der Stange.
   const groups=[
     ["Training, das mitdenkt","dumbbell",[
       ["dumbbell","Dein wissenschaftlicher Plan","Jeder Muskel 2×/Woche, Volumen im optimalen Korridor — automatisch auf Ziel, Level & Equipment berechnet.","A.menuGo('train')"],
@@ -3557,18 +3561,45 @@ function renderFeatureOverview(){
       ["settings","Ziele jederzeit neu setzen","Quiz neu starten oder Ziele anpassen — der Plan rechnet sofort neu.","A.menuGo('profile')"],
     ]],
   ];
+  const N=groups.length;
+  // FINALE: alle Etappen durch -> Belohnung + Konfetti
+  if(catStep>=N){
+    setTimeout(()=>{try{confetti()}catch{}},150);
+    root.innerHTML=`
+      <div class="center fade" style="min-height:62vh;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center">
+        <div style="width:84px;height:84px;border-radius:50%;background:rgba(63,169,140,.16);color:#3FA98C;display:flex;align-items:center;justify-content:center;margin-bottom:18px">${icon("check",46)}</div>
+        <h2 style="font-size:24px">Du kennst jetzt dein ganzes Arsenal 💪</h2>
+        <p class="sm t2" style="max-width:300px;margin:8px auto 0;line-height:1.6">Alle ${N} Bereiche freigeschaltet. Tipp dich jederzeit über das Menü wieder rein — jetzt: loslegen.</p>
+        <button class="btn volt mt16" style="max-width:320px" onclick="A.featDone()">Los geht's</button>
+        <button class="btn ghost mt8" style="max-width:320px" onclick="catStep=0;renderFeatureOverview()">Nochmal ansehen</button>
+      </div>`;
+    return;
+  }
+  const [gt,gic,items]=groups[catStep];
+  const pct=Math.round(8 + (catStep/(N))*92); // endowed progress: startet bei 8 %
   root.innerHTML=`
-    <div class="heroband fade" style="padding-top:8px"><h2>Alles, was METRICGYM kann</h2>
-      <p class="sm t2" style="max-width:300px;margin:6px auto 0">Dein ganzes Arsenal auf einen Blick — tippe auf eine Funktion, um sie direkt zu öffnen.</p></div>
-    <button class="btn volt mb16" onclick="A.replayTour()">${icon("play",15)} Geführte Tour starten (60 Sek.)</button>
-    ${groups.map(([gt,gic,items])=>`
-      <p class="label" style="margin:18px 4px 8px;display:flex;align-items:center;gap:7px">${icon(gic,14)} ${gt}</p>
-      ${items.map(([ic,t,b,act])=>`<button class="card" style="display:flex;gap:13px;align-items:center;padding:14px;width:100%;text-align:left;font-family:inherit;color:var(--t1);cursor:pointer" onclick="A.discoverGo(${JSON.stringify(act).replace(/"/g,'&quot;')})">
+    <div class="fade" style="padding-top:6px">
+      <div class="row mb8"><button class="btn ghost" style="width:auto;min-height:36px;padding:0 6px" onclick="A.featDone()">${icon("x",18)}</button>
+        <span class="metric xs t2">Etappe ${catStep+1} von ${N}</span></div>
+      <div class="progress mb4"><div style="width:${pct}%"></div></div>
+      <div class="tour-dots mb16" style="justify-content:center">${groups.map((_,k)=>`<span class="${k<=catStep?"on":""}"></span>`).join("")}</div>
+
+      <div style="text-align:center;margin-bottom:6px">
+        <div class="tour-ic" style="margin:0 auto 10px">${icon(gic,24)}</div>
+        <p class="xs" style="color:#3FA98C;letter-spacing:.12em;text-transform:uppercase">${icon("check",10)} Bereich ${catStep+1} freigeschaltet</p>
+        <h2 style="font-size:23px;margin-top:4px">${gt}</h2>
+      </div>
+
+      ${items.map(([ic,t,b,act])=>`<button class="card" style="display:flex;gap:13px;align-items:center;padding:14px;width:100%;text-align:left;font-family:inherit;color:var(--t1);cursor:pointer;margin-top:10px" onclick="A.discoverGo(${JSON.stringify(act).replace(/"/g,'&quot;')})">
         <span class="icon-circle" style="background:var(--s2);border:1px solid var(--border);color:var(--hl);flex-shrink:0">${icon(ic,19)}</span>
         <span style="flex:1;min-width:0"><span style="font-weight:700;display:block">${t}</span><span class="xs t2" style="line-height:1.45;display:block">${b}</span></span>
         <span class="t3" style="flex-shrink:0">${icon("chevronR",16)}</span></button>`).join("")}
-    `).join("")}
-    <button class="btn mt16" onclick="A.featDone()">Fertig — los geht's</button>`;
+
+      <div class="row" style="gap:10px;margin-top:18px">
+        ${catStep>0?`<button class="btn ghost" style="flex:1;min-height:48px" onclick="A.catPrev()">‹ Zurück</button>`:`<button class="btn ghost" style="flex:1;min-height:48px" onclick="A.replayTour()">${icon("play",14)} Tour</button>`}
+        <button class="btn volt" style="flex:1.5;min-height:48px" onclick="A.catNext()">${catStep===N-1?"Fertig ✓":"Weiter →"}</button>
+      </div>
+    </div>`;
 }
 
 // ---------- Universelles Quick-Log-Feld (Text ODER iOS-Tastatur-Diktat) ----------
@@ -6099,6 +6130,24 @@ function renderPlayer(){
     const prog=document.getElementById("prog"); if(prog)prog.style.width=progFor(cnt)+"%";
     A.refreshCta(); playerRestTick();
   };
+  // SAMMEL-LOGGING: alle (verbleibenden) Sätze in EINEM Zug mit gleichem Gewicht/Reps eintragen.
+  A.logAll=()=>{
+    const wel=document.getElementById("pw-in"); if(wel)A.setW(wel.value);
+    const rel=document.getElementById("pr-in"); if(rel)A.setR(rel.value);
+    const already=S.logged.filter(l=>l.n===name).length;
+    const remaining=Math.max(1, targetSets - already);
+    if(!S.liftLog[name])S.liftLog[name]=[];
+    for(let i=0;i<remaining;i++){
+      S.logged.push({n:name,w:pw,reps:pr,rpe:prpe,ts:Date.now()+i});
+      S.liftLog[name].push({t:Date.now()+i,w:pw,reps:pr,rpe:prpe});
+    }
+    const e1=e1rm(pw,pr,prpe), prevAll=S.liftLog[name].slice(0,-remaining);
+    const prev=prevAll.reduce((m,s)=>s.w>0?Math.max(m,e1rm(s.w,s.reps,s.rpe)):m,0);
+    if(prev>0&&e1>prev&&(!S.prToday||e1-prev>S.prToday.delta)) S.prToday={n:name,e1,delta:Math.round((e1-prev)*10)/10};
+    try{navigator.vibrate&&navigator.vibrate(24);}catch{}
+    save(); renderPlayer();
+    toast(`✓ ${remaining} ${remaining===1?"Satz":"Sätze"} eingetragen`);
+  };
   A.undoSet=(i)=>{
     const mine=S.logged.filter(l=>l.n===name), t=mine[i]; if(!t)return;
     S.logged.splice(S.logged.indexOf(t),1);
@@ -6156,6 +6205,7 @@ function renderPlayer(){
         <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
       <p id="rpe-desc" class="xs t2 mb12" style="text-align:right">${RPE_DESC[prpe]}</p>
       <button id="primary-cta" class="btn volt cta-big" onclick="${cta.f}"><span>${cta.l}</span><span class="cta-sub">${cta.s}</span></button>
+      ${logged.length<targetSets&&targetSets-logged.length>1?`<button class="btn mt8" style="min-height:44px" onclick="A.logAll()">${icon("check",15)} Alle ${targetSets-logged.length} restlichen Sätze auf einmal</button>`:""}
       ${logged.length>=targetSets?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.log()">+ Noch ein Satz</button>`:""}
       <ul id="logged-list" class="list mt16" style="border-top:1px solid var(--border);padding-top:10px;display:${logged.length?"block":"none"}">${loggedRows()}</ul>
     </div>
