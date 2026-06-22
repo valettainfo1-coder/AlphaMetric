@@ -5342,16 +5342,63 @@ function matchExerciseMuscle(s){
   if(/bauch|core|plank|crunch|abs/.test(t))return "Core";
   return null;
 }
+/* VERGLEICHS-ANALYSE: bewertet den importierten Fremdplan nach denselben Kriterien wie die
+   eigene Engine (Volumen im Korridor + 2×/Woche-Frequenz) — liefert den evidenzbasierten
+   Beweis, wie viele Muskeln der alte Plan optimal trifft (meist 2–4 von 6) vs. METRICGYM (alle). */
+function importedPlanAnalysis(){
+  try{
+    const j=S.importedPlan; if(!j||!j.days||!j.days.length) return null;
+    const COARSE={Brust:[10,22],"Rücken":[10,22],Schultern:[8,22],Arme:[10,26],Beine:[10,28],Core:[6,18]};
+    const NAMES=Object.keys(COARSE);
+    const sets={}, freq={};
+    for(const d of j.days){
+      const seen=new Set();
+      for(const ex of (d.exercises||[])){
+        const g=matchExerciseMuscle(ex); if(!g||!COARSE[g])continue;
+        const m=String(ex).match(/(\d+)\s*[×x]/); const s=m?Math.min(8,parseInt(m[1])||3):3; // Sätze aus "4×8"
+        sets[g]=(sets[g]||0)+s;
+        if(!seen.has(g)){ freq[g]=(freq[g]||0)+1; seen.add(g); }
+      }
+    }
+    let optimal=0; const issues=[];
+    for(const g of NAMES){
+      const v=sets[g]||0, f=freq[g]||0, lo=COARSE[g][0], hi=COARSE[g][1];
+      if(v===0){ issues.push(g+" fehlt ganz"); continue; }
+      if(v<lo){ issues.push(g+" zu wenig Volumen"); continue; }
+      if(v>hi){ issues.push(g+" über dem Limit"); continue; }
+      if(f<2){ issues.push(g+" nur 1×/Woche"); continue; }
+      optimal++;
+    }
+    return {optimal,total:NAMES.length,issues};
+  }catch(e){ return null; }
+}
 function showImportedPlan(){
   const j=S.importedPlan; if(!j)return;
   const days=(j.days||[]).map(d=>`<div class="mb8"><p class="sm" style="font-weight:700">${d.name||"Tag"}</p>
     <p class="xs t2" style="line-height:1.6">${(d.exercises||[]).join(" · ")||"—"}</p></div>`).join("");
   const adopt=j.verdict==="adopt";
+  const an=importedPlanAnalysis();
+  const cmp=an?`<div class="card" style="margin:0 0 12px;background:linear-gradient(160deg,rgba(74,111,216,.16),rgba(126,139,232,.04)),var(--glass-bg);border-color:rgba(157,180,240,.5)">
+      <p class="ct" style="margin-bottom:10px">${icon("chart",14)} Dein Plan vs. METRICGYM — der Beweis</p>
+      <div class="row" style="gap:10px;align-items:stretch;margin-bottom:10px">
+        <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center">
+          <p class="hero-num" style="font-size:30px;line-height:1">${an.optimal}<span style="font-size:16px">/${an.total}</span></p>
+          <p class="xs t2" style="margin-top:3px">Muskeln optimal<br><b style="color:var(--t1)">dein alter Plan</b></p></div>
+        <div style="flex:1;background:var(--accent);border-radius:14px;padding:12px;text-align:center">
+          <p class="hero-num" style="font-size:30px;line-height:1;color:#fff">${an.total}<span style="font-size:16px">/${an.total}</span></p>
+          <p class="xs" style="margin-top:3px;color:rgba(255,255,255,.85)">Muskeln optimal<br><b style="color:#fff">METRICGYM</b></p></div>
+      </div>
+      ${an.issues.length?`<p class="xs t2" style="line-height:1.55"><b style="color:var(--t1)">Was dein alter Plan liegen lässt:</b> ${an.issues.slice(0,4).join(" · ")}${an.issues.length>4?" …":""}.</p>
+      <p class="xs t2 mt8" style="line-height:1.55">METRICGYM trifft <b style="color:var(--t1)">jeden Muskel im Wachstums-Korridor (MEV–MRV) und 2×/Woche</b> — maximaler Reiz, kein Übertraining.</p>`
+        :`<p class="xs t2" style="line-height:1.55">Dein alter Plan ist solide — METRICGYM hält denselben Standard und sichert ihn über jede Woche automatisch ab (Volumen-Korridor + 2×-Frequenz + Erholung).</p>`}
+      <button class="btn volt mt12" style="min-height:42px" onclick="shareMaxStatus()">${icon("send",14)} Diesen Beweis teilen</button>
+    </div>`:"";
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
     <p class="pw-eyebrow">${icon("sparkle",12)} Plan-Analyse</p>
     <p class="display-m mb4">Dein importierter Plan</p>
     <p class="sm t2 mb12" style="line-height:1.6">${j.summary||""}</p>
     ${days?`<div class="card" style="margin:0 0 12px">${days}</div>`:""}
+    ${cmp}
     <div class="card" style="border-color:${adopt?"rgba(91,196,138,.4)":"rgba(157,180,240,.4)"};margin:0 0 12px">
       <p class="ct">${icon(adopt?"check":"zap",14)} ${adopt?"Dieser Plan passt zu dir":"METRICGYM ist hier im Vorteil"}</p>
       <p class="sm t2" style="line-height:1.6">${j.reasoning||""}</p></div>
