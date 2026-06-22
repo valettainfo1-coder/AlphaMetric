@@ -1102,8 +1102,8 @@ function multiTargets(a,bmr,td){
   }
   else if(goals.includes("strength")){ dir=0.03; dirLabel="leichter Überschuss"; }
   else { dir=0; dirLabel="Erhaltung"; }
-  if(goals.includes("strength")&&goals.includes("endurance")){
-    conflicts.push({type:"interference",msg:"Kraft + Ausdauer: Interferenzeffekt. Kraft vor Ausdauer, mind. 6 h Abstand.",bio:"Concurrent Training dämpft mTOR-Signalwege (Wilson et al., 2012)."});
+  if(goals.includes("endurance")&&(goals.includes("strength")||goals.includes("muscle_gain"))){
+    conflicts.push({type:"interference",msg:"Kraft/Muskeln + Ausdauer: Lege harte Cardio-Einheiten getrennt von Bein-Tagen (am besten anderer Tag oder ≥6 h Abstand) — so wächst der Muskel, und die Ausdauer steigt trotzdem.",bio:"Concurrent Training kann die mTOR-Signalwege dämpfen; zeitliche Trennung minimiert den Interferenzeffekt (Wilson et al., 2012; Schumann 2022)."});
   }
   // Gesundheits-/Cardio-Empfehlung jenseits der angeklickten Ziele
   if(bmi>=30 && !hasFat){ recs.push("Bei deinem BMI senkt regelmäßiges Cardio (2–3×/Woche, lockeres Tempo) Gesundheitsrisiken und beschleunigt den Fettabbau — gelenkschonend per Rad, Crosstrainer oder zügigem Gehen."); }
@@ -1216,6 +1216,12 @@ function volGroupOf(name){
 function primaryGoal(a){
   const g=(a&&a.goals)||[];
   if(g.includes("fat_loss")&&g.includes("muscle_gain")) return "recomp";
+  // Ausdauer & Mobilität steuern Cardio bzw. den Mobility-Block — NICHT das Wiederholungs-
+  // schema des Krafttrainings. Fürs Heben zählt das Kraft-/Hypertrophie-/Fettabbau-Ziel.
+  // (Wer "Ausdauer + Muskelaufbau" wählt, hebt für Muskeln im Hypertrophie-Bereich und
+  //  bekommt die Ausdauer über polarisierte Cardio-Einheiten obendrauf — concurrent training.)
+  const liftPriority=["muscle_gain","strength","recomp","fat_loss","general"];
+  for(const k of liftPriority){ if(g.includes(k)) return k; }
   return g[0]||"muscle_gain";
 }
 // Recomp findet nahe am Erhaltungsbedarf statt (nur leichtes Defizit, −8 %): die Erholung ist
