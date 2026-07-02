@@ -504,12 +504,29 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .fh-orb{width:36px; height:36px; min-width:36px; border-radius:12px; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); color:#fff; box-shadow:0 3px 12px rgba(74,111,216,.4);}
   .fh-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
-  .fh-tile{display:flex; align-items:center; gap:9px; padding:10px 11px; min-height:52px; text-align:left;
-    background:var(--s2); border:1px solid var(--hairline); border-radius:13px; cursor:pointer; color:var(--t1);
-    transition:transform .18s var(--ease-out,ease), border-color .18s; animation:corrRow .4s cubic-bezier(.22,1,.36,1) backwards;}
-  .fh-tile:active{transform:scale(.97);}
-  .fh-tile:hover{border-color:rgba(157,180,240,.35);}
-  .fh-tt{font-size:12.5px; font-weight:650; line-height:1.25;}
+  .fh-head{position:relative; margin:-4px -4px 12px; padding:6px 4px 10px; overflow:hidden; border-radius:16px;}
+  .fh-halo{position:absolute; top:-46px; left:-30px; width:200px; height:130px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(closest-side, rgba(86,200,214,.28), rgba(74,111,216,.16) 55%, transparent);
+    filter:blur(14px); animation:mgAura 4.5s ease-in-out infinite;}
+  .fh-quick{display:flex; gap:8px; margin:14px 0 2px;}
+  .fh-q{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 4px; border-radius:14px;
+    background:var(--s2); border:1px solid var(--hairline); cursor:pointer; color:var(--t2);
+    transition:transform .18s var(--ease-out,ease), border-color .18s; animation:corrRow .45s cubic-bezier(.22,1,.36,1) backwards;}
+  .fh-q:active{transform:scale(.94);}
+  .fh-q .fh-orb{width:40px; height:40px; border-radius:13px;}
+  .fh-row{display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x mandatory; padding:2px 2px 6px; margin:0 -2px;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  .fh-row::-webkit-scrollbar{display:none;}
+  .fh-card{display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:11px 12px; min-height:88px; text-align:left;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:14px; cursor:pointer; color:var(--t1);
+    transition:transform .18s var(--ease-out,ease), border-color .18s; animation:corrRow .45s cubic-bezier(.22,1,.36,1) backwards;}
+  .fh-card.snap{min-width:158px; max-width:170px; scroll-snap-align:start; flex-shrink:0;}
+  .fh-card:active{transform:scale(.97);}
+  .fh-card:hover{border-color:rgba(157,180,240,.35);}
+  .fh-grid .fh-card{width:100%;}
+  .fh-tt{font-size:12.5px; font-weight:700; line-height:1.25;}
+  .fh-sub{font-size:10.5px; color:var(--t3); line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  @media (prefers-reduced-motion:reduce){.fh-halo,.fh-q,.fh-card{animation:none}}
   .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
   @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
@@ -5765,36 +5782,76 @@ function fhSuggestions(){
   for(const x of sug){ if(seen.has(x.i))continue; seen.add(x.i); out.push(x); if(out.length>=3)break; }
   return out;
 }
+/* LIVE-Untertitel: Kacheln zeigen echten ZUSTAND statt toter Beschreibung. */
+function fhLive(f){
+  try{
+    if(f.t==="Heute trainieren"){ const t=todayType();
+      if(t==="rest")return "Heute: Erholungstag — gut so";
+      if(t==="cardio")return "Heute: Cardio · "+cardioProtocol((S.profile||{}).a||{},0).label.split("·")[0].trim();
+      const d=sessionDef(t),pk=parseTypeKey(t);
+      return ((TYPE_META[pk.base]||{}).label||"")+(pk.variant?" "+pk.variant:"")+" · "+d.main.length+" Übungen · ≈"+(d.est||45)+" Min"; }
+    if(f.t==="Wochenplan bearbeiten")return "Block "+(S.blockNum||1)+" · Woche "+S.currentWeek+" von 4"+(S.currentWeek===4?" · Deload":"");
+    if(f.t==="Neuen Trainingsblock generieren")return S.currentWeek===4?"Bereit — Erholungswoche läuft":"Wird in Woche 4 empfohlen · jetzt möglich";
+    if(f.t==="Ernährung heute"){ const l=S.nutritionLog[todayKey()]; const k=Math.round(((l&&l.meals)||[]).reduce((a,m)=>a+(m.k||0),0));
+      const tgt=S.profile&&S.profile.tg?S.profile.tg.train.kcal:0;
+      return k?(tgt?("Noch "+Math.max(0,tgt-k)+" kcal frei · "+((l.meals||[]).length)+" Mahlzeiten"):k+" kcal geloggt"):"Noch nichts geloggt — Magic-Log?"; }
+    if(f.t==="Analytics & Trends"){ const wk=(S.trainingHistory||[]).filter(t=>{const d=new Date(t.date);return (Date.now()-d)/864e5<7&&t.type!=="cardio";}).length;
+      return wk?wk+" Einheit"+(wk>1?"en":"")+" diese Woche · Trends live":"Kraftkurven, Volumen, Konsistenz"; }
+    if(f.t==="Kraft-Orakel"){ const n=Object.keys(S.liftLog||{}).length; return n?n+(n===1?" Übung":" Übungen")+" im Log — Prognose bereit":"Braucht ~2 Wochen Logs"; }
+    if(f.t==="Plan-Editor & Bio-Check"){ const t=todayType(); if(t&&t!=="rest"&&t!=="cardio")return sessionDef(t).main.length+" Übungen heute · Volumen-Check live"; }
+  }catch(e){}
+  return f.d;
+}
+function fhGreet(){
+  const h=new Date().getHours();
+  const g=h<5?"Nachtschicht":h<11?"Guten Morgen":h<14?"Mahlzeit":h<18?"Guten Tag":"Guten Abend";
+  const u=(S.users&&S.users[S.currentUser])||{}; const name=u.username?(", "+u.username.charAt(0).toUpperCase()+u.username.slice(1)):"";
+  let status="Dein Kommando-Zentrum — alles an einem Ort";
+  try{ if(S.profile){ const t=todayType();
+    status="Block "+(S.blockNum||1)+" · Woche "+S.currentWeek+" · heute "+(t==="rest"?"Erholung":t==="cardio"?"Cardio":(((TYPE_META[parseTypeKey(t).base]||{}).label)||"Training")+(parseTypeKey(t).variant?" "+parseTypeKey(t).variant:"")); } }catch(e){}
+  return {g:g+name,status};
+}
 function fhBodyHTML(q){
   q=(q||"").toLowerCase().trim();
-  const tile=(f,i)=>`<button class="fh-tile" onclick="A.fhRun(${i})" style="animation-delay:${(i%8)*35}ms">
-    <span class="acc-ic">${icon(f.ic,15)}</span><span class="fh-tt">${f.t}</span></button>`;
+  const card=(f,i,extraCls,delay)=>`<button class="fh-card ${extraCls||""}" onclick="A.fhRun(${i})" style="animation-delay:${delay||0}ms">
+    <span class="acc-ic">${icon(f.ic,16)}</span><span class="fh-tt">${f.t}</span><span class="fh-sub">${fhLive(f)}</span></button>`;
   if(q){
     const hit=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>(f.t+" "+f.d+" "+f.k).toLowerCase().includes(q));
-    return (hit.length?`<div class="fh-grid">${hit.map(({f,i})=>tile(f,i)).join("")}</div>`:"")
+    return (hit.length?`<p class="label" style="margin:2px 2px 8px">${hit.length} Treffer</p><div class="fh-grid">${hit.map(({f,i},j)=>card(f,i,"",j*35)).join("")}</div>`:"")
       +`<button class="fh-sug" style="margin-top:${hit.length?10:0}px" onclick="A.fhCoach()">
         <span class="fh-orb">${icon("message",16)}</span>
         <span class="acc-t"><span class="acc-h">Coach Metric fragen <span class="badge volt" style="font-size:8px">KI</span></span>
-        <span class="acc-s">„${esc(q.slice(0,60))}" — dein Coach kennt deine Daten</span></span>
+        <span class="acc-s">„${esc(q.slice(0,60))}" — er kennt deine Daten & antwortet direkt</span></span>
         <span class="mi-chev">${icon("chevronR",15)}</span></button>`;
   }
+  // Für dich jetzt (KI-Auswahl)
   const sug=fhSuggestions();
-  const sugHTML=sug.length?`<p class="label" style="margin:2px 2px 8px">${icon("sparkle",11)} Für dich jetzt</p>`
+  const sugHTML=sug.length?`<p class="label" style="margin:2px 2px 8px">${icon("sparkle",11)} Für dich jetzt <span class="badge volt" style="font-size:8px;margin-left:4px">KI</span></p>`
     +sug.map(({i,reason},j)=>{const f=FEATURE_INDEX[i];return `<button class="fh-sug" style="animation-delay:${j*70}ms" onclick="A.fhRun(${i})">
       <span class="fh-orb">${icon(f.ic,16)}</span>
       <span class="acc-t"><span class="acc-h">${f.t}</span><span class="acc-s">${reason}</span></span>
       <span class="mi-chev">${icon("chevronR",15)}</span></button>`;}).join(""):"";
-  const cats=["Alle","Training","Magie","Ernährung","Analyse","Konto"];
-  const chips=`<div class="chips" style="margin:14px 0 10px">${cats.map(c=>`<button class="chip ${fhCat===c?"sel":""}" onclick="A.fhCatSel('${c}')">${c}</button>`).join("")}</div>`;
-  const list=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>fhCat==="Alle"||f.c===fhCat);
-  return sugHTML+chips+`<div class="fh-grid">${list.map(({f,i})=>tile(f,i)).join("")}</div>`;
+  // Schnellzugriff: die 4 Alltags-Aktionen als runde Buttons
+  const QUICK=[["Heute trainieren","dumbbell","Training"],["Magic-Log — sprechen statt tippen","mic","Loggen"],["Analytics & Trends","chart","Analytics"],["__coach","message","Coach"]];
+  const quickHTML=`<div class="fh-quick">${QUICK.map(([t,ic,lbl],j)=>{
+    if(t==="__coach")return `<button class="fh-q" style="animation-delay:${210+j*50}ms" onclick="A.fhCoach()"><span class="fh-orb">${icon(ic,18)}</span><span class="xs">${lbl}</span></button>`;
+    const i=FEATURE_INDEX.findIndex(f=>f.t===t);
+    return `<button class="fh-q" style="animation-delay:${210+j*50}ms" onclick="A.fhRun(${i})"><span class="fh-orb">${icon(ic,18)}</span><span class="xs">${lbl}</span></button>`;}).join("")}</div>`;
+  // Kategorien als horizontale Snap-Reihen (Netflix-Prinzip): kompakt, wischbar, gruppiert
+  const CATS=[["Training","dumbbell"],["Magie","sparkle"],["Ernährung","utensils"],["Analyse","chart"],["Konto","user"]];
+  const rows=CATS.map(([c,ic],r)=>{
+    const list=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>f.c===c);
+    if(!list.length)return "";
+    return `<div class="row" style="margin:16px 2px 8px"><p class="label" style="margin:0">${icon(ic,11)} ${c}</p><span class="xs t3">${list.length}</span></div>
+      <div class="fh-row">${list.map(({f,i},j)=>card(f,i,"snap",280+r*60+j*30)).join("")}</div>`;
+  }).join("");
+  return sugHTML+quickHTML+rows;
 }
 function openFeatureHub(){
   if(!S.seenHub){S.seenHub=true;save();try{renderAppbar()}catch(e){}}
-  fhCat="Alle";
   A.fhClose=()=>{overlay.innerHTML="";};
-  A.fhCatSel=(c)=>{fhCat=c;const l=document.getElementById("fh-list");if(l)l.innerHTML=fhBodyHTML("");};
   A.fhFilter=(v)=>{const l=document.getElementById("fh-list"); if(l)l.innerHTML=fhBodyHTML(v);};
+  A.fhVoice=()=>speech((txt)=>{const inp=document.querySelector(".fh-search"); if(inp){inp.value=txt; A.fhFilter(txt);}},"fh-mic");
   A.fhCoach=()=>{ const inp=document.querySelector(".fh-search"); const q=inp?inp.value.trim():"";
     overlay.innerHTML=""; try{ coachOpen=true; renderFab(); if(q)setTimeout(()=>A.coachAsk(q),80); }catch(e){} };
   A.fhRun=(i)=>{
@@ -5809,12 +5866,21 @@ function openFeatureHub(){
     },f.tab?160:40); }
     else if(f.hint) setTimeout(()=>toast(f.hint),200);
   };
+  const gr=fhGreet();
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.fhClose()">
-    <div class="sheet fade fh-sheet" style="max-height:86vh;display:flex;flex-direction:column">
-      <div class="row mb8"><p class="display-m" style="margin:0">✦ Dein KI-Hub</p>
-        <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen">✕</button></div>
-      <input class="fh-search" type="search" placeholder="Sag, was du brauchst — „Plan ändern", „was kochen?" …" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen">
-      <div id="fh-list" style="overflow-y:auto;flex:1;padding:2px 2px 10px">${fhBodyHTML("")}</div>
+    <div class="sheet fade fh-sheet" style="max-height:88vh;display:flex;flex-direction:column">
+      <div class="fh-head">
+        <div class="fh-halo" aria-hidden="true"></div>
+        <div class="row" style="position:relative">
+          <div><p class="display-m" style="margin:0 0 3px">${gr.g}</p>
+            <p class="xs" style="margin:0;color:var(--hl);display:flex;align-items:center;gap:5px">${icon("activity",11)} ${gr.status}</p></div>
+          <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen">✕</button></div>
+      </div>
+      <div class="row" style="gap:8px;margin-bottom:4px">
+        <input class="fh-search" type="search" placeholder="Sag oder tipp, was du brauchst …" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen" style="margin-bottom:0;flex:1">
+        <button id="fh-mic" class="iconbtn" style="min-width:46px;min-height:46px;border:1px solid var(--hairline);border-radius:13px;background:var(--s2)" onclick="A.fhVoice()" aria-label="Sprechen">${icon("mic",17)}</button>
+      </div>
+      <div id="fh-list" style="overflow-y:auto;flex:1;padding:8px 2px 12px">${fhBodyHTML("")}</div>
     </div></div>`;
 }
 A.featureHub=openFeatureHub;
