@@ -490,6 +490,18 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .acc-b{padding:2px 12px 13px; animation:fade .35s cubic-bezier(.22,1,.36,1) backwards;}
   .acc-i .corr-chip{flex-shrink:0; margin-right:2px;}
   @media (prefers-reduced-motion:reduce){.acc-b{animation:none}.acc-ch{transition:none}}
+  /* ===== Funktions-Palette (✦ im Header) ===== */
+  .fh-search{width:100%; min-height:46px; border-radius:13px; border:1px solid var(--hairline); background:var(--s2);
+    color:var(--t1); font-size:15px; padding:0 14px; margin-bottom:6px; font-family:var(--font-ui);}
+  .fh-search:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+  .fh-item{width:100%; display:flex; align-items:center; gap:10px; padding:10px 10px; min-height:54px; text-align:left;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:13px; margin-bottom:8px; cursor:pointer;
+    color:var(--t1); transition:transform .18s var(--ease-out,ease), border-color .18s; animation:corrRow .4s cubic-bezier(.22,1,.36,1) backwards;}
+  .fh-item:active{transform:scale(.985);}
+  .fh-item:hover{border-color:rgba(157,180,240,.35);}
+  .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
+    background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
+  @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
   .stepper input.stepin::-webkit-outer-spin-button,.stepper input.stepin::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   .scale{display:flex; gap:6px; flex-wrap:wrap;}
   .scale button{min-width:44px; height:44px; border-radius:999px; background:var(--surface); border:1px solid var(--hairline);
@@ -3978,6 +3990,7 @@ function renderAppbar(){
       ${S.devMode?'<span class="badge mute" style="margin-left:4px">Demo</span>':""}
     </button>
     <div style="flex:1"></div>
+    <button class="icon-btn" onclick="A.featureHub()" aria-label="Alle Funktionen — suchen & entdecken" style="margin-right:8px;position:relative">${icon("sparkle",17)}${S.seenHub?"":'<span class="fh-dot"></span>'}</button>
     <button class="icon-btn" onclick="A.notif()" aria-label="Benachrichtigungen" style="margin-right:8px">${icon("bell",17)}</button>
     <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">${icon("menu",17)}</button>
   </div>
@@ -5685,6 +5698,81 @@ function renderHome(){
 let voicePreview=null;
 let trnSelDay=null, trnSelRot=null; // inline ausgewählter Trainingstag / Rotations-Index
 let schEditDay=null; // welcher Tag im Wochenplan-Editor gerade aufgeklappt ist
+/* ===== FUNKTIONS-PALETTE: Jede Funktion der App auffindbar — suchen, tippen, hinspringen =====
+   Loest das Versteckt-Problem an EINER Stelle: ✦ im Header oeffnet eine durchsuchbare Liste
+   aller Funktionen. Direkte Aktionen springen hin; Gesten-Funktionen (Long-Press etc.)
+   bekommen eine 5-Sekunden-Erklaerung. */
+const FEATURE_INDEX=[
+  {c:"Training",ic:"dumbbell",t:"Heute trainieren",d:"Deine heutige Einheit im Player starten",k:"workout session einheit starten heute",need:1,tab:"train"},
+  {c:"Training",ic:"edit",t:"Plan-Editor & Bio-Check",d:"Übungen/Sätze ändern — mit Live-Volumen-Check",k:"editor anpassen saetze uebungen bio check volumen",need:1,fn:"openPlanEditor"},
+  {c:"Training",ic:"calendar",t:"Wochenplan bearbeiten",d:"Tage verschieben, Trainingswoche (1–4) wählen",k:"woche tage verschieben kalender deload",need:1,fn:"openScheduleSheet"},
+  {c:"Training",ic:"camera",t:"Eigenen Plan importieren",d:"Foto vom alten Plan — Coach Metric liest & vergleicht",k:"import foto upload alter plan uebernehmen",need:1,tab:"train",fn:"planImportPick"},
+  {c:"Training",ic:"undo",t:"Übung tauschen",d:"So ersetzt du jede Übung durch eine Alternative",k:"tauschen wechseln alternative swap geraet besetzt",
+    modal:`<p class="ct">Übung tauschen</p><p class="sm t2 mt8" style="line-height:1.6"><b style="color:var(--t1)">Halte eine Übung gedrückt</b> (im Training oder in der Tagesansicht) — es öffnet sich das Tausch-Menü mit passenden Alternativen, sortiert nach Wirkung. Kurzes Tippen zeigt die Details mit Muskel-Karte.</p>`},
+  {c:"Training",ic:"zap",t:"Alle Sätze auf einmal loggen",d:"Übung fertig? Ein Eintrag statt Satz für Satz",k:"schnell eintrag bulk saetze gewichte gleichzeitig loggen",
+    modal:`<p class="ct">⚡ Schnell-Eintrag</p><p class="sm t2 mt8" style="line-height:1.6">Im Player findest du über der Gewichtseingabe den Schalter <b style="color:var(--t1)">„Satz für Satz / Alle auf einmal"</b>. Im Schnell-Modus trägst du alle Sätze in einem Raster ein — jede Zeile darf ihr eigenes Gewicht haben — und loggst mit EINEM Tipp die komplette Übung.</p>`},
+  {c:"Training",ic:"sparkle",t:"Neuen Trainingsblock generieren",d:"Block 2 lernt aus deinen Logs: tauscht Stagnierendes",k:"block mesozyklus neu progression stagnation",need:1,
+    modal:`<p class="ct">✦ Neuer Trainingsblock</p><p class="sm t2 mt8" style="line-height:1.6">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p><button class="btn volt mt12" onclick="overlay.innerHTML='';A.newBlock()">Jetzt Block generieren</button><p class="xs t2 mt8">Tipp: erscheint auch automatisch in Woche 4 (Erholungswoche) im Trainings-Tab.</p>`},
+  {c:"Training",ic:"brain",t:"Warum dieser Plan? (Bio-Beweis)",d:"MEV-MRV-Korridor, DUP, Frequenz — belegt statt behauptet",k:"warum begruendung wissenschaft uhrwerk beweis studien",need:1,fn:"__explainToday"},
+  {c:"Training",ic:"flame",t:"Reiz-Status (Volumen-Korridor)",d:"Wie nah dein Wochenvolumen am Maximum liegt",k:"mev mrv reiz status maximum volumen korridor",need:1,fn:"openMaxStatus"},
+  {c:"Training",ic:"moon",t:"Erholungswoche einlegen",d:"Sofort auf Deload schalten — bewusst leichter",k:"deload erholung leicht woche muede",need:1,tab:"train",fn:"earlyDeload"},
+  {c:"Training",ic:"activity",t:"Muskelkater-Modus",d:"Schonende Alternativen für einen Tag",k:"muskelkater soreness schonen alternative",
+    modal:`<p class="ct">Muskelkater-Modus</p><p class="sm t2 mt8" style="line-height:1.6">Öffne eine Trainingseinheit und tippe oben auf <b style="color:var(--t1)">„Muskelkater?"</b> — die Session tauscht belastende Übungen gegen schonende Alternativen, nur für diesen Tag.</p>`},
+  {c:"Magie",ic:"zap",t:"Kraft-Orakel",d:"Deine Kraft-Prognose aus echten Logs",k:"orakel prognose zukunft kraft e1rm vorhersage",need:1,fn:"strengthOracle",empty:"Das Orakel braucht ~2 Wochen Trainings-Logs — logg ein paar Sessions, dann sieht es deine Zukunft"},
+  {c:"Magie",ic:"user",t:"Stoffwechsel-Zwilling",d:"Dein Körper als Simulation — was wäre wenn",k:"zwilling stoffwechsel simulation kalorien was waere wenn",need:1,fn:"metabolicTwin"},
+  {c:"Magie",ic:"utensils",t:"Rezept-Alchemist",d:"Aus deinen Makro-Lücken wird ein Rezept",k:"rezept alchemist kochen makros luecke abendessen",need:1,fn:"recipeAlchemist"},
+  {c:"Magie",ic:"moon",t:"Rest-Snack-Retter",d:"Später Hunger? Der Snack, der noch ins Budget passt",k:"snack abend hunger spaet budget retter",need:1,fn:"restSnack"},
+  {c:"Ernährung",ic:"mic",t:"Magic-Log — sprechen statt tippen",d:"Sag, was du gegessen hast — die KI rechnet",k:"sprechen voice diktieren essen loggen mikrofon",tab:"nutrition",hint:"Unten im Ernährungs-Tab: Mikro halten & sprechen"},
+  {c:"Ernährung",ic:"utensils",t:"Ernährung heute",d:"Kalorien, Makros, Mahlzeiten",k:"essen kalorien makros protein log",tab:"nutrition"},
+  {c:"Analyse",ic:"chart",t:"Analytics & Trends",d:"Kraftkurven, Volumen, Konsistenz-Kalender",k:"statistik trends charts fortschritt kurven heatmap",tab:"analytics"},
+  {c:"Analyse",ic:"camera",t:"Fortschritts-Fotos",d:"Visueller Verlauf, privat gespeichert",k:"fotos bilder verlauf transformation",tab:"analytics",hint:"Im Analytics-Tab: Bereich Fortschritts-Fotos"},
+  {c:"Konto",ic:"send",t:"Freunde werben — echtes Guthaben",d:"Dein Link, dein Bonus — auszahlbar",k:"referral einladen freunde geld bonus cash",tab:"profile",fn:"invite"},
+  {c:"Konto",ic:"lock",t:"Daten exportieren (DSGVO)",d:"Alle deine Daten als JSON-Datei",k:"export dsgvo daten download sichern",tab:"profile",fn:"exportData"},
+  {c:"Konto",ic:"edit",t:"Ziele & Profil ändern",d:"Gewicht, Ziele, Trainingstage anpassen",k:"ziele profil aendern gewicht tage einstellungen",tab:"profile",fn:"editProfile"},
+  {c:"Konto",ic:"grid",t:"Kompletter Funktions-Katalog",d:"Alles mit Erklärung — zum Stöbern",k:"katalog alle funktionen entdecken liste",tab:"features"},
+];
+function __explainToday(){ try{ const t=todayType(); explainSession(t==="rest"||t==="cardio"?(schedule().find(x=>x!=="rest"&&x!=="cardio")||"push"):t); }catch(e){} }
+function fhListHTML(q){
+  q=(q||"").toLowerCase().trim();
+  const hit=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>!q||(f.t+" "+f.d+" "+f.k).toLowerCase().includes(q));
+  if(!hit.length)return `<p class="sm t2" style="text-align:center;padding:20px 0">Nichts gefunden — anders formulieren?</p>`;
+  let out="",cat="";
+  for(const {f,i} of hit){
+    if(f.c!==cat){cat=f.c;out+=`<p class="label" style="margin:14px 2px 8px">${cat}</p>`;}
+    out+=`<button class="fh-item" onclick="A.fhRun(${i})">
+      <span class="acc-ic">${icon(f.ic,15)}</span>
+      <span class="acc-t"><span class="acc-h">${f.t}</span><span class="acc-s">${f.d}</span></span>
+      <span class="mi-chev">${icon("chevronR",15)}</span></button>`;
+  }
+  return out;
+}
+function openFeatureHub(){
+  if(!S.seenHub){S.seenHub=true;save();try{renderAppbar()}catch(e){}}
+  A.fhClose=()=>{overlay.innerHTML="";};
+  A.fhFilter=(v)=>{const l=document.getElementById("fh-list"); if(l)l.innerHTML=fhListHTML(v);};
+  A.fhRun=(i)=>{
+    const f=FEATURE_INDEX[i]; if(!f)return;
+    if(f.need&&!S.profile){ toast("Erst das kurze Setup abschließen — dann ist das freigeschaltet"); return; }
+    overlay.innerHTML="";
+    if(f.tab){ S.tab=f.tab; save(); render(); }
+    if(f.modal){ setTimeout(()=>modal(f.modal),80); return; }
+    if(f.fn){ setTimeout(()=>{ try{ const g=(typeof window[f.fn]==="function")?window[f.fn]:A[f.fn];
+      if(typeof g==="function")g(); else if(f.hint)toast(f.hint); }catch(e){ if(f.hint)toast(f.hint); }
+      // Leer-Zustand abfangen: Funktion hat (noch) nichts zu zeigen -> freundlicher Hinweis statt toter Klick
+      if(f.empty) setTimeout(()=>{ if(!overlay.innerHTML) toast(f.empty); },220);
+    },f.tab?160:40); }
+    else if(f.hint) setTimeout(()=>toast(f.hint),200);
+  };
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.fhClose()">
+    <div class="sheet fade" style="max-height:82vh;display:flex;flex-direction:column">
+      <div class="row mb8"><p class="display-m" style="margin:0">✦ Alle Funktionen</p>
+        <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen">✕</button></div>
+      <input class="fh-search" type="search" placeholder="Suchen … (z. B. „tauschen", „Rezept", „Export")" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen">
+      <div id="fh-list" style="overflow-y:auto;flex:1;padding-bottom:8px">${fhListHTML("")}</div>
+    </div></div>`;
+  const inp=document.querySelector(".fh-search"); if(inp&&matchMedia("(min-width:700px)").matches)inp.focus();
+}
+A.featureHub=openFeatureHub;
 function openScheduleSheet(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; schEditDay=null; save(); openScheduleSheet(); };
