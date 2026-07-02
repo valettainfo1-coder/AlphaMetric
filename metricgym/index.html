@@ -2326,6 +2326,9 @@ function absBlockFor(a){
   const out=[];
   out.push(has("Kabel-Crunch")?["Kabel-Crunch",3,"10–15",60]:["Plank",2,"30–60s",60]);     // oberer/gesamter Rectus, beladen
   out.push(has("Hängendes Beinheben")?["Hängendes Beinheben",3,"10–15",60]:["Liegendes Beinheben",3,"12–20",45]); // unterer Rectus
+  // Kurze Sessions (<=45 Min): 1 Core-Uebung mit 2 Saetzen statt 2x3 — die gesparten ~6 Min
+  // gehen in die Hauptmuskeln (Core-MEV ist mit 4 Saetzen/Woche weiter gedeckt).
+  if((a&&a.sessionTime||60)<=45){ const o=out[0].slice(); o[1]=2; return [o]; }
   return out;
 }
 const TYPE_META={
@@ -2594,6 +2597,9 @@ function generateTrainingPlan(profile,variant){
   const PP=(()=>{ const base=progParams(a); if(!vB||(goals[0]==="endurance")) return base;
     return {...base, cR:"10–12", sR:"12–15", iR:"15–20", lR:"15–20",
       cRest:Math.max(75,base.cRest-60), sRest:Math.max(60,base.sRest-45), iRest:Math.max(45,base.iRest-15)}; })();
+  // RIR-Override: nicht nur bei Dekonditionierung — auch Fettabbau (eingeschränkte Erholung im
+  // Defizit, Helms 2014) und Ausdauer (Begleitreiz, kein Maximalreiz) trainieren mit RIR 2–3.
+  PP.rirOv=(PP.decon||primaryGoal(a)==="fat_loss"||primaryGoal(a)==="endurance")?PP.rir:undefined;
   const count=sessionCount(a);     // individuelle Übungszahl statt fixem Wert
   // fits = Equipment-Filter + Skill-Gate (hochtechnische Progressionen erst ab passender Erfahrung)
   const fits=(n)=>{const d=EXDB[n]; return d&&allowed.includes(d.eq)&&(!d.bench||hasBench)&&skillOk(n,exp);};
@@ -2630,9 +2636,15 @@ function generateTrainingPlan(profile,variant){
       const bonus=(FOCUS_EX[fm]||[]).find(x=>fits(x)&&!chosen.includes(x));
       if(bonus){chosen.splice(Math.min(2+added,chosen.length),0,bonus); added++; if(chosen.length>cnt+2)chosen.length=cnt+2; if(added>=2)break;}
     }
+    // VERLETZUNGS-REGEL (Audit-Fund P9): Der Tag startet NIE mit einer als riskant markierten
+    // Uebung — die erste sichere Grunduebung uebernimmt Position 1 (frisch = beste Technik).
+    if(injuries.length&&chosen.length>1&&injRisky(chosen[0])){
+      const j=chosen.findIndex(n=>!injRisky(n)&&(EXDB[n]||{}).compound);
+      if(j>0){ const sfe=chosen[j]; chosen.splice(j,1); chosen.unshift(sfe); }
+    }
     return chosen.map((n,i)=>{
       const d=EXDB[n]||{};
-      const rir=PP.decon?PP.rir:undefined;
+      const rir=PP.rirOv;
       if(d.compound&&i<2)return mk(n,scheme.c,PP.cR,PP.cRest,rir);
       if(d.compound)return mk(n,scheme.a,PP.sR,PP.sRest,rir);
       return mk(n,scheme.i,d.lengthened?PP.lR:PP.iR,PP.iRest,rir);
@@ -2751,8 +2763,15 @@ function capWeeklyVolume(PLAN,a,ctx){
         else focusSet.add(FOCUS_PARENT[fm]||fm);
       }
       const freqB={}; for(const b of sch) freqB[b]=(freqB[b]||0)+1;
+      // Im echten Defizit (Fettabbau) gilt: Muskel-ERHALT braucht nur ~1/3 des Wachstums-MEV
+      // (Israetel MV) — Arme sind ueber das Druck-/Zugvolumen gedeckt. Die Null-Volumen-
+      // Rettung (Zeitbudget-Bypass) laeuft deshalb nur bei Aufbau-orientierten Zielen.
+      const pgGoal=primaryGoal(a);
       const estB=(base)=>{ const d=PLAN[base]; const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0); return Math.round((8+sm+5)/5)*5; };
       const budgetM=Math.max(30,a.sessionTime||60);
+      // Zeit-Toleranz proportional: 20 % des Budgets, max. 12 Min (fixe +12 waren bei
+      // 30-Min-Budgets 40 % Ueberschuss — Audit-Fund P10).
+      const slackM=Math.min(12,Math.round(budgetM*0.2));
       // Fokus-Muskeln zuerst, dann typisch fehlende Ästhetik-Muskeln (Seitschulter, Arme)
       const order=["Schultern","Bizeps","Trizeps","Brust","Rücken","Core","Beine"]
         .sort((x,y)=>(focusSet.has(y)?1:0)-(focusSet.has(x)?1:0));
@@ -2761,18 +2780,30 @@ function capWeeklyVolume(PLAN,a,ctx){
         const target=focusSet.has(g)?Math.max(mevTarget(g),BANDS[g][0]):mevTarget(g); // Fokus → volles MEV
         let guard=0;
         while((weekly()[g]||0)<target && guard++<10){
+          const zeroV=((weekly()[g]||0)===0)&&pgGoal!=="fat_loss"; // Muskel OHNE Direktvolumen -> Prioritaet (ausser Defizit)
           let best=null,bestEst=1e9;
           for(const base of bases){
             if(!spec.days.includes(base))continue;
             const d=PLAN[base]; if(d.main.length>=7)continue;
             const present=new Set(d.main.map(e=>e.n));
             const cand=spec.ex.find(x=>fits(x)&&!present.has(x)&&okEq(x)); if(!cand)continue;
-            const f=freqB[base]||1; if((weekly()[g]||0)+3*f>BANDS[g][1])continue;       // nie über MRV
-            const e0=estB(base); if(e0>budgetM+12 && !focusSet.has(g))continue;          // weiche Zeitgrenze
+            const f=freqB[base]||1; if((weekly()[g]||0)+3*f>BANDS[g][1])continue;       // nie ueber MRV
+            // Zeitgrenze inkl. Kosten der NEUEN Uebung (~5 Min) — vorher konnte die
+            // Injektion das Budget um bis zu 17 Min sprengen (Audit-Fund P10).
+            const e0=estB(base); if(e0+5>budgetM+slackM && !focusSet.has(g) && !zeroV)continue;
             if(e0<bestEst){ bestEst=e0; best={base,cand}; }
           }
           if(!best)break;
-          const d=PLAN[best.base], dd=EXDB[best.cand]||{}, rir=PP.decon?PP.rir:undefined;
+          const d=PLAN[best.base], dd=EXDB[best.cand]||{}, rir=PP.rirOv;
+          // ZEIT-NEUTRALE UMVERTEILUNG (Audit-Fund P6): Hat der Muskel NULL Direktvolumen und
+          // ist der Tag am Zeitlimit, gibt die Gruppe mit dem groessten MEV-UEBERSCHUSS einen
+          // Satz ab — Volumen wandert vom Ueberfluss zur Luecke statt die Session zu strecken.
+          if(zeroV && estB(best.base)+5>budgetM+slackM){
+            const w=weekly(); let don=null,ds=-1;
+            for(const e of d.main){ const gg=grpOf(e.n); if(!gg||gg===g||e.sets<=2||!BANDS[gg])continue;
+              const sur=(w[gg]||0)-BANDS[gg][0]; if(sur>ds){ds=sur;don=e;} }
+            if(don&&ds>=3) don.sets--;
+          }
           d.main.push(mk(best.cand,2,(dd.lengthened?PP.lR:PP.iR),PP.iRest,rir));
         }
         // Fallback: kann keine WEITERE eigene Übung ergänzt werden (Equipment-Limit, z. B. nur
@@ -2810,7 +2841,7 @@ function capWeeklyVolume(PLAN,a,ctx){
           for(const slot of (SLOTS[base]||[])){
             const cand=slot.find(x=>fits(x)&&!present.has(x)&&okEq(x)); if(!cand)continue;
             const g=grpOf(cand); if(!g)continue;
-            const dd=EXDB[cand]||{}, rir=PP.decon?PP.rir:undefined;
+            const dd=EXDB[cand]||{}, rir=PP.rirOv;
             const addSets = dd.compound ? scheme.a : 2;
             // Diese Übung kommt f×/Woche vor; ihre Wochenspitze ist (Sätze + Compound-Bonus)·f.
             const addPeak = (addSets + (dd.compound?2:1)) * f;
