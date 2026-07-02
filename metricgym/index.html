@@ -413,6 +413,65 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .stepper input.stepin:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
   .btn.cta-big{min-height:60px; font-size:18px; display:flex; flex-direction:column; gap:2px; line-height:1.1;}
   .btn.cta-big .cta-sub{font-size:11.5px; font-weight:500; opacity:.72; letter-spacing:.01em;}
+  /* Schnell-Eintrag (Bulk-Log): Modus-Umschalter + Satz-Grid */
+  .logmode{display:flex; background:var(--s2); border:1px solid var(--hairline); border-radius:12px; padding:3px; gap:3px;}
+  .logmode button{flex:1; min-height:38px; border:none; border-radius:9px; background:transparent; color:var(--t2);
+    font-size:13px; font-weight:600; cursor:pointer; transition:background .25s var(--ease-out,ease), color .25s, transform .25s;}
+  .logmode button.on{background:var(--surface); color:var(--t1); box-shadow:0 1px 6px rgba(0,0,0,.25), 0 0 0 1px var(--hairline);}
+  .logmode button:active{transform:scale(.97);}
+  .bulkgrid{display:grid; grid-template-columns:34px 1fr 22px 1fr; gap:8px 6px; align-items:center;}
+  .bulkgrid .bulkin{width:100%; min-width:0; height:46px; font-size:18px;}
+  .bulkgrid>span{display:flex; align-items:center; justify-content:center;}
+  .bulkgrid>span.xs{justify-content:flex-start;}
+  /* ===== BIO-BEWEIS: MEV–MRV-Korridor, DUP-Welle, Frequenz-Leiste ===== */
+  .bioproof{background:var(--s2); border:1px solid var(--hairline); border-radius:14px; padding:14px; margin:0 0 16px;}
+  .corr{margin:0 0 14px; animation:corrRow .5s cubic-bezier(.22,1,.36,1) backwards;}
+  @keyframes corrRow{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  .corr-track{position:relative; height:10px; background:var(--s3); border-radius:999px;}
+  .corr-opt{position:absolute; top:0; bottom:0; border-radius:0 999px 999px 0; background:rgba(157,180,240,.10);}
+  .corr-fill{position:relative; height:100%; border-radius:999px; transform-origin:left center;
+    animation:corrFill .9s cubic-bezier(.22,1,.36,1) backwards;}
+  @keyframes corrFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .corr-fill.low{background:linear-gradient(90deg,#7FA0C8,#9DB4F0);}
+  .corr-fill.ok{background:linear-gradient(90deg,#9DB4F0,#4A6FD8);}
+  .corr-fill.max{background:linear-gradient(90deg,#4A6FD8,#56C8D6); box-shadow:0 0 12px rgba(86,200,214,.45);}
+  .corr-tick{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--t3); border-radius:2px; opacity:.8;}
+  .corr-lbls{position:relative; display:flex; justify-content:space-between; margin-top:4px; min-height:14px;}
+  .corr-lbls .corr-mev{position:absolute; transform:translateX(-50%); color:var(--hl);}
+  .corr-chip{font-size:10px; font-weight:700; letter-spacing:.02em; padding:2px 7px; border-radius:999px; white-space:nowrap;}
+  .corr-chip.ok{background:rgba(157,180,240,.16); color:var(--hl);}
+  .corr-chip.max{background:rgba(86,200,214,.16); color:#56C8D6;}
+  .corr-chip.low{background:var(--s3); color:var(--t2);}
+  .dupviz{display:flex; align-items:stretch; gap:10px; margin-top:14px;}
+  .dupcard{flex:1; background:var(--surface); border:1px solid var(--hairline); border-radius:12px; padding:10px;
+    display:flex; flex-direction:column; align-items:center; gap:5px;}
+  .dupcard.b{border-color:rgba(86,200,214,.35);}
+  .dupbars{display:flex; align-items:flex-end; gap:4px; height:38px;}
+  .dupbars i{display:block; width:7px; border-radius:3px; background:linear-gradient(180deg,#9DB4F0,#4A6FD8);
+    transform-origin:bottom; animation:barGrowY .7s cubic-bezier(.22,1,.36,1) backwards;}
+  .dupcard.b .dupbars i{background:linear-gradient(180deg,#56C8D6,#3E97A8);}
+  .dupbars i:nth-child(1){animation-delay:.10s}.dupbars i:nth-child(2){animation-delay:.18s}.dupbars i:nth-child(3){animation-delay:.26s}.dupbars i:nth-child(4){animation-delay:.34s}.dupbars i:nth-child(5){animation-delay:.42s}
+  .dup-arrow{align-self:center; color:var(--t3); font-size:16px;}
+  .corr-week{display:flex; gap:5px;}
+  .corr-week span{flex:1; text-align:center; font-size:10.5px; font-weight:700; padding:7px 0; border-radius:9px;
+    background:var(--s3); color:var(--t3); transition:all .3s;}
+  .corr-week span.on{background:linear-gradient(135deg,#4A6FD8,#56C8D6); color:#fff; box-shadow:0 2px 10px rgba(74,111,216,.35);
+    animation:weekPop .55s cubic-bezier(.34,1.56,.64,1) backwards;}
+  @keyframes weekPop{from{transform:scale(.7); opacity:0}to{transform:scale(1); opacity:1}}
+  @media (prefers-reduced-motion:reduce){.corr,.corr-fill,.dupbars i,.corr-week span.on{animation:none}}
+  /* ===== IMMERSION: gestaffelte Karten-Entrances + weiches Detail-Aufklappen ===== */
+  #root>.card,#root>details.card{animation:cardRise .5s cubic-bezier(.22,1,.36,1) backwards;}
+  #root>.card:nth-of-type(1),#root>details.card:nth-of-type(1){animation-delay:.02s}
+  #root>.card:nth-of-type(2),#root>details.card:nth-of-type(2){animation-delay:.07s}
+  #root>.card:nth-of-type(3),#root>details.card:nth-of-type(3){animation-delay:.12s}
+  #root>.card:nth-of-type(4),#root>details.card:nth-of-type(4){animation-delay:.17s}
+  #root>.card:nth-of-type(5),#root>details.card:nth-of-type(5){animation-delay:.22s}
+  #root>.card:nth-of-type(6),#root>details.card:nth-of-type(6){animation-delay:.27s}
+  @keyframes cardRise{from{opacity:0; transform:translateY(10px) scale(.985)}to{opacity:1; transform:none}}
+  details.card>*:not(summary){animation:fade .4s cubic-bezier(.22,1,.36,1) backwards;}
+  details.card summary{transition:color .25s;}
+  details.card[open] summary{color:var(--hl);}
+  @media (prefers-reduced-motion:reduce){#root>.card,#root>details.card,details.card>*:not(summary){animation:none}}
   .stepper input.stepin::-webkit-outer-spin-button,.stepper input.stepin::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   .scale{display:flex; gap:6px; flex-wrap:wrap;}
   .scale button{min-width:44px; height:44px; border-radius:999px; background:var(--surface); border:1px solid var(--hairline);
@@ -6258,12 +6317,8 @@ function explainSession(typeKey){
     const pct=Math.min(100,Math.round(100*tot/band[1]));
     const state=tot>=band[1]-1?"am Maximum":tot>=band[0]?"im optimalen Bereich":"im Aufbau";
     return {g,tot,mev:band[0],mrv:band[1],pct,state,fr:freq[base]||1}; });
-  const factHTML=rows.map(r=>`<div style="margin:8px 0">
-      <div class="row" style="margin-bottom:4px"><span class="sm" style="font-weight:600">${NICE[r.g]||r.g}</span>
-        <span class="metric xs t2">${r.tot} / ${r.mrv} Sätze · Woche</span></div>
-      <div class="fxbar" style="height:7px;background:var(--s2);border-radius:999px;overflow:hidden">
-        <div style="height:100%;width:${r.pct}%;background:${r.state==="am Maximum"?"var(--hl)":"linear-gradient(90deg,#9DB4F0,#4A6FD8)"};border-radius:999px"></div></div>
-      <p class="xs t2" style="margin-top:3px">${r.state} (MEV ${r.mev}–MRV ${r.mrv}) · ${r.fr}× pro Woche trainiert</p></div>`).join("");
+  const factHTML=corridorHTML(rows.map(r=>({g:NICE[r.g]||r.g,tot:r.tot,mev:r.mev,mrv:r.mrv})))
+    +`<p class="xs t2" style="margin-top:4px">Diese Muskeln werden ${rows[0]?rows[0].fr:1}× pro Woche trainiert · Korridor = MEV bis MRV (Israetel 2017)</p>`;
   const maxed=rows.filter(r=>r.state==="am Maximum").map(r=>NICE[r.g]||r.g);
   const det=`Diese Einheit trainiert ${todayGroups.map(g=>NICE[g]||g).join(", ")}. `+
     (maxed.length?`${maxed.join(" & ")} ${maxed.length>1?"haben":"hat"} über deine Woche bereits das maximal erholbare Volumen (MRV) erreicht — jeder zusätzliche Satz hier wäre Übertraining und würde deinen Fortschritt bremsen, nicht beschleunigen. Genau deshalb ist die Einheit bewusst schlanker: Du hast das Optimum bereits geholt.`
@@ -6716,6 +6771,7 @@ function renderTrain(){
 // PLAYER
 // =====================================================================
 let pw=null,pr=null,prpe=8;
+let bulkMode=false; // Schnell-Eintrag: alle Sätze einer Übung in EINEM Zug (bleibt über Übungen hinweg an)
 let cardioMin=null; // Dauer der aktuellen Cardio-Einheit (Minuten) — Cardio ist NICHT satz-/gewichtsbasiert
 let pRestTotal=0; // Pausenlänge der aktuellen Übung (für den In-Place-Timer)
 // In-Place-Pausentimer: aktualisiert NUR das Timer-Element (kein Voll-Neuaufbau → kein Flackern).
@@ -6735,6 +6791,57 @@ const RPE_DESC={7:"2–3 Reps Reserve",8:"1–2 Reps Reserve",9:"1 Rep Reserve",
 // ===== UHRWERK-BEGRÜNDUNG: warum dieser Plan biologisch/biochemisch optimal ist =====
 // Jedes "Zahnrad" = ein belegtes Prinzip, das im konkreten Plan-Tag sichtbar umgesetzt ist.
 // Nutzt die ECHTEN Tageszahlen (Übungen, Reps, Wochenvolumen) → keine Floskel, sondern Beweis.
+/* ===== BIO-BEWEIS-VISUALISIERUNG: zeigt, WARUM der Plan maximal effizient ist =====
+   1) MEV–MRV-Korridor je Muskel (Israetel 2017): animierter Füllstand = dein Wochenvolumen,
+      Marker = Mindestreiz (MEV), Ende = maximal erholbares Volumen (MRV).
+   2) DUP-Welle (Zourdos 2016): A schwer / B Volumen, wenn der Tag sich wiederholt.
+   3) Frequenz-Leiste (Schoenfeld 2016: 2×/Woche schlägt 1×). */
+function corridorHTML(rows){
+  return rows.map((r,i)=>{ const capd=r.tot>=r.mrv-1, ok=r.tot>=r.mev;
+    const pct=Math.max(4,Math.min(100,Math.round(100*r.tot/r.mrv)));
+    const mevPct=Math.round(100*r.mev/r.mrv);
+    const chip=capd?`<span class="corr-chip max">Maximum ausgereizt</span>`:ok?`<span class="corr-chip ok">optimal</span>`:`<span class="corr-chip low">im Aufbau</span>`;
+    return `<div class="corr" style="animation-delay:${i*70}ms">
+      <div class="row" style="margin-bottom:5px"><span class="sm" style="font-weight:650">${r.g}</span>
+        <span style="display:flex;align-items:center;gap:6px">${chip}<span class="metric xs t2">${r.tot}/${r.mrv} Sätze</span></span></div>
+      <div class="corr-track">
+        <div class="corr-opt" style="left:${mevPct}%;width:${100-mevPct}%"></div>
+        <div class="corr-fill ${capd?"max":ok?"ok":"low"}" style="width:${pct}%;animation-delay:${120+i*70}ms"></div>
+        <span class="corr-tick" style="left:${mevPct}%"></span>
+      </div>
+      <div class="corr-lbls"><span class="xs t3">0</span><span class="xs t3 corr-mev" style="left:${mevPct}%">MEV ${r.mev}</span><span class="xs t3">MRV ${r.mrv}</span></div>
+    </div>`;}).join("");
+}
+function bioProofHTML(typeKey){
+  try{
+    const a=(S.profile&&S.profile.a)||{}; const base=parseTypeKey(typeKey).base;
+    const d=sessionDef(typeKey); if(!(d.main||[]).length) return "";
+    const bands=deficitScaledBands(a);
+    const sch=schedule();
+    const weekly={},freq={};
+    for(const t of sch){ if(t==="rest"||t==="cardio")continue; const b=parseTypeKey(t).base; freq[b]=(freq[b]||0)+1;
+      const dd=sessionDef(t);
+      for(const e of [...dd.main,...(dd.abs||[])]){ const g=volGroupOf(e.n); if(g)weekly[g]=(weekly[g]||0)+weekSets(e.orig||e.n,e.sets); } }
+    const groups=[...new Set([...d.main,...(d.abs||[])].map(e=>volGroupOf(e.n)).filter(g=>g&&bands[g]))];
+    if(!groups.length) return "";
+    const rows=groups.map(g=>({g,tot:Math.round(weekly[g]||0),mev:bands[g][0],mrv:bands[g][1]}));
+    const fr=freq[base]||1, repeats=fr>1;
+    const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];
+    const fullSch=(sch&&sch.length===7)?sch:null;
+    const freqStrip=fullSch?`<div class="corr-week">${fullSch.map((t,i)=>{const on=parseTypeKey(t).base===base;return `<span class="${on?"on":""}">${WD[i]}</span>`;}).join("")}</div>`:"";
+    return `<div class="bioproof">
+      <p class="ct" style="margin:0 0 10px">${icon("activity",13)} Dein Volumen im Wissenschafts-Korridor</p>
+      ${corridorHTML(rows)}
+      <p class="xs t2" style="margin:2px 0 0;line-height:1.5">Unter MEV = zu wenig Reiz zum Wachsen. Über MRV = mehr Ermüdung als Anpassung (Übertraining). Dein Plan hält jede Gruppe exakt im produktiven Fenster — Israetel 2017.</p>
+      ${repeats?`<div class="dupviz">
+        <div class="dupcard"><span class="xs t3">Tag A</span><div class="dupbars">${[34,26,30].map(h=>`<i style="height:${h}px"></i>`).join("")}</div><span class="xs" style="font-weight:650">schwer</span></div>
+        <div class="dup-arrow">⇄</div>
+        <div class="dupcard b"><span class="xs t3">Tag B</span><div class="dupbars">${[18,14,20,16,19].map(h=>`<i style="height:${h}px"></i>`).join("")}</div><span class="xs" style="font-weight:650">Volumen</span></div>
+      </div><p class="xs t2" style="margin:6px 0 0;line-height:1.5">Dieser Tag kommt ${fr}× vor — als zwei VERSCHIEDENE Reize (schwer / Volumen, andere Übungen). Das baut messbar mehr Muskel als zweimal exakt dasselbe — Zourdos 2016 (DUP).</p>`:""}
+      ${freqStrip?`<p class="ct" style="margin:14px 0 6px">${icon("calendar",12)} Frequenz: ${fr}× pro Woche</p>${freqStrip}<p class="xs t2" style="margin:6px 0 0;line-height:1.5">${fr>=2?"Jeder Muskel ≥2× pro Woche gereizt schlägt 1× signifikant (Schoenfeld 2016) — die Muskelproteinsynthese läuft nur ~48 h, dann braucht sie den nächsten Impuls.":"Diese Platzierung maximiert die Erholung zwischen den Reizen — jede Einheit trifft dich frisch."}</p>`:""}
+    </div>`;
+  }catch(e){ return ""; }
+}
 function sessionRationale(key){
   try{
     const a=(S.profile&&S.profile.a)||{}; const g=primaryGoal(a);
@@ -6898,6 +7005,33 @@ function renderPlayer(){
     if(S.liftLog[name]){ const j=S.liftLog[name].findIndex(x=>x.t===t.ts); if(j>=0)S.liftLog[name].splice(j,1); }
     save(); renderPlayer();
   };
+  // ===== SCHNELL-EINTRAG: Übung fertig? Alle Sätze auf einmal — jede Zeile mit EIGENEM Gewicht/Reps. =====
+  A.bulkToggle=(on)=>{ bulkMode=!!on; renderPlayer(); };
+  A.bulkCopy=()=>{ // Zeile 1 auf alle übertragen (z. B. „3× dasselbe Gewicht")
+    const w0=document.getElementById("bw-0"), r0=document.getElementById("br-0"); if(!w0)return;
+    document.querySelectorAll("[id^='bw-']").forEach(el=>{ el.value=w0.value; });
+    document.querySelectorAll("[id^='br-']").forEach(el=>{ el.value=r0?r0.value:el.value; });
+  };
+  A.logBulk=()=>{
+    const rows=[]; let i=0;
+    while(true){ const w=document.getElementById("bw-"+i), r=document.getElementById("br-"+i); if(!w)break;
+      const wv=parseFloat(String(w.value).replace(",",".")), rv=parseInt(r?r.value:"",10);
+      if(isFinite(wv)&&isFinite(rv)&&rv>0) rows.push({w:Math.max(0,wv),reps:rv}); i++; }
+    if(!rows.length){ toast("Bitte Gewicht & Reps eintragen"); return; }
+    if(!S.liftLog[name])S.liftLog[name]=[];
+    const prevAll=S.liftLog[name].slice();
+    rows.forEach((s,j)=>{ S.logged.push({n:name,w:s.w,reps:s.reps,rpe:prpe,ts:Date.now()+j});
+      S.liftLog[name].push({t:Date.now()+j,w:s.w,reps:s.reps,rpe:prpe}); });
+    const e1=rows.reduce((m,s)=>Math.max(m,e1rm(s.w,s.reps,prpe)),0);
+    const prev=prevAll.reduce((m,s)=>s.w>0?Math.max(m,e1rm(s.w,s.reps,s.rpe)):m,0);
+    if(prev>0&&e1>prev&&(!S.prToday||e1-prev>S.prToday.delta)) S.prToday={n:name,e1,delta:Math.round((e1-prev)*10)/10};
+    {const d=Math.round((e1-prev)*10)/10; if(prev>0&&d>=1) setTimeout(()=>prShockwave(name,e1,d),60);}
+    try{navigator.vibrate&&navigator.vibrate([0,26,50,26]);}catch{}
+    pw=rows[rows.length-1].w; pr=rows[rows.length-1].reps;
+    save(); renderPlayer();
+    toast(`✓ ${rows.length} ${rows.length===1?"Satz":"Sätze"} eingetragen`);
+    if(typeof floatReward==="function") try{floatReward(`+${rows.length} Sätze`)}catch{}
+  };
   A.next=()=>{ pw=null; S.restEnd=null; clearTimeout(timerInt);
     if(S.exIdx<day.ex.length-1){ S.exIdx++; save(); renderPlayer(); } else A.finish(); };
   A.skipRest=()=>{S.restEnd=null;clearTimeout(timerInt);save();const s=document.getElementById("restslot");if(s)s.innerHTML="";};
@@ -6941,6 +7075,27 @@ function renderPlayer(){
           :`<p class="sm volt-txt metric mb8">Körpergewicht <span class="xs t2" style="font-family:var(--font-ui)">— Zusatzlast bei Bedarf eintragen</span></p>`)}
       <div class="row mb12"><p class="ct" style="margin:0">Sätze</p>
         <div class="setdots" id="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:Math.max(targetSets,logged.length)},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
+      ${logged.length<targetSets?`<div class="logmode mb12" role="tablist" aria-label="Eintrage-Modus">
+        <button role="tab" aria-selected="${!bulkMode}" class="${bulkMode?"":"on"}" onclick="A.bulkToggle(false)">Satz für Satz</button>
+        <button role="tab" aria-selected="${bulkMode}" class="${bulkMode?"on":""}" onclick="A.bulkToggle(true)">⚡ Alle auf einmal</button>
+      </div>`:""}
+      ${bulkMode&&logged.length<targetSets?(()=>{ // ===== SCHNELL-EINTRAG-GRID: jede Zeile = ein Satz mit eigenem Gewicht/Reps =====
+        const remaining=Math.max(1,targetSets-logged.length);
+        return `<p class="xs t2 mb8" style="line-height:1.5">Übung fertig? Trag alle Sätze in einem Rutsch ein — jede Zeile darf ihr eigenes Gewicht haben (z. B. aufsteigend).</p>
+        <div class="bulkgrid mb8">
+          <span class="xs t3">Satz</span><span class="xs t3">Gewicht (kg)</span><span class="xs t3"></span><span class="xs t3">Reps</span>
+          ${Array.from({length:remaining},(_,i)=>`
+            <span class="metric sm" style="color:var(--t2)">${logged.length+i+1}</span>
+            <input id="bw-${i}" class="stepin metric bulkin" type="number" inputmode="decimal" step="2.5" value="${pw}" onfocus="this.select()" aria-label="Gewicht Satz ${logged.length+i+1}">
+            <span class="t3" style="text-align:center">×</span>
+            <input id="br-${i}" class="stepin metric bulkin" type="number" inputmode="numeric" step="1" value="${pr}" onfocus="this.select()" aria-label="Reps Satz ${logged.length+i+1}">`).join("")}
+        </div>
+        ${remaining>1?`<button class="btn ghost mb8" style="min-height:38px;font-size:12.5px" onclick="A.bulkCopy()">${icon("undo",13)} Zeile 1 auf alle übertragen</button>`:""}
+        <div class="row mb8"><span class="sm t2">${LABELS.rpe} <span class="xs t3">(für alle Sätze)</span></span>
+          <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
+        <p id="rpe-desc" class="xs t2 mb12" style="text-align:right">${RPE_DESC[prpe]}</p>
+        <button class="btn volt cta-big" onclick="A.logBulk()"><span>Alle ${remaining} Sätze eintragen ✓</span><span class="cta-sub">ein Tipp — komplette Übung geloggt</span></button>`;
+      })():`
       <div class="row mb8"><span class="sm t2">Gewicht <span class="xs t3">(tippen)</span></span>
         <div class="stepper"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" class="stepin metric" type="number" inputmode="decimal" step="2.5" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div></div>
       <div class="row mb8"><span class="sm t2">Reps</span>
@@ -6949,8 +7104,7 @@ function renderPlayer(){
         <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
       <p id="rpe-desc" class="xs t2 mb12" style="text-align:right">${RPE_DESC[prpe]}</p>
       <button id="primary-cta" class="btn volt cta-big" onclick="${cta.f}"><span>${cta.l}</span><span class="cta-sub">${cta.s}</span></button>
-      ${logged.length<targetSets&&targetSets-logged.length>1?`<button class="btn mt8" style="min-height:44px" onclick="A.logAll()">${icon("check",15)} Alle ${targetSets-logged.length} restlichen Sätze auf einmal</button>`:""}
-      ${logged.length>=targetSets?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.log()">+ Noch ein Satz</button>`:""}
+      ${logged.length>=targetSets?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.log()">+ Noch ein Satz</button>`:""}`}
       <ul id="logged-list" class="list mt16" style="border-top:1px solid var(--border);padding-top:10px;display:${logged.length?"block":"none"}">${loggedRows()}</ul>
     </div>
     <div id="restslot"></div>
@@ -6958,6 +7112,7 @@ function renderPlayer(){
       return `<details class="card" style="margin-bottom:10px">
         <summary style="cursor:pointer;list-style:none;font-weight:700;display:flex;align-items:center;gap:8px;padding:4px 0">${icon("brain",15)} Warum dieser Plan biologisch perfekt ist<span class="xs t2" style="margin-left:auto">aufklappen ▾</span></summary>
         <p class="xs t2" style="line-height:1.5;margin:8px 0 14px">Dein Plan ist ein Uhrwerk — jedes Zahnrad ist ein belegtes Prinzip. So greifen sie für dein Ziel ineinander:</p>
+        ${bioProofHTML(type)}
         ${gears.map((x,i)=>`<div style="display:flex;gap:10px;margin-bottom:13px"><span class="metric" style="color:var(--hl);font-weight:800;min-width:22px;font-size:15px">${i+1}</span><div style="flex:1"><p class="sm" style="font-weight:700;margin:0 0 2px">${x.h}</p><p class="sm t2" style="line-height:1.55;margin:0">${x.b}</p>${x.src?`<p class="xs" style="color:var(--hl);margin-top:3px;display:flex;align-items:center;gap:4px">${icon("info",11)} ${esc(x.src)}</p>`:""}</div></div>`).join("")}
         <p class="sm" style="font-weight:700;color:var(--hl);line-height:1.5;margin-top:6px;padding-top:10px;border-top:1px solid var(--hairline)">Fazit: Keine Zahl hier ist Zufall. Jede Übung, jeder Satz, jede Pause ist die direkte Umsetzung eines belegten Prinzips für dein Ziel — der für dich begründbar optimale Plan.</p>
       </details>`;})()}
