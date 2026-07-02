@@ -566,6 +566,31 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){
     .chip,.pill,.acc-i,.fh-card,.fh-q,.logmode,.stepin,.fh-search,.bioproof,.dupcard{background:var(--s2);}
   }
+  /* ===== LIQUID GLASS v4: Lensing, Licht-Sweep, Scroll-Tiefe ===== */
+  .card,.fh-sug,.fh-card,.acc-i,.tier-card,.modal,.dupcard,.fh-q{--lx:50%; --ly:28%;}
+  .acc-i,.fh-card,.fh-q,.dupcard{position:relative;}
+  .lensing{transition:transform .09s linear !important; will-change:transform;}
+  .lensing::before{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+    background:radial-gradient(190px circle at var(--lx) var(--ly), rgba(255,255,255,.13), rgba(157,180,240,.05) 45%, transparent 65%),
+      linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,0) 48%) !important;}
+  /* Licht-Sweep: beim Oeffnen laeuft einmal ein Lichtstreifen uebers Glas */
+  @keyframes glassSweep{from{background-position:-140% 0, 0 0}to{background-position:240% 0, 0 0}}
+  .sheet::before,.modal::before{
+    background:linear-gradient(112deg, transparent 32%, rgba(255,255,255,.11) 46%, rgba(255,255,255,.02) 55%, transparent 68%),
+      linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,0) 48%);
+    background-size:230% 100%, 100% 100%; background-repeat:no-repeat;
+    animation:glassSweep 1.15s cubic-bezier(.4,0,.2,1) .12s backwards;}
+  /* Scroll-Tiefe: Appbar & Tabbar verdichten sich, wenn Inhalt unters Glas faehrt */
+  .appbar{transition:background .4s, box-shadow .4s;}
+  body.scrolled .appbar{background:rgba(8,9,13,.85); box-shadow:0 10px 34px rgba(0,0,0,.42);}
+  body.scrolled .tabbar-inner{box-shadow:0 0 0 1px rgba(0,0,0,.06), 0 18px 46px rgba(0,0,0,.30),
+    inset 0 1px 0 rgba(255,255,255,.12), inset 0 -10px 18px rgba(0,0,0,.22);}
+  /* Toast als Dynamic-Island-Glas */
+  .toast{background:linear-gradient(168deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 60%), rgba(16,17,23,.78);
+    border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(22px) saturate(170%); backdrop-filter:blur(22px) saturate(170%);
+    box-shadow:0 14px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.14);}
+  @media (prefers-reduced-motion:reduce){.sheet::before,.modal::before{animation:none}.lensing{transition:none !important}}
   .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
   @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
@@ -5924,6 +5949,29 @@ function openFeatureHub(){
     </div></div>`;
 }
 A.featureHub=openFeatureHub;
+/* ===== LIQUID LENSING: der Glanzpunkt folgt dem Finger, die Karte neigt sich zum Druckpunkt.
+   Ein globaler Listener, rAF-gedrosselt, nur waehrend der Beruehrung aktiv — 0 Kosten im Ruhezustand. */
+(function(){
+  const SEL=".card,.fh-sug,.fh-card,.acc-i,.tier-card,.modal,.dupcard,.fh-q";
+  const RM=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let el=null,raf=0;
+  const apply=(t)=>{ if(raf||!el)return;
+    raf=requestAnimationFrame(()=>{ raf=0; if(!el)return;
+      const r=el.getBoundingClientRect(); if(!r.width)return;
+      const x=Math.min(1,Math.max(0,(t.clientX-r.left)/r.width)), y=Math.min(1,Math.max(0,(t.clientY-r.top)/r.height));
+      el.style.setProperty("--lx",(x*100).toFixed(1)+"%"); el.style.setProperty("--ly",(y*100).toFixed(1)+"%");
+      if(!RM()&&r.width<560){ const rx=((y-0.5)*-3.4).toFixed(2), ry=((x-0.5)*3.4).toFixed(2);
+        el.style.transform="perspective(760px) rotateX("+rx+"deg) rotateY("+ry+"deg) scale(.992)"; }
+    });};
+  addEventListener("pointerdown",(e)=>{ const g=e.target.closest(SEL); if(!g)return;
+    el=g; g.classList.add("lensing"); apply(e); },{passive:true});
+  addEventListener("pointermove",(e)=>{ if(el)apply(e); },{passive:true});
+  const up=()=>{ if(!el)return; el.classList.remove("lensing"); el.style.transform=""; el=null; };
+  addEventListener("pointerup",up,{passive:true}); addEventListener("pointercancel",up,{passive:true});
+  // Scroll-Tiefe: Chrome verdichtet sich, sobald Inhalt unter das Glas faehrt
+  let sc=false; addEventListener("scroll",()=>{ const on=scrollY>10;
+    if(on!==sc){ sc=on; document.body.classList.toggle("scrolled",on); } },{passive:true});
+})();
 function openScheduleSheet(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   A.assign=(day,type)=>{ if(!S.schedule)S.schedule=sch.slice(); S.schedule[day]=type; schEditDay=null; save(); openScheduleSheet(); };
