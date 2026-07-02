@@ -5911,14 +5911,84 @@ function consistencyHeatmap(){
         ${[0,5,10,16].map(s=>`<span style="width:11px;height:11px;border-radius:3px;background:${shade(s)};display:inline-block"></span>`).join("")}
         <span class="xs t2">mehr</span></span></div>`;
 }
+/* ===== FALLBACK-GENERATOREN: Muskel-Diagramm + Ausfuehrungs-Cues fuer JEDE Uebung =====
+   Die 112er-Bibliothek ist zu gross fuer Handeintraege — Diagramm und Cues werden regelbasiert
+   aus Muskelgruppe, Bewegungsfamilie (Namens-Heuristik), Tempo und Dehnungs-Flag erzeugt.
+   Handgepflegte EXINFO/EX_ACT-Eintraege haben weiterhin Vorrang. */
+function _exFamily(n){
+  const L=n.toLowerCase();
+  if(/seitheben|front-heben/.test(L))return "raise";
+  if(/reverse|face pull|pull-apart|pec deck.*rev|reardelts/.test(L)&&!/pec deck$/.test(L))return "rear";
+  if(/curl/.test(L))return "curl";
+  if(/trizeps|skullcrusher|kickback|dips|enge liegest/.test(L))return "tri";
+  if(/klimmzug|latzug|pulldown|pullover/.test(L))return "vpull";
+  if(/rudern|row|shrug/.test(L))return "row";
+  if(/liegest|bankdr|brustpresse|fliegende|pec deck|drücken|dr\u00fccken|press|push-up/.test(L))return "press";
+  if(/kniebeuge|squat|beinpresse|hacken|ausfallschritt|step-up|beinstrecker|sissy|pistol/.test(L))return "squat";
+  if(/kreuzheben|beinbeuger|nordic|hip thrust|glute|swing|rückenstreck/.test(L))return "hinge";
+  if(/waden/.test(L))return "calf";
+  if(/plank|seitst|hollow|dead bug|crunch|beinheben|rollout|pallof|l-sit|dragon|climber/.test(L))return "core";
+  return "iso";
+}
+function exActFor(name){
+  const d=EXDB[name]||{}; const f=_exFamily(name); const sub=VOL_SUBGROUP[name];
+  if(sub==="Bizeps")return {p:["biceps"],s:["forearm"]};
+  if(sub==="Trizeps")return {p:["triceps"],s:name.includes("Dips")||name.includes("Liegest")?["chest","delts"]:[]};
+  if(d.m==="Brust")return d.compound?{p:["chest"],s:["delts","triceps"]}:{p:["chest"],s:["delts"]};
+  if(d.m==="Schultern")return f==="rear"?{p:["reardelts"],s:["traps"]}:f==="raise"?{p:["delts"],s:[]}:{p:["delts"],s:["triceps","traps"]};
+  if(d.m==="Rücken"){
+    if(/shrug/i.test(name))return {p:["traps"],s:["forearm"]};
+    if(/rückenstreck|superman/i.test(name))return {p:["lowerback"],s:["glutes","hams"]};
+    if(f==="vpull")return {p:["lats"],s:["biceps","traps","forearm"]};
+    return {p:["lats","traps"],s:["biceps","reardelts","forearm"]};
+  }
+  if(d.m==="Beine"){
+    if(f==="calf")return {p:["calves"],s:[]};
+    if(/beinbeuger|nordic/i.test(name))return {p:["hams"],s:["calves","glutes"]};
+    if(/hip thrust|glute|abduktor/i.test(name))return {p:["glutes"],s:["hams"]};
+    if(/kreuzheben|swing/i.test(name))return {p:["hams","glutes"],s:["lowerback","traps","forearm"]};
+    if(/beinstrecker|sissy/i.test(name))return {p:["quads"],s:[]};
+    return {p:["quads"],s:["glutes","adductors"]};
+  }
+  if(d.m==="Core")return /seitst|pallof/i.test(name)?{p:["obliques"],s:["abs"]}:{p:["abs"],s:["obliques"]};
+  return {p:[],s:[]};
+}
+function exInfoFor(name){
+  if(EXINFO[name])return EXINFO[name];
+  const d=EXDB[name]||{}; const f=_exFamily(name); const cues=[];
+  const SETUP={press:"Schulterblätter zurück und runter — stabile Basis, bevor du drückst",
+    row:"Rumpf fest, Rücken lang — der Zug beginnt am Schulterblatt, nicht am Arm",
+    vpull:"Schulterblätter zuerst nach unten ziehen, dann erst die Arme beugen",
+    squat:"Ganzer Fuß am Boden, Knie folgen den Zehen, Blick nach vorn",
+    hinge:"Hüfte nach hinten schieben, Rücken lang — die Last hebt die Hüfte, nicht der Rücken",
+    curl:"Ellbogen bleiben am Körper fixiert — nur der Unterarm bewegt sich",
+    tri:"Oberarme ruhig halten — die Streckung kommt allein aus dem Ellbogen",
+    raise:"Leicht gebeugte Arme, Schultern tief — kein Schwung aus dem Oberkörper",
+    rear:"Brust raus, Zug nach hinten-außen — die Schulterblätter arbeiten zusammen",
+    calf:"Ganz hoch auf die Zehenspitzen, unten die Dehnung zulassen",
+    core:"Unterer Rücken bleibt in Position — Spannung kommt aus der Körpermitte",
+    iso:"Kontrolliert und ohne Schwung — die Bewegung gehört dem Zielmuskel"};
+  cues.push(SETUP[f]||SETUP.iso);
+  const t=String(d.tempo||"");
+  if(t==="halten")cues.push("Position aktiv halten — Spannung aufbauen statt nur \u201eaushalten\u201c");
+  else if(t==="explosiv")cues.push("Explosiv aus der Hüfte — die Arme sind nur Seile");
+  else{ const dn=parseInt(t[0],10); if(dn>=2)cues.push(dn+" Sekunden kontrolliert ablassen — die Exzentrik baut den Muskel"); }
+  if(d.lengthened)cues.push("In der tiefsten Dehnposition kurz innehalten — genau dort entsteht der stärkste Wachstumsreiz");
+  else if(d.compound)cues.push("Rumpfspannung halten und volle Bewegungsamplitude nutzen");
+  else cues.push("Am Ende der Bewegung den Muskel bewusst zusammenziehen (1 s)");
+  const act=EX_ACT[name]||exActFor(name);
+  const NICE={chest:"Brust",delts:"Schulter",reardelts:"Hintere Schulter",triceps:"Trizeps",biceps:"Bizeps",forearm:"Unterarm",lats:"Latissimus",traps:"Trapez",lowerback:"Rückenstrecker",quads:"Quadrizeps",hams:"Beinbeuger",glutes:"Gluteus",adductors:"Adduktoren",calves:"Waden",abs:"Bauch",obliques:"Seitlicher Bauch"};
+  return {prim:(act.p||[]).map(x=>NICE[x]||x).join(", ")||d.m||"—",
+          sek:(act.s||[]).map(x=>NICE[x]||x).join(", ")||"—", cues};
+}
 function exDetailModal(name,gi){
-  const inf=EXINFO[name]||{prim:"—",sek:"—",cues:[]};
+  const inf=exInfoFor(name);
   const d=EXDB[name]||{};
   const warn=injuryWarn(name);
   const why=recWhy(name), rec=recommend(name), best=bestE1(name);
   const variants=GRIP_VARIANTS[name];
   gi=variants?Math.min(Math.max(0,gi|0),variants.length-1):0;
-  const act=variants?variants[gi].act:(EX_ACT[name]||{p:[],s:[]});
+  const act=variants?variants[gi].act:(EX_ACT[name]||exActFor(name));
   const isCardio=(d.m==="Herz");
   modal(`<p class="display-m mb8">${name}</p>
     ${rec?`<p class="metric sm volt-txt mb8">Empfohlen: ${fmtKg(rec.w)} × ${rec.reps}</p>`:""}
@@ -5947,6 +6017,63 @@ function exDetailModal(name,gi){
 // Global: Player & alle Screens nutzen dieselbe Übungs-Detailansicht.
 A.exInfo=(n)=>exDetailModal(n);
 A.exDetail=(n)=>exDetailModal(n);
+/* ===== MESOZYKLUS-PROGRESSION: Block N → Block N+1 lernt aus den Logs =====
+   1) Stagnations-Analyse: Uebungen ohne e1RM-Fortschritt (<1 % ueber >=3 Sessions) werden im
+      neuen Block gegen Slot-Alternativen getauscht — neuer Reiz statt Wiederholung (Fonseca 2014).
+   2) Ermuedungs-Steuerung: Median-RPE >= 9 im alten Block → Isolations-Saetze starten -1
+      (das Volumen baut sich ueber die Wochen ohnehin wieder auf).
+   3) Reset: Woche 1, Soreness/Overrides geleert — sauberer Blockstart. */
+function blockAnalysis(){
+  const cut=Date.now()-35*864e5;
+  const res={stagnant:[],progressed:[],rpes:[]};
+  for(const [n,logs] of Object.entries(S.liftLog||{})){
+    const L=(logs||[]).filter(x=>x.t>=cut&&x.w>0);
+    if(L.length<4)continue;
+    const sess={}; L.forEach(x=>{const k=Math.floor(x.t/864e5); sess[k]=Math.max(sess[k]||0,e1rm(x.w,x.reps,x.rpe));});
+    const days=Object.keys(sess).sort((a,b)=>a-b); if(days.length<3)continue;
+    const first=sess[days[0]], last=sess[days[days.length-1]];
+    ((last-first)/Math.max(1,first)<0.01?res.stagnant:res.progressed).push(n);
+    L.forEach(x=>{if(x.rpe)res.rpes.push(x.rpe);});
+  }
+  res.medRpe=res.rpes.length?res.rpes.sort((a,b)=>a-b)[Math.floor(res.rpes.length/2)]:null;
+  return res;
+}
+function newTrainingBlock(){
+  const an=blockAnalysis();
+  S.blockNum=(S.blockNum||1)+1;
+  S.plan=generateTrainingPlan(S.profile); S.planB=generateTrainingPlan(S.profile,"B");
+  const a=(S.profile&&S.profile.a)||{};
+  const allowed=EQ_ALLOWED[a.equipment]||EQ_ALLOWED.gym_full, hasBench=EQ_BENCH[a.equipment]!==false;
+  const okX=(x,day)=>{const dd=EXDB[x]; return dd&&allowed.includes(dd.eq)&&(!dd.bench||hasBench)&&skillOk(x,a.exp)&&!(richGymEq(a.equipment)&&isCalisthenic(x))&&!day.some(e=>e.n===x);};
+  const swapped=[];
+  for(const plan of [S.plan,S.planB]){
+    for(const base of Object.keys(SESSION_SLOTS)){
+      const d=plan[base]; if(!d||!d.main)continue;
+      d.main.forEach((e,i)=>{
+        if(!an.stagnant.includes(e.n))return;
+        for(const slot of SESSION_SLOTS[base]){
+          if(!slot.includes(e.n))continue;
+          const alt=slot.find(x=>x!==e.n&&okX(x,d.main));
+          if(alt){ const dd=EXDB[alt]||{}; d.main[i]={...e,n:alt,tempo:dd.tempo||e.tempo,rir:dd.rir||e.rir,m:dd.m||e.m,why:dd.why||"",alt:dd.alt||null,lengthened:!!dd.lengthened}; swapped.push(e.n+" → "+alt); }
+          break;
+        }
+      });
+    }
+  }
+  if(an.medRpe>=9){ for(const plan of [S.plan,S.planB]) for(const base of Object.keys(SESSION_SLOTS)){ const d=plan[base]; if(!d||!d.main)continue; d.main.forEach(e=>{ if(!(EXDB[e.n]||{}).compound) e.sets=Math.max(2,e.sets-1); }); } }
+  S.currentWeek=1; S.exOverrides={}; S.soreMode={};
+  save(); render();
+  const sw=[...new Set(swapped)].slice(0,3);
+  modal(`<p class="ct">${icon("sparkle",14)} Block ${S.blockNum} gestartet</p>
+    <p class="sm t2 mt8" style="line-height:1.6">Dein neuer Block — aus deinen echten Logs gelernt:</p>
+    <ul class="list mt8">
+      ${an.stagnant.length?`<li><span>Neuer Reiz</span><span class="metric xs">${an.stagnant.length} Übung${an.stagnant.length>1?"en":""} getauscht</span></li>`:`<li><span>Übungen</span><span class="metric xs">alle im Fortschritt — bleiben</span></li>`}
+      ${sw.map(x=>`<li><span class="xs t2">${x}</span><span></span></li>`).join("")}
+      ${an.medRpe?`<li><span>Ermüdung (Median-RPE)</span><span class="metric xs">${an.medRpe}${an.medRpe>=9?" → Start bewusst leichter":" → voll belastbar"}</span></li>`:""}
+      <li><span>Woche</span><span class="metric xs">1 von 4 · Volumen-Start</span></li>
+    </ul>`);
+}
+A.newBlock=newTrainingBlock;
 // Long-Press-Tausch: gedrückt halten öffnet das Alternativen-Menü, kurzer Tap die Details.
 A.lpStart=(key,idx)=>{ lpFired=false; clearTimeout(lpTimer); lpTimer=setTimeout(()=>{lpFired=true; openSwapSheet(key,idx);},500); };
 A.lpEnd=()=>clearTimeout(lpTimer);
@@ -6729,9 +6856,11 @@ function renderTrain(){
         <div class="lp-seg mb12">
           <button class="${!rotMode?"sel":""}" onclick="A.setPlanMode('week')">Nach Wochentagen</button>
           <button class="${rotMode?"sel":""}" onclick="A.setPlanMode('rotation')">Fortlaufende Rotation</button></div>
-        <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4 · "+(S.currentWeek===1?"Volumen-Start":S.currentWeek===2?"Volumen steigt":"Spitzenvolumen")}</span>
+        <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":(S.blockNum>1?"Block "+S.blockNum+" · ":"")+(isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4 · "+(S.currentWeek===1?"Volumen-Start":S.currentWeek===2?"Volumen steigt":"Spitzenvolumen"))}</span>
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
         ${rotMode?rotStrip:weekStrip}
+        ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
+        <p class="xs t2 mt8" style="line-height:1.5">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
         <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
         <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:16px;background:var(--s2);overflow:hidden">
           <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
@@ -6832,6 +6961,12 @@ function playerRestTick(){
       <button class="btn ghost" style="width:auto;padding:0" onclick="A.skipRest()">Beenden</button></div>${circleTimer(left,pRestTotal||left)}</div>`;
     clearTimeout(timerInt); timerInt=setTimeout(playerRestTick,1000);
   } else if(S.restEnd){
+    // Pausen-Ende: einmalig Vibration + (falls App im Hintergrund) System-Benachrichtigung
+    if(window._restAlerted!==S.restEnd){ window._restAlerted=S.restEnd;
+      try{navigator.vibrate&&navigator.vibrate([0,90,70,90]);}catch{}
+      try{ if(document.hidden&&"Notification" in window&&Notification.permission==="granted")
+        new Notification("Pause vorbei 💪",{body:"Zeit für den nächsten Satz",tag:"metricgym-rest"}); }catch{}
+    }
     slot.innerHTML=`<div class="card row"><p class="metric volt-txt pulse" style="font-size:28px;font-weight:600">0:00</p>
       <button class="btn ghost" style="width:auto" onclick="A.skipRest()">OK</button></div>`;
   } else { slot.innerHTML=""; }
@@ -6958,6 +7093,13 @@ function sessRingHTML(done,total){
       <p class="xs t2" style="margin:2px 0 0" id="sessring-lbl">${full?"Komplett — stark! 💪":`${done} von ${total} Sätzen`}</p></div>
   </div>`;
 }
+/* Scheiben-Rechner: was pro SEITE auf die 20-kg-Stange (nur Langhantel-Uebungen). */
+function plateHint(name,w){
+  const d=EXDB[name]||{}; if(d.eq!=="barbell"||!(w>20))return "";
+  let per=(w-20)/2, out=[]; for(const pl of [25,20,15,10,5,2.5,1.25]){ while(per>=pl-0.01){out.push(pl);per-=pl;} }
+  if(!out.length)return "";
+  return `Stange 20 kg + je Seite: ${out.map(x=>String(x).replace(".",",")).join(" · ")}${per>0.01?" (Rest "+per.toFixed(1).replace(".",",")+" kg)":""}`;
+}
 function renderPlayer(){
   const type=S.playerType||todayType();
   if(type==="rest"){S.tab="train";save();render();return;}
@@ -7024,8 +7166,9 @@ function renderPlayer(){
   A.refreshCta=()=>{ const c=S.logged.filter(l=>l.n===name).length, d=ctaFor(c), btn=document.getElementById("primary-cta");
     if(btn){ btn.setAttribute("onclick",d.f); btn.innerHTML=`<span>${d.l}</span><span class="cta-sub">${d.s}</span>`; } };
   // In-Place-Eingabe (kein Voll-Neuaufbau): Gewicht/Reps direkt tippbar + −/+ aktualisieren nur das Feld.
-  A.stepW=(d)=>{ pw=Math.max(0,Math.round((pw+d*2.5)*10)/10); const el=document.getElementById("pw-in"); if(el)el.value=pw; A.refreshCta(); };
-  A.setW=(v)=>{ const x=parseFloat(String(v).replace(",",".")); if(isFinite(x))pw=Math.max(0,x); A.refreshCta(); };
+  const _plateUpd=()=>{ const ph=document.getElementById("platehint"); if(ph)ph.textContent=plateHint(name,pw); };
+  A.stepW=(d)=>{ pw=Math.max(0,Math.round((pw+d*2.5)*10)/10); const el=document.getElementById("pw-in"); if(el)el.value=pw; _plateUpd(); A.refreshCta(); };
+  A.setW=(v)=>{ const x=parseFloat(String(v).replace(",",".")); if(isFinite(x))pw=Math.max(0,x); _plateUpd(); A.refreshCta(); };
   A.stepR=(d)=>{ pr=Math.max(1,pr+d); const el=document.getElementById("pr-in"); if(el)el.value=pr; A.refreshCta(); };
   A.setR=(v)=>{ const x=parseInt(v,10); if(isFinite(x))pr=Math.max(1,x); A.refreshCta(); };
   A.rpe=(v)=>{ prpe=v; document.querySelectorAll(".scale button").forEach(b=>b.classList.toggle("sel",+b.dataset.v===v)); const d=document.getElementById("rpe-desc"); if(d)d.textContent=RPE_DESC[v]; };
@@ -7040,6 +7183,7 @@ function renderPlayer(){
     if(prev>0&&e1>prev&&(!S.prToday||e1-prev>S.prToday.delta)) S.prToday={n:name,e1,delta:Math.round((e1-prev)*10)/10};
     {const d=Math.round((e1-prev)*10)/10; if(prev>0&&d>=1) prShockwave(name,e1,d);}   // ⚡ Magie #2: nur verdiente Rekorde (≥1 kg e1RM)
     if(rest>0)S.restEnd=Date.now()+rest*1000;
+    if(!S.notifAsked&&rest>0&&"Notification" in window&&Notification.permission==="default"){ S.notifAsked=true; try{Notification.requestPermission();}catch{} }
     const sessFull=S.logged.length>=sessTotal&&sessTotal>0;
     try{navigator.vibrate&&navigator.vibrate(sessFull?[0,30,60,30]:24);}catch{}   // Satz: knackiger Puls · Session komplett: Finale
     save();
@@ -7168,6 +7312,7 @@ function renderPlayer(){
       })():`
       <div class="row mb8"><span class="sm t2">Gewicht <span class="xs t3">(tippen)</span></span>
         <div class="stepper"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" class="stepin metric" type="number" inputmode="decimal" step="2.5" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div></div>
+      <p id="platehint" class="xs t3 mb8" style="text-align:right;min-height:14px">${plateHint(name,pw)}</p>
       <div class="row mb8"><span class="sm t2">Reps</span>
         <div class="stepper"><button onclick="A.stepR(-1)" aria-label="Reps verringern">−</button><input id="pr-in" class="stepin metric" type="number" inputmode="numeric" step="1" value="${pr}" onchange="A.setR(this.value)" onfocus="this.select()" aria-label="Wiederholungen"><button onclick="A.stepR(1)" aria-label="Reps erhöhen">+</button></div></div>
       <div class="row mb8"><span class="sm t2">${LABELS.rpe} <span class="xs t3">(optional)</span></span>
