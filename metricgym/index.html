@@ -494,11 +494,22 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .fh-search{width:100%; min-height:46px; border-radius:13px; border:1px solid var(--hairline); background:var(--s2);
     color:var(--t1); font-size:15px; padding:0 14px; margin-bottom:6px; font-family:var(--font-ui);}
   .fh-search:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
-  .fh-item{width:100%; display:flex; align-items:center; gap:10px; padding:10px 10px; min-height:54px; text-align:left;
-    background:var(--s2); border:1px solid var(--hairline); border-radius:13px; margin-bottom:8px; cursor:pointer;
-    color:var(--t1); transition:transform .18s var(--ease-out,ease), border-color .18s; animation:corrRow .4s cubic-bezier(.22,1,.36,1) backwards;}
-  .fh-item:active{transform:scale(.985);}
-  .fh-item:hover{border-color:rgba(157,180,240,.35);}
+  .fh-sug{position:relative; width:100%; display:flex; align-items:center; gap:11px; padding:12px; min-height:62px; text-align:left;
+    border-radius:15px; margin-bottom:8px; cursor:pointer; color:var(--t1);
+    background:linear-gradient(var(--s2),var(--s2)) padding-box, linear-gradient(120deg,rgba(74,111,216,.75),rgba(86,200,214,.55),rgba(74,111,216,.2)) border-box;
+    border:1px solid transparent; box-shadow:0 4px 22px rgba(74,111,216,.14);
+    transition:transform .18s var(--ease-out,ease), box-shadow .25s; animation:corrRow .45s cubic-bezier(.22,1,.36,1) backwards;}
+  .fh-sug:active{transform:scale(.985);}
+  .fh-sug:hover{box-shadow:0 6px 26px rgba(86,200,214,.22);}
+  .fh-orb{width:36px; height:36px; min-width:36px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#4A6FD8,#56C8D6); color:#fff; box-shadow:0 3px 12px rgba(74,111,216,.4);}
+  .fh-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .fh-tile{display:flex; align-items:center; gap:9px; padding:10px 11px; min-height:52px; text-align:left;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:13px; cursor:pointer; color:var(--t1);
+    transition:transform .18s var(--ease-out,ease), border-color .18s; animation:corrRow .4s cubic-bezier(.22,1,.36,1) backwards;}
+  .fh-tile:active{transform:scale(.97);}
+  .fh-tile:hover{border-color:rgba(157,180,240,.35);}
+  .fh-tt{font-size:12.5px; font-weight:650; line-height:1.25;}
   .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
   @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
@@ -5732,24 +5743,60 @@ const FEATURE_INDEX=[
   {c:"Konto",ic:"grid",t:"Kompletter Funktions-Katalog",d:"Alles mit Erklärung — zum Stöbern",k:"katalog alle funktionen entdecken liste",tab:"features"},
 ];
 function __explainToday(){ try{ const t=todayType(); explainSession(t==="rest"||t==="cardio"?(schedule().find(x=>x!=="rest"&&x!=="cardio")||"push"):t); }catch(e){} }
-function fhListHTML(q){
-  q=(q||"").toLowerCase().trim();
-  const hit=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>!q||(f.t+" "+f.d+" "+f.k).toLowerCase().includes(q));
-  if(!hit.length)return `<p class="sm t2" style="text-align:center;padding:20px 0">Nichts gefunden — anders formulieren?</p>`;
-  let out="",cat="";
-  for(const {f,i} of hit){
-    if(f.c!==cat){cat=f.c;out+=`<p class="label" style="margin:14px 2px 8px">${cat}</p>`;}
-    out+=`<button class="fh-item" onclick="A.fhRun(${i})">
-      <span class="acc-ic">${icon(f.ic,15)}</span>
-      <span class="acc-t"><span class="acc-h">${f.t}</span><span class="acc-s">${f.d}</span></span>
-      <span class="mi-chev">${icon("chevronR",15)}</span></button>`;
-  }
+let fhCat="Alle";
+/* KI-Kontext: bewertet den echten App-Zustand (Woche, Tagestyp, Logs, Uhrzeit, Stagnation)
+   und waehlt die 3 relevantesten Aktionen — "Fuer dich jetzt" statt Funktionsfriedhof. */
+function fhSuggestions(){
+  const sug=[]; const h=new Date().getHours();
+  const add=(t,reason,score)=>{ const i=FEATURE_INDEX.findIndex(f=>f.t===t); if(i>=0)sug.push({i,reason,score}); };
+  const trainedToday=(S.trainingHistory||[]).some(t=>t.date===todayKey());
+  let tt=null; try{ tt=S.profile?todayType():null; }catch(e){}
+  if(S.profile&&S.currentWeek===4) add("Neuen Trainingsblock generieren","Erholungswoche läuft — Zeit für Block "+((S.blockNum||1)+1),100);
+  if(S.profile&&tt&&tt!=="rest"&&tt!=="cardio"&&!trainedToday){ const pk=parseTypeKey(tt);
+    add("Heute trainieren","Heute steht "+(((TYPE_META[pk.base]||{}).label)||"deine Einheit")+(pk.variant?" "+pk.variant:"")+" an",90); }
+  try{ const an=blockAnalysis(); if(an.stagnant.length) add("Kraft-Orakel",an.stagnant[0]+" stagniert — sieh deine Prognose",80); }catch(e){}
+  if(S.profile&&trainedToday) add("Analytics & Trends","Einheit erledigt — sieh, was sie bewirkt hat",70);
+  if(h>=17) add("Rest-Snack-Retter","Abend: Was passt noch in dein Kalorienbudget?",62);
+  else if(h>=11) add("Rezept-Alchemist","Was kochen? Aus deinen Makro-Lücken berechnet",55);
+  if(S.profile&&(tt==="rest"||tt==="cardio")&&!trainedToday) add("Warum dieser Plan? (Bio-Beweis)","Ruhiger Tag — versteh dein System in 60 Sekunden",50);
+  add("Magic-Log — sprechen statt tippen","Essen loggen in 10 Sekunden — einfach sprechen",40);
+  sug.sort((a,b)=>b.score-a.score);
+  const seen=new Set(),out=[];
+  for(const x of sug){ if(seen.has(x.i))continue; seen.add(x.i); out.push(x); if(out.length>=3)break; }
   return out;
+}
+function fhBodyHTML(q){
+  q=(q||"").toLowerCase().trim();
+  const tile=(f,i)=>`<button class="fh-tile" onclick="A.fhRun(${i})" style="animation-delay:${(i%8)*35}ms">
+    <span class="acc-ic">${icon(f.ic,15)}</span><span class="fh-tt">${f.t}</span></button>`;
+  if(q){
+    const hit=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>(f.t+" "+f.d+" "+f.k).toLowerCase().includes(q));
+    return (hit.length?`<div class="fh-grid">${hit.map(({f,i})=>tile(f,i)).join("")}</div>`:"")
+      +`<button class="fh-sug" style="margin-top:${hit.length?10:0}px" onclick="A.fhCoach()">
+        <span class="fh-orb">${icon("message",16)}</span>
+        <span class="acc-t"><span class="acc-h">Coach Metric fragen <span class="badge volt" style="font-size:8px">KI</span></span>
+        <span class="acc-s">„${esc(q.slice(0,60))}" — dein Coach kennt deine Daten</span></span>
+        <span class="mi-chev">${icon("chevronR",15)}</span></button>`;
+  }
+  const sug=fhSuggestions();
+  const sugHTML=sug.length?`<p class="label" style="margin:2px 2px 8px">${icon("sparkle",11)} Für dich jetzt</p>`
+    +sug.map(({i,reason},j)=>{const f=FEATURE_INDEX[i];return `<button class="fh-sug" style="animation-delay:${j*70}ms" onclick="A.fhRun(${i})">
+      <span class="fh-orb">${icon(f.ic,16)}</span>
+      <span class="acc-t"><span class="acc-h">${f.t}</span><span class="acc-s">${reason}</span></span>
+      <span class="mi-chev">${icon("chevronR",15)}</span></button>`;}).join(""):"";
+  const cats=["Alle","Training","Magie","Ernährung","Analyse","Konto"];
+  const chips=`<div class="chips" style="margin:14px 0 10px">${cats.map(c=>`<button class="chip ${fhCat===c?"sel":""}" onclick="A.fhCatSel('${c}')">${c}</button>`).join("")}</div>`;
+  const list=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>fhCat==="Alle"||f.c===fhCat);
+  return sugHTML+chips+`<div class="fh-grid">${list.map(({f,i})=>tile(f,i)).join("")}</div>`;
 }
 function openFeatureHub(){
   if(!S.seenHub){S.seenHub=true;save();try{renderAppbar()}catch(e){}}
+  fhCat="Alle";
   A.fhClose=()=>{overlay.innerHTML="";};
-  A.fhFilter=(v)=>{const l=document.getElementById("fh-list"); if(l)l.innerHTML=fhListHTML(v);};
+  A.fhCatSel=(c)=>{fhCat=c;const l=document.getElementById("fh-list");if(l)l.innerHTML=fhBodyHTML("");};
+  A.fhFilter=(v)=>{const l=document.getElementById("fh-list"); if(l)l.innerHTML=fhBodyHTML(v);};
+  A.fhCoach=()=>{ const inp=document.querySelector(".fh-search"); const q=inp?inp.value.trim():"";
+    overlay.innerHTML=""; try{ coachOpen=true; renderFab(); if(q)setTimeout(()=>A.coachAsk(q),80); }catch(e){} };
   A.fhRun=(i)=>{
     const f=FEATURE_INDEX[i]; if(!f)return;
     if(f.need&&!S.profile){ toast("Erst das kurze Setup abschließen — dann ist das freigeschaltet"); return; }
@@ -5758,19 +5805,17 @@ function openFeatureHub(){
     if(f.modal){ setTimeout(()=>modal(f.modal),80); return; }
     if(f.fn){ setTimeout(()=>{ try{ const g=(typeof window[f.fn]==="function")?window[f.fn]:A[f.fn];
       if(typeof g==="function")g(); else if(f.hint)toast(f.hint); }catch(e){ if(f.hint)toast(f.hint); }
-      // Leer-Zustand abfangen: Funktion hat (noch) nichts zu zeigen -> freundlicher Hinweis statt toter Klick
       if(f.empty) setTimeout(()=>{ if(!overlay.innerHTML) toast(f.empty); },220);
     },f.tab?160:40); }
     else if(f.hint) setTimeout(()=>toast(f.hint),200);
   };
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.fhClose()">
-    <div class="sheet fade" style="max-height:82vh;display:flex;flex-direction:column">
-      <div class="row mb8"><p class="display-m" style="margin:0">✦ Alle Funktionen</p>
+    <div class="sheet fade fh-sheet" style="max-height:86vh;display:flex;flex-direction:column">
+      <div class="row mb8"><p class="display-m" style="margin:0">✦ Dein KI-Hub</p>
         <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen">✕</button></div>
-      <input class="fh-search" type="search" placeholder="Suchen … (z. B. „tauschen", „Rezept", „Export")" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen">
-      <div id="fh-list" style="overflow-y:auto;flex:1;padding-bottom:8px">${fhListHTML("")}</div>
+      <input class="fh-search" type="search" placeholder="Sag, was du brauchst — „Plan ändern", „was kochen?" …" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen">
+      <div id="fh-list" style="overflow-y:auto;flex:1;padding:2px 2px 10px">${fhBodyHTML("")}</div>
     </div></div>`;
-  const inp=document.querySelector(".fh-search"); if(inp&&matchMedia("(min-width:700px)").matches)inp.focus();
 }
 A.featureHub=openFeatureHub;
 function openScheduleSheet(){
