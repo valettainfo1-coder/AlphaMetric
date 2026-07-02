@@ -472,6 +472,24 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   details.card summary{transition:color .25s;}
   details.card[open] summary{color:var(--hl);}
   @media (prefers-reduced-motion:reduce){#root>.card,#root>details.card,details.card>*:not(summary){animation:none}}
+  /* ===== Wissens-Akkordeon: kompakte Oberthemen-Boxen ===== */
+  .acc{display:flex; flex-direction:column; gap:8px;}
+  .acc-i{background:var(--s2); border:1px solid var(--hairline); border-radius:13px; overflow:hidden;
+    transition:border-color .25s, box-shadow .25s;}
+  .acc-i[open]{border-color:rgba(157,180,240,.35); box-shadow:0 4px 18px rgba(0,0,0,.22);}
+  .acc-i summary{cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; padding:11px 12px; min-height:52px;}
+  .acc-i summary::-webkit-details-marker{display:none;}
+  .acc-ic{width:32px; height:32px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:var(--hl-soft); color:var(--hl);}
+  .acc-t{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+  .acc-h{font-size:13.5px; font-weight:700; color:var(--t1); line-height:1.25;}
+  .acc-s{font-size:11px; color:var(--t3); line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .acc-ch{color:var(--t3); font-size:12px; flex-shrink:0; transition:transform .3s cubic-bezier(.22,1,.36,1);}
+  .acc-i[open] .acc-ch{transform:rotate(180deg);}
+  .acc-i[open] .acc-ic{background:linear-gradient(135deg,#4A6FD8,#56C8D6); color:#fff;}
+  .acc-b{padding:2px 12px 13px; animation:fade .35s cubic-bezier(.22,1,.36,1) backwards;}
+  .acc-i .corr-chip{flex-shrink:0; margin-right:2px;}
+  @media (prefers-reduced-motion:reduce){.acc-b{animation:none}.acc-ch{transition:none}}
   .stepper input.stepin::-webkit-outer-spin-button,.stepper input.stepin::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   .scale{display:flex; gap:6px; flex-wrap:wrap;}
   .scale button{min-width:44px; height:44px; border-radius:999px; background:var(--surface); border:1px solid var(--hairline);
@@ -6812,10 +6830,10 @@ function corridorHTML(rows){
       <div class="corr-lbls"><span class="xs t3">0</span><span class="xs t3 corr-mev" style="left:${mevPct}%">MEV ${r.mev}</span><span class="xs t3">MRV ${r.mrv}</span></div>
     </div>`;}).join("");
 }
-function bioProofHTML(typeKey){
+function bioProofParts(typeKey){
   try{
     const a=(S.profile&&S.profile.a)||{}; const base=parseTypeKey(typeKey).base;
-    const d=sessionDef(typeKey); if(!(d.main||[]).length) return "";
+    const d=sessionDef(typeKey); if(!(d.main||[]).length) return null;
     const bands=deficitScaledBands(a);
     const sch=schedule();
     const weekly={},freq={};
@@ -6823,23 +6841,44 @@ function bioProofHTML(typeKey){
       const dd=sessionDef(t);
       for(const e of [...dd.main,...(dd.abs||[])]){ const g=volGroupOf(e.n); if(g)weekly[g]=(weekly[g]||0)+weekSets(e.orig||e.n,e.sets); } }
     const groups=[...new Set([...d.main,...(d.abs||[])].map(e=>volGroupOf(e.n)).filter(g=>g&&bands[g]))];
-    if(!groups.length) return "";
+    if(!groups.length) return null;
     const rows=groups.map(g=>({g,tot:Math.round(weekly[g]||0),mev:bands[g][0],mrv:bands[g][1]}));
     const fr=freq[base]||1, repeats=fr>1;
     const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];
     const fullSch=(sch&&sch.length===7)?sch:null;
-    const freqStrip=fullSch?`<div class="corr-week">${fullSch.map((t,i)=>{const on=parseTypeKey(t).base===base;return `<span class="${on?"on":""}">${WD[i]}</span>`;}).join("")}</div>`:"";
-    return `<div class="bioproof">
-      <p class="ct" style="margin:0 0 10px">${icon("activity",13)} Dein Volumen im Wissenschafts-Korridor</p>
-      ${corridorHTML(rows)}
-      <p class="xs t2" style="margin:2px 0 0;line-height:1.5">Unter MEV = zu wenig Reiz zum Wachsen. Über MRV = mehr Ermüdung als Anpassung (Übertraining). Dein Plan hält jede Gruppe exakt im produktiven Fenster — Israetel 2017.</p>
-      ${repeats?`<div class="dupviz">
+    const okAll=rows.every(r=>r.tot>=r.mev), maxed=rows.filter(r=>r.tot>=r.mrv-1).length;
+    const corr=corridorHTML(rows)
+      +`<p class="xs t2" style="margin:2px 0 0;line-height:1.5">Unter MEV = zu wenig Reiz zum Wachsen. Über MRV = mehr Ermüdung als Anpassung (Übertraining). Dein Plan hält jede Gruppe exakt im produktiven Fenster — Israetel 2017.</p>`;
+    const dup=repeats?`<div class="dupviz">
         <div class="dupcard"><span class="xs t3">Tag A</span><div class="dupbars">${[34,26,30].map(h=>`<i style="height:${h}px"></i>`).join("")}</div><span class="xs" style="font-weight:650">schwer</span></div>
         <div class="dup-arrow">⇄</div>
         <div class="dupcard b"><span class="xs t3">Tag B</span><div class="dupbars">${[18,14,20,16,19].map(h=>`<i style="height:${h}px"></i>`).join("")}</div><span class="xs" style="font-weight:650">Volumen</span></div>
-      </div><p class="xs t2" style="margin:6px 0 0;line-height:1.5">Dieser Tag kommt ${fr}× vor — als zwei VERSCHIEDENE Reize (schwer / Volumen, andere Übungen). Das baut messbar mehr Muskel als zweimal exakt dasselbe — Zourdos 2016 (DUP).</p>`:""}
-      ${freqStrip?`<p class="ct" style="margin:14px 0 6px">${icon("calendar",12)} Frequenz: ${fr}× pro Woche</p>${freqStrip}<p class="xs t2" style="margin:6px 0 0;line-height:1.5">${fr>=2?"Jeder Muskel ≥2× pro Woche gereizt schlägt 1× signifikant (Schoenfeld 2016) — die Muskelproteinsynthese läuft nur ~48 h, dann braucht sie den nächsten Impuls.":"Diese Platzierung maximiert die Erholung zwischen den Reizen — jede Einheit trifft dich frisch."}</p>`:""}
-    </div>`;
+      </div><p class="xs t2" style="margin:6px 0 0;line-height:1.5">Dieser Tag kommt ${fr}× vor — als zwei VERSCHIEDENE Reize (schwer / Volumen, andere Übungen). Das baut messbar mehr Muskel als zweimal exakt dasselbe — Zourdos 2016 (DUP).</p>`:"";
+    const freqHTML=fullSch?`<div class="corr-week">${fullSch.map((t,i)=>{const on=parseTypeKey(t).base===base;return `<span class="${on?"on":""}">${WD[i]}</span>`;}).join("")}</div>
+      <p class="xs t2" style="margin:6px 0 0;line-height:1.5">${fr>=2?"Jeder Muskel ≥2× pro Woche gereizt schlägt 1× signifikant (Schoenfeld 2016) — die Muskelproteinsynthese läuft nur ~48 h, dann braucht sie den nächsten Impuls.":"Diese Platzierung maximiert die Erholung zwischen den Reizen — jede Einheit trifft dich frisch."}</p>`:"";
+    return {corr,dup,freqHTML,fr,repeats,okAll,maxed,nGroups:rows.length};
+  }catch(e){ return null; }
+}
+/* Kompaktes Wissens-Akkordeon: Oberthemen-Boxen statt Textwand — jede Box ein
+   Prinzip, Einzeiler in der Zeile, Details nur auf Wunsch. */
+function rationaleAccordionHTML(typeKey){
+  try{
+    const gears=sessionRationale(typeKey); if(!gears.length) return "";
+    const P=bioProofParts(typeKey)||{};
+    const gearHTML=(ks)=>gears.filter(x=>ks.includes(x.k)).map(x=>`<div style="margin:0 0 12px"><p class="sm" style="font-weight:700;margin:0 0 2px">${x.h}</p><p class="sm t2" style="line-height:1.55;margin:0">${x.b}</p>${x.src?`<p class="xs" style="color:var(--hl);margin-top:3px">${icon("info",11)} ${esc(x.src)}</p>`:""}</div>`).join("");
+    const item=(ic,title,teaser,chip,body)=>body?`<details class="acc-i">
+      <summary><span class="acc-ic">${icon(ic,15)}</span><span class="acc-t"><span class="acc-h">${title}</span><span class="acc-s">${teaser}</span></span>${chip?`<span class="corr-chip ${chip[1]}">${chip[0]}</span>`:""}<span class="acc-ch">▾</span></summary>
+      <div class="acc-b">${body}</div></details>`:"";
+    const volChip=P.corr?(P.okAll?(P.maxed?["Maximum genutzt","max"]:["alle optimal","ok"]):["im Aufbau","low"]):null;
+    return `<div class="acc">
+      ${item("activity","Volumen im Korridor",`${P.nGroups||""} Muskelgruppen zwischen MEV & MRV`,volChip,P.corr||"")}
+      ${item("zap","Ziel & Intensität","Reps, Last & RIR exakt auf dein Ziel",null,gearHTML(["goal"]))}
+      ${item("grid","Übungsauswahl & Reihenfolge","Grundübungen zuerst, Isolation schließt Lücken",null,gearHTML(["sel"]))}
+      ${P.repeats?item("undo","Variation: Tag A ⇄ Tag B",`${P.fr}× pro Woche — zwei verschiedene Reize`,["DUP","ok"],(P.dup||"")+gearHTML(["dup"])):""}
+      ${item("calendar","Frequenz & Erholung",`${P.fr||1}× pro Woche, Proteinsynthese optimal getaktet`,null,P.freqHTML||"")}
+      ${item("brain","Die Biochemie dahinter","mTOR, Mechanotransduktion & Progression",null,gearHTML(["bio","vol"]))}
+    </div>
+    <p class="sm" style="font-weight:700;color:var(--hl);line-height:1.5;margin-top:12px;padding-top:10px;border-top:1px solid var(--hairline)">Fazit: Keine Zahl hier ist Zufall — jede Übung, jeder Satz, jede Pause ist die Umsetzung eines belegten Prinzips für dein Ziel.</p>`;
   }catch(e){ return ""; }
 }
 function sessionRationale(key){
@@ -6862,13 +6901,13 @@ function sessionRationale(key){
     };
     const gm=GMAP[g]||GMAP.muscle_gain;
     const gears=[];
-    gears.push({h:`Dein Ziel „${GOAL_LABEL[g]||"Muskelaufbau"}" → der Haupthebel`, b:`Dieser Tag ist auf ${gm.l}`, src:gm.s1});
-    gears.push({h:`Übungsauswahl: ${nComp} Grund- + ${nIso} Isolationsübungen`, b:`Grundübungen zuerst liefern die höchste mechanische Spannung und Systemreiz; die Isolationen schließen gezielt die Lücken, die Mehrgelenkübungen offen lassen — so wird jeder Zielmuskel voll ausgereizt.`, src:"Schoenfeld 2010; Gentil 2017"});
-    gears.push({h:`Wiederholungen & Intensität (${esc(compReps)})`, b:gm.rep, src:gm.s3});
-    if(volLines) gears.push({h:`Wochenvolumen exakt im erholbaren Korridor`, b:`${volLines}. Genug Reiz zum Wachsen, aber unter der Grenze, ab der Erholung kippt (MEV → MRV). Mehr Sätze ≠ mehr Muskel, sobald du über dem erholbaren Maximum liegst.`, src:"Israetel 2017 · MEV–MRV"});
-    gears.push({h:`Reihenfolge & Pausen`, b:`Die schweren Verbundübungen kommen, solange du frisch bist (maximale Last = maximaler Reiz); lange Pausen (2–3 Min) dort sichern volle Kraft pro Satz, kurze Pausen bei Isolationen erhöhen den metabolischen Stress.`, src:"Grgic 2017 · Pausenlänge"});
-    if(repeats) gears.push({h:`Variation desselben Tages (DUP: A schwer / B Volumen)`, b:`Wiederholt sich der Tag in der Woche, trennt der Plan in einen schweren Kraft-Reiz und einen Volumen-/Hypertrophie-Reiz mit anderen Übungen. Verschiedene Reize an verschiedenen Tagen bauen messbar mehr Muskel als zweimal exakt dasselbe.`, src:"Zourdos 2016 · DUP"});
-    gears.push({h:`Die Biochemie dahinter`, b:`Mechanische Spannung aktiviert über die Mechanotransduktion den <b style='color:var(--t1)'>mTOR-Signalweg</b> → erhöhte Muskelproteinsynthese für ~24–48 h. Die wöchentliche Last-Progression (progressive Overload) hält diese Anpassung am Laufen, statt sie verpuffen zu lassen.`, src:"Schoenfeld 2010; Morton 2018 · Protein"});
+    gears.push({k:"goal",h:`Dein Ziel „${GOAL_LABEL[g]||"Muskelaufbau"}" → der Haupthebel`, b:`Dieser Tag ist auf ${gm.l}`, src:gm.s1});
+    gears.push({k:"sel",h:`Übungsauswahl: ${nComp} Grund- + ${nIso} Isolationsübungen`, b:`Grundübungen zuerst liefern die höchste mechanische Spannung und Systemreiz; die Isolationen schließen gezielt die Lücken, die Mehrgelenkübungen offen lassen — so wird jeder Zielmuskel voll ausgereizt.`, src:"Schoenfeld 2010; Gentil 2017"});
+    gears.push({k:"goal",h:`Wiederholungen & Intensität (${esc(compReps)})`, b:gm.rep, src:gm.s3});
+    if(volLines) gears.push({k:"vol",h:`Wochenvolumen exakt im erholbaren Korridor`, b:`${volLines}. Genug Reiz zum Wachsen, aber unter der Grenze, ab der Erholung kippt (MEV → MRV). Mehr Sätze ≠ mehr Muskel, sobald du über dem erholbaren Maximum liegst.`, src:"Israetel 2017 · MEV–MRV"});
+    gears.push({k:"sel",h:`Reihenfolge & Pausen`, b:`Die schweren Verbundübungen kommen, solange du frisch bist (maximale Last = maximaler Reiz); lange Pausen (2–3 Min) dort sichern volle Kraft pro Satz, kurze Pausen bei Isolationen erhöhen den metabolischen Stress.`, src:"Grgic 2017 · Pausenlänge"});
+    if(repeats) gears.push({k:"dup",h:`Variation desselben Tages (DUP: A schwer / B Volumen)`, b:`Wiederholt sich der Tag in der Woche, trennt der Plan in einen schweren Kraft-Reiz und einen Volumen-/Hypertrophie-Reiz mit anderen Übungen. Verschiedene Reize an verschiedenen Tagen bauen messbar mehr Muskel als zweimal exakt dasselbe.`, src:"Zourdos 2016 · DUP"});
+    gears.push({k:"bio",h:`Die Biochemie dahinter`, b:`Mechanische Spannung aktiviert über die Mechanotransduktion den <b style='color:var(--t1)'>mTOR-Signalweg</b> → erhöhte Muskelproteinsynthese für ~24–48 h. Die wöchentliche Last-Progression (progressive Overload) hält diese Anpassung am Laufen, statt sie verpuffen zu lassen.`, src:"Schoenfeld 2010; Morton 2018 · Protein"});
     return gears;
   }catch(e){ return []; }
 }
@@ -7108,13 +7147,11 @@ function renderPlayer(){
       <ul id="logged-list" class="list mt16" style="border-top:1px solid var(--border);padding-top:10px;display:${logged.length?"block":"none"}">${loggedRows()}</ul>
     </div>
     <div id="restslot"></div>
-    ${(()=>{const gears=sessionRationale(type); if(!gears.length)return "";
+    ${(()=>{const acc=rationaleAccordionHTML(type); if(!acc)return "";
       return `<details class="card" style="margin-bottom:10px">
         <summary style="cursor:pointer;list-style:none;font-weight:700;display:flex;align-items:center;gap:8px;padding:4px 0">${icon("brain",15)} Warum dieser Plan biologisch perfekt ist<span class="xs t2" style="margin-left:auto">aufklappen ▾</span></summary>
-        <p class="xs t2" style="line-height:1.5;margin:8px 0 14px">Dein Plan ist ein Uhrwerk — jedes Zahnrad ist ein belegtes Prinzip. So greifen sie für dein Ziel ineinander:</p>
-        ${bioProofHTML(type)}
-        ${gears.map((x,i)=>`<div style="display:flex;gap:10px;margin-bottom:13px"><span class="metric" style="color:var(--hl);font-weight:800;min-width:22px;font-size:15px">${i+1}</span><div style="flex:1"><p class="sm" style="font-weight:700;margin:0 0 2px">${x.h}</p><p class="sm t2" style="line-height:1.55;margin:0">${x.b}</p>${x.src?`<p class="xs" style="color:var(--hl);margin-top:3px;display:flex;align-items:center;gap:4px">${icon("info",11)} ${esc(x.src)}</p>`:""}</div></div>`).join("")}
-        <p class="sm" style="font-weight:700;color:var(--hl);line-height:1.5;margin-top:6px;padding-top:10px;border-top:1px solid var(--hairline)">Fazit: Keine Zahl hier ist Zufall. Jede Übung, jeder Satz, jede Pause ist die direkte Umsetzung eines belegten Prinzips für dein Ziel — der für dich begründbar optimale Plan.</p>
+        <p class="xs t2" style="line-height:1.5;margin:8px 0 12px">Dein Plan ist ein Uhrwerk — jedes Thema ein Zahnrad, jedes Zahnrad belegt. Tipp auf ein Thema:</p>
+        ${acc}
       </details>`;})()}
     <div class="grid2 mb8">
       <button class="btn" ${S.exIdx===0?"disabled":""} onclick="A.jump(${S.exIdx-1})">‹ Vorherige</button>
