@@ -630,6 +630,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:linear-gradient(90deg,#4A6FD8,#56C8D6); animation:gnBar linear forwards; transform:scaleX(0);}
   @keyframes gnBar{to{transform:scaleX(1)}}
   .gn-skip{font-size:10.5px; color:var(--t3); margin-top:14px;}
+  /* Kompakte Muskelkarte in der Uebungsansicht */
+  .mg-mini{display:flex; gap:10px; align-items:center;}
+  .mg-mini .mg-svg{width:74px; height:148px;}
+  .mg-mini .xs.t2[style*="letter-spacing"]{font-size:8px;}
   .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
   @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
@@ -4055,7 +4059,7 @@ function render(){
   ensureCompTier(); // Freischalt-Liste: dauerhaft ELITE für berechtigte Konten
   if(rolloverDaily()) save(); // gestrigen Status-Check verwerfen (Daily-Refresh pro Tag)
   // KI-Feld auf allen In-App-Seiten + Onboarding/Reveal (nicht auf Landing/Login — die haben eigenen BG).
-  setAiField(S.currentUser!=null && !["landing","login","register"].includes(S.screen));
+  setAiField(!["login","register"].includes(S.screen)); // Intelligenz-Feld ueberall — inkl. Landing (Oura-Prinzip: EIN lebendiges Visual)
   if(typeof PB!=="undefined")PB.stop(); // Partikel-Animation beenden (nur Landing startet sie neu)
   if(S.tab!=="train"&&S.tab!=="player"){ trnSelDay=null; trnSelRot=null; } // Tag-Auswahl zurücksetzen
   if(S.currentUser!=null&&S.screen!=="onboarding"&&S.profile)adaptiveCalorieCheck(); // selbstlernender Kalorien-Abgleich
@@ -6096,15 +6100,24 @@ function muscleBody(view,arg,sex){
   const grp=(keys,sx,inner)=>`<g transform="translate(50,0) scale(${sx},1) translate(-50,0)">${inner}</g>`;
   const poly=(id,pts)=>{
     const c=col(id);
-    const attrs=c===MG_BODY?`fill="${c}"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;
-    return `<polygon points="${pts}" ${attrs} stroke="#05070C" stroke-width="0.25" stroke-linejoin="round"/>`;
+    const attrs=c===MG_BODY?`fill="${c}" opacity="0.5"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;
+    return `<polygon points="${pts}" ${attrs} stroke="#0A0E18" stroke-width="0.4" stroke-linejoin="round"/>`;
   };
-  let upperSvg="", lowerSvg="";
+  let upperSvg="", lowerSvg="", silUp="", silLo="";
+  // SILHOUETTE: alle Formen aufgeblasen in Koerperton uebereinander -> geschlossener Koerper,
+  // auf dem die Muskeln liegen (vorher schwebten die Polygone ohne Koerper im Raum).
+  const SIL="#161B28";
+  const sil=(pts)=>`<polygon points="${pts}" fill="${SIL}" stroke="${SIL}" stroke-width="7" stroke-linejoin="round"/>`;
+  // Fueller schliessen Luecken, die die Muskeldaten frei lassen (Becken vorn, Taille hinten)
+  const FILLER=view==="front"?["44 106 56 106 56 128 44 128","46 88 54 88 54 108 46 108"]:["42 96 58 96 58 112 42 112"];
   data.forEach(m=>{
     const shapes=m.p.map(pts=>poly(m.id,pts)).join("");
-    if(MG_LOWER_KEYS.has(m.k)) lowerSvg+=shapes; else upperSvg+=shapes;
+    const sh=m.p.map(pts=>sil(pts)).join("");
+    if(MG_LOWER_KEYS.has(m.k)){ lowerSvg+=shapes; silLo+=sh; } else { upperSvg+=shapes; silUp+=sh; }
   });
-  const body=grp(null,sxUp,upperSvg)+grp(null,sxLo,lowerSvg);
+  silUp+=FILLER.map(sil).join("");
+  const rim=`<g opacity="0.55">${grp(null,sxUp,silUp.replace(/stroke-width="7"/g,'stroke-width="9"').replace(new RegExp(SIL.replace('#','#'),'g'),'#232B3E'))}${grp(null,sxLo,silLo.replace(/stroke-width="7"/g,'stroke-width="9"').replace(new RegExp(SIL,'g'),'#232B3E'))}</g>`;
+  const body=rim+grp(null,sxUp,silUp)+grp(null,sxLo,silLo)+grp(null,sxUp,upperSvg)+grp(null,sxLo,lowerSvg);
   const defs=`<defs>
     <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <radialGradient id="${fid}bg" cx="50%" cy="28%" r="80%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
@@ -6320,25 +6333,34 @@ function exDetailModal(name,gi){
     ${rec?`<p class="metric sm volt-txt mb8">Empfohlen: ${fmtKg(rec.w)} × ${rec.reps}</p>`:""}
     ${isCardio
       ?`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px"><p class="label" style="margin-bottom:6px">Beansprucht</p><p class="sm t2" style="line-height:1.6">Herz-Kreislauf-System — stärkt deine Ausdauer und unterstützt die Erholung.</p></div>`
-      :`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px">
-        <p class="label" style="margin-bottom:10px">${variants?"Variante wählen — sieh, was sich ändert":"Beanspruchte Muskeln"}</p>
-        ${variants?`<div class="pills" style="justify-content:center;margin-bottom:6px">${variants.map((v,i)=>`<button class="pill ${i===gi?"active":""}" onclick="A.gripSel('${name.replace(/'/g,"\\'")}',${i})">${v.n}</button>`).join("")}</div>`:""}
-        ${bodyDiagram(act)}
-        ${variants?`<p class="sm t2" style="text-align:center;line-height:1.55;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}</p>`
-          :`<ul class="list mt16"><li><span>Primär</span><span>${inf.prim}</span></li><li><span>Sekundär</span><span>${inf.sek}</span></li></ul>`}
+      :`<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
+        ${variants?`<div class="pills" style="justify-content:center;margin-bottom:8px">${variants.map((v,i)=>`<button class="pill ${i===gi?"active":""}" onclick="A.gripSel('${name.replace(/'/g,"\\'")}',${i})">${v.n}</button>`).join("")}</div>`:""}
+        <div class="mg-mini">
+          <div style="display:flex;gap:4px;flex-shrink:0">${muscleBody("front",act)}${muscleBody("back",act)}</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:9px;padding-top:4px">
+            <div><p class="xs" style="color:#56C8FF;letter-spacing:.1em;font-weight:700;margin:0 0 2px">● PRIMÄR</p>
+              <p class="sm" style="font-weight:700;line-height:1.35;margin:0">${inf.prim}</p></div>
+            <div><p class="xs" style="color:#B98BFF;letter-spacing:.1em;font-weight:700;margin:0 0 2px">● SEKUNDÄR</p>
+              <p class="xs t2" style="line-height:1.4;margin:0">${inf.sek}</p></div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir&&d.rir!=="–"?`<span class="statchip">${d.rir} in Reserve</span>`:""}${d.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</div>
+          </div>
+        </div>
+        ${variants?`<p class="xs t2" style="line-height:1.5;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}</p>`:""}
       </div>`}
-    ${inf.cues&&inf.cues.length?`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px">
-      <p class="label" style="margin-bottom:10px">Ausführung — Schritt für Schritt</p>
-      ${inf.cues.map((c,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:5px 0">
-        <span style="width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
-        <span class="sm" style="line-height:1.5">${c}</span></div>`).join("")}
+    ${inf.cues&&inf.cues.length?`<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
+      <p class="label" style="margin-bottom:8px">So führst du sie aus</p>
+      ${inf.cues.map((c,i)=>`<div style="display:flex;gap:9px;align-items:flex-start;padding:4px 0">
+        <span style="width:20px;height:20px;min-width:20px;border-radius:50%;background:linear-gradient(135deg,#4A6FD8,#56C8D6);color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center">${i+1}</span>
+        <span class="sm" style="line-height:1.45">${c}</span></div>`).join("")}
     </div>`:""}
-    ${why?`<p class="sm t2 mb8" style="line-height:1.6">${why}</p>`:'<p class="sm t2 mb8">Erste Session: Gewicht selbst wählen — danach rechnet die Engine.</p>'}
-    ${best>0?`<p class="xs t2 mb8">Deine ${LABELS.e1rm}: <span class="metric">${fmtKg(best)}</span> ${infoBtn("e1rm")}</p>`:""}
-    ${d.why?`<div class="whybox"><b style="color:var(--t1)">Warum diese Übung:</b> ${d.why}</div>`:""}
-    ${(d.tempo||d.rir)?`<p class="mt8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir&&d.rir!=="–"?`<span class="statchip">${d.rir} in Reserve</span>`:""}${d.lengthened?'<span class="statchip">Volle Dehnung betonen</span>':""}</p>`:""}
-    ${d.alt?`<p class="xs t2 mt8">Bei Muskelkater/Beschwerden: <b style="color:var(--t1)">${d.alt}</b></p>`:""}
-    ${warn?`<div class="warncard"><b>${icon("alert",13)} ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}`);
+    ${warn?`<div class="warncard"><b>${icon("alert",13)} ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
+    <details class="acc-i" style="margin-top:2px"><summary><span class="acc-ic">${icon("brain",14)}</span><span class="acc-t"><span class="acc-h">Warum diese Übung? · Empfehlung & Alternative</span><span class="acc-s">Beleg, Gewichts-Logik, Ausweich-Übung</span></span><span class="acc-ch">▾</span></summary>
+      <div class="acc-b">
+        ${d.why?`<p class="sm t2" style="line-height:1.55;margin:0 0 8px"><b style="color:var(--t1)">Warum im Plan:</b> ${d.why}</p>`:""}
+        <p class="sm t2" style="line-height:1.55;margin:0 0 8px">${why||"Erste Session: Gewicht selbst wählen — danach rechnet die Engine aus deinen Sätzen."}</p>
+        ${best>0?`<p class="xs t2" style="margin:0 0 8px">Deine ${LABELS.e1rm}: <span class="metric">${fmtKg(best)}</span> ${infoBtn("e1rm")}</p>`:""}
+        ${d.alt?`<p class="xs t2" style="margin:0">Bei Muskelkater/Beschwerden: <b style="color:var(--t1)">${d.alt}</b></p>`:""}
+      </div></details>`);
 }
 // Global: Player & alle Screens nutzen dieselbe Übungs-Detailansicht.
 A.exInfo=(n)=>exDetailModal(n);
@@ -7212,32 +7234,6 @@ function renderTrain(){
   </div>`;
   root.innerHTML=`
     ${banner("train","dumbbell","<b>Dein Plan. Maximal effizient.</b> Jede Übung exakt auf dein Ziel, dein Level und dein Equipment berechnet.")}
-    ${renderSection("Dein Plan",
-      `<div class="card">
-        <div class="lp-seg mb12">
-          <button class="${!rotMode?"sel":""}" onclick="A.setPlanMode('week')">Nach Wochentagen</button>
-          <button class="${rotMode?"sel":""}" onclick="A.setPlanMode('rotation')">Fortlaufende Rotation</button></div>
-        <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":(S.blockNum>1?"Block "+S.blockNum+" · ":"")+(isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4 · "+(S.currentWeek===1?"Volumen-Start":S.currentWeek===2?"Volumen steigt":"Spitzenvolumen"))}</span>
-          ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
-        ${rotMode?rotStrip:weekStrip}
-        ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
-        <p class="xs t2 mt8" style="line-height:1.5">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
-        <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
-        <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:16px;background:var(--s2);overflow:hidden">
-          <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
-          <div class="accbody" style="padding:0 14px 12px">
-            <p class="xs t2 mb8" style="line-height:1.5">Lade deinen aktuellen Plan hoch (bis 8 Bilder) — <b style="color:var(--t1)">Foto machen oder aus der Galerie wählen</b>. Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder zeigt dir, warum METRICGYM stärker ist.</p>
-            <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan-Bilder hochladen</button>
-            <input type="file" id="plan-import-file" accept="image/*" multiple style="display:none" onchange="A.planImportFiles(this)">
-            <button class="btn" style="min-height:42px;margin-top:8px" onclick="A.openPlanEditor()">${icon("edit",14)} Plan anpassen & Bio-Check</button>
-            <p class="xs t2" style="line-height:1.5;margin-top:4px">Mach den Plan zu <b style="color:var(--t1)">deinem</b>: Übungen tauschen/ergänzen/entfernen, Sätze anpassen — die Engine prüft live dein Volumen je Muskel (MEV–MRV).</p>
-            <button class="btn ghost" style="min-height:40px;font-size:13px;margin-top:8px" onclick="A.regenPlan()">${icon("zap",14)} Plan neu berechnen (aktuelle Engine)</button>
-            <p class="xs t2" style="line-height:1.5;margin-top:4px">Setzt deinen Plan auf den aktuellen, wissenschaftlich korrekten Stand zurück (z. B. nach Engine-Updates). Deine eigenen Übungs-Tausche bleiben.</p>
-            ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
-          </div>
-        </details>
-      </div>`)}
-
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
@@ -7296,6 +7292,32 @@ function renderTrain(){
       })())
     :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest — dein Plan steht sofort.</p>
       <button class="btn volt" onclick="A.editSchedule()">Wochenplan festlegen</button></div>`)}
+
+    ${renderSection("Dein Plan",
+      `<div class="card">
+        <div class="lp-seg mb12">
+          <button class="${!rotMode?"sel":""}" onclick="A.setPlanMode('week')">Nach Wochentagen</button>
+          <button class="${rotMode?"sel":""}" onclick="A.setPlanMode('rotation')">Fortlaufende Rotation</button></div>
+        <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":(S.blockNum>1?"Block "+S.blockNum+" · ":"")+(isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4 · "+(S.currentWeek===1?"Volumen-Start":S.currentWeek===2?"Volumen steigt":"Spitzenvolumen"))}</span>
+          ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
+        ${rotMode?rotStrip:weekStrip}
+        ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
+        <p class="xs t2 mt8" style="line-height:1.5">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
+        <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
+        <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:16px;background:var(--s2);overflow:hidden">
+          <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+          <div class="accbody" style="padding:0 14px 12px">
+            <p class="xs t2 mb8" style="line-height:1.5">Lade deinen aktuellen Plan hoch (bis 8 Bilder) — <b style="color:var(--t1)">Foto machen oder aus der Galerie wählen</b>. Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder zeigt dir, warum METRICGYM stärker ist.</p>
+            <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan-Bilder hochladen</button>
+            <input type="file" id="plan-import-file" accept="image/*" multiple style="display:none" onchange="A.planImportFiles(this)">
+            <button class="btn" style="min-height:42px;margin-top:8px" onclick="A.openPlanEditor()">${icon("edit",14)} Plan anpassen & Bio-Check</button>
+            <p class="xs t2" style="line-height:1.5;margin-top:4px">Mach den Plan zu <b style="color:var(--t1)">deinem</b>: Übungen tauschen/ergänzen/entfernen, Sätze anpassen — die Engine prüft live dein Volumen je Muskel (MEV–MRV).</p>
+            <button class="btn ghost" style="min-height:40px;font-size:13px;margin-top:8px" onclick="A.regenPlan()">${icon("zap",14)} Plan neu berechnen (aktuelle Engine)</button>
+            <p class="xs t2" style="line-height:1.5;margin-top:4px">Setzt deinen Plan auf den aktuellen, wissenschaftlich korrekten Stand zurück (z. B. nach Engine-Updates). Deine eigenen Übungs-Tausche bleiben.</p>
+            ${S.importedPlan?`<button class="btn ghost" style="min-height:36px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="showImportedPlan()">${icon("sparkle",13)} Letzte Plan-Analyse ansehen</button>`:""}
+          </div>
+        </details>
+      </div>`)}
 
     ${renderSection("Dein perfekter Reiz — schwarz auf weiß",
       `${maxStatusCard()}
