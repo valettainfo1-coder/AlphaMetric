@@ -634,6 +634,17 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .mg-mini{display:flex; gap:10px; align-items:center;}
   .mg-mini .mg-svg{width:74px; height:148px;}
   .mg-mini .xs.t2[style*="letter-spacing"]{font-size:8px;}
+  /* Landing: Feature-Showcase + Sticky-CTA */
+  .lp-show{min-width:252px; max-width:268px; flex-shrink:0; scroll-snap-align:start; padding:14px; border-radius:16px;
+    background:linear-gradient(168deg, rgba(255,255,255,.06), rgba(255,255,255,.014) 62%), rgba(19,21,29,.5);
+    border:1px solid rgba(255,255,255,.09); box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 6px 22px rgba(0,0,0,.25);
+    text-align:left;}
+  .lp-show-t{font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--hl);
+    display:flex; align-items:center; gap:6px; margin:0 0 8px;}
+  .lp-stick{position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); z-index:55;
+    max-width:400px; margin:0 auto; opacity:0; pointer-events:none; transform:translateY(16px);
+    transition:opacity .35s, transform .35s cubic-bezier(.22,1,.36,1);}
+  body.scrolled .lp-stick{opacity:1; pointer-events:auto; transform:none;}
   .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
   @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
@@ -4544,6 +4555,16 @@ function lpAnalyticsPreview(){
       ${tile("+18 %","Kraft / 12 Wo.","volt-txt")}${tile("84","Ø Erholung")}${tile("91 %","Konstanz","volt-txt")}
     </div></div>`;
 }
+/* Landing-Live-Demo: die ECHTE Muskel-Engine auf der Startseite — Uebung antippen, Koerper leuchtet um. */
+const LP_DEMO_EX=[["Bankdrücken","Brust"],["Klimmzug","Rücken"],["Kniebeuge","Beine"],["Seitheben","Schultern"],["Kreuzheben","Alles"]];
+function lpAnatInner(n){
+  const act=EX_ACT[n]||exActFor(n); const d=EXDB[n]||{};
+  return `<div class="chips" style="justify-content:center;margin-bottom:10px">${LP_DEMO_EX.map(([ex,lbl])=>`<button class="chip ${ex===n?"sel":""}" onclick="A.lpDemo('${ex}')">${lbl}</button>`).join("")}</div>
+    <div style="display:flex;justify-content:center;gap:10px">${muscleBody("front",act,"male")}${muscleBody("back",act,"male")}</div>
+    <p class="sm" style="font-weight:700;text-align:center;margin:8px 0 2px">${n}</p>
+    <p class="xs t2" style="text-align:center;line-height:1.5;max-width:300px;margin:0 auto">${d.why||""}</p>`;
+}
+A.lpDemo=(n)=>{ const el=document.getElementById("lp-anat"); if(el)el.innerHTML=lpAnatInner(n); };
 function renderLanding(){
   A.lpSet=(k,v)=>{
     LP[k]=(k==="days")?parseInt(v):v;
@@ -4575,6 +4596,11 @@ function renderLanding(){
           <button class="btn" style="max-width:320px;width:100%;margin:0 auto" onclick="A.devMode()">${icon("play",15)} Live-Demo ansehen</button>
         </div>
         <p class="xs t2" style="margin-top:14px">Dauerhaft kostenlos · DSGVO-konform · in 60 Sekunden startklar</p>
+        <div class="chips" style="justify-content:center;margin-top:12px">
+          <span class="chip" style="pointer-events:none">112 Übungen</span>
+          <span class="chip" style="pointer-events:none">40+ Studien</span>
+          <span class="chip" style="pointer-events:none">MEV–MRV-Engine</span>
+          <span class="chip" style="pointer-events:none">Audit: 10/10 ✓</span></div>
       </div>
     </section>
 
@@ -4587,8 +4613,64 @@ function renderLanding(){
       </div>
     </section>
 
+    <!-- LIVE-DEMO: echte App-Anatomie zum Antippen (kein Mockup) -->
+    <section class="lp-sec" style="padding-top:0">
+      <p class="lp-eyebrow">${icon("sparkle",12)} Live aus der App</p>
+      <h2 class="lp-h2">Tippe eine Übung —<br>sieh, was sie trainiert.</h2>
+      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Das ist keine Grafik — das ist die echte Muskel-Engine der App.</p>
+      <div class="card" style="max-width:400px;margin:0 auto;padding:16px">
+        <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
+      </div>
+    </section>
+
+    <!-- FEATURE-SHOWCASE: die Funktionen mit ihren ECHTEN Visuals, wischbar -->
+    <section class="lp-sec" style="padding-top:6px">
+      <p class="lp-eyebrow">Was drin ist</p>
+      <h2 class="lp-h2 mb4">Keine Versprechen. Ansichten.</h2>
+      <p class="sm t2 mb12">Wische durch — jede Karte ist ein echtes Stück App.</p>
+      <div class="fh-row" style="padding-bottom:10px">
+        <div class="lp-show">
+          <p class="lp-show-t">${icon("activity",13)} Wissenschafts-Korridor</p>
+          ${corridorHTML([{g:"Brust",tot:16,mev:10,mrv:20},{g:"Rücken",tot:18,mev:12,mrv:22}])}
+          <p class="xs t2" style="line-height:1.45;margin-top:2px">Jeder Muskel exakt zwischen Mindestreiz und Maximum (Israetel 2017).</p>
+        </div>
+        <div class="lp-show">
+          <p class="lp-show-t">${icon("undo",13)} Tag A ⇄ Tag B</p>
+          <div class="dupviz" style="margin-top:4px">
+            <div class="dupcard"><span class="xs t3">Tag A</span><div class="dupbars">${[30,24,27].map(h=>`<i style="height:${h}px"></i>`).join("")}</div><span class="xs" style="font-weight:650">schwer</span></div>
+            <div class="dup-arrow">⇄</div>
+            <div class="dupcard b"><span class="xs t3">Tag B</span><div class="dupbars">${[16,12,18,14,17].map(h=>`<i style="height:${h}px"></i>`).join("")}</div><span class="xs" style="font-weight:650">Volumen</span></div>
+          </div>
+          <p class="xs t2" style="line-height:1.45;margin-top:8px">Zwei Reize statt Wiederholung — baut messbar mehr Muskel (Zourdos 2016).</p>
+        </div>
+        <div class="lp-show">
+          <p class="lp-show-t">${icon("sparkle",13)} KI, die dich kennt</p>
+          <div class="fh-sug" style="pointer-events:none;margin:4px 0 8px">
+            <span class="fh-orb">${icon("zap",15)}</span>
+            <span class="acc-t"><span class="acc-h">Kraft-Orakel</span><span class="acc-s">Bankdrücken stagniert — sieh deine Prognose</span></span>
+          </div>
+          <p class="xs t2" style="line-height:1.45">Der KI-Hub schlägt vor, was JETZT zählt — aus deinen echten Logs.</p>
+        </div>
+        <div class="lp-show">
+          <p class="lp-show-t">${icon("zap",13)} Loggen in einem Zug</p>
+          <div style="display:flex;flex-direction:column;gap:5px;margin:6px 0 8px">
+            ${[["1","60,0","10"],["2","62,5","8"],["3","65,0","8"]].map(([n,w,r])=>`<div style="display:flex;gap:8px;align-items:center"><span class="metric xs t3" style="width:12px">${n}</span><span class="statchip" style="flex:1;text-align:center">${w} kg</span><span class="t3">×</span><span class="statchip" style="width:44px;text-align:center">${r}</span></div>`).join("")}
+            <span class="statchip" style="background:var(--hl-soft);color:var(--hl);text-align:center;font-weight:700">✓ Alle 3 Sätze eintragen</span>
+          </div>
+          <p class="xs t2" style="line-height:1.45">Übung fertig? Ein Tipp — komplette Übung geloggt, jede Zeile eigenes Gewicht.</p>
+        </div>
+        <div class="lp-show">
+          <p class="lp-show-t">${icon("brain",13)} Blöcke, die lernen</p>
+          <div style="display:flex;align-items:center;gap:8px;margin:10px 0;justify-content:center">
+            <span class="statchip">Bankdrücken</span><span style="color:var(--hl);font-weight:800">→</span><span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Brustpresse</span>
+          </div>
+          <p class="xs t2" style="line-height:1.45">Stagniert eine Übung 4 Wochen, tauscht Block 2 sie automatisch — dein Plan wird mit jedem Monat persönlicher.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- WARUM -->
-    <section class="lp-sec lp-deskonly" style="padding-top:0">
+    <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">Die Grundlage</p>
       <h2 class="lp-h2">Auf der Wissenschaft gebaut,<br>die wirklich wirkt.</h2>
       <p class="lp-lead mb16">Jeder Plan und jede Empfehlung ruht auf peer-reviewter Trainings- und Ernährungsforschung. <b style="color:var(--t1)">Und dein Fortschritt steht in klaren Zahlen vor dir</b> — Woche für Woche belegt.</p>
@@ -4627,7 +4709,7 @@ function renderLanding(){
     </section>
 
     <!-- SO FUNKTIONIERT'S -->
-    <section class="lp-sec lp-deskonly" style="padding-top:0">
+    <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">In 3 Schritten</p>
       <h2 class="lp-h2 mb16">Vom Log zur Entscheidung</h2>
       <div class="lp-steps-grid">
@@ -4640,7 +4722,7 @@ function renderLanding(){
     </section>
 
     <!-- REASON TO BELIEVE: WISSENSCHAFT -->
-    <section class="lp-sec lp-deskonly" style="padding-top:0">
+    <section class="lp-sec" style="padding-top:0">
       <div class="lp-dark">
         <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Die wissenschaftliche Basis</p>
         <p class="lp-quote mb16">Jede Empfehlung steht auf Peer-Review-Forschung.</p>
@@ -4660,6 +4742,7 @@ function renderLanding(){
       <p class="lp-lead mb16" style="max-width:320px;margin-left:auto;margin-right:auto">Der kostenlose Plan ist ein vollständiges Produkt — Trainingsplan, Logging, Status und dein erster Insight inklusive.</p>
       <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
       <button class="btn ghost" style="max-width:320px;margin:0 auto" onclick="A.devMode()">${icon("settings",15)} Erst die Demo ansehen</button>
+      <div class="lp-stick"><button class="btn volt" style="box-shadow:0 14px 40px rgba(0,0,0,.5)" onclick="A.toRegister()">Kostenlos starten — 60 Sekunden</button></div>
       <div class="row" style="gap:14px;justify-content:center;margin-top:20px">
         <span class="xs t2">Dauerhaft kostenlos</span><span class="xs" style="color:var(--t3)">·</span>
         <span class="xs t2">DSGVO-konform</span><span class="xs" style="color:var(--t3)">·</span>
