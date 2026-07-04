@@ -645,6 +645,21 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     max-width:400px; margin:0 auto; opacity:0; pointer-events:none; transform:translateY(16px);
     transition:opacity .35s, transform .35s cubic-bezier(.22,1,.36,1);}
   body.scrolled .lp-stick{opacity:1; pointer-events:auto; transform:none;}
+  /* ===== OURA-RING + Ruhe-Typografie ===== */
+  .oring-wrap{position:relative; width:176px; height:176px; background:none; border:none; cursor:pointer; padding:0;
+    display:inline-flex; align-items:center; justify-content:center; animation:fade .8s ease backwards;}
+  .oring-halo{position:absolute; inset:-26px; border-radius:50%; filter:blur(14px); pointer-events:none;
+    animation:mgAura 5s ease-in-out infinite;}
+  .oring-fill{animation:oringIn 1.4s cubic-bezier(.22,1,.36,1) backwards;}
+  @keyframes oringIn{from{stroke-dashoffset:100}}
+  .oring-c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;}
+  .oring-num{font-family:var(--font-mono); font-size:52px; font-weight:300; letter-spacing:-.03em; line-height:1; color:var(--t1);}
+  .oring-lbl{font-size:9px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--t3); margin-top:5px;}
+  .oring-tier{font-size:12px; font-weight:650; margin-top:2px;}
+  /* Ruhige Zahlen ueberall: grosse Werte duenn statt fett (Oura-Prinzip) */
+  .hero-num{font-weight:350; letter-spacing:-.02em;}
+  .th-metric .m-v{font-weight:450;}
+  @media (prefers-reduced-motion:reduce){.oring-fill,.oring-wrap,.oring-halo{animation:none}}
   .fh-dot{position:absolute; top:9px; right:9px; width:8px; height:8px; border-radius:50%;
     background:linear-gradient(135deg,#4A6FD8,#56C8D6); box-shadow:0 0 8px rgba(86,200,214,.8); animation:pulse 1.6s infinite;}
   @media (prefers-reduced-motion:reduce){.fh-dot{animation:none}.fh-item{animation:none}}
@@ -5625,6 +5640,36 @@ function checkCelebrations(){
     const m=MILESTONES.find(x=>x.id===news[news.length-1]); celebrate(m.t,m.d); return; }
   if(s.level>(S.lastLevel||1)){ S.lastLevel=s.level; save(); celebrate("Level "+s.level+" erreicht!","Dein Einsatz zahlt sich aus. Weiter geht's."); }
 }
+/* ===== OURA-RING: der grosse, ruhige Bereitschafts-Ring — Herzstueck des Home-Screens.
+   Echter Score aus readinessToday(); ohne Check-in ein ehrlicher Leer-Zustand mit CTA. ===== */
+function ouraRingHTML(r){
+  const TIER_COL={Stark:"#56C8D6",Gut:"#9DB4F0","Mäßig":"#E0A24A",Erholung:"#7FA0C8"};
+  const sz=176,st=9,rr=(sz-st)/2;
+  if(!r){
+    return `<button class="oring-wrap" onclick="A.openStatus()" aria-label="Tages-Check starten">
+      <svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">
+        <circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="${st}" stroke-dasharray="2 7" stroke-linecap="round"/>
+      </svg>
+      <span class="oring-c"><span class="oring-num" style="font-size:40px;color:var(--t3)">–</span>
+        <span class="oring-lbl">Bereitschaft</span>
+        <span class="oring-tier" style="color:var(--hl)">Check starten →</span></span>
+    </button>`;
+  }
+  const tier=r.tier||(r.score>=78?"Stark":r.score>=58?"Gut":r.score>=40?"Mäßig":"Erholung");
+  const col=TIER_COL[tier]||"#9DB4F0";
+  return `<button class="oring-wrap" onclick="A.openStatus()" aria-label="Bereitschaft ${r.score} — ${r.tier}">
+    <span class="oring-halo" style="background:radial-gradient(closest-side, ${col}33, transparent 70%)"></span>
+    <svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" style="transform:rotate(-90deg)">
+      <circle cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="${st}"/>
+      <circle class="oring-fill" cx="${sz/2}" cy="${sz/2}" r="${rr}" fill="none" stroke="${col}" stroke-width="${st}"
+        stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100-r.score}"
+        style="filter:drop-shadow(0 0 8px ${col}66)"/>
+    </svg>
+    <span class="oring-c"><span class="oring-num">${r.score}</span>
+      <span class="oring-lbl">Bereitschaft</span>
+      <span class="oring-tier" style="color:${col}">${tier}${(r.mult!=null&&r.mult<1)?" · Volumen "+Math.round(r.mult*100)+" %":""}</span></span>
+  </button>`;
+}
 function renderHome(){
   const p=S.profile;
   const tType=todayType(), tSession=TYPES[tType];
@@ -5771,15 +5816,16 @@ function renderHome(){
       const metric=(ic,v,l,oc)=>`<button class="th-metric" ${oc?`onclick="${oc}"`:""}><div class="m-ic">${icon(ic,17)}</div><p class="m-v">${v}</p><p class="m-l">${l}</p></button>`;
       const heroTier=r?(r.score>=80?"th-strong":r.score>=60?"th-good":r.score>=40?"th-mod":"th-rest"):"";
       return `<section class="today-hero fade ${heroTier}"><div class="th-scene"></div>
-        <p class="sm" style="color:var(--t2);margin-bottom:14px">${greet()}, ${userName()}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
+        <p class="sm" style="color:var(--t2);margin-bottom:10px">${greet()}, ${userName()}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
         <div class="th-metrics">
-          ${metric("activity",r?r.score:"–","Bereitschaft","A.openStatus()")}
+          ${metric("dumbbell",isRest?"Frei":tLabel,"Heute","A.q('train')")}
           ${metric("flame",streak,"Streak")}
           ${metric("zap",eng.level,"Level")}
         </div>
         <div class="th-ring">
           <div class="hero-aura" aria-hidden="true"></div>
-          ${r?`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status erneut öffnen">${ringSVG(r.score,r.tier,184)}</button>`
+          ${r?(()=>{const tier=r.tier||(r.score>=78?"Stark":r.score>=58?"Gut":r.score>=40?"Mäßig":"Erholung");
+            return `<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Bereitschaft ${r.score} — ${tier}">${ringSVG(r.score,tier,184)}</button>`;})()
             :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
                 <div style="width:184px;height:184px;border-radius:50%;border:7px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
                   <span style="font-size:32px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.4">Bereit für heute?<br>Check in 10 Sek.</span>
