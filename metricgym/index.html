@@ -598,14 +598,21 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     animation:fade .4s ease; cursor:pointer;}
   .genesis.out{animation:gnOut .42s cubic-bezier(.4,0,.2,1) forwards;}
   @keyframes gnOut{to{opacity:0; transform:scale(1.04); filter:blur(6px)}}
-  .gn-orb{position:relative; width:104px; height:104px; margin-bottom:22px;}
-  .gn-orb span{position:absolute; inset:0; border-radius:50%;}
-  .gn-orb span:nth-child(1){background:radial-gradient(circle at 32% 28%, rgba(157,180,240,.95), rgba(74,111,216,.75) 46%, rgba(20,26,48,.9) 78%);
-    box-shadow:0 0 60px rgba(86,200,214,.4), inset 0 2px 10px rgba(255,255,255,.35); animation:gnBreath 2.2s ease-in-out infinite;}
-  .gn-orb span:nth-child(2){inset:-16px; border-radius:50%; border:1.5px solid rgba(157,180,240,.35);
-    border-top-color:rgba(86,200,214,.9); animation:spin 1.6s linear infinite;}
-  .gn-orb span:nth-child(3){inset:-30px; border-radius:50%; background:radial-gradient(closest-side, rgba(86,200,214,.22), transparent 70%);
-    filter:blur(10px); animation:gnBreath 2.2s ease-in-out infinite reverse;}
+  .gn-orb{display:flex; justify-content:center; margin-bottom:22px;}
+  /* Rauchkreis — DAS Signatur-Visual: morphender Rauch-Orb + rotierender Akzentring + atmende Aura.
+     Eine Komponente, ueberall identisch: Hero, Engine-Rechnung, Plan-Genese, KI-Hub. */
+  .rk{position:relative; display:inline-block; flex:none;}
+  .rk svg{display:block; position:relative; z-index:1;}
+  .rk-ring{position:absolute; inset:-8%; border-radius:50%; border:1.5px solid rgba(157,180,240,.28);
+    border-top-color:rgba(86,200,214,.9); animation:spin 1.9s linear infinite; z-index:2; pointer-events:none;}
+  .rk-aura{position:absolute; inset:-24%; border-radius:50%; filter:blur(12px); pointer-events:none;
+    background:radial-gradient(closest-side, rgba(86,200,214,.20), rgba(74,111,216,.12) 55%, transparent 78%);
+    animation:gnBreath 2.6s ease-in-out infinite;}
+  @media (prefers-reduced-motion:reduce){.rk-ring,.rk-aura{animation:none}}
+  /* Einheitliche kompakte Engine-Boxen (Landing-Buehne = gleiche Sprache wie Plan-Genese) */
+  .gn-step.mini{padding:9px 12px; margin-bottom:7px; animation:none; opacity:1;}
+  .gn-step.mini .gn-tx b{font-size:12.5px;}
+  .gn-step.mini .gn-tick{width:18px; height:18px; min-width:18px; font-size:9px; animation:none;}
   @keyframes gnBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
   .gn-title{font-family:var(--font-display); font-size:21px; font-weight:700; margin:0 0 18px; text-align:center;
     background:linear-gradient(90deg,#F3F6FB,#9DB4F0,#56C8D6,#F3F6FB); background-size:220% 100%; -webkit-background-clip:text;
@@ -665,8 +672,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Scrollytelling: gepinnte Buehne */
   .lp-story{padding:0 20px;}
   .lp-story-track{height:240vh; position:relative;}
-  .lp-story-pin{position:sticky; top:64px; max-width:400px; margin:0 auto; text-align:center; padding-top:12px;}
-  .lp-phone{position:relative; min-height:290px; max-width:330px; margin:14px auto 10px; padding:18px 16px; border-radius:26px;
+  .lp-story-pin{position:sticky; top:0; min-height:100vh; min-height:100svh; max-width:400px; margin:0 auto; text-align:center;
+    display:flex; flex-direction:column; justify-content:center; padding:60px 0 16px; box-sizing:border-box;}
+  .lp-phone{position:relative; width:100%; min-height:290px; max-width:330px; margin:14px auto 10px; padding:18px 16px; border-radius:26px; box-sizing:border-box;
     background:linear-gradient(168deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 62%), rgba(15,17,24,.72);
     border:1px solid rgba(255,255,255,.12); box-shadow:0 24px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
     -webkit-backdrop-filter:blur(22px) saturate(160%); backdrop-filter:blur(22px) saturate(160%);}
@@ -685,7 +693,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     .lp-rev{opacity:1; transform:none; transition:none;}
     .lp-marq-in{animation:none;}
     .lp-story-track{height:auto;}
-    .lp-story-pin{position:static;}
+    .lp-story-pin{position:static; min-height:0; display:block; padding:12px 0 0;}
     .lp-scene{position:static; opacity:1; transform:none; margin-bottom:14px;}
   }
   /* ===== OURA-RING + Ruhe-Typografie ===== */
@@ -1295,6 +1303,11 @@ function smokeOrb(size,opts){
     <circle cx="${size/2}" cy="${size/2}" r="${(size*0.47).toFixed(0)}" fill="url(#${id}h)" opacity=".75"/>
     <g filter="url(#${id}f)"><circle cx="${size/2}" cy="${size/2}" r="${(size*0.33).toFixed(0)}" fill="url(#${id}g)"/></g>
   </svg>`;
+}
+/* Rauchkreis-Komponente: Rauch-Orb + Akzentring + Aura als EIN wiederverwendbares Markup. */
+function rauchkreis(size,opts){
+  opts=opts||{};
+  return `<div class="rk" style="width:${size}px;height:${size}px" aria-hidden="true"><span class="rk-aura"></span>${smokeOrb(size,opts)}<span class="rk-ring"></span></div>`;
 }
 let PB={raf:null,onMove:null,onResize:null,
   stop(){ if(PB.raf)cancelAnimationFrame(PB.raf); PB.raf=null;
@@ -4683,6 +4696,7 @@ function renderLanding(){
     <!-- HERO — Smoke nur als Hintergrund-Gradient, nutzenorientierte Headline -->
     <section class="lp-hero" style="--par:0px">
       <div class="lp-herocopy">
+        <div class="orb-float" style="display:flex;justify-content:center;margin:2px auto 14px">${rauchkreis(126)}</div>
         <p class="lp-eyebrow">Tracken · Analysieren · Wachsen</p>
         <h1 class="lp-h">Training. Ernährung.<br>Erholung. <span class="volt-txt">Eine App.</span></h1>
         <p class="lp-lead" style="max-width:360px;margin:0 auto 22px">Dein Fortschritt in Zahlen — Kraft, Körper & Erholung, Woche für Woche.</p>
@@ -4736,11 +4750,11 @@ function renderLanding(){
               <p class="xs t2" style="text-align:center;margin-top:12px;line-height:1.5">Ziel · Level · Equipment · Zeit —<br>mehr braucht die Engine nicht.</p>
             </div>
             <div class="lp-scene sc2">
-              <div class="gn-orb" style="width:74px;height:74px;margin:0 auto 14px"><span></span><span></span><span></span></div>
-              ${[["112 Übungen gescannt"],["Volumen-Korridor kalibriert"],["DUP-Rotation gesetzt"]].map(([t],i)=>`<div class="gn-step" style="animation:none;opacity:1;padding:8px 11px;margin-bottom:6px"><span class="gn-ic">${icon("check",12)}</span><span class="gn-tx"><b style="font-size:12px">${t}</b></span><span class="gn-tick" style="animation:none;width:18px;height:18px;min-width:18px;font-size:9px">✓</span></div>`).join("")}
+              <div style="display:flex;justify-content:center;margin-bottom:16px">${rauchkreis(88)}</div>
+              ${[["grid","112 Übungen gescannt"],["activity","Volumen-Korridor kalibriert"],["undo","DUP-Rotation gesetzt"]].map(([ic,t])=>`<div class="gn-step mini"><span class="gn-ic">${icon(ic,13)}</span><span class="gn-tx"><b>${t}</b></span><span class="gn-tick">✓</span></div>`).join("")}
             </div>
             <div class="lp-scene sc3">
-              ${[["Bankdrücken","4 × 6–10 · 150 s"],["Arnold Press","3 × 8–12"],["Kabel-Seitheben","2 × 12–20 · ⚡ Partials"]].map(([n,d],i)=>`<div class="gn-step" style="animation:none;opacity:1;padding:9px 11px;margin-bottom:6px"><span class="gn-tx"><b style="font-size:12.5px">${n}</b><i>${d}</i></span></div>`).join("")}
+              ${[["Bankdrücken","4 × 6–10 · 150 s"],["Arnold Press","3 × 8–12"],["Kabel-Seitheben","2 × 12–20 · ⚡ Partials"]].map(([n,d])=>`<div class="gn-step mini"><span class="gn-tx"><b>${n}</b><i>${d}</i></span></div>`).join("")}
               ${corridorHTML([{g:"Brust",tot:16,mev:10,mrv:20}])}
             </div>
           </div>
@@ -6268,8 +6282,8 @@ function openFeatureHub(){
       <div class="fh-head">
         <div class="fh-halo" aria-hidden="true"></div>
         <div class="row" style="position:relative">
-          <div><p class="display-m" style="margin:0 0 3px">${gr.g}</p>
-            <p class="xs" style="margin:0;color:var(--hl);display:flex;align-items:center;gap:5px">${icon("activity",11)} ${gr.status}</p></div>
+          <div style="display:flex;align-items:center;gap:13px">${rauchkreis(44)}<div><p class="display-m" style="margin:0 0 3px">${gr.g}</p>
+            <p class="xs" style="margin:0;color:var(--hl);display:flex;align-items:center;gap:5px">${icon("activity",11)} ${gr.status}</p></div></div>
           <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen">✕</button></div>
       </div>
       <div class="row" style="gap:8px;margin-bottom:4px">
@@ -6693,7 +6707,7 @@ function planGenesis(run,ctx){
   const gid="genesis-"+Date.now(); const total=380+steps.length*430+520;
   let fired=false; const finish=()=>{ if(fired)return; fired=true; try{ run(); }catch(e){} };
   overlay.innerHTML=`<div class="genesis" id="${gid}" role="status" aria-live="polite">
-    <div class="gn-orb" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="gn-orb" aria-hidden="true">${rauchkreis(104)}</div>
     <p class="gn-title">${ctx.title||"Engine baut deinen Plan"}</p>
     <div class="gn-steps">${steps.map((st,i)=>`<div class="gn-step" style="animation-delay:${380+i*430}ms">
       <span class="gn-ic">${icon(st.ic,14)}</span>
