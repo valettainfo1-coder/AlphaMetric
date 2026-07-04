@@ -4319,8 +4319,22 @@ function renderFab(){
   const cc=document.getElementById("coach-chat"); if(cc)cc.scrollTop=cc.scrollHeight;
 }
 
+/* KONTO-FREISCHALTUNGEN: E-Mails aus config.eliteAccounts bekommen dauerhaft ELITE —
+   greift bei Login, Registrierung und jedem App-Start (idempotent). */
+function applyAccountGrants(){
+  try{
+    const list=((window.METRICGYM_CONFIG||{}).eliteAccounts||[]).map(x=>String(x).toLowerCase().trim());
+    if(!list.length) return;
+    const em=currentEmail()||((typeof SB!=="undefined"&&SB.user&&SB.user.email)||"").toLowerCase().trim();
+    if(em&&list.includes(em)&&S.tier!=="elite"){
+      S.tier="elite"; save();
+      setTimeout(()=>toast("✦ ELITE freigeschaltet — willkommen im Inner Circle"),400);
+    }
+  }catch(e){}
+}
 function renderApp(){
   if(!S.profile){ S.screen="onboarding"; save(); render(); return; }
+  applyAccountGrants();
   if(S.tab==="home") renderHome();
   else if(S.tab==="train") renderTrain();
   else if(S.tab==="player") renderPlayer();

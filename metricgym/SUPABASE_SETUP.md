@@ -94,3 +94,27 @@ auch ohne Google.
   (z. B. Supabase Edge Function) routen und rotieren.
 - DSGVO: Konto-Löschung serverseitig = Zeile in `user_state` + `auth.users`-Eintrag löschen
   (per `on delete cascade` reicht das Löschen des Auth-Users).
+
+## Alle Konten zurücksetzen (vor dem Launch)
+
+Der Anon-Key im Client kann fremde Konten NICHT löschen (RLS) — das geht nur
+im Supabase-Dashboard (https://supabase.com/dashboard → Projekt):
+
+1. **Gespeicherte App-Daten löschen** — SQL Editor:
+   ```sql
+   truncate table public.user_state;
+   ```
+2. **Auth-Konten löschen** — SQL Editor (löscht ALLE Logins!):
+   ```sql
+   delete from auth.users;
+   ```
+   (alternativ einzeln unter Authentication → Users)
+
+Danach ist die Datenbank leer wie am ersten Tag. Lokale Gerätedaten der
+Tester löschen sich über Profil → „Konto & Daten endgültig löschen" oder
+Browser-Daten der Seite entfernen.
+
+## Dauerhafte ELITE-Konten
+
+In `config.js` unter `eliteAccounts` gepflegt (z. B. Gründer/Familie):
+beim Login oder App-Start wird das Konto automatisch auf ELITE gesetzt.

@@ -24,6 +24,10 @@ window.METRICGYM_CONFIG = {
   openrouterModel: "openai/gpt-4o-mini",
   groqKey: "",
 
+  /* Konten mit dauerhaftem ELITE-Zugang (z. B. Gründer, Familie, Presse).
+     Wird beim Login/App-Start geprüft — Klein-/Großschreibung egal. */
+  eliteAccounts: ["lovisstumpfe@icloud.com"],
+
   /* Cloud-Sync pro Konto. anon-Key ist öffentlich – Schutz erfolgt über RLS. */
   supabaseUrl: "https://nsdziafvhhzuuhrctozl.supabase.co",
   supabaseAnonKey: "sb_publishable_Be3Xcvik1HiQnHfPblaSKQ_-nt9rf0c",
