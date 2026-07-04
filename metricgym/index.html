@@ -645,6 +645,49 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     max-width:400px; margin:0 auto; opacity:0; pointer-events:none; transform:translateY(16px);
     transition:opacity .35s, transform .35s cubic-bezier(.22,1,.36,1);}
   body.scrolled .lp-stick{opacity:1; pointer-events:auto; transform:none;}
+  /* ===== LANDING-FX ===== */
+  .lp-prog{position:fixed; top:0; left:0; right:0; height:2.5px; z-index:60; background:rgba(255,255,255,.05);}
+  .lp-prog i{display:block; height:100%; transform:scaleX(0); transform-origin:left;
+    background:linear-gradient(90deg,#4A6FD8,#56C8D6); box-shadow:0 0 10px rgba(86,200,214,.6);}
+  .lp-rev{opacity:0; transform:translateY(22px); transition:opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1);}
+  .lp-rev.inview{opacity:1; transform:none;}
+  .lp-hero .lp-herocopy{transform:translateY(calc(var(--par,0px)*-0.35));}
+  .lp-hero{background-position-y:var(--par,0px);}
+  .lp-hero .btn.volt{transition:transform .25s cubic-bezier(.22,1,.36,1), background-position .8s;}
+  /* Marquee */
+  .lp-marq{overflow:hidden; border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline);
+    padding:11px 0; margin:4px 0 26px; -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);}
+  .lp-marq-in{display:flex; gap:18px; width:max-content; animation:lpMarq 26s linear infinite; align-items:center;}
+  .lp-marq-in span{font-size:11.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); white-space:nowrap;}
+  .lp-marq-in i{color:var(--hl); font-style:normal; font-size:9px; opacity:.7;}
+  @keyframes lpMarq{to{transform:translateX(-50%)}}
+  /* Scrollytelling: gepinnte Buehne */
+  .lp-story{padding:0 20px;}
+  .lp-story-track{height:240vh; position:relative;}
+  .lp-story-pin{position:sticky; top:64px; max-width:400px; margin:0 auto; text-align:center; padding-top:12px;}
+  .lp-phone{position:relative; min-height:290px; max-width:330px; margin:14px auto 10px; padding:18px 16px; border-radius:26px;
+    background:linear-gradient(168deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 62%), rgba(15,17,24,.72);
+    border:1px solid rgba(255,255,255,.12); box-shadow:0 24px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+    -webkit-backdrop-filter:blur(22px) saturate(160%); backdrop-filter:blur(22px) saturate(160%);}
+  .lp-scene{position:absolute; inset:18px 16px; opacity:0; transform:translateY(18px) scale(.98); pointer-events:none;
+    transition:opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1);
+    display:flex; flex-direction:column; justify-content:center;}
+  .lp-story[data-step="0"] .sc1,.lp-story[data-step="1"] .sc2,.lp-story[data-step="2"] .sc3{opacity:1; transform:none;}
+  .lp-story[data-step="0"] .sc1 .chip{animation:corrRow .5s cubic-bezier(.22,1,.36,1) backwards;}
+  #lp-story-h{transition:opacity .3s;}
+  .lp-dots{display:flex; gap:7px; justify-content:center; margin-top:6px;}
+  .lp-dots span{width:7px; height:7px; border-radius:999px; background:var(--s3); transition:all .4s cubic-bezier(.22,1,.36,1);}
+  .lp-story[data-step="0"] .lp-dots span:nth-child(1),
+  .lp-story[data-step="1"] .lp-dots span:nth-child(2),
+  .lp-story[data-step="2"] .lp-dots span:nth-child(3){width:22px; background:linear-gradient(90deg,#4A6FD8,#56C8D6);}
+  @media (prefers-reduced-motion:reduce){
+    .lp-rev{opacity:1; transform:none; transition:none;}
+    .lp-marq-in{animation:none;}
+    .lp-story-track{height:auto;}
+    .lp-story-pin{position:static;}
+    .lp-scene{position:static; opacity:1; transform:none; margin-bottom:14px;}
+  }
   /* ===== OURA-RING + Ruhe-Typografie ===== */
   .oring-wrap{position:relative; width:176px; height:176px; background:none; border:none; cursor:pointer; padding:0;
     display:inline-flex; align-items:center; justify-content:center; animation:fade .8s ease backwards;}
@@ -1011,7 +1054,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .avatar{width:52px;height:52px;border-radius:50%;background:var(--s3);color:var(--t1);font-weight:700;display:flex;align-items:center;justify-content:center;}
   .icon-circle{width:44px;height:44px;min-width:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--t1);}
   /* ===== Landingpage (Marketing) ===== */
-  .lp-root{max-width:none;margin:0;padding:0;min-height:100dvh;position:relative;overflow:hidden;}
+  .lp-root{max-width:none;margin:0;padding:0;min-height:100dvh;position:relative;overflow:clip;}
   /* Immersiver Smoke-Gradient ganz oben — hinter Nav UND Hero, fadet smooth nach unten aus */
   .lp-root::before{content:"";position:absolute;top:0;left:-12%;right:-12%;height:620px;z-index:0;pointer-events:none;will-change:transform;
     background:
@@ -4630,6 +4673,7 @@ function renderLanding(){
   const pr=landingProjection();
   root.className="lp-root"; // full-bleed: keine .wrap-Seitenränder (immersiv, randlos)
   root.innerHTML=`<div class="lp fade">
+    <div class="lp-prog" aria-hidden="true"><i id="lp-prog-i"></i></div>
     <div class="lp-nav">
       <span style="display:flex;align-items:center;gap:9px">${logoSVG(22)}<span class="logo-text" style="font-size:15.5px">METRIC<span class="gy">GYM</span></span></span>
       <button class="btn ghost" style="width:auto;min-height:40px;padding:0 14px;font-size:13px" onclick="A.toLogin()">Anmelden</button>
@@ -4637,7 +4681,7 @@ function renderLanding(){
     ${S.invitedBy?`<div style="background:var(--accent);color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600">${icon("send",14)} Du wurdest eingeladen — <b>14 Tage PERFORMANCE gratis</b> nach der Anmeldung.</div>`:""}
 
     <!-- HERO — Smoke nur als Hintergrund-Gradient, nutzenorientierte Headline -->
-    <section class="lp-hero">
+    <section class="lp-hero" style="--par:0px">
       <div class="lp-herocopy">
         <p class="lp-eyebrow">Tracken · Analysieren · Wachsen</p>
         <h1 class="lp-h">Training. Ernährung.<br>Erholung. <span class="volt-txt">Eine App.</span></h1>
@@ -4655,12 +4699,18 @@ function renderLanding(){
       </div>
     </section>
 
+    <!-- MARQUEE: endloses Beweis-Band (Awwwards-Muster) -->
+    <div class="lp-marq" aria-hidden="true"><div class="lp-marq-in">
+      ${Array(2).fill(["MEV–MRV-Engine","112 Übungen","DUP · Tag A/B","Israetel 2017","Pendlay Row","Zourdos 2016","Lengthened Partials","Kraft-Orakel","Schoenfeld 2016","Stoffwechsel-Zwilling","Verletzungs-Schutz","40+ Studien"]).flat()
+        .map(x=>`<span>${x}</span><i>✦</i>`).join("")}
+    </div></div>
+
     <!-- CLAIMS / REASONS TO BELIEVE — mobil bewusst nur 3 kompakte Boxen -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-claimgrid">
-        <div class="lp-claim"><p class="n volt-txt">40+</p><p class="l">Studien als Fundament jeder Empfehlung</p></div>
-        <div class="lp-claim"><p class="n">100<span style="font-size:18px">%</span></p><p class="l">deine echten Daten — nichts erfunden</p></div>
-        <div class="lp-claim"><p class="n">10<span style="font-size:18px">s</span></p><p class="l">loggen — tippen oder sprechen</p></div>
+        <div class="lp-claim lp-rev"><p class="n volt-txt"><span data-cnt="40">0</span>+</p><p class="l">Studien als Fundament jeder Empfehlung</p></div>
+        <div class="lp-claim lp-rev"><p class="n"><span data-cnt="112">0</span></p><p class="l">Übungen — das komplette Universum</p></div>
+        <div class="lp-claim lp-rev"><p class="n"><span data-cnt="10">0</span><span style="font-size:18px">s</span></p><p class="l">loggen — tippen oder sprechen</p></div>
       </div>
     </section>
 
@@ -4671,6 +4721,31 @@ function renderLanding(){
       <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Das ist keine Grafik — das ist die echte Muskel-Engine der App.</p>
       <div class="card" style="max-width:400px;margin:0 auto;padding:16px">
         <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
+      </div>
+    </section>
+
+    <!-- SCROLLYTELLING: gepinnte Buehne — die Engine in 3 Akten (Apple-Muster) -->
+    <section class="lp-story" id="lp-story" data-step="0">
+      <div class="lp-story-track">
+        <div class="lp-story-pin">
+          <p class="lp-eyebrow">${icon("sparkle",12)} So entsteht dein Plan</p>
+          <h2 class="lp-h2" id="lp-story-h" style="min-height:2.4em">Du antwortest.<br>60 Sekunden.</h2>
+          <div class="lp-phone">
+            <div class="lp-scene sc1">
+              <div class="chips" style="justify-content:center">${["Muskelaufbau","5 Tage","Gym · voll","75 Min","2–4 Jahre"].map((c,i)=>`<span class="chip" style="animation-delay:${i*120}ms">${c}</span>`).join("")}</div>
+              <p class="xs t2" style="text-align:center;margin-top:12px;line-height:1.5">Ziel · Level · Equipment · Zeit —<br>mehr braucht die Engine nicht.</p>
+            </div>
+            <div class="lp-scene sc2">
+              <div class="gn-orb" style="width:74px;height:74px;margin:0 auto 14px"><span></span><span></span><span></span></div>
+              ${[["112 Übungen gescannt"],["Volumen-Korridor kalibriert"],["DUP-Rotation gesetzt"]].map(([t],i)=>`<div class="gn-step" style="animation:none;opacity:1;padding:8px 11px;margin-bottom:6px"><span class="gn-ic">${icon("check",12)}</span><span class="gn-tx"><b style="font-size:12px">${t}</b></span><span class="gn-tick" style="animation:none;width:18px;height:18px;min-width:18px;font-size:9px">✓</span></div>`).join("")}
+            </div>
+            <div class="lp-scene sc3">
+              ${[["Bankdrücken","4 × 6–10 · 150 s"],["Arnold Press","3 × 8–12"],["Kabel-Seitheben","2 × 12–20 · ⚡ Partials"]].map(([n,d],i)=>`<div class="gn-step" style="animation:none;opacity:1;padding:9px 11px;margin-bottom:6px"><span class="gn-tx"><b style="font-size:12.5px">${n}</b><i>${d}</i></span></div>`).join("")}
+              ${corridorHTML([{g:"Brust",tot:16,mev:10,mrv:20}])}
+            </div>
+          </div>
+          <div class="lp-dots"><span></span><span></span><span></span></div>
+        </div>
       </div>
     </section>
 
@@ -4808,7 +4883,45 @@ function renderLanding(){
     </section>
   </div>`;
   // Rauch-Orb ist reines (animiertes) SVG — kein Canvas-Start mehr nötig.
-  setTimeout(()=>{ lpAnimateResult(); },60);
+  setTimeout(()=>{ lpAnimateResult(); lpFX(); },60);
+}
+/* ===== LANDING-FX: Scroll-Choreografie (einmal initialisiert, rAF-gedrosselt) =====
+   1) Reveal: Sektionen steigen beim Erreichen ein  2) Counter zaehlen hoch
+   3) Scrollytelling: gepinnte Buehne wechselt Akte  4) Parallax-Hero
+   5) Magnetischer CTA (nur feine Pointer)  6) Scroll-Progress-Linie */
+function lpFX(){
+  if(window._lpfx) return; window._lpfx=true;
+  const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Reveal-Choreografie fuer alle Sektions-Kinder
+  document.querySelectorAll(".lp-sec").forEach(sec=>{ [...sec.children].forEach((c,i)=>{ c.classList.add("lp-rev"); c.style.transitionDelay=(Math.min(i,5)*70)+"ms"; }); });
+  const io=new IntersectionObserver((es)=>{ es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("inview");
+    e.target.querySelectorAll("[data-cnt]").forEach(el=>{ if(el._done)return; el._done=1; const t=+el.dataset.cnt, t0=performance.now();
+      const tick=(now)=>{ const p=Math.min(1,(now-t0)/900); el.textContent=Math.round(t*(RM?1:(1-Math.pow(1-p,3)))); if(p<1)requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); });
+    io.unobserve(e.target); } }); },{threshold:.18});
+  document.querySelectorAll(".lp-rev").forEach(el=>io.observe(el));
+  // Scrollytelling + Parallax + Progress in EINEM Scroll-Handler
+  const story=document.getElementById("lp-story"), sh=document.getElementById("lp-story-h");
+  const H=["Du antwortest.<br>60 Sekunden.","Die Engine rechnet.<br>Sichtbar.","Dein Plan.<br>Materialisiert."];
+  const hero=document.querySelector(".lp-hero"), prog=document.getElementById("lp-prog-i");
+  let raf=0;
+  const onScroll=()=>{ if(raf)return; raf=requestAnimationFrame(()=>{ raf=0;
+    if(story&&sh){ const r=story.getBoundingClientRect(); const total=story.offsetHeight-innerHeight;
+      if(total>40){ const p=Math.min(1,Math.max(0,-r.top/total)); const step=p<0.34?0:p<0.67?1:2;
+        if(+story.dataset.step!==step){ story.dataset.step=step; sh.innerHTML=H[step]; } } }
+    if(hero&&!RM){ const y=Math.min(400,scrollY); hero.style.setProperty("--par",(y*0.18).toFixed(1)+"px"); }
+    if(prog){ const d=document.documentElement; prog.style.transform="scaleX("+Math.min(1,scrollY/((d.scrollHeight-innerHeight)||1)).toFixed(4)+")"; }
+  });};
+  addEventListener("scroll",onScroll,{passive:true}); onScroll();
+  // Magnetischer Haupt-CTA (Desktop)
+  if(!RM&&matchMedia("(pointer:fine)").matches){
+    document.querySelectorAll(".lp-hero .btn.volt").forEach(btn=>{
+      btn.addEventListener("pointermove",(e)=>{ const r=btn.getBoundingClientRect();
+        const dx=e.clientX-(r.left+r.width/2), dy=e.clientY-(r.top+r.height/2);
+        btn.style.transform=`translate(${(dx*0.12).toFixed(1)}px,${(dy*0.22).toFixed(1)}px)`; });
+      btn.addEventListener("pointerleave",()=>{ btn.style.transform=""; });
+    });
+  }
 }
 
 /* ===== Rechtliches (Vorlagen mit [PLATZHALTER] — vor Launch anwaltlich prüfen/füllen) ===== */
