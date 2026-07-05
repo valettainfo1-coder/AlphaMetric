@@ -602,13 +602,29 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Rauchkreis — DAS Signatur-Visual: morphender Rauch-Orb + rotierender Akzentring + atmende Aura.
      Eine Komponente, ueberall identisch: Hero, Engine-Rechnung, Plan-Genese, KI-Hub. */
   .rk{position:relative; display:inline-block; flex:none;}
-  .rk svg{display:block; position:relative; z-index:1;}
+  /* Kern: perfekt runde, geblurrte Sphaere — innen wirbeln drei weiche Farbschwaden
+     (Blau/Tuerkis/Violett) auf dunklem Grund, oben ein mystisches Leuchten. */
+  .rk-core{position:absolute; inset:5%; border-radius:50%; overflow:hidden; z-index:1;
+    background:radial-gradient(circle at 50% 44%, #101627, #070A12 72%);
+    box-shadow:inset 0 0 calc(var(--d,100px)*0.16) rgba(0,0,0,.65), 0 0 calc(var(--d,100px)*0.3) rgba(86,200,214,.22);}
+  .rk-core i{position:absolute; inset:-28%; border-radius:50%; mix-blend-mode:screen;
+    filter:blur(calc(var(--d,100px)*0.11));}
+  .rk-core i:nth-child(1){background:radial-gradient(circle at 30% 36%, rgba(122,143,235,.95), transparent 54%);
+    animation:rkSwirl 7s linear infinite;}
+  .rk-core i:nth-child(2){background:radial-gradient(circle at 70% 58%, rgba(86,200,214,.8), transparent 50%);
+    animation:rkSwirl 11s linear infinite reverse;}
+  .rk-core i:nth-child(3){background:radial-gradient(circle at 52% 82%, rgba(185,139,255,.65), transparent 46%);
+    animation:rkSwirl 16s linear infinite;}
+  .rk-core::after{content:""; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle at 38% 26%, rgba(240,246,255,.42), transparent 42%);
+    filter:blur(calc(var(--d,100px)*0.05));}
+  @keyframes rkSwirl{to{transform:rotate(360deg)}}
   .rk-ring{position:absolute; inset:-8%; border-radius:50%; border:1.5px solid rgba(157,180,240,.28);
     border-top-color:rgba(86,200,214,.9); animation:spin 1.9s linear infinite; z-index:2; pointer-events:none;}
   .rk-aura{position:absolute; inset:-24%; border-radius:50%; filter:blur(12px); pointer-events:none;
     background:radial-gradient(closest-side, rgba(86,200,214,.20), rgba(74,111,216,.12) 55%, transparent 78%);
     animation:gnBreath 2.6s ease-in-out infinite;}
-  @media (prefers-reduced-motion:reduce){.rk-ring,.rk-aura{animation:none}}
+  @media (prefers-reduced-motion:reduce){.rk-ring,.rk-aura,.rk-core i{animation:none}}
   /* Einheitliche kompakte Engine-Boxen (Landing-Buehne = gleiche Sprache wie Plan-Genese) */
   .gn-step.mini{padding:9px 12px; margin-bottom:7px; animation:none; opacity:1;}
   .gn-step.mini .gn-tx b{font-size:12.5px;}
@@ -1304,10 +1320,9 @@ function smokeOrb(size,opts){
     <g filter="url(#${id}f)"><circle cx="${size/2}" cy="${size/2}" r="${(size*0.33).toFixed(0)}" fill="url(#${id}g)"/></g>
   </svg>`;
 }
-/* Rauchkreis-Komponente: Rauch-Orb + Akzentring + Aura als EIN wiederverwendbares Markup. */
+/* Rauchkreis-Komponente: runde geblurrte KI-Sphaere + Akzentring + Aura — EIN Markup ueberall. */
 function rauchkreis(size,opts){
-  opts=opts||{};
-  return `<div class="rk" style="width:${size}px;height:${size}px" aria-hidden="true"><span class="rk-aura"></span>${smokeOrb(size,opts)}<span class="rk-ring"></span></div>`;
+  return `<div class="rk" style="width:${size}px;height:${size}px;--d:${size}px" aria-hidden="true"><span class="rk-aura"></span><div class="rk-core"><i></i><i></i><i></i></div><span class="rk-ring"></span></div>`;
 }
 let PB={raf:null,onMove:null,onResize:null,
   stop(){ if(PB.raf)cancelAnimationFrame(PB.raf); PB.raf=null;
