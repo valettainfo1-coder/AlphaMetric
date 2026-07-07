@@ -602,29 +602,35 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Rauchkreis — DAS Signatur-Visual: morphender Rauch-Orb + rotierender Akzentring + atmende Aura.
      Eine Komponente, ueberall identisch: Hero, Engine-Rechnung, Plan-Genese, KI-Hub. */
   .rk{position:relative; display:inline-block; flex:none;}
-  /* Kern: perfekt runde, geblurrte Sphaere — innen wirbeln drei weiche Farbschwaden
-     (Blau/Tuerkis/Violett) auf dunklem Grund, oben ein mystisches Leuchten. */
-  .rk-core{position:absolute; inset:5%; border-radius:50%; overflow:hidden; z-index:1;
-    background:radial-gradient(circle at 50% 44%, #101627, #070A12 72%);
-    box-shadow:inset 0 0 calc(var(--d,100px)*0.16) rgba(0,0,0,.65), 0 0 calc(var(--d,100px)*0.3) rgba(86,200,214,.22);}
-  .rk-core i{position:absolute; inset:-28%; border-radius:50%; mix-blend-mode:screen;
-    filter:blur(calc(var(--d,100px)*0.11));}
-  .rk-core i:nth-child(1){background:radial-gradient(circle at 30% 36%, rgba(122,143,235,.95), transparent 54%);
-    animation:rkSwirl 7s linear infinite;}
-  .rk-core i:nth-child(2){background:radial-gradient(circle at 70% 58%, rgba(86,200,214,.8), transparent 50%);
-    animation:rkSwirl 11s linear infinite reverse;}
-  .rk-core i:nth-child(3){background:radial-gradient(circle at 52% 82%, rgba(185,139,255,.65), transparent 46%);
-    animation:rkSwirl 16s linear infinite;}
+  /* Mystische KI-Sphaere — dieselbe Sprache wie das ai-field hinter Home: perfekt runde,
+     dunkle Kugel, in der weiche Licht-Schwaden (Blau/Tuerkis/Violett) sanft driften.
+     clip-path:circle() erzwingt kreisrundes Clipping AUCH fuer geblurrte Kinder
+     (overflow:hidden allein versagt in iOS-Safari → eckiges Artefakt). */
+  .rk-core{position:absolute; inset:0; border-radius:50%; z-index:1;
+    clip-path:circle(50% at 50% 50%); -webkit-clip-path:circle(50% at 50% 50%); overflow:hidden;
+    background:radial-gradient(circle at 50% 46%, #0E1424 0%, #080B14 72%);
+    box-shadow:inset 0 0 calc(var(--d,100px)*0.14) rgba(4,6,12,.7);}
+  .rk-core i{position:absolute; border-radius:50%; mix-blend-mode:screen; will-change:transform;
+    filter:blur(calc(var(--d,100px)*0.10));}
+  .rk-core i:nth-child(1){inset:6%; background:radial-gradient(circle at 34% 32%, rgba(90,127,224,.95), transparent 60%);
+    animation:rkA 9s ease-in-out infinite alternate;}
+  .rk-core i:nth-child(2){inset:12%; background:radial-gradient(circle at 68% 60%, rgba(86,200,214,.8), transparent 58%);
+    animation:rkB 12s ease-in-out infinite alternate;}
+  .rk-core i:nth-child(3){inset:18%; background:radial-gradient(circle at 52% 80%, rgba(150,120,235,.6), transparent 56%);
+    animation:rkC 15s ease-in-out infinite alternate;}
   .rk-core::after{content:""; position:absolute; inset:0; border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle at 38% 26%, rgba(240,246,255,.42), transparent 42%);
-    filter:blur(calc(var(--d,100px)*0.05));}
-  @keyframes rkSwirl{to{transform:rotate(360deg)}}
-  .rk-ring{position:absolute; inset:-8%; border-radius:50%; border:1.5px solid rgba(157,180,240,.28);
-    border-top-color:rgba(86,200,214,.9); animation:spin 1.9s linear infinite; z-index:2; pointer-events:none;}
-  .rk-aura{position:absolute; inset:-24%; border-radius:50%; filter:blur(12px); pointer-events:none;
-    background:radial-gradient(closest-side, rgba(86,200,214,.20), rgba(74,111,216,.12) 55%, transparent 78%);
-    animation:gnBreath 2.6s ease-in-out infinite;}
-  @media (prefers-reduced-motion:reduce){.rk-ring,.rk-aura,.rk-core i{animation:none}}
+    background:radial-gradient(circle at 40% 27%, rgba(232,241,255,.48), transparent 40%);}
+  @keyframes rkA{from{transform:translate(-6%,-4%) scale(1)}to{transform:translate(6%,5%) scale(1.13)}}
+  @keyframes rkB{from{transform:translate(5%,4%) scale(1.06)}to{transform:translate(-5%,-6%) scale(.94)}}
+  @keyframes rkC{from{transform:translate(-3%,6%) scale(1)}to{transform:translate(5%,-4%) scale(1.1)}}
+  /* weicher Vollkreis-Rand (kein Lade-Spinner) + atmende Aura */
+  .rk-rim{position:absolute; inset:0; border-radius:50%; z-index:2; pointer-events:none;
+    box-shadow:inset 0 1px 1.5px rgba(255,255,255,.28), inset 0 0 0 1px rgba(157,180,240,.16);}
+  .rk-aura{position:absolute; inset:-22%; border-radius:50%; filter:blur(calc(var(--d,100px)*0.12)); pointer-events:none; z-index:0;
+    background:radial-gradient(circle, rgba(86,200,214,.22), rgba(74,111,216,.14) 55%, transparent 76%);
+    animation:rkAura 6s ease-in-out infinite;}
+  @keyframes rkAura{0%,100%{opacity:.7; transform:scale(1)}50%{opacity:1; transform:scale(1.05)}}
+  @media (prefers-reduced-motion:reduce){.rk-aura,.rk-core i{animation:none}}
   /* Einheitliche kompakte Engine-Boxen (Landing-Buehne = gleiche Sprache wie Plan-Genese) */
   .gn-step.mini{padding:9px 12px; margin-bottom:7px; animation:none; opacity:1;}
   .gn-step.mini .gn-tx b{font-size:12.5px;}
@@ -820,6 +826,19 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .barrow .bval{width:62px; text-align:right; font-size:11px; color:var(--t2); flex-shrink:0;}
   .iconbtn{background:none; border:none; color:var(--t2); cursor:pointer; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;}
   .conf{font-size:10px; color:var(--t3); font-family:var(--font-mono);}
+  .badge{line-height:1;}
+  /* Insight-Blöcke: die „Was deine Daten dir sagen"-Liste wird scanbar — je Block ein
+     Kategorie-Icon, farbiger Akzent-Balken, fette Kernaussage + Erklärung + Beleg. */
+  .ins-block{position:relative; background:var(--s2); border:1px solid var(--border); border-radius:16px;
+    padding:13px 14px 12px 16px; margin-bottom:9px; overflow:hidden;}
+  .ins-block::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--ic,#6E7BE0);}
+  .ins-block.risk{border-color:rgba(224,162,74,.4);}
+  .ins-head{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
+  .ins-ic{width:26px; height:26px; min-width:26px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--ic,#6E7BE0) 18%, transparent); color:var(--ic,#6E7BE0);}
+  .ins-cat{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ic,#6E7BE0);}
+  .ins-block b.ins-title{display:block; font-size:13.5px; font-weight:700; color:var(--t1); margin-bottom:3px; line-height:1.35;}
+  .ins-txt{font-size:13px; line-height:1.55; color:var(--t2);}
   .quicklog-field{width:100%; min-height:64px; padding:14px 16px 50px; box-sizing:border-box;
     background:var(--surface); border:1px solid var(--hairline); border-radius:18px;
     color:var(--t1); font-size:15px; font-family:var(--font-display); resize:none; line-height:1.5;}
@@ -1322,7 +1341,7 @@ function smokeOrb(size,opts){
 }
 /* Rauchkreis-Komponente: runde geblurrte KI-Sphaere + Akzentring + Aura — EIN Markup ueberall. */
 function rauchkreis(size,opts){
-  return `<div class="rk" style="width:${size}px;height:${size}px;--d:${size}px" aria-hidden="true"><span class="rk-aura"></span><div class="rk-core"><i></i><i></i><i></i></div><span class="rk-ring"></span></div>`;
+  return `<div class="rk" style="width:${size}px;height:${size}px;--d:${size}px" aria-hidden="true"><span class="rk-aura"></span><div class="rk-core"><i></i><i></i><i></i></div><span class="rk-rim"></span></div>`;
 }
 let PB={raf:null,onMove:null,onResize:null,
   stop(){ if(PB.raf)cancelAnimationFrame(PB.raf); PB.raf=null;
@@ -1794,13 +1813,19 @@ function maxStimulusStatus(){
     const sch=((S.schedule&&S.schedule.length?S.schedule:(S.scheduleSuggestion||[]))).filter(t=>t&&t!=="rest"&&t!=="cardio");
     if(!sch.length) return null;
     const BANDS=deficitScaledBands(a);
-    const pk=(e)=> e.sets + ((EXDB[e.n]||{}).compound?2:1); // Woche-3-Spitze
+    // Woche-3-Spitze EXAKT wie die Engine (weekSets): Grundübungen +1 Satz, Isolation unverändert.
+    // (Vorher pauschal +2/+1 → zählte einen sauber gedeckelten Plan künstlich über MRV.)
+    const pk=(e)=> e.sets + ((EXDB[e.n]||{}).compound?1:0);
+    // Hat der Nutzer den Plan selbst verändert? Nur dann kann er vom Optimum abweichen —
+    // ein frisch generierter Plan ist per Engine-Garantie immer im Korridor (MEV ≤ v ≤ MRV).
+    const edited = !!(S.exOverrides && Object.values(S.exOverrides).some(o=>o&&Object.keys(o).length))
+      || !!(S.soreMode && Object.values(S.soreMode).some(Boolean));
     const w={};
     for(const tk of sch){ const d=sessionDef(tk); for(const e of [...(d.main||[]),...(d.abs||[])]){ const g=volGroupOf(e.n); if(g) w[g]=(w[g]||0)+pk(e); } }
     const groups=Object.keys(w); if(!groups.length) return null;
     let inCorr=0, over=0, under=0, utilSum=0; const muscles=[];
     for(const g of groups){ const mev=BANDS[g][0], mrv=BANDS[g][1], v=w[g];
-      let st; if(v>mrv+0.5){st="over";over++;} else if(v<mev){st="under";under++;} else {st="ok";inCorr++;}
+      let st; if(edited&&v>mrv+0.5){st="over";over++;} else if(edited&&v<mev){st="under";under++;} else {st="ok";inCorr++;}
       utilSum+=Math.min(1.05,v/mrv);
       muscles.push({g,v,mev,mrv,pct:Math.min(110,Math.round(100*v/mrv)),st,ok:st==="ok"});
     }
@@ -3591,6 +3616,27 @@ function evidenceTag(ins){
   const basis = ins.n ? `beruht auf ${ins.n} ${ins.nUnit||"Datenpunkten"}`
                       : "wird mit jeder Session belastbarer";
   return `${e.label} · ${basis}`;
+}
+/* Insight → Kategorie (Icon, Farbe, Label) für scanbare Blöcke statt Textwand. */
+function insightMeta(t,risk){
+  if(/Übertrain|Verletzungsrisiko|zu hoch|über.*Maximum/i.test(t)) return {cat:"Risiko",ic:"alert",c:"#E0A24A"};
+  if(/Dranbleiber|Konstanz|geplanten Trainings|ausgefallene/i.test(t)) return {cat:"Konstanz",ic:"calendar",c:"#4A6FD8"};
+  if(/Trainingsbelastung|MEV|Sätze\/Woche|zu niedrig für/i.test(t)) return {cat:"Volumen",ic:"activity",c:"#56C8D6"};
+  if(/Gewicht|Protein|Adhärenz|Ernährung|kcal|Kalorien/i.test(t)) return {cat:"Ernährung",ic:"flame",c:"#B98BFF"};
+  if(/Fortschrittstempo|Kraft|1RM|Trainingsvolumen hat sich|stärker/i.test(t)) return {cat:"Fortschritt",ic:"chart",c:"#3FA98C"};
+  return {cat:risk?"Hinweis":"Einblick",ic:"sparkle",c:"#6E7BE0"};
+}
+/* Ein Insight als strukturierter Block: Kategorie-Kopf + fette Kernaussage (Teil vor „:")
+   + Erklärung + Beleg. Macht die „Was deine Daten dir sagen"-Liste scanbar. */
+function insightBlockHTML(i){
+  const m=insightMeta(i.t,i.risk);
+  const ci=i.t.indexOf(": ");
+  const title=ci>0&&ci<48?i.t.slice(0,ci):"";
+  const body=title?i.t.slice(ci+2):i.t;
+  return `<div class="ins-block${i.risk?" risk":""}" style="--ic:${m.c}">
+    <div class="ins-head"><span class="ins-ic">${icon(m.ic,14)}</span><span class="ins-cat">${m.cat}</span></div>
+    ${title?`<b class="ins-title">${title}</b>`:""}<span class="ins-txt">${body}</span>
+    <div class="conf mt8">${esc(evidenceTag(i))}</div></div>`;
 }
 // ---------- Insight-/Risk-Engine (regelbasiert; Aussagen mit echter Datenbasis) ----------
 function buildInsights(){
@@ -7549,6 +7595,20 @@ function renderTrain(){
         <span style="font-size:11px;font-weight:700;line-height:1.1">${TYPES[t].label}</span>
         ${isNext?'<span style="font-size:8px;letter-spacing:.06em;opacity:.85">NÄCHSTE</span>':""}</button>`;}).join("")}
   </div>`;
+  // Wochen-ÜBERSICHT: der ganze Plan auf einen Blick — jeder Trainingstag als Karte mit
+  // seinen Hauptübungen, ohne dass man jeden Tag einzeln antippen muss. Tap = Einheit öffnen.
+  const dayCard=(t,i,isRot,isNext)=>{ const d=sessionDef(t); const names=(d.main||[]).map(e=>e.n);
+    const isSel=isRot?(i===rotSelIdx):(i===focusDayIdx); const isToday=!isRot&&i===dow;
+    const head=isRot?TYPES[t].label:`${WD[i]} · ${TYPES[t].label}`;
+    return `<button onclick="${isRot?`A.selectRot(${i})`:`A.selectDay(${i})`}" style="text-align:left;background:${isSel?"var(--accent-soft)":"var(--s2)"};border:1px solid ${isSel?"var(--hl)":"var(--border)"};border-radius:14px;padding:11px 13px;cursor:pointer;font-family:inherit;color:var(--t1);width:100%">
+      <div class="row" style="margin-bottom:5px;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;min-width:0"><span style="display:inline-flex;color:var(--hl)">${icon(TYPES[t].icon,15)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${head}</span>${isToday?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">heute</span>':isNext?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">nächste</span>':""}</span><span class="xs t3" style="flex-shrink:0">${names.length} Üb.</span></div>
+      <p class="xs t2" style="line-height:1.5;margin:0">${names.slice(0,5).join(" · ")}${names.length>5?" …":""}</p>
+    </button>`;};
+  const weekOverview=`<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+    ${rotMode
+      ? rot.map((t,i)=>dayCard(t,i,true,i===(S.rotationPos||0)%rot.length)).join("")
+      : sch.map((t,i)=>t==="rest"?"":dayCard(t,i,false,false)).join("")}
+  </div>`;
   root.innerHTML=`
     ${banner("train","dumbbell","<b>Dein Plan. Maximal effizient.</b> Jede Übung exakt auf dein Ziel, dein Level und dein Equipment berechnet.")}
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
@@ -7618,9 +7678,10 @@ function renderTrain(){
         <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":(S.blockNum>1?"Block "+S.blockNum+" · ":"")+(isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4 · "+(S.currentWeek===1?"Volumen-Start":S.currentWeek===2?"Volumen steigt":"Spitzenvolumen"))}</span>
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
         ${rotMode?rotStrip:weekStrip}
+        ${weekOverview}
         ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
         <p class="xs t2 mt8" style="line-height:1.5">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
-        <p class="xs t2 mt8">${rotMode?"Tipp auf eine Box, um die Übungen zu sehen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett anzusehen — auch zukünftige."}</p>
+        <p class="xs t2 mt8">${rotMode?"Tipp auf eine Einheit, um sie komplett zu öffnen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett zu öffnen — auch zukünftige."}</p>
         <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:16px;background:var(--s2);overflow:hidden">
           <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
           <div class="accbody" style="padding:0 14px 12px">
@@ -8444,11 +8505,12 @@ function renderAnalytics(){
     const volWhy=S.currentWeek===4
       ?`Grund: geplante ${LABELS.deload} (Woche 4 von 4) — bewusst weniger Sätze, kein Trainingsausfall.`
       :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Sessions prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
-    html+=`<div class="card"><p class="ct">Dein Trainingsvolumen diese Woche</p>
-      <div style="display:flex;align-items:flex-end;gap:10px;height:90px;padding:0 8px">
-        ${wks.map((v,i)=>`<div style="flex:1;text-align:center">
-          <div class="volbar" style="height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C2E6,#4A6FD8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(74,111,216,.45)":""};animation-delay:${i*0.08}s"></div>
-          <p class="xs t2" style="margin-top:4px">W${i+1}</p><p class="metric xs">${v}</p></div>`).join("")}
+    html+=`<div class="card"><p class="ct" style="margin-bottom:14px">Dein Trainingsvolumen diese Woche</p>
+      <div style="display:flex;align-items:flex-end;gap:10px;height:80px;padding:0 8px">
+        ${wks.map((v,i)=>`<div class="volbar" style="flex:1;height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C2E6,#4A6FD8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(74,111,216,.45)":""};animation-delay:${i*0.08}s"></div>`).join("")}
+      </div>
+      <div style="display:flex;gap:10px;padding:0 8px;margin-top:6px">
+        ${wks.map((v,i)=>`<div style="flex:1;text-align:center"><p class="xs t2">W${i+1}</p><p class="metric xs" style="${i===3?"color:var(--hl)":""}">${v}</p></div>`).join("")}
       </div>
       <p class="xs t2 mt8">${volWhy}</p></div>`;
   } else html+=gateCard("Wochenvolumen","3",S.trainingHistory.length,"Sessions");
@@ -8603,8 +8665,8 @@ function renderAnalytics(){
   const visIns=ins.slice(0,insCap);
   const hiddenIns=ins.slice(insCap);
   const hiddenCats=[...new Set(hiddenIns.map(i=>/Fortschrittstempo/.test(i.t)?LABELS.velocity:/Ernährungs-Treue/.test(i.t)?LABELS.adherence:/Trainingsbelastung/.test(i.t)?LABELS.volume:/Übertrain/.test(i.t)?"Übertrainings-Risiko":"Trend-Analyse"))];
-  html+=visIns.length?`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p>
-    ${visIns.map(i=>`<div class="${i.risk?"warncard":"msg ai"}" style="max-width:100%;margin-bottom:8px">${i.t}<div class="conf mt8">${esc(evidenceTag(i))}</div></div>`).join("")}
+  html+=visIns.length?`<div class="card"><p class="ct" style="margin-bottom:12px">${icon("sparkle",14)} Was deine Daten dir sagen</p>
+    ${visIns.map(i=>insightBlockHTML(i)).join("")}
     ${hiddenIns.length?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${hiddenIns.length} weitere ${hiddenIns.length===1?"Insight":"Insights"} verfügbar — ${hiddenCats.slice(0,3).join(", ")}.</p>
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">${TIER_LABEL[S.tier==="free"?"pro":"elite"]} freischalten</button></div>`:""}</div>`
   :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Sobald ein klares Muster da ist, erklärt dir die Engine deinen Fortschritt — in Klartext.</p></div>`;
