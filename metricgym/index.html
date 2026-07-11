@@ -143,6 +143,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     100%{transform:translate3d(3.5%,-3%,0) scale(1.16)}
   }
   @media (prefers-reduced-motion:reduce){ body::before,body::after{animation:none} }
+  /* ===== iOS-App-Gefühl: Doppeltipp-Zoom aus (touch-action), kein Gummiband im Standalone ===== */
+  html{-webkit-text-size-adjust:100%;}
+  *{touch-action:manipulation;}
+  @media (display-mode:standalone){ body{overscroll-behavior-y:none;} }
   /* ===== „Lebendiges KI-Feld" hinter Home: morphende, driftende Gradienten —
      wirkt wie ein intelligentes System, das im Hintergrund rechnet/optimiert. ===== */
   .ai-field{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;}
@@ -2063,7 +2067,8 @@ const PAYOUTS_LIVE=false;
 S.referralRankSeen=S.referralRankSeen??null;   // höchster gefeierter Botschafter-Rang
 S.proBonusUntil=S.proBonusUntil??null;
 // Abo-/Paywall-Psychologie: Trial (Endowment + Risk-Reversal), Briefing-Loop (Zeigarnik)
-S.trialUntil=S.trialUntil??null;        // aktiver Gratis-Test (Endowment-Effekt)
+S.trialUntil=S.trialUntil??null;
+S.installDismissed=S.installDismissed??false;   // „Als App installieren"-Hinweis ausgeblendet        // aktiver Gratis-Test (Endowment-Effekt)
 S.trialUsed=S.trialUsed??false;         // Trial nur einmal (ehrliche Knappheit)
 S.trialTier=S.trialTier??null;          // welcher Tier im Trial aktiv ist
 S.briefingDate=S.briefingDate??null;    // wann das Tages-Briefing zuletzt geöffnet wurde
@@ -4212,6 +4217,30 @@ const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Train
 let menuOpen=false;
 
 // Lebendiges KI-Feld als persistente Ebene hinter der ganzen App (kein Neustart pro Render).
+/* ===== Als echte App aufs iPhone/Android: Standalone-Erkennung + Install-Anleitung ===== */
+function isStandalone(){ try{ return (window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true; }catch(e){ return false; } }
+window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); window._bip=e; });
+A.installApp=()=>{
+  if(window._bip){ try{ window._bip.prompt(); }catch(e){} return; }
+  const ios=/iPhone|iPad|iPod/i.test(navigator.userAgent||"");
+  const steps=ios
+    ?[["1","Öffne diese Seite in <b>Safari</b>"],["2","Tippe unten auf das <b>Teilen-Symbol</b> (Quadrat mit Pfeil nach oben)"],["3","Wähle <b>„Zum Home-Bildschirm“</b> und bestätige"]]
+    :[["1","Öffne das <b>Browser-Menü</b> (⋮ oben rechts)"],["2","Wähle <b>„App installieren“</b> bzw. „Zum Startbildschirm hinzufügen“"],["3","Bestätigen — fertig"]];
+  modal(`<p class="ct">${icon("send",14)} METRICGYM als App installieren</p>
+    <p class="sm t2 mb12" style="line-height:1.6">Danach startet METRICGYM im <b style="color:var(--t1)">Vollbild</b> — ohne Adressleiste, ohne Doppeltipp-Zoom, mit eigenem Icon und eigener Karte im App-Umschalter.</p>
+    ${steps.map(([n,t])=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0"><span style="width:22px;height:22px;min-width:22px;border-radius:50%;background:linear-gradient(135deg,#4A6FD8,#56C8D6);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">${n}</span><span class="sm" style="line-height:1.5">${t}</span></div>`).join("")}
+    <p class="xs t3 mt8" style="line-height:1.5">Funktioniert auf der veröffentlichten HTTPS-Adresse (z. B. deiner Netlify-URL) — deine Daten bleiben dieselben.</p>`);
+};
+A.installDismiss=()=>{ S.installDismissed=true; save(); render(); };
+function installCardHTML(){
+  if(isStandalone()||S.installDismissed) return "";
+  return `<div class="card row" style="border-color:rgba(157,180,240,.4)">
+    <span class="brief-orb" style="flex-shrink:0">${icon("send",18)}</span>
+    <span class="sm" style="flex:1;line-height:1.5;min-width:0"><b>Nutze METRICGYM als App.</b><br><span class="t2">Vollbild ohne Browser-Leiste — in 10 Sekunden auf dem Homescreen.</span></span>
+    <button class="btn" style="width:auto;min-height:38px;padding:0 12px;font-size:12.5px;flex-shrink:0" onclick="A.installApp()">So geht's</button>
+    <span class="iconbtn" style="min-width:34px;min-height:34px" role="button" aria-label="Hinweis ausblenden" onclick="A.installDismiss()">✕</span>
+  </div>`;
+}
 function setAiField(on){
   let el=document.getElementById("aifield");
   if(on){ if(!el){ el=document.createElement("div"); el.id="aifield"; el.className="ai-field"; el.setAttribute("aria-hidden","true"); document.body.insertBefore(el, document.body.firstChild); } }
@@ -4759,8 +4788,8 @@ function renderLanding(){
       <div class="lp-herocopy">
         <div class="orb-float" style="display:flex;justify-content:center;margin:2px auto 14px">${rauchkreis(126)}</div>
         <p class="lp-eyebrow">Tracken · Analysieren · Wachsen</p>
-        <h1 class="lp-h">Training. Ernährung.<br>Erholung. <span class="volt-txt">Eine App.</span></h1>
-        <p class="lp-lead" style="max-width:360px;margin:0 auto 22px">Dein Fortschritt in Zahlen — Kraft, Körper & Erholung, Woche für Woche.</p>
+        <h1 class="lp-h">Die erste App, die dir <span class="volt-txt">beweist</span>,<br>dass dein Plan optimal ist.</h1>
+        <p class="lp-lead" style="max-width:370px;margin:0 auto 22px">Jeder Muskel im wissenschaftlichen Korridor, jede Zahl belegt — und du kannst den Beweis jederzeit antippen.</p>
         <div class="lp-cta-row" style="display:flex;flex-direction:column;gap:8px;align-items:center">
           <button class="btn volt" style="max-width:320px;width:100%;margin:0 auto" onclick="A.toRegister()">Kostenlos starten</button>
           <button class="btn" style="max-width:320px;width:100%;margin:0 auto" onclick="A.devMode()">${icon("play",15)} Live-Demo ansehen</button>
@@ -6072,6 +6101,7 @@ function renderHome(){
         <span class="brief-orb" style="background:radial-gradient(circle at 35% 30%,#8FE3EC,#3FB6C6 70%);box-shadow:0 0 18px rgba(86,200,214,.5)">${icon("play",20)}</span>
         <span class="sm" style="flex:1;line-height:1.5"><b>${d.label} fortsetzen</b><br><span class="t2">${S.logged.length} von ${tot} Sätzen geloggt — genau da weiter, wo du warst.</span></span>
         <span class="iconbtn" style="min-width:36px;min-height:36px" role="button" aria-label="Session verwerfen" onclick="event.stopPropagation();A.discardSess()">✕</span></button>`;})():""}
+    ${installCardHTML()}
     ${briefingCard}
     ${!S.seenCatalog?`<button class="card row" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);border-color:rgba(157,180,240,.45);background:linear-gradient(160deg,rgba(74,111,216,.14),transparent)" onclick="A.menuGo('features')">
       <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
@@ -7283,6 +7313,7 @@ function maxStatusCard(){
         <button class="btn" style="flex:1;min-height:42px" onclick="openMaxStatus()">${icon("chart",14)} Beweis ansehen</button>
         <button class="btn volt" style="flex:1;min-height:42px" onclick="shareMaxStatus()">${icon("send",14)} Beweis teilen</button>
       </div>
+      <button class="btn ghost mt8" style="min-height:38px;font-size:12.5px" onclick="openPlanCoach()">${icon("message",14)} Warum sieht mein Plan so aus?</button>
     </div>`;
   }
   const n=st.over||st.under;
@@ -7294,6 +7325,7 @@ function maxStatusCard(){
     <p class="sm" style="line-height:1.55">Durch deine Anpassungen ${diag} <b style="color:var(--t1)">Ein Tap bringt deinen Plan zurück aufs wissenschaftliche Maximum.</b></p>
     <button class="btn volt mt12" style="min-height:46px" onclick="A.resetToOptimum()">${icon("zap",15)} Auf Optimum bringen</button>
     <button class="btn ghost mt8" style="min-height:40px;font-size:13px" onclick="openMaxStatus()">${icon("chart",13)} Welche Muskeln? Details ansehen</button>
+    <button class="btn ghost mt4" style="min-height:38px;font-size:12.5px" onclick="openPlanCoach()">${icon("message",14)} Warum sieht mein Plan so aus?</button>
   </div>`;
 }
 A.resetToOptimum=()=>{
@@ -7565,7 +7597,7 @@ function renderTrain(){
     return `<button class="exrow" ${press} aria-label="Details zu ${name} — gedrückt halten zum Tauschen">
       <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
         <span style="display:flex;align-items:center;gap:6px">${warn?`<span style="color:var(--warn);display:inline-flex">${icon("alert",13)}</span>`:""}${name}${e.swapped?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Alternative</span>':""}${e.userSwap?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Getauscht</span>':""}</span>
-        <span><span class="statchip">${weekSets(e.orig||e.n,e.sets)} × ${e.reps}</span>${e.rir&&e.rir!=="–"?`<span class="statchip">${e.rir} in Reserve</span>`:""}${e.tempo&&e.tempo!=="locker"&&e.tempo!=="halten"?`<span class="statchip">Tempo ${e.tempo}</span>`:""}${e.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</span>
+        <span><span class="statchip">${weekSets(e.orig||e.n,e.sets)} × ${e.reps}</span>${e.rir&&e.rir!=="–"?`<span class="statchip">RIR ${e.rir}</span>`:""}</span>
         ${e.tech?`<span><span class="statchip" style="background:var(--hl-soft);color:var(--hl)">⚡ ${e.tech}</span></span>`:""}
       </span>
       <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
@@ -7610,7 +7642,7 @@ function renderTrain(){
       : sch.map((t,i)=>t==="rest"?"":dayCard(t,i,false,false)).join("")}
   </div>`;
   root.innerHTML=`
-    ${banner("train","dumbbell","<b>Dein Plan. Maximal effizient.</b> Jede Übung exakt auf dein Ziel, dein Level und dein Equipment berechnet.")}
+    ${banner("train","dumbbell","<b>Dein Plan. Beweisbar optimal.</b> Jede Zahl wissenschaftlich begründet — der Beweis ist einen Tap entfernt.")}
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
@@ -7647,24 +7679,29 @@ function renderTrain(){
           </div>`:"";
         const dispMain = reduce ? F.main.map(e=>({...e,sets:Math.max(1,Math.round(e.sets*R.mult))})) : F.main;
         return `<div class="card">${head}
-          <button class="btn ghost" style="min-height:38px;font-size:12.5px;justify-content:flex-start;padding-left:0;margin-top:6px" onclick="explainSession('${focusType}')">${icon("info",14)} Warum genau diese Übungen & diese Länge?</button>
           ${autoBanner?`<div style="margin-top:14px">${autoBanner}</div>`:""}
-          <div style="margin-top:${autoBanner?"4px":"22px"}" class="mb12">${muscleSplitBars(focusType)}</div>
+          <div style="margin-top:${autoBanner?"4px":"18px"}" class="mb12">${muscleSplitBars(focusType)}</div>
           <p class="label" style="margin-bottom:8px">Übungen${reduce?` <span class="xs t2" style="font-weight:400">· heute autoreguliert</span>`:""}</p>
           ${dispMain.map((e,i)=>exLine(e,focusType,i)).join("")}
-          <p class="xs t2 mt8">Übung gedrückt halten, um eine Alternative zu wählen.</p>
-          <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
-          ${S.planUndo&&S.planUndo.typeKey===focusType?`<button class="btn ghost mt8" style="min-height:40px" onclick="planUndoRestore()">${icon("undo",14)} KI-Anpassung rückgängig machen</button>`:""}
-          ${F.abs&&F.abs.length?`<p class="label" style="margin-top:16px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
-          <div style="margin-top:18px">${phaseAcc("Aufwärmen",F.warmup)}${F.mobility&&F.mobility.length?phaseAcc(icon("activity",14)+" Mobility-Routine",F.mobility):""}${phaseAcc("Cool-down",F.cooldown)}</div>
+          ${F.abs&&F.abs.length?`<p class="label" style="margin-top:14px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
           <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
-          <p class="label" style="margin:18px 0 8px">Schnell loggen</p>
-          ${quickLogField("z. B. 'Bankdrücken 90 kg 3x8'","A.trainParse")}
+          <p class="xs t2 mt8" style="text-align:center">Übung antippen für Details · gedrückt halten zum Tauschen</p>
           ${voicePreview?`<div class="card mt8" style="background:var(--s2)">
             <p class="sm"><b>${esc(voicePreview.name)}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
             <p class="conf mt8">Treffsicherheit ${Math.round(voicePreview.conf*100)} %</p>
             <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
             <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
+          <details class="acc" style="margin-top:12px;background:var(--s2);border:1px solid var(--border)">
+            <summary style="font-size:13px;padding:12px 14px;color:var(--t1);font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("settings",14)} Anpassen, verstehen & schnell loggen</span><span class="chev t2">${icon("chevron",15)}</span></summary>
+            <div class="accbody">
+              <button class="btn ghost" style="min-height:38px;font-size:12.5px;justify-content:flex-start;padding-left:0" onclick="explainSession('${focusType}')">${icon("info",14)} Warum genau diese Übungen & diese Länge?</button>
+              <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9px;margin-left:4px">KI</span>':""}</button>
+              ${S.planUndo&&S.planUndo.typeKey===focusType?`<button class="btn ghost mt8" style="min-height:40px" onclick="planUndoRestore()">${icon("undo",14)} KI-Anpassung rückgängig machen</button>`:""}
+              <div style="margin-top:12px">${phaseAcc("Aufwärmen",F.warmup)}${F.mobility&&F.mobility.length?phaseAcc(icon("activity",14)+" Mobility-Routine",F.mobility):""}${phaseAcc("Cool-down",F.cooldown)}</div>
+              <p class="label" style="margin:14px 0 8px">Schnell loggen</p>
+              ${quickLogField("z. B. 'Bankdrücken 90 kg 3x8'","A.trainParse")}
+            </div>
+          </details>
         </div>`;
       })())
     :renderSection("Training",`<div class="card"><p class="sm t2 mb8">Leg deine Trainingstage fest — dein Plan steht sofort.</p>
@@ -7697,12 +7734,7 @@ function renderTrain(){
         </details>
       </div>`)}
 
-    ${renderSection("Dein perfekter Reiz — schwarz auf weiß",
-      `${maxStatusCard()}
-      <div class="card">
-        <p class="sm t2 mb12" style="line-height:1.6">Warum trifft dein Plan jeden Muskel perfekt? <b style="color:var(--t1)">Frag nach — du bekommst die Antwort mit Beleg.</b></p>
-        <button class="btn" onclick="openPlanCoach()">${icon("message",15)} Warum sieht mein Plan so aus?</button>
-      </div>`)}
+    ${renderSection("Dein perfekter Reiz — schwarz auf weiß", maxStatusCard())}
   `;
 }
 
@@ -8420,30 +8452,36 @@ function renderAnalytics(){
   const did2w=S.trainingHistory.filter(t=>Date.now()-new Date(t.date).getTime()<14*dayMs&&t.type!=="cardio"&&t.type!=="rest").length;
   const consistency=Math.min(100,Math.round(did2w/Math.max(1,planned2w)*100));
   const headline=ins.length?ins[0]:null;
+  // Kopf-Kacheln: DAS Wichtigste zuerst — Kraft-Trend, Konstanz, Wochen-Sätze
+  let kTrend=null;
+  if(lifts.length){ const s=e1Series([...lifts].sort((x,y)=>e1Series(y).length-e1Series(x).length)[0]);
+    const win=s.filter(q=>Date.now()-q.t<28*dayMs); const arr=win.length>=2?win:s;
+    if(arr.length>=2&&arr[arr.length-1].t-arr[0].t>=7*dayMs&&arr[0].v>0) kTrend=Math.round((arr[arr.length-1].v-arr[0].v)/arr[0].v*100); }
+  const wkSetsNow=Object.values(weeklyMuscleSets(0)).reduce((s,v)=>s+v,0);
 
   let html=html0+`
     <div class="card" style="border-color:rgba(26,26,26,.1)">
-      <div class="row mb12"><p class="ct" style="margin:0">${icon("sparkle",14)} Alles Wichtige auf einen Blick</p>
-        <span class="badge mute">${activeMods}/6 aktiv</span></div>
+      <div class="row mb12"><p class="ct" style="margin:0">${icon("sparkle",14)} Alles Wichtige auf einen Blick</p></div>
       <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px">
-        ${[["Datenbasis",completeness+" %",completeness>=70?"volt-txt":completeness>=40?"":"t2"],
+        ${[["Kraft · 4 Wo.",kTrend==null?"—":(kTrend>0?"+":"")+kTrend+" %",kTrend>0?"volt-txt":kTrend<0?"warn-txt":"t2"],
            ["Konstanz",consistency+" %",consistency>=70?"volt-txt":consistency>=40?"warn-txt":"t2"],
-           ["Insights",String(ins.length),ins.length?"volt-txt":"t2"]].map(([l,v,c])=>`
+           ["Sätze/Woche",wkSetsNow?String(wkSetsNow):"—",wkSetsNow?"":"t2"]].map(([l,v,c])=>`
           <div style="background:var(--s2);border-radius:14px;padding:12px 8px;text-align:center">
             <p class="hero-num ${c}" style="font-size:24px">${v}</p>
             <p class="xs t2" style="margin-top:2px">${l}</p></div>`).join("")}
       </div>
+      <p class="xs t3 mt8" style="text-align:center">Datenbasis ${completeness} % · ${activeMods}/6 Analyse-Module aktiv</p>
       ${headline?`<div class="msg ai" style="max-width:100%;margin-top:12px;margin-bottom:0">${icon("zap",13)} <b>Wichtigste Erkenntnis:</b> ${headline.t}<div class="conf mt8">${esc(evidenceTag(headline))}</div></div>`
         :`<p class="sm t2 mt12" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
       <button class="btn mt12" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
     </div>`;
 
   // Monats-Überblick: Tagesbewertung als Kalender (rot->grün) + Cheat-Days + Monatsnote
-  html+=`<p class="label" style="margin-top:4px">Monats-Überblick</p>`+monthlyOverview();
-  const devTrend=developmentTrend(); if(devTrend) html+=devTrend;
-  html+=`<p class="label" style="margin-top:4px">Stoffwechsel & Kalorien</p>`+metabolismCard();
+  html+="§SEG:monat§"+`<p class="label" style="margin-top:4px">Monats-Überblick</p>`+monthlyOverview();
+  const devTrend=developmentTrend(); if(devTrend) html+="§SEG:trend§"+devTrend;
+  html+="§SEG:stoffwechsel§"+`<p class="label" style="margin-top:4px">Stoffwechsel & Kalorien</p>`+metabolismCard();
 
-  html+=`
+  html+="§SEG:status§"+`
     <!-- Daten-Sammelstand: ehrlich, immer sichtbar bis voll -->
     ${(dp.training<7||dp.nutrition<7||dp.status<7)?`<div class="card" style="border-color:rgba(91,140,255,.35)">
       <p class="ct">${icon("activity",14)} Deine Daten wachsen — letzte 7 Tage</p>
@@ -8457,6 +8495,7 @@ function renderAnalytics(){
       <div><p class="ct" style="margin-bottom:4px">Status</p><p class="xs t2">Aktueller Erholungszustand.</p></div></div>`
     :gateCard("Bereit für heute?",1,0,"Check","Jetzt Check machen","home")}`;
 
+  html+="§SEG:kraft§";
   // Dein Kraftfortschritt — Free: 1 Übung, Pro/Elite: alle (Top 2 mobil)
   if(lifts.length){
     const maxLifts=S.tier==="free"?1:2;
@@ -8473,6 +8512,7 @@ function renderAnalytics(){
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('trajectory')">Freischalten</button></div>`:""}</div>`;
   } else html+=gateCard("Dein Kraftfortschritt",3,0,"Trainings je Übung","Training beginnen","train");
 
+  html+="§SEG:rekorde§";
   // Persönliche Rekorde — Top 3 geschätzte Maximalkraft mit Datum
   const prs=Object.keys(S.liftLog).map(n=>{
     const s=e1Series(n); if(!s.length)return null;
@@ -8488,6 +8528,7 @@ function renderAnalytics(){
       <p class="xs t2 mt8">Geschätzte Maximalkraft — berechnet aus deinen echten Sätzen.</p></div>`;
   }
 
+  html+="§SEG:konsistenz§";
   // Konsistenz-Kalender (Heatmap der letzten 12 Wochen)
   if(S.trainingHistory.length>=3){
     html+=`<div class="card"><p class="ct">${icon("calendar",14)} Deine Konsistenz · 12 Wochen</p>
@@ -8495,6 +8536,7 @@ function renderAnalytics(){
       ${consistencyHeatmap()}</div>`;
   }
 
+  html+="§SEG:volumen§";
   // Volumen
   if(S.trainingHistory.length>=3){
     const wks=[...Array(4)].map((_,i)=>{
@@ -8515,6 +8557,7 @@ function renderAnalytics(){
       <p class="xs t2 mt8">${volWhy}</p></div>`;
   } else html+=gateCard("Wochenvolumen","3",S.trainingHistory.length,"Sessions");
 
+  html+="§SEG:heatmap§";
   // Muskelbalance: Sätze je Muskelgruppe diese Woche vs. optimaler Korridor (MEV–MRV)
   if(allSets.length>=10){
     const w0=weeklyMuscleSets(0);
@@ -8540,6 +8583,7 @@ function renderAnalytics(){
     }
   }
 
+  html+="§SEG:rpe§";
   // RPE
   if(allSets.length>=10){
     const rpeCounts={7:0,8:0,9:0,10:0};
@@ -8555,6 +8599,7 @@ function renderAnalytics(){
       ${pct10>20?`<p class="warncard mt8" role="alert"><b>Übertrainings-Risiko:</b> ${pct10} % RPE-10-Sätze. <span class="conf">Signal aus deinen RPE-Daten</span></p>`:`<p class="xs t2 mt8">Zielzone: ~70 % bei RPE 7–8 (Helms et al., 2016).</p>`}</div>`;
   } else html+=gateCard("Wie hart du wirklich trainierst",10,allSets.length,"Sätze","Training beginnen","train");
 
+  html+="§SEG:koerper§";
   // Körper
   if(S.weightLog.length>=3){
     const w7=S.weightLog;
@@ -8577,6 +8622,7 @@ function renderAnalytics(){
       </div></div>`;
   } else html+=gateCard("Deine Körperentwicklung",3,S.weightLog.length,"Wiegungen","Gewicht eintragen","profile");
 
+  html+="§SEG:recovery§";
   // Recovery — öffnet bei manuellen Checks ODER gemessenen Health-Daten (HRV/Ruhepuls)
   if(S.readinessHistory.length>=5 || S.hrvLog.length>=3 || S.rhrLog.length>=5){
     const r14=S.readinessHistory.slice(-14);
@@ -8599,6 +8645,7 @@ function renderAnalytics(){
       ${(hrvAvg!=null||rhrAvg!=null)?`<p class="xs t2 mt8" style="line-height:1.55">HRV über und Ruhepuls unter deiner Baseline = gut erholt. Diese Messwerte färben deine Tage im Monats-Überblick.</p>`:""}</div>`;
   } else html+=gateCard("Recovery","5",S.readinessHistory.length,"Status-Checks");
 
+  html+="§SEG:ernaehrung§";
   // Ernährung
   const nutriDays=Object.keys(S.nutritionLog).filter(d=>(S.nutritionLog[d].meals||[]).length>0);
   if(nutriDays.length>=3){
@@ -8630,6 +8677,7 @@ function renderAnalytics(){
           <span style="color:var(--t3)">●</span> Fett ${nfi.format(macroSum.f*9)} kcal</div></div></div>`;
   } else html+=gateCard("Ernährungs-Analytics","3",nutriDays.length,"Tage geloggt");
 
+  html+="§SEG:mikro§";
   // Bekommt dein Körper, was er braucht?: NUR aus tatsächlich geloggten Top-10-Lebensmitteln (PERFORMANCE)
   if(S.tier==="free"){
     html+=`<div class="card"><p class="ct">Bekommt dein Körper, was er braucht?</p>
@@ -8660,6 +8708,7 @@ function renderAnalytics(){
     }
   } else html+=gateCard("Bekommt dein Körper, was er braucht?",3,nutriDays.length,"Tage","Mahlzeit loggen","nutrition");
 
+  html+="§SEG:insights§";
   // Insights — Tier-Slicing: Free 1 / Pro 5 / Elite 8, Lock-Card nennt Kategorien
   const insCap=S.tier==="free"?1:(S.tier==="elite"?8:5);
   const visIns=ins.slice(0,insCap);
@@ -8671,7 +8720,13 @@ function renderAnalytics(){
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">${TIER_LABEL[S.tier==="free"?"pro":"elite"]} freischalten</button></div>`:""}</div>`
   :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Sobald ein klares Muster da ist, erklärt dir die Engine deinen Fortschritt — in Klartext.</p></div>`;
 
-  root.innerHTML=html;
+  // WICHTIGKEITS-REIHENFOLGE (nur Anzeige; Berechnungs-Reihenfolge oben bleibt):
+  // Kraft → Insights → Muskel-Heatmap → Volumen → Intensität → Rekorde → Konsistenz →
+  // Körper → Erholung → Ernährung → Mikros → Stoffwechsel → Monat → Trend → Meta/Status.
+  const _parts=html.split(/§SEG:(\w+)§/); const _seg={};
+  for(let i=1;i<_parts.length;i+=2){ _seg[_parts[i]]=(_seg[_parts[i]]||"")+_parts[i+1]; }
+  const _order=["kraft","insights","heatmap","volumen","rpe","rekorde","konsistenz","koerper","recovery","ernaehrung","mikro","stoffwechsel","monat","trend","status"];
+  root.innerHTML=_parts[0]+_order.map(k=>_seg[k]||"").join("")+Object.keys(_seg).filter(k=>!_order.includes(k)).map(k=>_seg[k]).join("");
 }
 
 // =====================================================================
