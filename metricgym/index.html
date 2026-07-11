@@ -951,7 +951,36 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .reveal-bar{width:100%; max-width:42px; border-radius:8px 8px 3px 3px; background:linear-gradient(180deg,#A9C4DE,#6E93B8);
     box-shadow:0 0 16px rgba(110,147,184,.5); transform-origin:bottom; animation:barGrowY .7s var(--spring) both;}
   /* ===== Immersive Today-Hero (Oura/Apple-würdig): atmosphärische Szene + Score + Serif-Voice ===== */
-  .today-hero{position:relative; margin:-70px -16px 20px; padding:80px 22px 30px; overflow:hidden; text-align:center;}
+  /* ===== 180° EDITORIAL-ATMOSPHÄRE: jeder Tab öffnet mit einer SZENE, nicht mit einer Box ===== */
+  .today-hero{position:relative; margin:-70px -24px 20px; padding:80px 24px 30px; overflow:hidden; text-align:center;}
+  .today-hero::after{content:""; position:absolute; inset:0; z-index:-1; opacity:.4; mix-blend-mode:overlay; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");}
+  .hz{position:relative; margin:-70px -24px 22px; padding:94px 24px 30px; overflow:hidden;
+    /* Szenerie liegt DIREKT auf der Zone — kein z-index-Kind, keine Stapel-Falle */
+    background:
+      radial-gradient(120% 82% at 50% 2%, var(--hz-a) 0%, var(--hz-b) 46%, rgba(10,12,15,0) 84%),
+      radial-gradient(64% 34% at 50% 12%, rgba(240,246,255,.12), transparent 70%),
+      radial-gradient(82% 54% at 10% 24%, var(--hz-c), transparent 64%),
+      linear-gradient(180deg, var(--hz-b), var(--bg) 92%);}
+  .hz>*:not(.hz-scene){position:relative;}
+  .hz-scene{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
+  .hz-scene::before{content:""; position:absolute; inset:-18%; will-change:transform;
+    background:radial-gradient(44% 38% at 72% 24%, var(--hz-c), transparent 64%);
+    animation:heroDrift 22s ease-in-out infinite alternate;}
+  .hz-scene::after{content:""; position:absolute; inset:0; opacity:.5; mix-blend-mode:overlay; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");}
+  .hz-kick{font-size:10.5px; font-weight:650; letter-spacing:.18em; text-transform:uppercase; color:var(--hz-k); margin-bottom:12px;}
+  .hz-h{font-family:var(--font-serif); font-size:32px; font-weight:500; letter-spacing:-.015em; line-height:1.12; margin:0 0 8px; color:var(--t1);}
+  .hz-sub{font-size:15px; line-height:1.6; color:var(--t2); max-width:36ch;}
+  .hz-stats{display:flex; gap:26px; margin-top:22px;}
+  .hz-stat .v{font-family:var(--font-hero); font-size:28px; font-weight:300; letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; color:var(--t1);}
+  .hz-stat .v em{font-style:normal; font-size:15px; font-weight:400; color:var(--t2);}
+  .hz-stat .l{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); margin-top:6px; font-weight:600; white-space:nowrap;}
+  .hz.train{--hz-a:#3A5578; --hz-b:#1B2839; --hz-c:rgba(143,184,220,.30); --hz-k:#8FB8DC;}
+  .hz.analytics{--hz-a:#32545F; --hz-b:#17262E; --hz-c:rgba(127,169,143,.28); --hz-k:#8FB8DC;}
+  .hz.nutrition{--hz-a:#3C5839; --hz-b:#1B2A1F; --hz-c:rgba(196,180,122,.28); --hz-k:#7FA98F;}
+  .hz.profile{--hz-a:#333947; --hz-b:#1B2029; --hz-c:rgba(169,196,222,.20); --hz-k:#A9C4DE;}
+  @media (prefers-reduced-motion:reduce){.hz-scene::before{animation:none}}
   .today-hero .th-scene{position:absolute; inset:0; z-index:-1; overflow:hidden;
     background:
       radial-gradient(120% 78% at 50% -6%, #313F70 0%, #1A2342 36%, #0C1020 70%, var(--bg) 100%),
@@ -1196,6 +1225,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     /* Inhalt rechts neben der Sidebar, komfortable Breite */
     .appbar-inner{max-width:none; padding-left:24px; padding-right:24px;}
     .wrap{max-width:780px; margin-left:236px; margin-right:auto; padding:84px 48px 64px;}
+    .hz{margin:-84px -48px 26px; padding:112px 48px 36px;}
+    .today-hero{margin:-84px -48px 20px;}
     .wrap.noshell{margin:0 auto; max-width:480px; padding:72px 24px 56px;}
     .fab{right:40px; bottom:40px;}
     .coach-panel{left:auto; right:40px; width:390px; margin:0; bottom:40px;}
@@ -4599,6 +4630,15 @@ function renderFeatureOverview(){
 // Ersetzt separate Mikro-Buttons: das native Mikro der iOS-/Android-Tastatur
 // füllt dasselbe Feld — kein eigener Speech-Recognition-State nötig.
 // Value Banner: erklärt Nutzen, einmalig pro Nutzer dismissable
+/* 180°-Editorial: Tab-Hero — Szene mit Kicker, Serif-Statement und OFFENEN Kennzahlen (keine Boxen). */
+function tabHero(cls,kicker,headline,sub,stats){
+  return `<section class="hz ${cls}"><div class="hz-scene" aria-hidden="true"></div>
+    <p class="hz-kick">${kicker}</p>
+    <h2 class="hz-h">${headline}</h2>
+    ${sub?`<p class="hz-sub">${sub}</p>`:""}
+    ${stats&&stats.length?`<div class="hz-stats">${stats.map(([v,l])=>`<div class="hz-stat"><p class="v">${v}</p><p class="l">${l}</p></div>`).join("")}</div>`:""}
+  </section>`;
+}
 function banner(id,iconName,html){
   if(S.dismissedBanners.includes(id))return "";
   return `<div class="banner pop"><span class="bicon">${icon(iconName,18)}</span>
@@ -7661,13 +7701,17 @@ function renderTrain(){
       : sch.map((t,i)=>t==="rest"?"":dayCard(t,i,false,false)).join("")}
   </div>`;
   root.innerHTML=`
-    ${banner("train","dumbbell","<b>Dein Plan. Beweisbar optimal.</b> Jede Zahl wissenschaftlich begründet — der Beweis ist einen Tap entfernt.")}
-    ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Deine nächste Einheit"):(focusDayIdx===dow?"Dein Training heute":"Training · "+focusDayName),
+    ${(()=>{ const FT=focusType?TYPES[focusType]:null;
+      const kick=focusType?(rotMode?"Training · Rotation":(focusDayIdx===dow?"Training · Heute":"Training · "+WD[focusDayIdx])):"Training";
+      const hl=FT?FT.label+".":"Dein Plan.";
+      const sub=FT?(parseTypeKey(focusType).base==="cardio"?"Ausdauer-Einheit · ≈ "+(FT.est||35)+" Min.":FT.main.length+" Übungen · ≈ "+(FT.est||(S.profile.a.len||60))+" Min — beweisbar optimal dosiert."):"Leg deine Trainingstage fest — dein Plan steht sofort.";
+      const phase=isDeload?"Deload":(S.currentWeek===3?"Spitze":"Aufbau");
+      return tabHero("train",kick,hl,sub,[[String(sch.filter(t=>t!=="rest").length),"Einheiten / Woche"],[String(S.currentWeek||1)+"<em> / 4</em>","Woche im Block"],[phase,"Phase"]]); })()}
+    ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Nächste Einheit"):"Deine Einheit",
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
-        const head=`<div class="row"><p class="display-m" style="display:flex;align-items:center;gap:8px">${icon(F.icon,18)} ${F.label}</p>
+        const head=`<div class="row"><p class="ct" style="margin:0">${icon(F.icon,13)} ${F.label}</p>
           ${isCardio?"":`<button class="chip ${S.soreMode[focusType]?"sel":""}" style="min-height:34px;font-size:11px" onclick="A.soreToggle('${focusType}')">Muskelkater?</button>`}</div>
-          <p class="sm t2 mt8">${isCardio?"≈ "+(F.est||35)+" Min · Ausdauer-Einheit":F.main.length+" Übungen · ≈ "+(F.est||S.profile.a.len||60)+" Min"}</p>
           ${(!isCardio && F.est && S.profile.a.sessionTime && F.est < S.profile.a.sessionTime-12)?`<p class="xs t2" style="line-height:1.5;margin-top:4px;display:flex;gap:6px"><span style="color:var(--hl)">${icon("info",12)}</span><span>Kürzer als deine ${S.profile.a.sessionTime} Min: Die Muskeln dieses Tages haben bei deiner Trainingsfrequenz ihr <b style="color:var(--t1)">optimales Wochenvolumen</b> erreicht — mehr Sätze wären kontraproduktiv (Übertraining). Für längere Einheiten: mehr Trainingstage oder „Für mich optimieren".</span></p>`:""}`;
         if(isCardio){
           const cIdx=(S.trainingHistory||[]).filter(t=>t.type==="cardio").length;
@@ -8446,7 +8490,7 @@ function renderAnalytics(){
     return;
   }
   const dp=dataProgress();
-  let html0=banner("analytics","chart","<b>Fortschritt, schwarz auf weiß.</b> Keine Schätzungen — nur deine echten Daten.");
+  let html0="";
   const lifts=Object.keys(S.liftLog).filter(n=>e1Series(n).length>=3);
   const allSets=Object.values(S.liftLog).flat();
   const ins=buildInsights();
@@ -8477,22 +8521,20 @@ function renderAnalytics(){
     const win=s.filter(q=>Date.now()-q.t<28*dayMs); const arr=win.length>=2?win:s;
     if(arr.length>=2&&arr[arr.length-1].t-arr[0].t>=7*dayMs&&arr[0].v>0) kTrend=Math.round((arr[arr.length-1].v-arr[0].v)/arr[0].v*100); }
   const wkSetsNow=Object.values(weeklyMuscleSets(0)).reduce((s,v)=>s+v,0);
+  html0=tabHero("analytics","Analytics",
+    (kTrend!=null&&kTrend>0)?"Deine Kraft zieht an.":(consistency>=70?"Du bleibst dran — das zahlt ein.":"Deine Daten nehmen Form an."),
+    "Keine Schätzungen — jede Aussage kommt aus deinen echten Daten.",
+    [[kTrend==null?"—":(kTrend>0?"+":"")+kTrend+"<em> %</em>","Kraft · 4 Wo."],
+     [consistency+"<em> %</em>","Konstanz"],
+     [wkSetsNow?String(wkSetsNow):"—","Sätze / Woche"]]);
 
   let html=html0+`
     <div class="card" style="border-color:rgba(26,26,26,.1)">
-      <div class="row mb12"><p class="ct" style="margin:0">${icon("sparkle",14)} Alles Wichtige auf einen Blick</p></div>
-      <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px">
-        ${[["Kraft · 4 Wo.",kTrend==null?"—":(kTrend>0?"+":"")+kTrend+" %",kTrend>0?"volt-txt":kTrend<0?"warn-txt":"t2"],
-           ["Konstanz",consistency+" %",consistency>=70?"volt-txt":consistency>=40?"warn-txt":"t2"],
-           ["Sätze/Woche",wkSetsNow?String(wkSetsNow):"—",wkSetsNow?"":"t2"]].map(([l,v,c])=>`
-          <div style="background:var(--s2);border-radius:14px;padding:14px 8px 12px;text-align:center;box-shadow:inset 0 1px 0 var(--edge)">
-            <p class="hero-num ${c}" style="font-size:32px">${v}</p>
-            <p class="xs t2" style="margin-top:3px">${l}</p></div>`).join("")}
-      </div>
-      <p class="xs t3 mt8" style="text-align:center">Datenbasis ${completeness} % · ${activeMods}/6 Analyse-Module aktiv</p>
-      ${headline?`<div class="msg ai" style="max-width:100%;margin-top:12px;margin-bottom:0">${icon("zap",13)} <b>Wichtigste Erkenntnis:</b> ${headline.t}<div class="conf mt8">${esc(evidenceTag(headline))}</div></div>`
-        :`<p class="sm t2 mt12" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
+      <p class="ct">${icon("zap",13)} Wichtigste Erkenntnis</p>
+      ${headline?`<div class="msg ai" style="max-width:100%;margin-bottom:0"><span class="sm" style="line-height:1.6">${headline.t}</span><div class="conf mt8">${esc(evidenceTag(headline))}</div></div>`
+        :`<p class="sm t2" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
       <button class="btn mt12" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
+      <p class="xs t3 mt8" style="text-align:center">Datenbasis ${completeness} % · ${activeMods}/6 Analyse-Module aktiv</p>
     </div>`;
 
   // Monats-Überblick: Tagesbewertung als Kalender (rot->grün) + Cheat-Days + Monatsnote
@@ -9011,7 +9053,10 @@ function renderNutrition(){
   favIdx=favIdx.slice(0,6);
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
-    ${banner("nutrition","utensils","<b>Tracking in 10 Sekunden.</b> Tippen oder sprechen — Kalorien und Protein rechnet die Engine.")}
+    ${(()=>{ const tg=S.profile?(S.profile.tg[dayType]||S.profile.tg.train):null;
+      const lg=S.nutritionLog[todayKey()]; const sm=((lg&&lg.meals)||[]).reduce((x,m)=>({k:x.k+(m.k||0),p:x.p+(m.p||0)}),{k:0,p:0});
+      return tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Tippen oder sprechen — die Engine macht aus Worten Zahlen.",
+        [[nfi.format(sm.k),"kcal heute"],[tg?nfi.format(tg.kcal):"—","Tagesziel"],[nfi.format(sm.p)+"<em> g</em>","Protein"]]); })()}
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
@@ -9574,7 +9619,7 @@ function renderProfile(){
     <summary style="padding:15px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon(ic,14)} ${title}${badge?` ${badge}`:""}</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
     <div class="accbody" style="padding:0 16px 14px">${body}</div></details>`;
   root.innerHTML=`
-    ${banner("profile","user","<b>Dein Profil. Deine Präzision.</b> Gewicht und Ziele schärfen jede Empfehlung.")}
+    ${tabHero("profile","Profil",(typeof userName==="function"?userName():"Du")+".","Gewicht und Ziele schärfen jede Empfehlung — und deine Daten gehören dir.")}
 
     ${acc("user","Dein Konto",`<span class="badge ${S.tier==="free"?"mute":"volt"}" style="font-size:8px">${TIER_LABEL[S.tier]}</span>`,`
       <div class="row" style="justify-content:flex-start;gap:14px">
