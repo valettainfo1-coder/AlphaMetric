@@ -373,17 +373,17 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .tab.active{color:var(--t1);}
   .tab.active .ic{
     transform:translateY(-1px);
-    background:linear-gradient(135deg, rgba(169,196,222,.30), rgba(169,196,222,.12));
-    border:1px solid rgba(169,196,222,.5);
-    box-shadow:0 2px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+    background:rgba(239,231,220,.14);
+    border:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
     animation:tabPop .42s var(--spring);
   }
   @keyframes tabPop{0%{transform:translateY(-1px) scale(.78)}58%{transform:translateY(-1px) scale(1.16)}100%{transform:translateY(-1px) scale(1)}}
   .tab:active .ic{transform:scale(.92);}
   .tab.flag .ic{
     width:46px; height:46px; margin-top:-22px; border-radius:50%;
-    background:var(--accent); color:#fff; border:3px solid var(--bg);
-    box-shadow:0 6px 16px rgba(26,26,26,.25);
+    background:linear-gradient(180deg,#F6F0E7,#E7DCCB); color:#14171C; border:3px solid var(--bg);
+    box-shadow:0 8px 22px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.8);
   }
   .tab.flag{color:var(--t3);}
   .tab.flag.active{color:var(--t1);}
@@ -585,10 +585,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   body.scrolled .tabbar-inner{box-shadow:0 0 0 1px rgba(0,0,0,.06), 0 18px 46px rgba(0,0,0,.30),
     inset 0 1px 0 rgba(255,255,255,.12), inset 0 -10px 18px rgba(0,0,0,.22);}
   /* Toast als Dynamic-Island-Glas */
-  .toast{background:linear-gradient(168deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 60%), rgba(16,17,23,.78);
-    border:1px solid rgba(255,255,255,.14);
-    -webkit-backdrop-filter:blur(22px) saturate(170%); backdrop-filter:blur(22px) saturate(170%);
-    box-shadow:0 14px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.14);}
+  .toast{background:rgba(18,21,26,.92);
+    border:none;
+    -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+    box-shadow:0 14px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.10);
+    font-size:13.5px; line-height:1.45; max-width:320px; text-align:center;}
   @media (prefers-reduced-motion:reduce){.sheet::before,.modal::before{animation:none}.lensing{transition:none !important}}
   /* ===== PLAN-GENESE ===== */
   .genesis{position:fixed; inset:0; z-index:9600; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -1224,6 +1225,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .st-word{font-family:var(--font-serif); font-weight:500; letter-spacing:-.01em; line-height:1.15; color:var(--t1);}
   /* Spacing-Disziplin: Karten & Accordions enden NIE mit hängendem Margin. */
   .card>:last-child,.accbody>:last-child,.modal>:last-child,.lcell>:last-child{margin-bottom:0;}
+  .pills,.fh-row,.hscroll{scrollbar-width:none;}
+  .pills::-webkit-scrollbar,.fh-row::-webkit-scrollbar,.hscroll::-webkit-scrollbar{display:none;}
   .card>.ct:first-child{margin-top:2px;}
   .cell.dash{border:1px dashed rgba(255,255,255,.16);}
   .btn.ghost{color:var(--hl);}
@@ -4100,17 +4103,28 @@ function lineChart(series, fc){
     const lbl=fmtD(new Date(t));
     if(lbl===lastTick)return "";
     lastTick=lbl;
-    return `<text x="${X(t)}" y="${H-2}" fill="var(--t3)" font-size="9" text-anchor="middle" font-family="Schibsted Grotesk,sans-serif">${lbl}</text>`;}).join("");
+    return `<text x="${X(t)}" y="${H-2}" fill="var(--t3)" font-size="9" text-anchor="middle" font-family="InterV,system-ui,sans-serif">${lbl}</text>`;}).join("");
   const gid="lc"+Math.random().toString(36).slice(2,7);
   const fx=X(series[0].t).toFixed(1), lx=X(series[series.length-1].t).toFixed(1);
   const area=`${line} L${lx},${H-P} L${fx},${H-P} Z`;
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;aspect-ratio:16/10;display:block" aria-hidden="true">
+  // Oura-Details: Hairline-Grid, Leuchtpunkt am aktuellen Wert, Creme-Annotation
+  const lp=series[series.length-1], lpx=X(lp.t), lpy=Y(lp.v);
+  const lbl=(Math.round(lp.v*10)/10).toLocaleString("de-DE")+" kg";
+  const bw=lbl.length*6.2+16, bx=Math.min(W-P-bw,Math.max(P,lpx-bw/2)), by=Math.max(2,lpy-30);
+  const grid=[0.25,0.5,0.75].map(f=>`<line x1="${P}" y1="${(P+f*(H-2*P)).toFixed(1)}" x2="${W-P}" y2="${(P+f*(H-2*P)).toFixed(1)}" stroke="rgba(255,255,255,.05)" stroke-width="1"/>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;aspect-ratio:16/10;display:block;overflow:visible" aria-hidden="true">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="var(--volt)" stop-opacity=".32"/><stop offset="1" stop-color="var(--volt)" stop-opacity="0"/></linearGradient>
+      <stop offset="0" stop-color="var(--volt)" stop-opacity=".30"/><stop offset="1" stop-color="var(--volt)" stop-opacity="0"/></linearGradient>
       <linearGradient id="${gid}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#A9C4DE"/><stop offset="1" stop-color="#8FB8DC"/></linearGradient></defs>
-    <path d="${area}" fill="url(#${gid})" stroke="none"/>
+    ${grid}<path d="${area}" fill="url(#${gid})" stroke="none"/>
     ${band}<path class="chartdraw" d="${line}" fill="none" stroke="url(#${gid}s)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dash?`<path d="${dash}" fill="none" stroke="var(--volt)" stroke-width="1.5" stroke-dasharray="5 4"/>`:""}${ticks}</svg>`;
+    ${dash?`<path d="${dash}" fill="none" stroke="var(--volt)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".7"/>`:""}
+    <line x1="${lpx.toFixed(1)}" y1="${(by+20).toFixed(1)}" x2="${lpx.toFixed(1)}" y2="${lpy.toFixed(1)}" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+    <circle cx="${lpx.toFixed(1)}" cy="${lpy.toFixed(1)}" r="6.5" fill="rgba(143,184,220,.25)"/>
+    <circle cx="${lpx.toFixed(1)}" cy="${lpy.toFixed(1)}" r="3.4" fill="#EFE7DC"/>
+    <rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(0)}" height="20" rx="10" fill="#EFE7DC"/>
+    <text x="${(bx+bw/2).toFixed(1)}" y="${(by+13.5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#14171C" font-family="InterV,system-ui,sans-serif">${lbl}</text>
+    ${ticks}</svg>`;
 }
 function donutSVG(parts,size=110){
   const total=parts.reduce((s,p)=>s+p.v,0)||1, r=size/2-10, c=2*Math.PI*r;
@@ -4458,7 +4472,7 @@ const TOUR=[
 ];
 function startTour(i){
   i=i||0;
-  if(i>=TOUR.length){ S.tourDone=true; save(); overlay.innerHTML=""; document.body.classList.remove("overlay-open"); confetti&&confetti(); toast("Tour fertig — leg los! 💪"); return; }
+  if(i>=TOUR.length){ S.tourDone=true; save(); overlay.innerHTML=""; document.body.classList.remove("overlay-open"); toast("Tour fertig — leg los."); return; }
   const s=TOUR[i];
   S.tab=s.tab; save(); render();
   A.tourNext=()=>startTour(i+1);
@@ -4806,8 +4820,8 @@ function projChart(lo,hi){
     <path d="${area}" fill="var(--hl)" opacity=".12"/>
     <path class="lp-chartline" d="${line}" fill="none" stroke="var(--hl)" stroke-width="2.5" stroke-linecap="round"/>
     <circle cx="${pts[12][0]}" cy="${pts[12][1]}" r="4" fill="var(--hl)"/>
-    <text x="${P}" y="${H-1}" font-size="9" fill="var(--t3)" font-family="Schibsted Grotesk,sans-serif">Heute</text>
-    <text x="${W-P}" y="${H-1}" font-size="9" fill="var(--t3)" text-anchor="end" font-family="Schibsted Grotesk,sans-serif">Woche 12</text></svg>`;
+    <text x="${P}" y="${H-1}" font-size="9" fill="var(--t3)" font-family="InterV,system-ui,sans-serif">Heute</text>
+    <text x="${W-P}" y="${H-1}" font-size="9" fill="var(--t3)" text-anchor="end" font-family="InterV,system-ui,sans-serif">Woche 12</text></svg>`;
 }
 function lpResultInner(){
   const pr=landingProjection();
@@ -6036,7 +6050,7 @@ function renderHome(){
   A.tryMagicData=()=>{ const seed=buildDevSeed();
     S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
     S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog; S.sampleData=true;
-    save(); render(); try{confetti&&confetti();}catch{} toast("✨ Beispiel-Historie geladen — erlebe deine Magie live"); };
+    save(); render(); toast("Beispiel-Historie geladen — erlebe deine Magie live"); };
   A.clearMagicData=()=>{ const p=S.profile;
     S.liftLog={}; S.readinessHistory=[]; S.trainingHistory=[]; S.nutritionLog={};
     S.weightLog=p?[{t:Date.now(),v:p.a.weight}]:[]; S.checkin=null; S.checkinDate=null; S.sampleData=false;
@@ -6724,7 +6738,7 @@ function consistencyHeatmap(){
   S.trainingHistory.forEach(t=>{if(t.type!=="rest"&&t.type!=="cardio")byDate[t.date]=(byDate[t.date]||0)+t.sets;});
   const today=new Date(); const dow=(today.getDay()+6)%7;
   const monThis=new Date(today); monThis.setDate(today.getDate()-dow); // Montag dieser Woche
-  const shade=(s)=>s===0?"var(--s3)":s<=6?"rgba(143,184,220,.35)":s<=12?"rgba(143,184,220,.6)":"rgba(143,184,220,.95)";
+  const shade=(s)=>s===0?"rgba(255,255,255,.06)":s<=6?"rgba(239,231,220,.30)":s<=12?"rgba(239,231,220,.62)":"rgba(239,231,220,.95)";
   let cols="";
   for(let w=weeks-1;w>=0;w--){
     let cells="";
@@ -6733,14 +6747,14 @@ function consistencyHeatmap(){
       const key=dkey(d);
       const future=d>today;
       const s=byDate[key]||0;
-      cells+=`<div title="${key}: ${s} Sätze" style="width:12px;height:12px;border-radius:3px;background:${future?"transparent":shade(s)}"></div>`;
+      cells+=`<div title="${key}: ${s} Sätze" style="width:11px;height:11px;border-radius:50%;background:${future?"transparent":shade(s)}"></div>`;
     }
     cols+=`<div style="display:flex;flex-direction:column;gap:3px">${cells}</div>`;
   }
   return `<div style="display:flex;gap:3px;overflow-x:auto;padding-bottom:4px">${cols}</div>
     <div class="row" style="justify-content:space-between;margin-top:8px"><span class="xs t2">vor 12 Wochen</span>
       <span class="row" style="gap:4px;align-items:center"><span class="xs t2">weniger</span>
-        ${[0,5,10,16].map(s=>`<span style="width:11px;height:11px;border-radius:3px;background:${shade(s)};display:inline-block"></span>`).join("")}
+        ${[0,5,10,16].map(s=>`<span style="width:10px;height:10px;border-radius:50%;background:${shade(s)};display:inline-block"></span>`).join("")}
         <span class="xs t2">mehr</span></span></div>`;
 }
 /* ===== FALLBACK-GENERATOREN: Muskel-Diagramm + Ausfuehrungs-Cues fuer JEDE Uebung =====
@@ -7434,7 +7448,6 @@ A.resetToOptimum=()=>{
   S.exOverrides={}; S.soreMode={};
   try{ const opt=generateOptimalSchedule(S.profile.a); S.schedule=opt.schedule.slice(); }catch{}
   save(); render();
-  setTimeout(()=>{try{confetti()}catch{}},150);
   toast("✓ Plan auf das wissenschaftliche Maximum zurückgesetzt");
 };
 function openMaxStatus(){
