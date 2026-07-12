@@ -6832,15 +6832,20 @@ function muscleBody(view,arg,sex){
   // bleiben unverändert (die echten, anatomisch korrekten Polygone werden nur proportioniert).
   const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95;
   const grp=(keys,sx,inner)=>`<g transform="translate(50,0) scale(${sx},1) translate(-50,0)">${inner}</g>`;
+  const glowMode=!!(arguments[3]&&arguments[3].glow), plainMode=!!(arguments[3]&&arguments[3].plain);
   const poly=(id,pts)=>{
     const c=col(id);
+    if(glowMode){ // Glow-Map: nur aktive Muskeln leuchten, Rest schwarz
+      if(c===MG_BODY) return `<polygon points="${pts}" fill="#000000"/>`;
+      return `<polygon points="${pts}" fill="${c}" filter="url(#${fid}g)"/>`;
+    }
     const attrs=c===MG_BODY?`fill="${c}" opacity="0.5"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;
     return `<polygon points="${pts}" ${attrs} stroke="#0A0E18" stroke-width="0.4" stroke-linejoin="round"/>`;
   };
   let upperSvg="", lowerSvg="", silUp="", silLo="";
   // SILHOUETTE: alle Formen aufgeblasen in Koerperton uebereinander -> geschlossener Koerper,
   // auf dem die Muskeln liegen (vorher schwebten die Polygone ohne Koerper im Raum).
-  const SIL="#242B39";
+  const SIL=glowMode?"#000000":"#242B39";
   const sil=(pts)=>`<polygon points="${pts}" fill="${SIL}" stroke="${SIL}" stroke-width="7" stroke-linejoin="round"/>`;
   // Fueller schliessen Luecken, die die Muskeldaten frei lassen (Becken vorn, Taille hinten)
   const FILLER=view==="front"?["44 106 56 106 56 128 44 128","46 88 54 88 54 108 46 108"]:["42 96 58 96 58 112 42 112"];
@@ -6861,6 +6866,8 @@ function muscleBody(view,arg,sex){
     <radialGradient id="${fid}a" cx="50%" cy="38%" r="55%"><stop offset="0%" stop-color="#8FB8DC" stop-opacity="0.30"/><stop offset="55%" stop-color="#8FB8DC" stop-opacity="0.08"/><stop offset="100%" stop-color="#8FB8DC" stop-opacity="0"/></radialGradient></defs>`;
   // KEIN Hintergrund-Rechteck mehr — der Körper sitzt direkt auf der Karten-Fläche. Nur weiche Aura.
   const bg=`<ellipse cx="50" cy="112" rx="48" ry="124" fill="url(#${fid}a)" class="mg-aura"/>`;
+  // Textur-Modi: reines SVG (für die 3D-Projektion), ohne Aura/Label
+  if(glowMode||plainMode) return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -6 116 232">${defs}${body}</svg>`;
   return `<div style="text-align:center">
     <svg class="mg-svg" viewBox="-8 -6 116 232" width="100" height="200" aria-hidden="true">${defs}${bg}${body}</svg>
     <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
@@ -6873,23 +6880,22 @@ function bodyDiagram(act){
 }
 
 /* =====================================================================
-   MG3D — der drehbare 3D-Körper (Signature-Feature), Version 2: anatomisch.
-   Statt zusammengesetzter Kugeln: EIN durchgehend geglättetes Mesh —
-   Rumpf als modellierte Drehfläche (Brustplatte, Lat-Flare, Taille, Gesäß),
-   Gliedmaßen als Profilkurven mit echten Muskelbäuchen (Quadrizeps vor,
-   Wade hinter der Beinachse, Bizeps-/Unterarm-Bauch). Muskelgruppen sind
-   PER-VERTEX-REGIONEN: aktive Regionen glühen aus der Oberfläche heraus
-   (Shader-Emissive mit ruhigem Puls) statt als aufgesetzte Bälle.
-   Drehen per Finger/Maus (vertikal scrollt weiter), Trägheit, Auto-Rotation.
-   three.js liegt lokal in vendor/ — ohne WebGL: 2D-Fallback.
+   MG3D v4 — der drehbare 3D-Körper, gebaut AUS der 2D-Anatomie.
+   Die Silhouette wird per Scanline direkt aus den anatomischen Polygonen
+   (MG_ANT/MG_POST, 100×220-Raum) vermessen → Ring-Stapel je Körperteil.
+   Die professionelle Muskel-Zeichnung selbst wird als Textur auf Vorder-
+   und Rückseite projiziert (Diffuse + Glow-Map, gepulst): Von vorn und
+   hinten sieht der 3D-Körper EXAKT wie die bewährte 2D-Ansicht aus —
+   und bleibt frei drehbar. three.js lokal; ohne WebGL: 2D-Fallback.
    ===================================================================== */
 const MG3D={
-  inst:[], raf:0, _p:null, failed:false,
+  inst:[], raf:0, _p:null, failed:false, _profCache:{},
   IDS:["chest","obliques","abs","biceps","triceps","delts","reardelts","traps","lats","lowerback","forearm","adductors","quads","hams","glutes","calves"],
+  K:.00864, // svg-Einheit → Welt (220 svg ≈ 1.9 m)
   load(){
     if(window.THREE) return Promise.resolve();
     if(MG3D._p) return MG3D._p;
-    const urls=["vendor/three.min.js", // lokal mitgeliefert: kein CDN nötig, offline ab Start
+    const urls=["vendor/three.min.js",
                 "https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js",
                 "https://unpkg.com/three@0.147.0/build/three.min.js"];
     MG3D._p=new Promise((res,rej)=>{ let i=0;
@@ -6900,16 +6906,6 @@ const MG3D={
       next(); });
     return MG3D._p;
   },
-  /* Farbwert ("#8FB8DC" | "rgba(143,184,220,.3)" | "var(--danger)") -> {c:Hex, k:Intensität} */
-  parse(cstr){
-    let s=String(cstr||"").trim(), k=1;
-    if(s.startsWith("var(")){ try{ s=getComputedStyle(document.documentElement).getPropertyValue(s.slice(4,-1)).trim(); }catch(e){ s="#C97C63"; } }
-    const m=/rgba?\(([^)]+)\)/.exec(s);
-    if(m){ const a=m[1].split(",").map(x=>parseFloat(x)); k=a.length>3?a[3]:1;
-      return {c:(a[0]<<16|a[1]<<8|a[2]), k}; }
-    if(s[0]==="#"){ if(s.length===4) s="#"+s[1]+s[1]+s[2]+s[2]+s[3]+s[3]; return {c:parseInt(s.slice(1,7),16), k}; }
-    return {c:0xA7AFC0, k:1};
-  },
   mount(el){
     const cv=el.querySelector("canvas"); if(!cv) return;
     let colors={}; try{ colors=JSON.parse(el.dataset.b3d||"{}"); }catch(e){}
@@ -6918,198 +6914,146 @@ const MG3D={
       .catch(()=>MG3D.fallback(el,colors));
   },
   fallback(el,colors){
-    // 2D-Ersatz: dieselben Farben auf Front-/Rückansicht (z. B. ohne WebGL/CDN)
     const col=(id)=>colors[id]||MG_BODY;
     const hint=el.nextElementSibling;
-    if(hint&&hint.classList&&hint.classList.contains("b3d-hint")) hint.remove(); // „3D drehen"-Hinweis gilt hier nicht
+    if(hint&&hint.classList&&hint.classList.contains("b3d-hint")) hint.remove();
     el.outerHTML=`<div style="display:flex;justify-content:center;gap:12px;align-items:flex-start">${muscleBody("front",col)}${muscleBody("back",col)}</div>`;
   },
-  /* ---------- Modellier-Werkzeuge ---------- */
-  key(keys,t){ // weiche Interpolation über [t,wert]-Stützpunkte
+  key(keys,t){
     if(t<=keys[0][0]) return keys[0][1];
     for(let i=0;i<keys.length-1;i++){ const a=keys[i],b=keys[i+1];
       if(t<=b[0]){ const k=(t-a[0])/((b[0]-a[0])||1), s=k*k*(3-2*k); return a[1]+(b[1]-a[1])*s; } }
     return keys[keys.length-1][1];
   },
-  gauss(x,c,w){ const d=(x-c)/w; return Math.exp(-d*d); },
-  sstep(a,b,x){ const k=Math.min(1,Math.max(0,(x-a)/((b-a)||1))); return k*k*(3-2*k); },
-  /* Gliedmaße: Zylinder entlang −Y; Radius, Querschnitts-Ellipse und Z-Versatz
-     folgen Profilkurven → Muskelbauch, Gelenk-Engstelle, Waden-/Quad-Shift. */
-  limb(o){
-    const g=new THREE.CylinderGeometry(1,1,1,o.rad||40,o.seg||46,true);
-    const p=g.attributes.position;
-    const wrap=(d)=>{ d=Math.abs(d%360); return Math.min(d,360-d); };
-    for(let i=0;i<p.count;i++){
-      const t=.5-p.getY(i); // 0 = Ansatz … 1 = Ende
-      let r=MG3D.key(o.rx,t);
-      // Muskel-Ridges: {d:Winkel° (90=vorn, 270=hinten), w:Breite°, a:±Amplitude, t0,t1}
-      if(o.ridges){
-        const th=Math.atan2(p.getZ(i),p.getX(i))*180/Math.PI;
-        for(const rd of o.ridges){
-          const win=MG3D.sstep(rd.t0,rd.t0+.09,t)*(1-MG3D.sstep(rd.t1-.09,rd.t1,t));
-          r*=1+rd.a*Math.exp(-Math.pow(wrap(th-rd.d)/rd.w,2))*win;
+  /* ---- Silhouetten-Vermessung: Scanline über die anatomischen Polygone ----
+     Liefert je Körperteil Zeilen {y, lo, hi} im finalen SVG-Raum (Front bereits
+     auf Rück-Maßstab skaliert, Geschlechts-Proportionen wie in der 2D-Ansicht). */
+  profiles(sex){
+    if(MG3D._profCache[sex]) return MG3D._profCache[sex];
+    const FS=1.1224, sf=sex==="female";
+    const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95; // identisch zur 2D-Ansicht
+    const ARM=new Set(["BICEPS","TRICEPS","FOREARM"]);
+    const LEG=new Set(["QUADRICEPS","ABDUCTOR","ABDUCTORS","KNEES","CALVES","HAMSTRING","LEFT_SOLEUS","RIGHT_SOLEUS"]);
+    const parse=(data,front)=>{
+      const groups={torso:[],armL:[],armR:[],legL:[],legR:[]};
+      for(const m of data){
+        const gsx=MG_LOWER_KEYS.has(m.k)?sxLo:sxUp;
+        for(const str of m.p){
+          const raw=str.split(" ").map(Number), pts=[];
+          for(let i=0;i<raw.length;i+=2){
+            let x=raw[i], y=raw[i+1];
+            x=50+(x-50)*gsx;                       // Statur (wie 2D-grp())
+            if(front){ x=50+(x-50)*FS; y=y*FS; }   // Front→Rück-Maßstab (wie 2D-Fix)
+            pts.push([x,y]);
+          }
+          const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
+          let g="torso";
+          if(ARM.has(m.k)) g=cx<50?"armL":"armR";
+          else if(LEG.has(m.k)) g=cx<50?"legL":"legR";
+          groups[g].push(pts);
         }
       }
-      const ell=o.ell?MG3D.key(o.ell,t):1, zo=o.zoff?MG3D.key(o.zoff,t):0;
-      p.setXYZ(i, p.getX(i)*r, -t*o.len, p.getZ(i)*r*ell+zo);
-    }
-    g.computeVertexNormals();
-    return g;
-  },
-  /* Rumpf: Drehfläche Hüfte→Halsansatz, elliptisch (breit/flach), danach in die
-     Fläche modelliert: Brustplatte + Sternum-Rinne, Bauch, Lat-Flare, Trapez,
-     Gesäß, Lendenrinne. Unten geschlossen (Taper), oben schließt der Hals an. */
-  trunk(F){
-    // Anthropometrie: Schritt ~49 % H, Taille 1.2, Brustkorb-Max 1.44–1.52,
-    // Schulter-Shelf 1.52–1.58, Halsansatz 1.63 — Werte für H≈1.93.
-    const prof=F?[[.928,.02],[.937,.1],[.955,.117],[1.02,.122],[1.1,.113],[1.18,.099],[1.26,.101],[1.34,.106],[1.42,.112],[1.5,.115],[1.55,.108],[1.585,.098],[1.63,.055]]
-                :[[.928,.02],[.937,.095],[.955,.108],[1.02,.115],[1.1,.112],[1.18,.103],[1.26,.104],[1.34,.111],[1.42,.12],[1.5,.126],[1.55,.118],[1.585,.104],[1.63,.06]];
-    // Fein aufgelöst (52 Ringe): erst dadurch bekommen die Muskel-Regionen
-    // klare, organische Kanten statt über Riesen-Dreiecke zu verschwimmen.
-    // Becken reicht bis y .9 — die Unterkante liegt IN den Oberschenkeln,
-    // dadurch gibt es keine sichtbare „Puppenbein"-Stufe mehr.
-    const keys=prof.map(([y,r])=>[y,r]), pts=[];
-    for(let i=0;i<=72;i++){ const y=.928+(1.63-.928)*i/72; pts.push(new THREE.Vector2(MG3D.key(keys,y),y)); }
-    const g=new THREE.LatheGeometry(pts,56);
-    const sx=F?1.36:1.5, sz=.86;
-    const p=g.attributes.position;
-    for(let i=0;i<p.count;i++){
-      let x=p.getX(i)*sx, y=p.getY(i), z=p.getZ(i)*sz;
-      // Schritt-Gewölbe: unterhalb der Hüfte wird die Mitte (kleines |x|) in der
-      // Tiefe flachgedrückt — der Rumpf-Boden verschwindet ZWISCHEN den Beinen,
-      // statt als sichtbare „Hüftrock"-Kante über den Oberschenkeln zu enden.
-      {const gLow=1-MG3D.sstep(.9,1.03,y);
-       const squeeze=.3+.7*MG3D.sstep(.015,.1,Math.abs(x));
-       z*=1-gLow*(1-squeeze);}
-      // Trapez-Schräge: Silhouette fällt DURCHGEHEND diagonal vom Hals zur Schulterkuppe
-      x*=1-.55*MG3D.sstep(1.53,1.63,y);
-      // Schulter-Shelf/Clavicula: seitlich zur Deltakappe hin verbreitern
-      x*=1+.22*MG3D.gauss(y,1.55,.04);
-      const ax=Math.abs(x);
-      if(z>0){
-        const F1=MG3D.sstep(0,.05,z); // wirkt nur auf der Vorderseite
-        // Brustplatte (Mamillarlinie ~72 % H): zwei Wölbungen + Sternum-Rinne
-        z+=(F?.016:.03)*MG3D.gauss(y,1.40,.07)*MG3D.gauss(ax,.078,.05)*F1;
-        // Pec-Falte: harte untere Brustkante
-        z-=.009*MG3D.gauss(y,1.335,.016)*MG3D.sstep(.025,.06,ax)*(1-MG3D.sstep(.13,.18,ax))*F1;
-        // Clavicula-Kante
-        z+=.006*MG3D.gauss(y,1.538,.012)*MG3D.sstep(.03,.06,ax)*(1-MG3D.sstep(.14,.19,ax))*F1;
-        // Bauchwand leicht vor (Nabelhöhe ~1.16)
-        z+=.011*MG3D.gauss(y,1.16,.11)*MG3D.gauss(ax,0,.085)*F1;
-        // Sixpack: drei Reihen Rectus-Segmente …
-        if(!F){ const row=MG3D.gauss(y,1.27,.024)+MG3D.gauss(y,1.19,.024)+MG3D.gauss(y,1.11,.024);
-          z+=.011*row*MG3D.gauss(ax,.036,.028)*F1; }
-        // … getrennt durch die Linea alba (Mittelrinne)
-        z-=.007*MG3D.sstep(1.04,1.09,y)*(1-MG3D.sstep(1.31,1.35,y))*MG3D.gauss(ax,0,.011)*F1;
-        // Leisten-Einzug (Hüftbeuge): Becken setzt sich vorn vom Bein ab
-        z-=.012*MG3D.gauss(y,.99,.05)*MG3D.gauss(ax,.05,.06)*F1;
-      } else {
-        // Latissimus-Flare: hinten-seitlich in die Breite (V-Form, unter der Achsel)
-        x*=1+.14*MG3D.gauss(y,1.36,.1)*MG3D.sstep(.02,.09,-z);
-        // Trapez-Wulst oben
-        z-=.027*MG3D.gauss(y,1.575,.055)*MG3D.gauss(ax,.055,.085);
-        // Gesäß (Maximum ~51 % H) — seitlich deutlich lesbare Wölbung
-        z-=(F?.062:.054)*MG3D.gauss(y,.985,.062)*MG3D.gauss(ax,.066,.075);
-        // Wirbelsäulen-Furche: durchgehend vom Kreuz bis zwischen die Schulterblätter
-        z+=.009*MG3D.sstep(1.0,1.08,y)*(1-MG3D.sstep(1.48,1.56,y))*MG3D.gauss(ax,0,.016);
-        // Schulterblätter: zwei flache Platten
-        z-=.013*MG3D.gauss(y,1.47,.05)*MG3D.gauss(ax,.092,.045);
+      return groups;
+    };
+    const scan=(polys,y)=>{ let lo=1e9,hi=-1e9;
+      for(const pts of polys){ const n=pts.length;
+        for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n];
+          if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y)){
+            const x=a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]);
+            if(x<lo)lo=x; if(x>hi)hi=x; } } }
+      return hi<lo?null:[lo,hi]; };
+    const F=parse(MG_ANT,true), Bk=parse(MG_POST,false);
+    const profile=(gF,gB,y0,y1,pad)=>{
+      const rows=[];
+      for(let y=y0;y<=y1;y+=2){
+        const a=scan(gF,y), b=scan(gB,y);
+        let lo=null,hi=null;
+        if(a){ lo=a[0]; hi=a[1]; }
+        if(b){ lo=lo==null?b[0]:Math.min(lo,b[0]); hi=hi==null?b[1]:Math.max(hi,b[1]); }
+        rows.push({y,lo,hi});
       }
-      p.setXYZ(i,x,y,z);
-    }
-    g.computeVertexNormals();
-    return g;
+      let last=null; // Lücken zwischen Muskel-Polygonen linear schließen
+      for(let i=0;i<rows.length;i++){ if(rows[i].lo!=null){
+        if(last!=null&&i-last>1){ for(let j=last+1;j<i;j++){ const t=(j-last)/(i-last);
+          rows[j].lo=rows[last].lo+(rows[i].lo-rows[last].lo)*t;
+          rows[j].hi=rows[last].hi+(rows[i].hi-rows[last].hi)*t; } }
+        last=i; } }
+      const out=rows.filter(r=>r.lo!=null);
+      for(const r of out){ r.lo-=pad; r.hi+=pad; } // Silhouetten-Rand (2D: stroke-width 7 ⇒ ~3.5)
+      // Glätten (2 Gauß-Pässe): die Scanline übernimmt sonst jede Polygon-Ecke
+      for(let pass=0;pass<2;pass++){
+        const L=out.map(r=>r.lo), H=out.map(r=>r.hi), k=[1,2,3,2,1];
+        for(let i=0;i<out.length;i++){
+          let sl=0,sh=0,sw=0;
+          for(let o=-2;o<=2;o++){ const j=i+o; if(j<0||j>=out.length) continue;
+            const w=k[o+2]; sl+=L[j]*w; sh+=H[j]*w; sw+=w; }
+          out[i].lo=sl/sw; out[i].hi=sh/sw;
+        }
+      }
+      return out;
+    };
+    const p={
+      torso:profile(F.torso,Bk.torso,2,126,3.2),
+      armL:profile(F.armL,Bk.armL,46,113,2.6), armR:profile(F.armR,Bk.armR,46,113,2.6),
+      legL:profile(F.legL,Bk.legL,102,218,2.8), legR:profile(F.legR,Bk.legR,102,218,2.8),
+    };
+    MG3D._profCache[sex]=p;
+    return p;
   },
-  /* Kopf inkl. Hals: Drehfläche mit Schädelwölbung, Kiefer-Taper, Kinn leicht vor */
-  head(){
-    const prof=[[0,.056],[.04,.059],[.09,.069],[.14,.081],[.2,.09],[.25,.087],[.285,.068],[.305,.032],[.312,.006]];
-    const g=new THREE.LatheGeometry(prof.map(([y,r])=>new THREE.Vector2(r,y)),32);
-    const p=g.attributes.position;
-    for(let i=0;i<p.count;i++){
-      let x=p.getX(i)*1.0, y=p.getY(i), z=p.getZ(i)*1.05;
-      z+=.015*MG3D.gauss(y,.08,.05)*MG3D.sstep(0,.04,z);  // Kiefer/Kinn
-      z-=.01*MG3D.gauss(y,.21,.06)*MG3D.sstep(0,.04,-z);  // Hinterkopf voller
-      p.setXYZ(i,x,y+1.615,z);
+  /* Ring-Stapel: aus {y,lo,hi}-Zeilen wird ein glatter Schlauch — Halbbreite a
+     aus der Silhouette (Front-Projektion == 2D-Zeichnung), Tiefe b=a·d(y),
+     z-Versatz für Brust-/Gesäß-Asymmetrie. taperTop/Bot schließt die Enden. */
+  stack(rows,dKeys,zKeys,taperTop,taperBot){
+    const K=MG3D.K, RAD=34;
+    const R=[...rows];
+    const syn=(base,list,end)=>{ // synthetische Schließ-Zeilen
+      const c=(base.lo+base.hi)/2, a=(base.hi-base.lo)/2;
+      for(const [dy,f] of list) end.push({y:base.y+dy, lo:c-a*f, hi:c+a*f});
+    };
+    if(taperTop){ const t=[]; syn(R[0],taperTop.map(([dy,f])=>[-dy,f]),t); R.unshift(...t.reverse()); }
+    if(taperBot){ const t=[]; syn(R[R.length-1],taperBot,t); R.push(...t); }
+    const n=R.length, V=[], I=[];
+    for(let i=0;i<n;i++){
+      const r=R[i];
+      const cx=((r.lo+r.hi)/2-50)*K, cy=1.93-r.y*K, a=Math.max(.003,(r.hi-r.lo)/2*K);
+      const b=Math.max(.003,a*MG3D.key(dKeys,r.y)), zo=zKeys?MG3D.key(zKeys,r.y)*K:0;
+      for(let j=0;j<RAD;j++){ const th=j/RAD*Math.PI*2;
+        V.push(cx+Math.cos(th)*a, cy, Math.sin(th)*b+zo);
+      }
     }
-    g.computeVertexNormals();
-    return g;
-  },
-  /* Alle Teile (indiziert, glatte Normalen!) zu EINEM Mesh verschmelzen;
-     je Vertex bleibt ein Teil-Tag für die Muskel-Region-Zuordnung. */
-  merge(parts){
-    let vT=0,iT=0;
-    for(const p of parts){ vT+=p.g.attributes.position.count; iT+=p.g.index.count; }
-    const pos=new Float32Array(vT*3), nor=new Float32Array(vT*3), tags=new Array(vT);
-    const idx=vT>65535?new Uint32Array(iT):new Uint16Array(iT);
-    let vo=0,io=0;
-    for(const p of parts){
-      const pa=p.g.attributes.position, na=p.g.attributes.normal, ia=p.g.index;
-      pos.set(pa.array,vo*3); nor.set(na.array,vo*3);
-      for(let i=0;i<ia.count;i++) idx[io+i]=ia.array[i]+vo;
-      tags.fill(p.tag,vo,vo+pa.count);
-      vo+=pa.count; io+=ia.count;
-      p.g.dispose();
+    for(let i=0;i<n-1;i++) for(let j=0;j<RAD;j++){
+      const a0=i*RAD+j, a1=i*RAD+(j+1)%RAD, b0=a0+RAD, b1=a1+RAD;
+      I.push(a0,b0,a1, a1,b0,b1);
     }
     const g=new THREE.BufferGeometry();
-    g.setIndex(new THREE.BufferAttribute(idx,1));
-    g.setAttribute("position",new THREE.BufferAttribute(pos,3));
-    g.setAttribute("normal",new THREE.BufferAttribute(nor,3));
-    g.setAttribute("color",new THREE.BufferAttribute(new Float32Array(vT*3),3));
-    g.setAttribute("aGlow",new THREE.BufferAttribute(new Float32Array(vT*3),3));
-    return {g,tags};
+    g.setIndex(I);
+    g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(V),3));
+    g.computeVertexNormals();
+    return g;
   },
-  /* Muskel-Region je Vertex — WEICH gewichtet (0..1) über anatomische Masken,
-     damit aktive Muskeln als organische Formen glühen (Pec-Platte, Lat-V,
-     Quad-Strang …) statt als harte Rechteck-Patches. */
-  regionOf(tag,x,y,z){
-    const ax=Math.abs(x), G=MG3D.gauss, S=MG3D.sstep;
-    const R=(id,w)=>w>.05?{id,w:Math.min(1,w)}:null;
-    if(tag==="trunk"){
-      if(z>.015){
-        // Platte statt Kugel: oben weich (Clavicula), unten hart (Brustfalte),
-        // seitlich bis zur Achsel, mittig der Sternum-Spalt
-        const chest=R("chest",1.7*S(1.3,1.38,y)*(1-S(1.45,1.53,y))*S(.012,.05,ax)*(1-S(.13,.22,ax))*G(y,1.41,.1)*G(ax,.078,.12)*S(.015,.05,z)*(1-.75*G(ax,0,.016)));
-        if(chest) return chest;
-        const abs_=R("abs",1.5*S(1.06,1.12,y)*(1-S(1.28,1.34,y))*G(ax,0,.07)*S(.015,.05,z));
-        if(abs_) return abs_;
-      }
-      const obl=R("obliques",1.4*G(ax,.135,.05)*S(1.05,1.11,y)*(1-S(1.31,1.37,y))*S(-.05,.02,z));
-      if(obl) return obl;
-      if(z<=-.01){
-        const traps=R("traps",1.6*G(y,1.585,.05)*G(ax,.05,.075)*S(.01,.04,-z));
-        if(traps) return traps;
-        const lats=R("lats",1.6*G(y,1.34,.105)*S(.035,.1,ax)*S(.01,.05,-z));
-        if(lats) return lats;
-        const lb=R("lowerback",1.5*G(y,1.13,.06)*G(ax,.028,.05)*S(.01,.04,-z));
-        if(lb) return lb;
-        const gl=R("glutes",1.7*G(y,.985,.062)*G(ax,.062,.058)*S(.01,.05,-z));
-        if(gl) return gl;
-      }
-      return null;
-    }
-    if(tag==="delt"){
-      const w=S(1.49,1.535,y)*(.55+.45*S(.1,.19,ax)); // Kuppe voll, zur Achsel/Innenseite ausblenden
-      return z<-.05?R("reardelts",w):R("delts",w);
-    }
-    if(tag==="arm"){
-      const dl=R(z<-.05?"reardelts":"delts",S(1.47,1.52,y)*(.9-.3*S(.0,.03,-z))); // Schulterkappe läuft auf den Arm aus
-      if(dl) return dl;
-      const bi=R("biceps",1.5*G(y,1.43,.07)*S(.008,.03,z));
-      if(bi) return bi;
-      const tri=R("triceps",1.5*G(y,1.42,.075)*S(.008,.03,-z));
-      if(tri) return tri;
-      return R("forearm",1.4*G(y,1.15,.09));
-    }
-    if(tag==="leg"){
-      const add=R("adductors",.85*G(ax,.055,.036)*G(y,.8,.1)*(1-S(.9,.98,y)));
-      if(add) return add;
-      const q=R("quads",1.7*G(y,.8,.13)*S(.012,.05,z));
-      if(q) return q;
-      const h=R("hams",1.7*G(y,.79,.12)*S(.012,.05,-z));
-      if(h) return h;
-      return R("calves",1.6*G(y,.4,.09)*S(.004,.04,-z));
-    }
-    return null;
+  /* Texturen: die 2D-Anatomie wird gerastert — Diffuse (plain) + Glow-Map */
+  makeTex(view,colors,sex,glow){
+    return new Promise((res)=>{
+      const col=(id)=>{
+        let c=colors[id]||MG_BODY;
+        if(String(c).startsWith("var(")){ try{ c=getComputedStyle(document.documentElement).getPropertyValue(String(c).slice(4,-1)).trim()||"#C97C63"; }catch(e){ c="#C97C63"; } }
+        return c;
+      };
+      const svg=muscleBody(view,col,sex,glow?{glow:true}:{plain:true});
+      const img=new Image();
+      const cnv=document.createElement("canvas"); cnv.width=256; cnv.height=512;
+      const done=()=>{
+        const t=new THREE.CanvasTexture(cnv);
+        t.flipY=false; // v läuft top-down wie unsere Projektion
+        if(THREE.sRGBEncoding!==undefined) t.encoding=THREE.sRGBEncoding;
+        res(t);
+      };
+      img.onload=()=>{ const c=cnv.getContext("2d");
+        if(glow){ c.fillStyle="#000"; c.fillRect(0,0,256,512); }
+        c.drawImage(img,0,0,256,512); done(); };
+      img.onerror=()=>done(); // leere Textur → Basisfarbe bleibt sichtbar
+      img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+    });
   },
   build(el,cv,colors,sex){
     let renderer=null;
@@ -7122,120 +7066,71 @@ const MG3D={
     const scene=new THREE.Scene();
     const cam=new THREE.PerspectiveCamera(33,W/H,.1,20);
     cam.position.set(0,.12,3.62); cam.lookAt(0,-.02,0);
-    scene.add(new THREE.HemisphereLight(0xA9C4E8,0x0B0D13,.72));
-    const key=new THREE.DirectionalLight(0xE8F0FF,.72); key.position.set(3.2,2.6,1.8); scene.add(key);
-    const fill=new THREE.DirectionalLight(0x6E93B8,.22); fill.position.set(-2.6,-.5,2.8); scene.add(fill);
-    const rim=new THREE.PointLight(0x8FB8DC,.85,12); rim.position.set(-2.4,1.4,-2.6); scene.add(rim);
+    scene.add(new THREE.HemisphereLight(0xA9C4E8,0x0B0D13,.9));
+    const key=new THREE.DirectionalLight(0xE8F0FF,.55); key.position.set(2.6,2.6,2.6); scene.add(key);
+    const rim=new THREE.PointLight(0x8FB8DC,.7,12); rim.position.set(-2.4,1.4,-2.6); scene.add(rim);
     const group=new THREE.Group(); scene.add(group);
-    // ---- Körper zusammensetzen ----
-    const F=sex==="female";
-    const SX=F?.18:.205, HX=F?.11:.107, LEAN=.1, LF=F?.92:1;
-    const parts=[{g:MG3D.trunk(F),tag:"trunk"},{g:MG3D.head(),tag:"head"}];
-    for(const s of [-1,1]){
-      // Schulterkappe (Delta) — gleicher Radius wie Arm-Ansatz → nahtloser Übergang
-      const d=new THREE.SphereGeometry(F?.055:.061,24,20);
-      d.scale(1.02,1.14,1); // Tropfen: leicht vertikal gestreckt, läuft in den Arm aus
-      d.translate(s*SX,1.542,0); // exakt am Arm-Ansatz (Akromion ~81 % H) = Kugelgelenk
-      parts.push({g:d,tag:"delt"});
-      // Arm: Bizepsbauch (t≈.22), Ellbogen-Engstelle (.5), Unterarmbauch (.62), Handgelenk
-      const arm=MG3D.limb({len:.6,
-        rx:[[0,.063*LF],[.2,.06*LF],[.36,.052*LF],[.5,.041*LF],[.6,.048*LF],[.82,.036*LF],[1,.028*LF]],
-        ell:[[0,1],[.4,1.02],[.6,.9],[1,.82]],
-        zoff:[[0,.002],[.2,.007],[.5,0],[.64,-.004],[1,.002]],
-        ridges:[{d:90,w:34,a:.16,t0:.06,t1:.46},   // Bizepsbauch (vorn)
-                {d:270,w:40,a:.16,t0:.05,t1:.5},   // Trizeps (hinten)
-                {d:90,w:30,a:.11,t0:.52,t1:.85},   // Unterarm-Strecker
-                {d:0,w:16,a:-.08,t0:.1,t1:.45},{d:180,w:16,a:-.08,t0:.1,t1:.45}]}); // Bizeps/Trizeps-Trennfurche
-      arm.rotateZ(s*LEAN); arm.translate(s*SX,1.548,0);
-      parts.push({g:arm,tag:"arm"});
-      // Hand
-      const hd=new THREE.SphereGeometry(.036,14,12); hd.scale(1.02,1.65,.62);
-      hd.rotateZ(s*LEAN); hd.translate(s*(SX+Math.sin(LEAN)*.63),1.548-Math.cos(LEAN)*.63,.012);
-      parts.push({g:hd,tag:"hand"});
-      // Bein: Quad-Bauch vor der Achse, Knie-Engstelle, Wade hinter der Achse
-      const leg=MG3D.limb({len:1.02,
-        rx:[[0,.085*LF*(F?1.08:1)],[.18,.08*LF*(F?1.06:1)],[.34,.072*LF],[.48,.053*LF],[.52,.049*LF],[.65,.062*LF],[.8,.044*LF],[.96,.031*LF],[1,.03*LF]],
-        ell:[[0,1.02],[.3,1.05],[.52,.96],[.65,1.14],[1,.85]],
-        zoff:[[0,.004],[.22,.011],[.5,.002],[.65,-.018],[.9,-.006],[1,-.002]],
-        ridges:[{d:90,w:26,a:.14,t0:.06,t1:.44},   // Rectus femoris (vorn Mitte)
-                {d:145,w:24,a:.11,t0:.1,t1:.46},{d:35,w:24,a:.11,t0:.1,t1:.46}, // Vastus-Köpfe
-                {d:0,w:14,a:-.07,t0:.12,t1:.5},{d:180,w:14,a:-.07,t0:.12,t1:.5}, // IT-Band-Furche außen/innen
-                {d:242,w:22,a:.15,t0:.53,t1:.78},{d:298,w:22,a:.15,t0:.53,t1:.78}, // Gastrocnemius: 2 Wadenköpfe
-                {d:270,w:18,a:-.05,t0:.56,t1:.75},
-                {d:90,w:20,a:.06,t0:.46,t1:.56}]}); // Rinne zwischen den Wadenköpfen + Patella
-      leg.translate(s*HX,1.06,0);
-      parts.push({g:leg,tag:"leg"});
-      // Fuß
-      const ft=new THREE.SphereGeometry(.045,16,12); ft.scale(.9,.42,2.35);
-      ft.rotateY(s*.14); ft.translate(s*(HX+.006),.043,.062);
-      parts.push({g:ft,tag:"foot"});
-    }
-    const merged=MG3D.merge(parts);
-    // Regionen je Vertex vorberechnen
-    const pa=merged.g.attributes.position, regions=new Array(pa.count);
-    for(let i=0;i<pa.count;i++) regions[i]=MG3D.regionOf(merged.tags[i],pa.getX(i),pa.getY(i),pa.getZ(i));
-    /* Faszien-/Sehnenlinien wie am Anatomie-Modell: Linea alba + Sehnen-Quer-
-       linien, Sternum, Clavicula, Leistenband-V, Tibia-Kante, Patella,
-       Achillessehne, Wirbelsäule mit Trapezius-Raute und Kreuzbein-Dreieck.
-       Als helle Linien in die Grundfarbe gemalt (per Vertex, einmalig). */
-    const G=MG3D.gauss, SS=MG3D.sstep;
-    const seg=(x,y,ax_,ay,bx,by)=>{ // Abstand Punkt→Strecke (x/y-Ebene)
-      const dx=bx-ax_,dy=by-ay,L2=dx*dx+dy*dy||1;
-      let t=((x-ax_)*dx+(y-ay)*dy)/L2; t=Math.max(0,Math.min(1,t));
-      const px=ax_+t*dx,py=ay+t*dy; return Math.hypot(x-px,y-py);
-    };
-    const fascia=new Float32Array(pa.count);
-    for(let i=0;i<pa.count;i++){
-      const tag=merged.tags[i], x=pa.getX(i), y=pa.getY(i), z=pa.getZ(i), ax=Math.abs(x);
-      let f=0;
-      if(tag==="trunk"){
-        if(z>.02){
-          f=Math.max(f,.9*G(ax,0,.0075)*SS(1.03,1.07,y)*(1-SS(1.32,1.36,y)));          // Linea alba
-          f=Math.max(f,.8*(G(y,1.27,.01)+G(y,1.19,.01)+G(y,1.11,.01))*(1-SS(.06,.085,ax))); // Sehnen-Querlinien
-          f=Math.max(f,.8*G(ax,0,.008)*SS(1.34,1.37,y)*(1-SS(1.49,1.52,y)));          // Sternum
-          f=Math.max(f,.65*G(y,1.539,.011)*SS(.02,.05,ax)*(1-SS(.15,.19,ax)));        // Clavicula
-          f=Math.max(f,.85*G(seg(x,y,Math.sign(x)*.12,1.03,Math.sign(x)*.012,.947),0,.011)); // Leistenband-V
-        }
-        if(z<-.02){
-          f=Math.max(f,.7*G(ax,0,.0075)*SS(1.02,1.06,y)*(1-SS(1.5,1.54,y)));           // Wirbelsäule
-          const wD=Math.max(0,.05*(1-Math.abs(y-1.47)/.13));                          // Trapezius-Raute
-          f=Math.max(f,.55*SS(.003,.012,wD-ax));
-          const wS=Math.max(0,.05*(1-Math.abs(y-.995)/.08));                          // Kreuzbein-Dreieck
-          f=Math.max(f,.55*SS(.003,.012,wS-ax));
-        }
-      } else if(tag==="leg"){
-        const lx=Math.abs(ax-HX);
-        if(z>.015){
-          f=Math.max(f,.7*G(lx,0,.013)*SS(.14,.2,y)*(1-SS(.48,.52,y)));                // Tibia-Kante
-          f=Math.max(f,.7*G(y,.545,.02)*G(lx,0,.024));                                // Patella
-          f=Math.max(f,.45*G(y,.59,.013)*G(lx,0,.014));                               // Quadrizeps-Sehne
-        }
-        if(z<-.01) f=Math.max(f,.65*G(lx,0,.014)*SS(.06,.1,y)*(1-SS(.26,.3,y)));      // Achillessehne
-      } else if(tag==="arm"&&z<-.01){
-        f=Math.max(f,.4*G(y,1.263,.012));                                             // Olekranon (Ellbogen)
-      }
-      fascia[i]=Math.min(1,f);
-    }
-    // Material: Basis dunkel-satiniert; aktive Regionen kommen über Vertex-Farbe
-    // (leichte Aufhellung) + per-Vertex-Emissive (aGlow) mit ruhigem Puls-Uniform.
+    // ---- Geometrie aus der 2D-Silhouette ----
+    const Pr=MG3D.profiles(sex);
+    // Tiefe relativ zur Halbbreite (Seitenansicht) + z-Versatz (Brust vor, Gesäß zurück)
+    const torso=MG3D.stack(Pr.torso,
+      [[2,1.02],[26,1.02],[36,.92],[46,.8],[56,.6],[70,.56],[90,.62],[108,.62],[126,.55]],
+      [[2,0],[40,0],[58,.9],[72,1.1],[86,.2],[100,-1.6],[112,-1.4],[126,0]],
+      [[1.4,.72],[2.6,.4],[3.4,.1]],
+      [[2.5,.72],[4.5,.4],[6,.12]]);
+    const dArm=[[46,.98],[70,1.0],[90,.92],[113,.85]];
+    const armL=MG3D.stack(Pr.armL,dArm,null,null,[[3,.7],[6,.38],[8.5,.1]]);
+    const armR=MG3D.stack(Pr.armR,dArm,null,null,[[3,.7],[6,.38],[8.5,.1]]);
+    const dLeg=[[102,.72],[126,1.02],[150,.96],[172,1.1],[200,.92],[218,.9]];
+    const zLeg=[[102,0],[128,.9],[150,.1],[172,-1.5],[205,-.4],[218,.2]];
+    const legL=MG3D.stack(Pr.legL,dLeg,zLeg,null,[[2.5,.6],[4.5,.25]]);
+    const legR=MG3D.stack(Pr.legR,dLeg,zLeg,null,[[2.5,.6],[4.5,.25]]);
+    // ---- EIN Material mit Front/Rück-Projektion der 2D-Zeichnung ----
     const inst={el,cv,renderer,scene,cam,group,visible:true,dead:false,
-      rotY:-.5,rotX:.02,vY:0,idle:0,drag:null,phase:Math.random()*6,uPulse:null,
-      geo:merged.g,regions,fascia};
-    const mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.42,metalness:.12,vertexColors:true});
-    mat.customProgramCacheKey=()=>"mg3dGlow";
+      rotY:-.5,rotX:.02,vY:0,idle:0,drag:null,phase:Math.random()*6,uPulse:null,sh:null,tex:{}};
+    const mat=new THREE.MeshStandardMaterial({color:0x222A38,roughness:.5,metalness:.15});
+    mat.customProgramCacheKey=()=>"mg3dTexProj";
     mat.onBeforeCompile=(sh)=>{
-      sh.uniforms.uPulse={value:.6}; inst.uPulse=sh.uniforms.uPulse;
-      sh.vertexShader="attribute vec3 aGlow;\nvarying vec3 vGlow;\n"+
-        sh.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\n vGlow=aGlow;");
-      sh.fragmentShader="varying vec3 vGlow;\nuniform float uPulse;\n"+
-        sh.fragmentShader.replace("#include <emissivemap_fragment>","#include <emissivemap_fragment>\n totalEmissiveRadiance += vGlow*(0.5+0.5*uPulse);");
+      sh.uniforms.tF={value:inst.tex.f||null}; sh.uniforms.tB={value:inst.tex.b||null};
+      sh.uniforms.gF={value:inst.tex.gf||null}; sh.uniforms.gB={value:inst.tex.gb||null};
+      sh.uniforms.uHasTex={value:inst.tex.f?1:0};
+      sh.uniforms.uPulse={value:.65};
+      inst.uPulse=sh.uniforms.uPulse; inst.sh=sh;
+      sh.vertexShader="varying vec3 vMPos;\nvarying float vNz;\n"+sh.vertexShader
+        .replace("#include <begin_vertex>","#include <begin_vertex>\n vMPos=position;\n vNz=normal.z;");
+      sh.fragmentShader=("varying vec3 vMPos;\nvarying float vNz;\n"+
+        "uniform sampler2D tF;uniform sampler2D tB;uniform sampler2D gF;uniform sampler2D gB;uniform float uHasTex;uniform float uPulse;\n")+
+        sh.fragmentShader
+        .replace("#include <map_fragment>",
+          "#include <map_fragment>\n"+
+          " vec2 suv=vec2((vMPos.x/0.00864+58.0)/116.0, ((1.93-vMPos.y)/0.00864+6.0)/232.0);\n"+
+          " float kfb=smoothstep(-0.18,0.18,vNz);\n"+
+          " if(uHasTex>0.5){\n"+
+          "   vec4 tf=texture2D(tF,suv);\n"+
+          "   vec4 tb=texture2D(tB,vec2(1.0-suv.x,suv.y));\n"+
+          "   vec4 tex=mix(tb,tf,kfb);\n"+
+          "   diffuseColor.rgb=mix(diffuseColor.rgb,tex.rgb,tex.a);\n"+
+          " }")
+        .replace("#include <emissivemap_fragment>",
+          "#include <emissivemap_fragment>\n"+
+          " if(uHasTex>0.5){\n"+
+          "   vec3 gf=texture2D(gF,suv).rgb;\n"+
+          "   vec3 gb=texture2D(gB,vec2(1.0-suv.x,suv.y)).rgb;\n"+
+          "   totalEmissiveRadiance+=mix(gb,gf,kfb)*(0.55+0.5*uPulse);\n"+
+          " }");
     };
-    const mesh=new THREE.Mesh(merged.g,mat);
-    group.add(mesh);
-    group.position.y=-.97; // Drehpunkt ≈ Körpermitte → dreht „auf der Stelle"
-    MG3D.paintInst(inst,colors);
+    for(const g of [torso,armL,armR,legL,legR]) group.add(new THREE.Mesh(g,mat));
+    // Füße (Textur dort dunkel — Silhouetten-Ton)
+    for(const s of [-1,1]){
+      const P2=Pr["leg"+(s<0?"L":"R")], lastRow=P2[P2.length-1];
+      const axc=((lastRow.lo+lastRow.hi)/2-50)*MG3D.K;
+      const ft=new THREE.SphereGeometry(.042,16,12); ft.scale(.9,.42,2.2);
+      ft.rotateY(s*.12); ft.translate(axc,.045,.055);
+      group.add(new THREE.Mesh(ft,mat));
+    }
+    group.position.y=-.95;
+    MG3D.paintInst(inst,colors,sex);
     try{ new IntersectionObserver((es)=>{es.forEach(e=>inst.visible=e.isIntersecting);}).observe(el); }catch(e){}
-    /* Drehen per Finger: horizontal = rotieren, vertikal scrollt weiter (touch-action:pan-y) */
     cv.addEventListener("pointerdown",(e)=>{ inst.drag={x:e.clientX,y:e.clientY,rY:inst.rotY,rX:inst.rotX}; inst.vY=0;
       try{ cv.setPointerCapture(e.pointerId); }catch(ex){} });
     cv.addEventListener("pointermove",(e)=>{ if(!inst.drag) return;
@@ -7250,30 +7145,24 @@ const MG3D={
     el.dataset.on="1";
     MG3D.inst.push(inst);
     inst.group.rotation.y=inst.rotY; inst.group.rotation.x=inst.rotX;
-    renderer.render(scene,cam); // erster Frame sofort — kein leeres Feld vor dem Sichtbarwerden
+    renderer.render(scene,cam);
     MG3D.loop();
   },
-  /* Färben: Basis-Vertexfarbe + Glow je Region — beides mit dem weichen
-     Regionen-Gewicht multipliziert, so entstehen organische Muskel-Formen. */
-  paintInst(inst,colors){
-    const BASE=new THREE.Color(0x303C50), FAS=new THREE.Color(0x8FA3C2), col=inst.geo.attributes.color, glow=inst.geo.attributes.aGlow;
-    const tmp=new THREE.Color();
-    for(let i=0;i<inst.regions.length;i++){
-      const reg=inst.regions[i], cstr=reg?colors[reg.id]:null;
-      let r,g,b;
-      if(!cstr||cstr===MG_BODY){
-        r=BASE.r; g=BASE.g; b=BASE.b; glow.setXYZ(i,0,0,0);
-      } else {
-        const {c,k}=MG3D.parse(cstr); tmp.setHex(c);
-        const m=(.5+.24*k)*reg.w;
-        r=BASE.r+(tmp.r-BASE.r)*m; g=BASE.g+(tmp.g-BASE.g)*m; b=BASE.b+(tmp.b-BASE.b)*m;
-        const e=(.4+.44*k)*reg.w;
-        glow.setXYZ(i,tmp.r*e,tmp.g*e,tmp.b*e);
+  /* Färben = Texturen (neu) rastern: Diffuse+Glow für Front und Rück */
+  paintInst(inst,colors,sex){
+    sex=sex||"male";
+    Promise.all([
+      MG3D.makeTex("front",colors,sex,false), MG3D.makeTex("back",colors,sex,false),
+      MG3D.makeTex("front",colors,sex,true),  MG3D.makeTex("back",colors,sex,true),
+    ]).then(([f,b,gf,gb])=>{
+      if(inst.dead) return;
+      inst.tex={f,b,gf,gb};
+      if(inst.sh){
+        inst.sh.uniforms.tF.value=f; inst.sh.uniforms.tB.value=b;
+        inst.sh.uniforms.gF.value=gf; inst.sh.uniforms.gB.value=gb;
+        inst.sh.uniforms.uHasTex.value=1;
       }
-      const f=(inst.fascia&&inst.fascia[i])||0; // Faszienlinien liegen ÜBER allem
-      col.setXYZ(i,r+(FAS.r-r)*f,g+(FAS.g-g)*f,b+(FAS.b-b)*f);
-    }
-    col.needsUpdate=true; glow.needsUpdate=true;
+    });
   },
   scan(){
     if(MG3D.failed){ document.querySelectorAll(".b3d:not([data-on])").forEach(el=>{ el.dataset.on="1"; let c={}; try{ c=JSON.parse(el.dataset.b3d||"{}"); }catch(e){} MG3D.fallback(el,c); }); return; }
@@ -7284,7 +7173,7 @@ const MG3D={
     const step=()=>{
       MG3D.inst=MG3D.inst.filter(i=>{
         if(i.dead||!i.el.isConnected){
-          try{ i.geo.dispose(); i.renderer.dispose(); i.renderer.forceContextLoss&&i.renderer.forceContextLoss(); }catch(e){}
+          try{ i.renderer.dispose(); i.renderer.forceContextLoss&&i.renderer.forceContextLoss(); }catch(e){}
           return false; }
         return true; });
       if(!MG3D.inst.length){ MG3D.raf=0; return; }
@@ -7294,12 +7183,12 @@ const MG3D={
         for(const i of MG3D.inst){
           if(!i.visible) continue;
           if(!i.drag){
-            i.rotY+=i.vY; i.vY*=.94;                       // Trägheit nach dem Loslassen
+            i.rotY+=i.vY; i.vY*=.94;
             i.idle+=1/60;
-            if(i.idle>2.5) i.rotY+=.0045*Math.min(1,(i.idle-2.5)); // sanfte Auto-Rotation
+            if(i.idle>2.5) i.rotY+=.0045*Math.min(1,(i.idle-2.5));
           }
           i.group.rotation.y=i.rotY; i.group.rotation.x=i.rotX;
-          if(i.uPulse) i.uPulse.value=.68+.32*Math.sin(t*2.1+i.phase); // ruhiges Muskel-Pulsieren
+          if(i.uPulse) i.uPulse.value=.5+.5*Math.sin(t*2.1+i.phase);
           i.renderer.render(i.scene,i.cam);
         }
       }
