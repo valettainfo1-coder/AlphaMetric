@@ -4686,12 +4686,13 @@ function renderFeatureOverview(){
 // füllt dasselbe Feld — kein eigener Speech-Recognition-State nötig.
 // Value Banner: erklärt Nutzen, einmalig pro Nutzer dismissable
 /* 180°-Editorial: Tab-Hero — Szene mit Kicker, Serif-Statement und OFFENEN Kennzahlen (keine Boxen). */
-function tabHero(cls,kicker,headline,sub,stats){
+function tabHero(cls,kicker,headline,sub,stats,extra){
   return `<section class="hz ${cls}"><div class="hz-scene" aria-hidden="true"></div>
     <p class="hz-kick">${kicker}</p>
     <h2 class="hz-h">${headline}</h2>
     ${sub?`<p class="hz-sub">${sub}</p>`:""}
     ${stats&&stats.length?`<div class="hz-stats">${stats.map(([v,l])=>`<div class="hz-stat"><p class="v">${v}</p><p class="l">${l}</p></div>`).join("")}</div>`:""}
+    ${extra||""}
   </section>`;
 }
 function banner(id,iconName,html){
@@ -7425,7 +7426,7 @@ function maxStatusCard(){
       </div>
       <div class="row" style="gap:8px">
         <button class="btn" style="flex:1;min-height:42px" onclick="openMaxStatus()">${icon("chart",14)} Beweis ansehen</button>
-        <button class="btn volt" style="flex:1;min-height:42px" onclick="shareMaxStatus()">${icon("send",14)} Beweis teilen</button>
+        <button class="btn" style="flex:1;min-height:42px" onclick="shareMaxStatus()">${icon("send",14)} Beweis teilen</button>
       </div>
       <button class="btn ghost mt8" style="min-height:38px;font-size:12.5px" onclick="openPlanCoach()">${icon("message",14)} Warum sieht mein Plan so aus?</button>
     </div>`;
@@ -7705,6 +7706,10 @@ function renderTrain(){
     toast(S.soreMode[t]?"Schonende Alternativen aktiv — gute Entscheidung bei Muskelkater":"Standard-Übungen wieder aktiv");};
   const exLine=(e,key,idx)=>{
     const name=e.n, warn=injuryWarn(name), r=recommend(name);
+    // Fortschritts-Signal: ▲ wenn die letzten Sätze über dem Niveau davor liegen (e1RM)
+    let _up=false; try{ const _s=S.liftLog[name]||[]; if(_s.length>=4){ const _e=(x)=>e1rm(x.w,x.reps,x.rpe||8);
+      const _r2=_s.slice(-2).reduce((m,x)=>x.w>0?Math.max(m,_e(x)):m,0), _b4=_s.slice(-6,-2).reduce((m,x)=>x.w>0?Math.max(m,_e(x)):m,0);
+      _up=_b4>0&&_r2>_b4+0.4; } }catch(err){}
     const swappable=key!=null&&idx!=null;
     const press=swappable?`onclick="A.lpTap('${name}')" onpointerdown="A.lpStart('${key}',${idx})" onpointerup="A.lpEnd()" onpointercancel="A.lpEnd()" onpointerleave="A.lpEnd()" oncontextmenu="event.preventDefault()"`:`onclick="A.exDetail('${name}')"`;
     return `<button class="exrow" ${press} aria-label="Details zu ${name} — gedrückt halten zum Tauschen">
@@ -7714,7 +7719,7 @@ function renderTrain(){
         ${e.tech?`<span><span class="statchip" style="background:var(--hl-soft);color:var(--hl)">⚡ ${e.tech}</span></span>`:""}
       </span>
       <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
-        <span class="metric xs t2">${r?fmtKg(r.w):""}</span>
+        <span class="metric xs" style="color:${_up?"#8FB8DC":"var(--t2)"}">${_up?"▲ ":""}${r?fmtKg(r.w):""}</span>
         ${swappable?`<span class="iconbtn" style="min-width:36px;min-height:36px" role="button" aria-label="${name} tauschen" onclick="event.stopPropagation();A.swapMenu('${key}',${idx})" onpointerdown="event.stopPropagation()">${icon("undo",14)}</span>`:""}
       </span>
     </button>`;
@@ -7723,12 +7728,15 @@ function renderTrain(){
     <div class="accbody">${items.map(w=>`<p class="sm" style="padding:5px 0;font-weight:600;color:var(--t1)">${w.n}</p><p class="xs t2" style="line-height:1.5;margin-bottom:6px">${w.why}</p>`).join("")}</div></details>`:"";
   // Wochen-Strip: Tag antippen → DESSEN Einheit erscheint unten INLINE (kein Popup).
   // Der aktuell gezeigte Tag ist hervorgehoben.
+  // Wochen-KOMPASS: Tag + Icon, Haken auf absolvierten Tagen — Namen tragen die Karten darunter.
+  const _mon=new Date(); _mon.setDate(_mon.getDate()-dow);
+  const _trained=(i)=>{ const d=new Date(_mon); d.setDate(_mon.getDate()+i); const k=dkey(d);
+    return S.trainingHistory.some(t=>t.date===k&&t.sets>0); };
   const weekStrip=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
-    ${sch.map((t,i)=>{const train=t!=="rest"; const sel=i===focusDayIdx;
-      return `<button ${train?`onclick="A.selectDay(${i})"`:""} style="background:${sel?"var(--accent-soft)":"none"};border:1px solid ${sel?"var(--hl)":"transparent"};border-radius:10px;padding:6px 0;cursor:${train?"pointer":"default"};font-family:inherit;color:var(--t1)">
-        <p class="xs" style="color:${sel?"var(--hl)":i===dow?"var(--t1)":"var(--t3)"};font-weight:${sel||i===dow?"700":"400"}">${WD[i]}</p>
-        <p style="font-size:16px;margin:4px 0">${t==="rest"?"·":`<span style="display:inline-flex">${icon(TYPES[t].icon,15)}</span>`}</p>
-        <p style="font-size:8.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
+    ${sch.map((t,i)=>{const train=t!=="rest"; const sel=i===focusDayIdx; const done=_trained(i);
+      return `<button ${train?`onclick="A.selectDay(${i})"`:""} style="background:${sel?"var(--accent-soft)":"none"};border:none;border-radius:12px;padding:8px 0 9px;cursor:${train?"pointer":"default"};font-family:inherit;color:var(--t1)">
+        <p class="xs" style="color:${sel?"var(--hl)":i===dow?"var(--t1)":"var(--t3)"};font-weight:${sel||i===dow?"600":"400"}">${WD[i]}</p>
+        <p style="font-size:15px;margin:5px 0 0">${done?`<span style="display:inline-flex;color:#7FA98F">${icon("check",14)}</span>`:t==="rest"?`<span style="color:var(--t3)">·</span>`:`<span style="display:inline-flex;color:${sel?"var(--hl)":"var(--t2)"}">${icon(TYPES[t].icon,15)}</span>`}</p>
       </button>`;}).join("")}
   </div>`;
   // Rotations-Strip: Boxen pro Einheit, „Nächste" markiert, alle antippbar
@@ -7746,21 +7754,36 @@ function renderTrain(){
     const isSel=isRot?(i===rotSelIdx):(i===focusDayIdx); const isToday=!isRot&&i===dow;
     const head=isRot?TYPES[t].label:`${WD[i]} · ${TYPES[t].label}`;
     return `<button onclick="${isRot?`A.selectRot(${i})`:`A.selectDay(${i})`}" style="text-align:left;background:${isSel?"var(--accent-soft)":"var(--s2)"};border:1px solid ${isSel?"var(--hl)":"var(--border)"};border-radius:14px;padding:11px 13px;cursor:pointer;font-family:inherit;color:var(--t1);width:100%">
-      <div class="row" style="margin-bottom:5px;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;min-width:0"><span style="display:inline-flex;color:var(--hl)">${icon(TYPES[t].icon,15)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${head}</span>${isToday?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">heute</span>':isNext?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">nächste</span>':""}</span><span class="xs t3" style="flex-shrink:0">${names.length} Üb.</span></div>
+      <div class="row" style="margin-bottom:5px;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;min-width:0"><span style="display:inline-flex;color:var(--hl)">${icon(TYPES[t].icon,15)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${head}</span>${isToday?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">heute</span>':isNext?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">nächste</span>':""}</span><span class="xs t3" style="flex-shrink:0">${names.length} Üb.${TYPES[t].est?" · "+TYPES[t].est+" Min":""}</span></div>
       <p class="xs t2" style="line-height:1.5;margin:0">${names.slice(0,5).join(" · ")}${names.length>5?" …":""}</p>
     </button>`;};
+  A.weekAll=()=>{ window._twa=!window._twa; renderTrain(); };
+  // Nur die NÄCHSTEN 3 Einheiten zeigen (ab heute, rollierend) — Rest per Toggle.
+  const _ordered=[...Array(7)].map((_,k)=>(dow+k)%7).filter(i=>sch[i]!=="rest");
+  const _showIdx=window._twa?_ordered:_ordered.slice(0,3);
   const weekOverview=`<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
     ${rotMode
       ? rot.map((t,i)=>dayCard(t,i,true,i===(S.rotationPos||0)%rot.length)).join("")
-      : sch.map((t,i)=>t==="rest"?"":dayCard(t,i,false,false)).join("")}
+      : _showIdx.map(i=>dayCard(sch[i],i,false,false)).join("")}
+    ${(!rotMode&&_ordered.length>3)?`<button class="btn ghost" style="min-height:38px;font-size:12.5px" onclick="A.weekAll()">${window._twa?"Weniger anzeigen":"Ganze Woche anzeigen · "+_ordered.length+" Einheiten"}</button>`:""}
   </div>`;
   root.innerHTML=`
     ${(()=>{ const FT=focusType?TYPES[focusType]:null;
-      const kick=focusType?(rotMode?"Training · Rotation":(focusDayIdx===dow?"Training · Heute":"Training · "+WD[focusDayIdx])):"Training";
+      const restToday=sch[dow]==="rest";
+      const kick=focusType?(rotMode?"Training · Rotation":(focusDayIdx===dow?"Training · Heute":(restToday?"Heute Ruhetag · Nächste: "+WD[focusDayIdx]:"Training · "+WD[focusDayIdx]))):"Training";
       const hl=FT?FT.label+".":"Dein Plan.";
       const sub=FT?(parseTypeKey(focusType).base==="cardio"?"Ausdauer-Einheit · ≈ "+(FT.est||35)+" Min.":FT.main.length+" Übungen · ≈ "+(FT.est||(S.profile.a.len||60))+" Min — jede Zahl exakt auf dich berechnet."):"Leg deine Trainingstage fest — dein Plan steht sofort.";
       const phase=isDeload?"Deload":(S.currentWeek===3?"Spitze":"Aufbau");
-      return tabHero("train",kick,hl,sub,[[String(sch.filter(t=>t!=="rest").length),"Einheiten"],[String(S.currentWeek||1)+"<em> / 4</em>","Woche"],[phase,"Phase"]]); })()}
+      // NULL-SCROLL-START: die eine Aktion direkt im Hero — mit Kontext & Erledigt-Zustand
+      let cta="";
+      if(FT){ const done=S.trainingHistory.some(t=>t.date===todayKey()&&t.sets>0&&t.type===parseTypeKey(focusType).base);
+        const first=(FT.main&&FT.main[0])?FT.main[0].n:null;
+        cta=`<button class="btn ${done?"":"volt"}" style="margin-top:18px" onclick="A.startType('${focusType}')">
+          <span style="display:flex;flex-direction:column;align-items:center;line-height:1.25">
+            <span>${done?"Noch eine Session":(focusDayIdx===dow||rotMode?"Training beginnen":FT.label+" starten")}</span>
+            <span style="font-size:11px;font-weight:500;opacity:.7">${done?"Heute schon erledigt ✓":(first?"startet mit "+first+" · ≈ "+(FT.est||60)+" Min":"≈ "+(FT.est||60)+" Min")}</span>
+          </span></button>`; }
+      return tabHero("train",kick,hl,sub,[[String(sch.filter(t=>t!=="rest").length),"Einheiten"],[String(S.currentWeek||1)+"<em> / 4</em>","Woche"],[phase,"Phase"]],cta); })()}
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Nächste Einheit"):"Deine Einheit",
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
@@ -7801,7 +7824,7 @@ function renderTrain(){
           <p class="label" style="margin-bottom:8px">Übungen${reduce?` <span class="xs t2" style="font-weight:400">· heute autoreguliert</span>`:""}</p>
           ${dispMain.map((e,i)=>exLine(e,focusType,i)).join("")}
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:14px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
-          <button class="btn volt mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
+          <button class="btn mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
           <p class="xs t2 mt8" style="text-align:center">Übung antippen für Details · gedrückt halten zum Tauschen</p>
           ${voicePreview?`<div class="card mt8" style="background:var(--s2)">
             <p class="sm"><b>${esc(voicePreview.name)}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
@@ -7835,9 +7858,9 @@ function renderTrain(){
         ${weekOverview}
         ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
         <p class="xs t2 mt8" style="line-height:1.5">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
-        <p class="xs t2 mt8">${rotMode?"Tipp auf eine Einheit, um sie komplett zu öffnen. Nach jeder Einheit rückt die Rotation automatisch weiter.":"Tipp auf einen Tag, um die Einheit komplett zu öffnen — auch zukünftige."}</p>
+        ${rotMode?`<p class="xs t2 mt8">Nach jeder Einheit rückt die Rotation automatisch weiter.</p>`:""}
         <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:16px;background:var(--s2);overflow:hidden">
-          <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("camera",15)} Eigenen Plan importieren / neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+          <summary style="font-size:13.5px;font-weight:600;padding:13px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("edit",15)} Plan bearbeiten, importieren oder neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
           <div class="accbody" style="padding:0 14px 12px">
             <p class="xs t2 mb8" style="line-height:1.5">Lade deinen aktuellen Plan hoch (bis 8 Bilder) — <b style="color:var(--t1)">Foto machen oder aus der Galerie wählen</b>. Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder zeigt dir, warum METRICGYM stärker ist.</p>
             <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan-Bilder hochladen</button>
