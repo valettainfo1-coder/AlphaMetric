@@ -24,14 +24,23 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   driftendem Volumen-Rauch, wanderndem Licht-Kern („da denkt etwas") und
   subtiler Reaktion auf den Finger/Cursor. Läuft mit 30 fps akkuschonend,
   pausiert unsichtbar, fällt ohne WebGL sauber auf die CSS-Sphäre zurück.
+- **Kein Ring/Kreis mehr um die Sphäre**: Der Rand folgt der Rauchdichte und
+  franst frei in die Dunkelheit aus — wie ein echter Nebel, keine Scheibe.
 - Überall identisch: Hero, Plan-Bühne, Plan-Genese, KI-Hub, Final-CTA.
 
 ### 3. Drehbarer 3D-Körper (ersetzt Vorderseite/Rückseite)
-- Neues Signature-Feature: stilisierter 3D-Athlet (three.js, lokal in
-  `vendor/three.min.js` — kein CDN nötig, offline ab Start). Muskelgruppen sind
-  eigene Meshes: primär beanspruchte leuchten Puderblau, sekundäre Gold, mit
-  ruhigem Puls. **Mit dem Finger drehen** (vertikal scrollt die Seite weiter),
-  Trägheit beim Loslassen, sanfte Auto-Rotation im Leerlauf.
+- Signature-Feature, anatomische Ausführung: EIN durchgehend geglättetes
+  Mannequin-Mesh — Rumpf als fein tessellierte, modellierte Drehfläche
+  (Brustplatte mit Sternum-Rinne, Latissimus-V, Taille, Trapez, Gesäß,
+  Lendenrinne), Gliedmaßen als Profilkurven mit echten Muskelbäuchen
+  (Quadrizeps vor / Wade hinter der Beinachse, Bizeps-/Unterarm-Bauch),
+  Schultern als nahtlose Kugelgelenke.
+- Muskeln sind IN die Oberfläche gemalt (per-Vertex-Regionen mit weichen
+  anatomischen Masken): primär beanspruchte glühen Puderblau, sekundäre Gold,
+  mit ruhigem Puls aus dem Material heraus — keine aufgesetzten Formen.
+- **Mit dem Finger drehen** (vertikal scrollt die Seite weiter), Trägheit beim
+  Loslassen, sanfte Auto-Rotation im Leerlauf. three.js liegt lokal in
+  `vendor/three.min.js` — kein CDN nötig, offline ab Start.
 - Eingesetzt überall, wo vorher die zwei 2D-Ansichten standen: Landing-Demo,
   Übungs-Detail (inkl. Griff-Varianten), Muskel-Heatmap, Session-Fokus.
 - Fallback: ohne WebGL erscheinen die 2D-Ansichten — deren Größen-Asymmetrie
