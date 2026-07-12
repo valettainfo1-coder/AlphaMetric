@@ -29,12 +29,20 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - Überall identisch: Hero, Plan-Bühne, Plan-Genese, KI-Hub, Final-CTA.
 
 ### 3. Drehbarer 3D-Körper (ersetzt Vorderseite/Rückseite)
-- Signature-Feature, anatomische Ausführung: EIN durchgehend geglättetes
-  Mannequin-Mesh — Rumpf als fein tessellierte, modellierte Drehfläche
-  (Brustplatte mit Sternum-Rinne, Latissimus-V, Taille, Trapez, Gesäß,
-  Lendenrinne), Gliedmaßen als Profilkurven mit echten Muskelbäuchen
-  (Quadrizeps vor / Wade hinter der Beinachse, Bizeps-/Unterarm-Bauch),
-  Schultern als nahtlose Kugelgelenke.
+- Signature-Feature, anatomische Ausführung (in 6 Screenshot-Bewertungs-
+  Iterationen gegen anthropometrische Referenzwerte und ein Écorché-Vorbild
+  entwickelt): Proportionen nach Mensch (Schritt ~49 % H, Akromion 81 %,
+  Ellbogen 66 %, Handgelenk 50 %, Knie 29 %, Wadenbauch 21 %); Rumpf als fein
+  tessellierte Drehfläche mit modellierter Anatomie: Pec-Platten mit
+  Brustfalte + Sternum-Rinne, Sixpack-Reihen mit Linea alba, Obliques,
+  Clavicula-Kante, Latissimus-V, Trapez-Diagonale, Schulterblätter,
+  durchgehende Wirbelsäulen-Furche, geformtes Gesäß mit Schritt-Gewölbe
+  (kein „Puppenbein"-Absatz); Gliedmaßen mit echten Muskelbäuchen und
+  Trennfurchen (Rectus femoris + Vastus-Köpfe, IT-Band-Furche, Patella,
+  zwei Gastrocnemius-Wadenköpfe, Bizeps/Trizeps-Separation,
+  Unterarm-Strecker); Schultern als nahtlose Kugelgelenk-Delts in
+  Tropfenform; Streiflicht-Setup macht die Muskelformen aus jedem
+  Winkel lesbar.
 - Muskeln sind IN die Oberfläche gemalt (per-Vertex-Regionen mit weichen
   anatomischen Masken): primär beanspruchte glühen Puderblau, sekundäre Gold,
   mit ruhigem Puls aus dem Material heraus — keine aufgesetzten Formen.
