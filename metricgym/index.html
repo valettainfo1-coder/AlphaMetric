@@ -667,9 +667,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     color:var(--t1); font-size:21px; line-height:1; cursor:pointer; font-family:inherit; flex-shrink:0;
     box-shadow:inset 0 1px 0 var(--edge);}
   .lcell-row>button:active{transform:scale(.94); background:rgba(255,255,255,.12);}
-  .lcell-row input{flex:1; min-width:0; width:auto; background:none; border:none; color:var(--t1); font-size:27px; font-weight:300;
-    text-align:center; font-variant-numeric:tabular-nums; font-family:var(--font-hero); padding:0; min-height:42px;}
-  .lcell-hint{font-size:10.5px; color:var(--t3); margin:7px 0 0; min-height:13px;}
+  .lcell-row input{flex:1; min-width:54px; width:auto; background:none; border:none; color:var(--t1); font-size:23px; font-weight:300;
+    text-align:center; font-variant-numeric:tabular-nums; font-family:var(--font-hero); padding:0 2px; min-height:42px;}
+  .lcell-hint{font-size:10.5px; color:var(--t3); margin:7px 0 0; min-height:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   /* Session-Anatomie: Körper + Fokus-Liste in einer ruhigen Fläche */
   .sess-anat{display:flex; gap:16px; align-items:center; background:var(--s2); border-radius:18px; padding:14px;
     box-shadow:inset 0 1px 0 var(--edge);}
@@ -990,9 +990,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .hz-h{font-family:var(--font-serif); font-size:33px; font-weight:560; font-optical-sizing:auto; letter-spacing:-.015em; line-height:1.12; margin:0 0 8px; color:var(--t1);}
   .hz-sub{font-size:15px; line-height:1.6; color:var(--t2); max-width:36ch;}
   .hz-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:22px;}
-  .hz-stat{background:rgba(11,14,19,.44); border-radius:16px; padding:13px 6px 11px; text-align:center;
-    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+  .hz-stat{background:rgba(255,255,255,.06); border-radius:18px; padding:14px 6px 12px; text-align:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 4px 16px rgba(0,0,0,.25);}
   .hz-stat .v{font-family:var(--font-hero); font-size:26px; font-weight:300; letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; color:var(--t1);}
   .hz-stat .v em{font-style:normal; font-size:14px; font-weight:400; color:var(--t2);}
   .hz-stat .l{font-size:9px; letter-spacing:.13em; text-transform:uppercase; color:var(--t3); margin-top:7px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -1223,6 +1222,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .ins-block::before{display:none;}  /* Farbbalken raus — die Caps-Kategorie trägt die Farbe allein */
   .chip.sel,.pill.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.18);}
   .st-word{font-family:var(--font-serif); font-weight:500; letter-spacing:-.01em; line-height:1.15; color:var(--t1);}
+  /* Spacing-Disziplin: Karten & Accordions enden NIE mit hängendem Margin. */
+  .card>:last-child,.accbody>:last-child,.modal>:last-child,.lcell>:last-child{margin-bottom:0;}
+  .card>.ct:first-child{margin-top:2px;}
   .cell.dash{border:1px dashed rgba(255,255,255,.16);}
   .btn.ghost{color:var(--hl);}
   .lp-seg{border:none; box-shadow:inset 0 1px 0 var(--edge);}
@@ -6597,7 +6599,7 @@ function muscleBody(view,arg,sex){
   let upperSvg="", lowerSvg="", silUp="", silLo="";
   // SILHOUETTE: alle Formen aufgeblasen in Koerperton uebereinander -> geschlossener Koerper,
   // auf dem die Muskeln liegen (vorher schwebten die Polygone ohne Koerper im Raum).
-  const SIL="#161B28";
+  const SIL="#242B39";
   const sil=(pts)=>`<polygon points="${pts}" fill="${SIL}" stroke="${SIL}" stroke-width="7" stroke-linejoin="round"/>`;
   // Fueller schliessen Luecken, die die Muskeldaten frei lassen (Becken vorn, Taille hinten)
   const FILLER=view==="front"?["44 106 56 106 56 128 44 128","46 88 54 88 54 108 46 108"]:["42 96 58 96 58 112 42 112"];
@@ -6607,14 +6609,14 @@ function muscleBody(view,arg,sex){
     if(MG_LOWER_KEYS.has(m.k)){ lowerSvg+=shapes; silLo+=sh; } else { upperSvg+=shapes; silUp+=sh; }
   });
   silUp+=FILLER.map(sil).join("");
-  const rim=`<g opacity="0.55">${grp(null,sxUp,silUp.replace(/stroke-width="7"/g,'stroke-width="9"').replace(new RegExp(SIL.replace('#','#'),'g'),'#232B3E'))}${grp(null,sxLo,silLo.replace(/stroke-width="7"/g,'stroke-width="9"').replace(new RegExp(SIL,'g'),'#232B3E'))}</g>`;
+  const rim=`<g opacity="0.55">${grp(null,sxUp,silUp.replace(/stroke-width="7"/g,'stroke-width="9"').replace(new RegExp(SIL.replace('#','#'),'g'),'#313A4C'))}${grp(null,sxLo,silLo.replace(/stroke-width="7"/g,'stroke-width="9"').replace(new RegExp(SIL,'g'),'#313A4C'))}</g>`;
   const body=rim+grp(null,sxUp,silUp)+grp(null,sxLo,silLo)+grp(null,sxUp,upperSvg)+grp(null,sxLo,lowerSvg);
   const defs=`<defs>
     <filter id="${fid}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <radialGradient id="${fid}bg" cx="50%" cy="28%" r="80%"><stop offset="0%" stop-color="#161D2C"/><stop offset="62%" stop-color="#0B0F18"/><stop offset="100%" stop-color="#05070C"/></radialGradient>
-    <radialGradient id="${fid}a" cx="50%" cy="38%" r="55%"><stop offset="0%" stop-color="#3F86FF" stop-opacity="0.45"/><stop offset="55%" stop-color="#5B8CFF" stop-opacity="0.1"/><stop offset="100%" stop-color="#5B8CFF" stop-opacity="0"/></radialGradient></defs>`;
-  const bg=`<rect x="-8" y="-6" width="116" height="232" rx="10" fill="url(#${fid}bg)"/>
-    <ellipse cx="50" cy="112" rx="48" ry="124" fill="url(#${fid}a)" class="mg-aura"/>`;
+    <radialGradient id="${fid}a" cx="50%" cy="38%" r="55%"><stop offset="0%" stop-color="#8FB8DC" stop-opacity="0.30"/><stop offset="55%" stop-color="#8FB8DC" stop-opacity="0.08"/><stop offset="100%" stop-color="#8FB8DC" stop-opacity="0"/></radialGradient></defs>`;
+  // KEIN Hintergrund-Rechteck mehr — der Körper sitzt direkt auf der Karten-Fläche. Nur weiche Aura.
+  const bg=`<ellipse cx="50" cy="112" rx="48" ry="124" fill="url(#${fid}a)" class="mg-aura"/>`;
   return `<div style="text-align:center">
     <svg class="mg-svg" viewBox="-8 -6 116 232" width="100" height="200" aria-hidden="true">${defs}${bg}${body}</svg>
     <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
@@ -8581,7 +8583,7 @@ function renderAnalytics(){
       <p class="ct">${icon("zap",13)} Wichtigste Erkenntnis</p>
       ${headline?`<div class="msg ai" style="max-width:100%;margin-bottom:0"><span class="sm" style="line-height:1.6">${headline.t}</span><div class="conf mt8">${esc(evidenceTag(headline))}</div></div>`
         :`<p class="sm t2" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
-      <button class="btn mt12" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
+      <button class="btn mt16" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
       <p class="xs t3 mt12" style="text-align:center">Datenbasis ${completeness} % · ${activeMods}/6 Analyse-Module aktiv</p>
     </div>`;
 
