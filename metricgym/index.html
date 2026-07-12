@@ -222,15 +222,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .ct{font-size:10.5px; font-weight:650; letter-spacing:.15em; text-transform:uppercase; color:var(--t3); margin-bottom:12px;}
   .btn{
     display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
-    min-height:48px; border-radius:999px; border:none;
-    background:rgba(255,255,255,.09); color:var(--t1); font-size:15px; font-weight:600;
+    min-height:52px; border-radius:999px; border:none;
+    background:linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.06));
+    color:var(--t1); font-size:15.5px; font-weight:600; letter-spacing:.01em;
     cursor:pointer; font-family:inherit;
-    box-shadow:inset 0 1px 0 var(--edge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 1px 3px rgba(0,0,0,.35);
     transition:all .25s var(--spring);
   }
   .btn:active{transform:scale(.97); box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.05);}
-  .btn.volt{background:var(--cream); color:#14171C; border:none; font-weight:650;
-    box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  .btn.volt{background:linear-gradient(180deg,#F6F0E7,#E7DCCB); color:#131519; border:none; font-weight:650;
+    box-shadow:0 14px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 0 rgba(0,0,0,.07);}
   @keyframes voltSheen{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
   .btn.volt:active{transform:scale(.97);}
   @media (prefers-reduced-motion:reduce){.btn.volt{animation:none}}
@@ -657,6 +658,29 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:linear-gradient(90deg,#6E93B8,#8FB8DC); animation:gnBar linear forwards; transform:scaleX(0);}
   @keyframes gnBar{to{transform:scaleX(1)}}
   .gn-skip{font-size:10.5px; color:var(--t3); margin-top:14px;}
+  /* Log-Bedienfeld im Player: klare Zellen — Gewicht | Reps | Anstrengung */
+  .lcells{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px;}
+  .lcell{background:var(--s2); border-radius:16px; padding:12px 10px 9px; text-align:center; box-shadow:inset 0 1px 0 var(--edge);}
+  .lcell-l{font-size:9.5px; font-weight:650; letter-spacing:.13em; text-transform:uppercase; color:var(--t3); margin:0 0 8px;}
+  .lcell-row{display:flex; align-items:center; justify-content:center; gap:4px;}
+  .lcell-row>button{width:38px; height:42px; border:none; border-radius:13px; background:rgba(255,255,255,.07);
+    color:var(--t1); font-size:21px; line-height:1; cursor:pointer; font-family:inherit; flex-shrink:0;
+    box-shadow:inset 0 1px 0 var(--edge);}
+  .lcell-row>button:active{transform:scale(.94); background:rgba(255,255,255,.12);}
+  .lcell-row input{flex:1; min-width:0; width:auto; background:none; border:none; color:var(--t1); font-size:27px; font-weight:300;
+    text-align:center; font-variant-numeric:tabular-nums; font-family:var(--font-hero); padding:0; min-height:42px;}
+  .lcell-hint{font-size:10.5px; color:var(--t3); margin:7px 0 0; min-height:13px;}
+  /* Session-Anatomie: Körper + Fokus-Liste in einer ruhigen Fläche */
+  .sess-anat{display:flex; gap:16px; align-items:center; background:var(--s2); border-radius:18px; padding:14px;
+    box-shadow:inset 0 1px 0 var(--edge);}
+  .sa-bodies{display:flex; gap:6px; flex-shrink:0;}
+  .sess-anat .mg-svg{width:72px; height:146px;}
+  .sess-anat .sa-bodies p{display:none;}
+  .sa-list{flex:1; min-width:0; display:flex; flex-direction:column; gap:11px;}
+  .sa-row{position:relative; display:flex; justify-content:space-between; font-size:13px; color:var(--t2); padding-bottom:8px;}
+  .sa-row .metric{color:var(--t1);}
+  .sa-row i{position:absolute; left:0; bottom:0; height:2px; border-radius:2px;
+    background:linear-gradient(90deg,#8FB8DC,rgba(143,184,220,.15));}
   /* Kompakte Muskelkarte in der Uebungsansicht */
   .mg-mini{display:flex; gap:10px; align-items:center;}
   .mg-mini .mg-svg{width:74px; height:148px;}
@@ -965,10 +989,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .hz-kick{font-size:10.5px; font-weight:650; letter-spacing:.18em; text-transform:uppercase; color:var(--hz-k); margin-bottom:12px;}
   .hz-h{font-family:var(--font-serif); font-size:33px; font-weight:560; font-optical-sizing:auto; letter-spacing:-.015em; line-height:1.12; margin:0 0 8px; color:var(--t1);}
   .hz-sub{font-size:15px; line-height:1.6; color:var(--t2); max-width:36ch;}
-  .hz-stats{display:flex; gap:26px; margin-top:22px;}
-  .hz-stat .v{font-family:var(--font-hero); font-size:28px; font-weight:300; letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; color:var(--t1);}
-  .hz-stat .v em{font-style:normal; font-size:15px; font-weight:400; color:var(--t2);}
-  .hz-stat .l{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); margin-top:6px; font-weight:600; white-space:nowrap;}
+  .hz-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:22px;}
+  .hz-stat{background:rgba(11,14,19,.44); border-radius:16px; padding:13px 6px 11px; text-align:center;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+  .hz-stat .v{font-family:var(--font-hero); font-size:26px; font-weight:300; letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; color:var(--t1);}
+  .hz-stat .v em{font-style:normal; font-size:14px; font-weight:400; color:var(--t2);}
+  .hz-stat .l{font-size:9px; letter-spacing:.13em; text-transform:uppercase; color:var(--t3); margin-top:7px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .hz.train{--hz-a:#3A5578; --hz-b:#1B2839; --hz-c:rgba(143,184,220,.30); --hz-k:#8FB8DC;}
   .hz.analytics{--hz-a:#32545F; --hz-b:#17262E; --hz-c:rgba(127,169,143,.28); --hz-k:#8FB8DC;}
   .hz.nutrition{--hz-a:#3C5839; --hz-b:#1B2A1F; --hz-c:rgba(196,180,122,.28); --hz-k:#7FA98F;}
@@ -3489,6 +3516,25 @@ function muscleSplit(key){
   (d.abs||[]).forEach(e=>addEx(e,"Core"));
   return Object.entries(map).map(([m,s])=>({m,pct:Math.round(s/tot*100)})).sort((x,y)=>y.pct-x.pct);
 }
+/* SESSION-ANATOMIE: die trainierten Muskeln leuchten am Körper auf — Signature-Visual
+   statt Balkenliste. Intensität je Region aus Sätzen (primär voll, sekundär 40 %). */
+function sessionAnatomy(key){
+  const parts=muscleSplit(key); if(!parts.length) return "";
+  const F=TYPES[key]; const w={};
+  for(const e of (F.main||[])){ const a=EX_ACT[e.n]||exActFor(e.n); if(!a)continue;
+    (a.p||[]).forEach(id=>w[id]=(w[id]||0)+(e.sets||3));
+    (a.s||[]).forEach(id=>w[id]=(w[id]||0)+(e.sets||3)*0.4); }
+  const mx=Math.max(1,...Object.values(w));
+  const col=(id)=>{ const t=(w[id]||0)/mx; if(t<=0) return MG_BODY;
+    return t>0.62?"#A9C4DE":t>0.28?"#8FB8DC":"rgba(143,184,220,.45)"; };
+  return `<div class="sess-anat">
+    <div class="sa-bodies">${muscleBody("front",col)}${muscleBody("back",col)}</div>
+    <div class="sa-list">
+      <p class="ct" style="margin-bottom:2px">Session-Fokus</p>
+      ${parts.slice(0,4).map(p=>`<div class="sa-row"><span>${p.m}</span><span class="metric">${p.pct} %</span><i style="width:${p.pct}%"></i></div>`).join("")}
+    </div>
+  </div>`;
+}
 function muscleSplitBars(key){
   const parts=muscleSplit(key);
   if(!parts.length)return "";
@@ -5656,25 +5702,25 @@ function drawShareCard(opts){
   // Logo: 3 Balken + Wortmarke
   x.fillStyle="#1A1A1A";
   [[80,104,36],[100,86,54],[120,68,72]].forEach(([bx,by,bh])=>{ if(x.roundRect){x.beginPath();x.roundRect(bx,by,14,bh,7);x.fill();}else x.fillRect(bx,by,14,bh); });
-  x.font="800 58px 'Schibsted Grotesk',system-ui"; x.fillText("METRICGYM",156,138);
+  x.font="800 58px 'InterV',system-ui"; x.fillText("METRICGYM",156,138);
   // Eyebrow
-  x.fillStyle="#A9C4DE"; x.font="700 34px 'Schibsted Grotesk',system-ui";
+  x.fillStyle="#A9C4DE"; x.font="700 34px 'InterV',system-ui";
   x.fillText((opts.eyebrow||"").toUpperCase(),80,250);
   // Hero
-  x.fillStyle="#1A1A1A"; x.font=`900 ${opts.heroSize||200}px 'Schibsted Grotesk',system-ui`;
+  x.fillStyle="#1A1A1A"; x.font=`900 ${opts.heroSize||200}px 'InterV',system-ui`;
   x.fillText(opts.hero,80,opts.heroSize?250+opts.heroSize*0.95:470);
-  x.fillStyle="#6E6A62"; x.font="600 44px 'Schibsted Grotesk',system-ui";
+  x.fillStyle="#6E6A62"; x.font="600 44px 'InterV',system-ui";
   let y=(opts.heroSize?250+opts.heroSize*0.95:470)+70;
   x.fillText(opts.heroLabel||"",80,y); y+=120;
   // bis zu 3 Sekundär-Stats
   (opts.stats||[]).forEach(([v,l,accent])=>{
-    x.fillStyle=accent?"#A9C4DE":"#1A1A1A"; x.font="900 100px 'Schibsted Grotesk',system-ui"; x.fillText(v,80,y);
-    x.fillStyle="#6E6A62"; x.font="600 38px 'Schibsted Grotesk',system-ui"; x.fillText(l,80,y+52); y+=200;
+    x.fillStyle=accent?"#A9C4DE":"#1A1A1A"; x.font="900 100px 'InterV',system-ui"; x.fillText(v,80,y);
+    x.fillStyle="#6E6A62"; x.font="600 38px 'InterV',system-ui"; x.fillText(l,80,y+52); y+=200;
   });
   // Footer-Band
-  x.fillStyle="#1A1A1A"; x.font="700 40px 'Schibsted Grotesk',system-ui";
+  x.fillStyle="#1A1A1A"; x.font="700 40px 'InterV',system-ui";
   x.fillText("Fortschritt, wissenschaftlich fundiert.",80,1230);
-  x.fillStyle="#A39E93"; x.font="500 32px 'Schibsted Grotesk',system-ui";
+  x.fillStyle="#A39E93"; x.font="500 32px 'InterV',system-ui";
   x.fillText("metricgym.app",80,1285);
   return c;
 }
@@ -7697,7 +7743,7 @@ function renderTrain(){
     ${(()=>{ const FT=focusType?TYPES[focusType]:null;
       const kick=focusType?(rotMode?"Training · Rotation":(focusDayIdx===dow?"Training · Heute":"Training · "+WD[focusDayIdx])):"Training";
       const hl=FT?FT.label+".":"Dein Plan.";
-      const sub=FT?(parseTypeKey(focusType).base==="cardio"?"Ausdauer-Einheit · ≈ "+(FT.est||35)+" Min.":FT.main.length+" Übungen · ≈ "+(FT.est||(S.profile.a.len||60))+" Min — beweisbar optimal dosiert."):"Leg deine Trainingstage fest — dein Plan steht sofort.";
+      const sub=FT?(parseTypeKey(focusType).base==="cardio"?"Ausdauer-Einheit · ≈ "+(FT.est||35)+" Min.":FT.main.length+" Übungen · ≈ "+(FT.est||(S.profile.a.len||60))+" Min — jede Zahl exakt auf dich berechnet."):"Leg deine Trainingstage fest — dein Plan steht sofort.";
       const phase=isDeload?"Deload":(S.currentWeek===3?"Spitze":"Aufbau");
       return tabHero("train",kick,hl,sub,[[String(sch.filter(t=>t!=="rest").length),"Einheiten"],[String(S.currentWeek||1)+"<em> / 4</em>","Woche"],[phase,"Phase"]]); })()}
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Nächste Einheit"):"Deine Einheit",
@@ -7736,7 +7782,7 @@ function renderTrain(){
         const dispMain = reduce ? F.main.map(e=>({...e,sets:Math.max(1,Math.round(e.sets*R.mult))})) : F.main;
         return `<div class="card">${head}
           ${autoBanner?`<div style="margin-top:14px">${autoBanner}</div>`:""}
-          <div style="margin-top:${autoBanner?"4px":"18px"}" class="mb12">${muscleSplitBars(focusType)}</div>
+          <div style="margin-top:${autoBanner?"4px":"16px"}" class="mb12">${sessionAnatomy(focusType)}</div>
           <p class="label" style="margin-bottom:8px">Übungen${reduce?` <span class="xs t2" style="font-weight:400">· heute autoreguliert</span>`:""}</p>
           ${dispMain.map((e,i)=>exLine(e,focusType,i)).join("")}
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:14px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
@@ -8177,14 +8223,23 @@ function renderPlayer(){
         <p id="rpe-desc" class="xs t2 mb12" style="text-align:right">${RPE_DESC[prpe]}</p>
         <button class="btn volt cta-big" onclick="A.logBulk()"><span>Alle ${remaining} Sätze eintragen ✓</span><span class="cta-sub">ein Tipp — komplette Übung geloggt</span></button>`;
       })():`
-      <div class="row mb8"><span class="sm t2">Gewicht <span class="xs t3">(tippen)</span></span>
-        <div class="stepper"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" class="stepin metric" type="number" inputmode="decimal" step="${wStep}" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div></div>
-      <p id="platehint" class="xs t3 mb8" style="text-align:right;min-height:14px">${plateHint(name,pw)}</p>
-      <div class="row mb8"><span class="sm t2">Reps</span>
-        <div class="stepper"><button onclick="A.stepR(-1)" aria-label="Reps verringern">−</button><input id="pr-in" class="stepin metric" type="number" inputmode="numeric" step="1" value="${pr}" onchange="A.setR(this.value)" onfocus="this.select()" aria-label="Wiederholungen"><button onclick="A.stepR(1)" aria-label="Reps erhöhen">+</button></div></div>
-      <div class="row mb8"><span class="sm t2">${LABELS.rpe} <span class="xs t3">(optional)</span></span>
-        <div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
-      <p id="rpe-desc" class="xs t2 mb12" style="text-align:right">${RPE_DESC[prpe]}</p>
+      <div class="lcells mb8">
+        <div class="lcell">
+          <p class="lcell-l">Gewicht · kg</p>
+          <div class="lcell-row"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" type="number" inputmode="decimal" step="${wStep}" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div>
+          <p id="platehint" class="lcell-hint">${plateHint(name,pw)}</p>
+        </div>
+        <div class="lcell">
+          <p class="lcell-l">Wiederholungen</p>
+          <div class="lcell-row"><button onclick="A.stepR(-1)" aria-label="Reps verringern">−</button><input id="pr-in" type="number" inputmode="numeric" step="1" value="${pr}" onchange="A.setR(this.value)" onfocus="this.select()" aria-label="Wiederholungen"><button onclick="A.stepR(1)" aria-label="Reps erhöhen">+</button></div>
+          <p class="lcell-hint">${(day.main&&day.main[S.exIdx]&&day.main[S.exIdx].reps)?"Ziel "+day.main[S.exIdx].reps:""}</p>
+        </div>
+      </div>
+      <div class="lcell mb12">
+        <p class="lcell-l">${LABELS.rpe} · RPE</p>
+        <div class="lcell-row" style="gap:0"><div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
+        <p id="rpe-desc" class="lcell-hint">${RPE_DESC[prpe]}</p>
+      </div>
       <button id="primary-cta" class="btn volt cta-big" onclick="${cta.f}"><span>${cta.l}</span><span class="cta-sub">${cta.s}</span></button>
       ${logged.length&&logged.length<targetSets?`<button class="btn ghost mt8" style="min-height:40px;font-size:13px" onclick="A.repeatSet()">↻ Wie letzter Satz (${fmtKg(logged[logged.length-1].w)} × ${logged[logged.length-1].reps})</button>`:""}
       ${logged.length>=targetSets?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.log()">+ Noch ein Satz</button>`:""}`}
@@ -8514,9 +8569,9 @@ function renderAnalytics(){
     const win=s.filter(q=>Date.now()-q.t<28*dayMs); const arr=win.length>=2?win:s;
     if(arr.length>=2&&arr[arr.length-1].t-arr[0].t>=7*dayMs&&arr[0].v>0) kTrend=Math.round((arr[arr.length-1].v-arr[0].v)/arr[0].v*100); }
   const wkSetsNow=Object.values(weeklyMuscleSets(0)).reduce((s,v)=>s+v,0);
-  html0=tabHero("analytics","Analytics",
-    (kTrend!=null&&kTrend>0)?"Deine Kraft zieht an.":(consistency>=70?"Du bleibst dran — das zahlt ein.":"Deine Daten nehmen Form an."),
-    "Keine Schätzungen — jede Aussage kommt aus deinen echten Daten.",
+  html0=tabHero("analytics","Dein Fortschritt",
+    (kTrend!=null&&kTrend>0)?"Du wirst messbar stärker.":(consistency>=70?"Konstanz. Deine stärkste Waffe.":"Dein Fortschritt bekommt Kontur."),
+    "Gemessen, nicht geschätzt — jede Zahl kommt aus deinem Training.",
     [[kTrend==null?"—":(kTrend>0?"+":"")+kTrend+"<em> %</em>","Kraft 4 Wo."],
      [consistency+"<em> %</em>","Konstanz"],
      [wkSetsNow?String(wkSetsNow):"—","Sätze / Woche"]]);
@@ -8527,7 +8582,7 @@ function renderAnalytics(){
       ${headline?`<div class="msg ai" style="max-width:100%;margin-bottom:0"><span class="sm" style="line-height:1.6">${headline.t}</span><div class="conf mt8">${esc(evidenceTag(headline))}</div></div>`
         :`<p class="sm t2" style="line-height:1.6">Noch keine belastbare Erkenntnis — je vollständiger deine Tages-Routine (siehe Home), desto schärfer werden diese Auswertungen.</p>`}
       <button class="btn mt12" onclick="shareWeekPNG()">${icon("send",15)} Meine Woche teilen</button>
-      <p class="xs t3 mt8" style="text-align:center">Datenbasis ${completeness} % · ${activeMods}/6 Analyse-Module aktiv</p>
+      <p class="xs t3 mt12" style="text-align:center">Datenbasis ${completeness} % · ${activeMods}/6 Analyse-Module aktiv</p>
     </div>`;
 
   // Monats-Überblick: Tagesbewertung als Kalender (rot->grün) + Cheat-Days + Monatsnote
@@ -9048,7 +9103,7 @@ function renderNutrition(){
   root.innerHTML=`
     ${(()=>{ const tg=S.profile?(S.profile.tg[dayType]||S.profile.tg.train):null;
       const lg=S.nutritionLog[todayKey()]; const sm=((lg&&lg.meals)||[]).reduce((x,m)=>({k:x.k+(m.k||0),p:x.p+(m.p||0)}),{k:0,p:0});
-      return tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Tippen oder sprechen — die Engine macht aus Worten Zahlen.",
+      return tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Sag, was du gegessen hast — die Engine macht Zahlen daraus.",
         [[nfi.format(sm.k),"kcal heute"],[tg?nfi.format(tg.kcal):"—","Tagesziel"],[nfi.format(sm.p)+"<em> g</em>","Protein"]]); })()}
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
