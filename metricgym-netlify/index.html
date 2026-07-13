@@ -6933,10 +6933,12 @@ const MG3D={
     const FS=1.1224, sf=sex==="female";
     const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95; // identisch zur 2D-Ansicht
     const ARM=new Set(["BICEPS","TRICEPS","FOREARM"]);
+    const SKIP=new Set(["HEAD","NECK"]); // Kopf/Hals werden separat als Kugel+Zylinder gebaut
     const LEG=new Set(["QUADRICEPS","ABDUCTOR","ABDUCTORS","KNEES","CALVES","HAMSTRING","LEFT_SOLEUS","RIGHT_SOLEUS"]);
     const parse=(data,front)=>{
       const groups={torso:[],armL:[],armR:[],legL:[],legR:[]};
       for(const m of data){
+        if(SKIP.has(m.k)) continue;
         const gsx=MG_LOWER_KEYS.has(m.k)?sxLo:sxUp;
         for(const str of m.p){
           const raw=str.split(" ").map(Number), pts=[];
@@ -6980,20 +6982,22 @@ const MG3D={
         last=i; } }
       const out=rows.filter(r=>r.lo!=null);
       for(const r of out){ r.lo-=pad; r.hi+=pad; } // Silhouetten-Rand (2D: stroke-width 7 ⇒ ~3.5)
-      // Glätten (2 Gauß-Pässe): die Scanline übernimmt sonst jede Polygon-Ecke
-      for(let pass=0;pass<2;pass++){
-        const L=out.map(r=>r.lo), H=out.map(r=>r.hi), k=[1,2,3,2,1];
+      // Glätten (5 Gauß-Pässe, breiter Kernel): die Scanline übernimmt sonst
+      // jede Polygon-Ecke → sichtbare Dellen. So wird die Silhouette organisch.
+      const k=[1,3,6,10,12,10,6,3,1];
+      for(let pass=0;pass<5;pass++){
+        const L=out.map(r=>r.lo), H=out.map(r=>r.hi);
         for(let i=0;i<out.length;i++){
           let sl=0,sh=0,sw=0;
-          for(let o=-2;o<=2;o++){ const j=i+o; if(j<0||j>=out.length) continue;
-            const w=k[o+2]; sl+=L[j]*w; sh+=H[j]*w; sw+=w; }
+          for(let o=-4;o<=4;o++){ const j=Math.max(0,Math.min(out.length-1,i+o));
+            const w=k[o+4]; sl+=L[j]*w; sh+=H[j]*w; sw+=w; }
           out[i].lo=sl/sw; out[i].hi=sh/sw;
         }
       }
       return out;
     };
     const p={
-      torso:profile(F.torso,Bk.torso,2,126,1.6),
+      torso:profile(F.torso,Bk.torso,38,126,1.4),
       armL:profile(F.armL,Bk.armL,46,113,1.4), armR:profile(F.armR,Bk.armR,46,113,1.4),
       legL:profile(F.legL,Bk.legL,102,218,1.6), legR:profile(F.legR,Bk.legR,102,218,1.6),
     };
@@ -7077,13 +7081,19 @@ const MG3D={
     // Tiefe relativ zur Halbbreite (Seitenansicht) + z-Versatz (Brust vor, Gesäß zurück)
     // Tiefe: Verhältnis zur Breite MIT absoluter Obergrenze (athletisch statt massig)
     const torso=MG3D.stack(Pr.torso,
-      [[2,1.05],[18,1.05],[28,.95],[36,.85],[46,.66],[56,.55],[70,.5],[85,.48],[100,.54],[112,.56],[126,.5]],
-      // Sagittale S-Linie (in svg-Einheiten): Hals leicht vor, Schulter/oberer
-      // Rücken zurück, Brustbein vor, Lende zurück, Gesäß deutlich nach hinten
-      [[2,.4],[14,.4],[24,.1],[34,-.2],[44,-.5],[54,.5],[64,1.7],[76,2.1],[88,1.0],[98,-1.2],[106,-2.7],[114,-2.1],[126,-.5]],
-      [[2,.092],[16,.094],[26,.056],[34,.052],[42,.075],[52,.096],[62,.106],[74,.108],[84,.098],[94,.086],[102,.09],[110,.098],[118,.094],[126,.084]],
-      [[1,.85],[2,.6],[3,.35],[3.8,.12]],
+      // Tiefe/Breite-Verhältnis
+      [[38,.7],[52,.66],[64,.6],[76,.56],[88,.54],[100,.56],[112,.6],[126,.55]],
+      // Sagittale S-Linie (+z=vorn): Schulter zurück, Brustbein vor, Lende zurück, Gesäß raus
+      [[38,-.3],[50,.5],[62,1.5],[74,1.15],[86,.25],[98,-.9],[108,-2.0],[118,-1.5],[126,-.35]],
+      // absolute Tiefen-Obergrenze (Meter-Halbtiefe) → athletisch, nie massig
+      [[38,.1],[52,.108],[64,.112],[76,.108],[88,.096],[100,.09],[112,.096],[126,.086]],
+      [[1.5,.8],[3,.52],[5,.22],[6.5,.06]], // Schulter-Yoke weich & rund schließen
       [[2,.55],[3.2,.28],[4,.1]]);
+    // Hals (kurzer, leicht nach vorn geneigter Zylinder) + Kopf (Ei)
+    const neck=new THREE.CylinderGeometry(.048,.062,.16,24,1,true);
+    neck.translate(0,1.635,.01);
+    const head=new THREE.SphereGeometry(.093,32,26); head.scale(.92,1.12,.99);
+    head.translate(0,1.815,.016);
     const dArm=[[46,.92],[70,.9],[90,.85],[113,.8]], capArm=[[46,.05],[80,.047],[113,.038]];
     const armL=MG3D.stack(Pr.armL,dArm,null,capArm,null,[[3,.7],[6,.38],[8.5,.1]]);
     const armR=MG3D.stack(Pr.armR,dArm,null,capArm,null,[[3,.7],[6,.38],[8.5,.1]]);
@@ -7126,7 +7136,7 @@ const MG3D={
           "   totalEmissiveRadiance+=mix(gb,gf,kfb)*(0.55+0.5*uPulse);\n"+
           " }");
     };
-    for(const g of [torso,armL,armR,legL,legR]) group.add(new THREE.Mesh(g,mat));
+    for(const g of [torso,neck,head,armL,armR,legL,legR]) group.add(new THREE.Mesh(g,mat));
     // Füße (Textur dort dunkel — Silhouetten-Ton)
     for(const s of [-1,1]){
       const P2=Pr["leg"+(s<0?"L":"R")], lastRow=P2[P2.length-1];
