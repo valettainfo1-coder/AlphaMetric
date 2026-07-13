@@ -6833,10 +6833,15 @@ function muscleBody(view,arg,sex){
   const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95;
   const grp=(keys,sx,inner)=>`<g transform="translate(50,0) scale(${sx},1) translate(-50,0)">${inner}</g>`;
   const glowMode=!!(arguments[3]&&arguments[3].glow), plainMode=!!(arguments[3]&&arguments[3].plain);
+  const TONE="#33404F"; // einheitlicher Körperton für die 3D-Projektion (KEINE Risslinien)
   const poly=(id,pts)=>{
     const c=col(id);
-    if(glowMode){ // Glow-Map: nur aktive Muskeln leuchten, Rest schwarz
+    if(glowMode){ // Glow-Map: nur aktive Muskeln leuchten weich, Rest schwarz
       if(c===MG_BODY) return `<polygon points="${pts}" fill="#000000"/>`;
+      return `<polygon points="${pts}" fill="${c}" filter="url(#${fid}g)"/>`;
+    }
+    if(plainMode){ // Diffuse für 3D: glatter Ton, aktive Muskeln als weiche Farbfläche — OHNE Konturen
+      if(c===MG_BODY) return `<polygon points="${pts}" fill="${TONE}"/>`;
       return `<polygon points="${pts}" fill="${c}" filter="url(#${fid}g)"/>`;
     }
     const attrs=c===MG_BODY?`fill="${c}" opacity="0.5"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;
@@ -6845,7 +6850,7 @@ function muscleBody(view,arg,sex){
   let upperSvg="", lowerSvg="", silUp="", silLo="";
   // SILHOUETTE: alle Formen aufgeblasen in Koerperton uebereinander -> geschlossener Koerper,
   // auf dem die Muskeln liegen (vorher schwebten die Polygone ohne Koerper im Raum).
-  const SIL=glowMode?"#000000":"#242B39";
+  const SIL=glowMode?"#000000":(plainMode?"#33404F":"#242B39");
   const sil=(pts)=>`<polygon points="${pts}" fill="${SIL}" stroke="${SIL}" stroke-width="7" stroke-linejoin="round"/>`;
   // Fueller schliessen Luecken, die die Muskeldaten frei lassen (Becken vorn, Taille hinten)
   const FILLER=view==="front"?["44 106 56 106 56 128 44 128","46 88 54 88 54 108 46 108"]:["42 96 58 96 58 112 42 112"];
@@ -7072,8 +7077,8 @@ const MG3D={
     const scene=new THREE.Scene();
     const cam=new THREE.PerspectiveCamera(33,W/H,.1,20);
     cam.position.set(0,.12,3.62); cam.lookAt(0,-.02,0);
-    scene.add(new THREE.HemisphereLight(0xA9C4E8,0x0B0D13,.9));
-    const key=new THREE.DirectionalLight(0xE8F0FF,.55); key.position.set(2.6,2.6,2.6); scene.add(key);
+    scene.add(new THREE.HemisphereLight(0xBCD2F0,0x2A3340,1.05));
+    const key=new THREE.DirectionalLight(0xF0F5FF,.5); key.position.set(1.4,2.2,4.2); scene.add(key);
     const rim=new THREE.PointLight(0x8FB8DC,.7,12); rim.position.set(-2.4,1.4,-2.6); scene.add(rim);
     const group=new THREE.Group(); scene.add(group);
     // ---- Geometrie aus der 2D-Silhouette ----
@@ -7105,7 +7110,7 @@ const MG3D={
     // ---- EIN Material mit Front/Rück-Projektion der 2D-Zeichnung ----
     const inst={el,cv,renderer,scene,cam,group,visible:true,dead:false,
       rotY:-.5,rotX:.02,vY:0,idle:0,drag:null,phase:Math.random()*6,uPulse:null,sh:null,tex:{}};
-    const mat=new THREE.MeshStandardMaterial({color:0x222A38,roughness:.5,metalness:.15});
+    const mat=new THREE.MeshStandardMaterial({color:0x33404F,roughness:.62,metalness:.08});
     mat.customProgramCacheKey=()=>"mg3dTexProj";
     mat.onBeforeCompile=(sh)=>{
       sh.uniforms.tF={value:inst.tex.f||null}; sh.uniforms.tB={value:inst.tex.b||null};
@@ -7121,7 +7126,7 @@ const MG3D={
         .replace("#include <map_fragment>",
           "#include <map_fragment>\n"+
           " vec2 suv=vec2((vMPos.x/0.00864+58.0)/116.0, ((1.93-vMPos.y)/0.00864+6.0)/232.0);\n"+
-          " float kfb=smoothstep(-0.18,0.18,vNz);\n"+
+          " float kfb=smoothstep(-0.4,0.4,vNz);\n"+
           " if(uHasTex>0.5){\n"+
           "   vec4 tf=texture2D(tF,suv);\n"+
           "   vec4 tb=texture2D(tB,vec2(1.0-suv.x,suv.y));\n"+
@@ -7133,7 +7138,7 @@ const MG3D={
           " if(uHasTex>0.5){\n"+
           "   vec3 gf=texture2D(gF,suv).rgb;\n"+
           "   vec3 gb=texture2D(gB,vec2(1.0-suv.x,suv.y)).rgb;\n"+
-          "   totalEmissiveRadiance+=mix(gb,gf,kfb)*(0.55+0.5*uPulse);\n"+
+          "   totalEmissiveRadiance+=mix(gb,gf,kfb)*(0.4+0.4*uPulse);\n"+
           " }");
     };
     for(const g of [torso,neck,head,armL,armR,legL,legR]) group.add(new THREE.Mesh(g,mat));
