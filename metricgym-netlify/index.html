@@ -6993,9 +6993,9 @@ const MG3D={
       return out;
     };
     const p={
-      torso:profile(F.torso,Bk.torso,2,126,3.2),
-      armL:profile(F.armL,Bk.armL,46,113,2.6), armR:profile(F.armR,Bk.armR,46,113,2.6),
-      legL:profile(F.legL,Bk.legL,102,218,2.8), legR:profile(F.legR,Bk.legR,102,218,2.8),
+      torso:profile(F.torso,Bk.torso,2,126,1.6),
+      armL:profile(F.armL,Bk.armL,46,113,1.4), armR:profile(F.armR,Bk.armR,46,113,1.4),
+      legL:profile(F.legL,Bk.legL,102,218,1.6), legR:profile(F.legR,Bk.legR,102,218,1.6),
     };
     MG3D._profCache[sex]=p;
     return p;
@@ -7003,7 +7003,7 @@ const MG3D={
   /* Ring-Stapel: aus {y,lo,hi}-Zeilen wird ein glatter Schlauch — Halbbreite a
      aus der Silhouette (Front-Projektion == 2D-Zeichnung), Tiefe b=a·d(y),
      z-Versatz für Brust-/Gesäß-Asymmetrie. taperTop/Bot schließt die Enden. */
-  stack(rows,dKeys,zKeys,taperTop,taperBot){
+  stack(rows,dKeys,zKeys,capKeys,taperTop,taperBot){
     const K=MG3D.K, RAD=34;
     const R=[...rows];
     const syn=(base,list,end)=>{ // synthetische Schließ-Zeilen
@@ -7016,7 +7016,9 @@ const MG3D={
     for(let i=0;i<n;i++){
       const r=R[i];
       const cx=((r.lo+r.hi)/2-50)*K, cy=1.93-r.y*K, a=Math.max(.003,(r.hi-r.lo)/2*K);
-      const b=Math.max(.003,a*MG3D.key(dKeys,r.y)), zo=zKeys?MG3D.key(zKeys,r.y)*K:0;
+      let b=Math.max(.003,a*MG3D.key(dKeys,r.y));
+      if(capKeys) b=Math.min(b,MG3D.key(capKeys,r.y)); // z. B. Schulterbreite ≠ Brusttiefe
+      const zo=zKeys?MG3D.key(zKeys,r.y)*K:0;
       for(let j=0;j<RAD;j++){ const th=j/RAD*Math.PI*2;
         V.push(cx+Math.cos(th)*a, cy, Math.sin(th)*b+zo);
       }
@@ -7073,18 +7075,22 @@ const MG3D={
     // ---- Geometrie aus der 2D-Silhouette ----
     const Pr=MG3D.profiles(sex);
     // Tiefe relativ zur Halbbreite (Seitenansicht) + z-Versatz (Brust vor, Gesäß zurück)
+    // Tiefe: Verhältnis zur Breite MIT absoluter Obergrenze (athletisch statt massig)
     const torso=MG3D.stack(Pr.torso,
-      [[2,1.02],[26,1.02],[36,.92],[46,.8],[56,.6],[70,.56],[90,.62],[108,.62],[126,.55]],
-      [[2,0],[40,0],[58,.9],[72,1.1],[86,.2],[100,-1.6],[112,-1.4],[126,0]],
-      [[1.4,.72],[2.6,.4],[3.4,.1]],
-      [[2.5,.72],[4.5,.4],[6,.12]]);
-    const dArm=[[46,.98],[70,1.0],[90,.92],[113,.85]];
-    const armL=MG3D.stack(Pr.armL,dArm,null,null,[[3,.7],[6,.38],[8.5,.1]]);
-    const armR=MG3D.stack(Pr.armR,dArm,null,null,[[3,.7],[6,.38],[8.5,.1]]);
-    const dLeg=[[102,.72],[126,1.02],[150,.96],[172,1.1],[200,.92],[218,.9]];
-    const zLeg=[[102,0],[128,.9],[150,.1],[172,-1.5],[205,-.4],[218,.2]];
-    const legL=MG3D.stack(Pr.legL,dLeg,zLeg,null,[[2.5,.6],[4.5,.25]]);
-    const legR=MG3D.stack(Pr.legR,dLeg,zLeg,null,[[2.5,.6],[4.5,.25]]);
+      [[2,1.0],[18,1.0],[28,.9],[36,.8],[46,.62],[56,.5],[70,.46],[85,.44],[100,.5],[112,.52],[126,.48]],
+      // Kopf lädt vorn aus, Hals sitzt dahinter — sonst Säulen-Profil von der Seite
+      [[2,.9],[14,.9],[26,.15],[40,0],[58,.9],[72,1.1],[86,.2],[100,-1.5],[112,-1.3],[126,0]],
+      [[2,.082],[16,.084],[26,.055],[34,.05],[42,.08],[50,.1],[60,.106],[80,.09],[95,.082],[108,.095],[126,.085]],
+      [[1,.85],[2,.6],[3,.35],[3.8,.12]],
+      [[2,.55],[3.2,.28],[4,.1]]);
+    const dArm=[[46,.9],[70,.88],[90,.85],[113,.8]], capArm=[[46,.055],[113,.045]];
+    const armL=MG3D.stack(Pr.armL,dArm,null,capArm,null,[[3,.7],[6,.38],[8.5,.1]]);
+    const armR=MG3D.stack(Pr.armR,dArm,null,capArm,null,[[3,.7],[6,.38],[8.5,.1]]);
+    const dLeg=[[102,.62],[126,.9],[150,.85],[172,1.0],[200,.85],[218,.8]];
+    const zLeg=[[102,0],[128,.9],[150,.1],[172,-1.4],[205,-.4],[218,.2]];
+    const capLeg=[[102,.095],[130,.09],[152,.07],[174,.078],[218,.045]];
+    const legL=MG3D.stack(Pr.legL,dLeg,zLeg,capLeg,null,[[2.5,.6],[4.5,.25]]);
+    const legR=MG3D.stack(Pr.legR,dLeg,zLeg,capLeg,null,[[2.5,.6],[4.5,.25]]);
     // ---- EIN Material mit Front/Rück-Projektion der 2D-Zeichnung ----
     const inst={el,cv,renderer,scene,cam,group,visible:true,dead:false,
       rotY:-.5,rotX:.02,vY:0,idle:0,drag:null,phase:Math.random()*6,uPulse:null,sh:null,tex:{}};
@@ -7124,8 +7130,8 @@ const MG3D={
     for(const s of [-1,1]){
       const P2=Pr["leg"+(s<0?"L":"R")], lastRow=P2[P2.length-1];
       const axc=((lastRow.lo+lastRow.hi)/2-50)*MG3D.K;
-      const ft=new THREE.SphereGeometry(.042,16,12); ft.scale(.9,.42,2.2);
-      ft.rotateY(s*.12); ft.translate(axc,.045,.055);
+      const ft=new THREE.SphereGeometry(.043,16,12); ft.scale(.92,.52,2.15);
+      ft.rotateY(s*.12); ft.translate(axc,.05,.06);
       group.add(new THREE.Mesh(ft,mat));
     }
     group.position.y=-.95;
