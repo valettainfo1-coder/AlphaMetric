@@ -11,17 +11,17 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.</title>
-<meta name="description" content="METRICGYM baut deinen Trainingsplan aus über 40 Studien, misst ihn Woche für Woche an deinen echten Zahlen und zeigt dir, warum du stärker wirst. Ernährung in 10 Sekunden, 3D-Muskel-Engine, ehrliche Statistiken.">
+<meta name="description" content="METRICGYM baut deinen Trainingsplan aus über 40 Studien, misst ihn Woche für Woche an deinen echten Zahlen und zeigt dir, warum du stärker wirst. Ernährung in 10 Sekunden, anatomische Muskel-Engine, ehrliche Statistiken.">
 <!-- Open Graph / Link-Vorschau (Product-led Growth): geteilte Links zeigen eine attraktive Vorschau -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.">
-<meta property="og:description" content="Die Trainings-Intelligenz: Plan aus 40+ Studien, jede Empfehlung belegt, jeder Fortschritt schwarz auf weiß — mit drehbarer 3D-Muskel-Engine.">
+<meta property="og:description" content="Die Trainings-Intelligenz: Plan aus 40+ Studien, jede Empfehlung belegt, jeder Fortschritt schwarz auf weiß — mit anatomischer Muskel-Engine.">
 <meta property="og:image" content="og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.">
-<meta name="twitter:description" content="Die Trainings-Intelligenz: Plan aus 40+ Studien, jede Empfehlung belegt, jeder Fortschritt schwarz auf weiß — mit drehbarer 3D-Muskel-Engine.">
+<meta name="twitter:description" content="Die Trainings-Intelligenz: Plan aus 40+ Studien, jede Empfehlung belegt, jeder Fortschritt schwarz auf weiß — mit anatomischer Muskel-Engine.">
 <meta name="twitter:image" content="og-image.png">
 <!-- Optionale lokale Konfiguration (z. B. KI-Key). NICHT im Repo — liegt nur im Deploy-Ordner.
      Achtung: bei öffentlichem Deploy ist diese Datei abrufbar; für Produktion Server-Proxy nutzen. -->
@@ -5110,11 +5110,11 @@ function renderLanding(){
       </div>
     </section>
 
-    <!-- LIVE-DEMO: die echte 3D-Muskel-Engine zum Anfassen -->
+    <!-- LIVE-DEMO: die echte Muskel-Engine (Vorder-/Rückansicht) -->
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">${icon("sparkle",12)} Der Beweis — live</p>
       <h2 class="lp-h2">Tippe eine Übung.<br>Sieh, was in dir arbeitet.</h2>
-      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App. Und der Körper lässt sich mit dem Finger drehen.</p>
+      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App: Vorder- und Rückseite, jeder beanspruchte Muskel leuchtet auf.</p>
       <div class="card" style="max-width:400px;margin:0 auto;padding:16px">
         <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
       </div>
@@ -7231,23 +7231,22 @@ const MG3D={
     MG3D.raf=requestAnimationFrame(step);
   },
 };
-/* body3d(): HTML-Platzhalter — gemountet wird automatisch (MutationObserver).
-   arg = {p:[],s:[]} (Aktivierung) ODER col(id)-Funktion ODER {id:farbe}-Map. */
+/* body3d(): bewusst wieder die hochwertige 2D-Anatomie (Vorder- + Rückansicht).
+   Das prozedurale 3D-Mesh wirkte trotz vieler Iterationen wie ein Roblox-Modell;
+   die professionelle 2D-Muskelkarte sieht high-end aus — darum EINE Zeile, die
+   überall die zwei Ansichten rendert. arg = {p,s} | col(id)-Funktion | {id:farbe}.
+   (MG3D bleibt im Code, wird aber nicht mehr instanziiert — kein Canvas, kein
+   three.js-Load, da body3d keine .b3d-Platzhalter mehr erzeugt.) */
 function body3d(arg,opts){
   opts=opts||{};
-  const colors={};
-  const AC={p:"#8FB8DC",s:"#C4B47A"};
-  for(const id of MG3D.IDS){
-    let c=null;
-    if(typeof arg==="function") c=arg(id);
-    else if(arg&&Array.isArray(arg.p)) c=arg.p.includes(id)?AC.p:(arg.s||[]).includes(id)?AC.s:null;
-    else if(arg&&typeof arg==="object") c=arg[id]||null;
-    if(c&&c!==MG_BODY) colors[id]=c;
+  const sex=opts.sex||curBodySex();
+  // {id:farbe}-Map → col(id)-Funktion; {p,s} und Funktion versteht muscleBody direkt
+  let a=arg;
+  if(arg&&typeof arg==="object"&&!Array.isArray(arg.p)&&typeof arg!=="function"){
+    const map=arg; a=(id)=>map[id]||MG_BODY;
   }
-  const h=opts.h||300, sex=opts.sex||curBodySex();
-  return `<div class="b3d${opts.small?" b3d-sm":""}" data-b3d="${esc(JSON.stringify(colors))}" data-sex="${sex}" style="height:${h}px${opts.w?";width:"+opts.w+"px":""}">
-      <span class="b3d-glow" aria-hidden="true"></span><canvas></canvas>
-    </div>${opts.hint===false?"":`<p class="b3d-hint">${icon("undo",10)} 3D — mit dem Finger drehen</p>`}`;
+  const gap=opts.small?8:14;
+  return `<div style="display:flex;justify-content:center;gap:${gap}px;align-items:flex-start">${muscleBody("front",a,sex)}${muscleBody("back",a,sex)}</div>`;
 }
 /* Griff-/Varianten-Vergleich (der „one grip change"-Effekt): dieselbe Übung,
    andere Betonung — Muskelkarte leuchtet je nach Griff anders auf. */
