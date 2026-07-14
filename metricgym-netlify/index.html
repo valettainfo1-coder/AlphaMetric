@@ -696,14 +696,23 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .mg-mini{display:flex; gap:10px; align-items:center;}
   .mg-mini .mg-svg{width:74px; height:148px;}
   .mg-mini .xs.t2[style*="letter-spacing"]{font-size:8px;}
-  /* 3D-Körper: Canvas-Bühne — horizontal ziehen dreht, vertikal scrollt die Seite weiter */
-  .b3d{position:relative; margin:0 auto; max-width:340px; touch-action:pan-y; user-select:none; -webkit-user-select:none;}
-  .b3d canvas{display:block; width:100%; height:100%; cursor:grab;}
-  .b3d canvas:active{cursor:grabbing;}
-  .b3d .b3d-glow{position:absolute; inset:6% 16%; border-radius:50%; z-index:-1; filter:blur(28px); pointer-events:none;
-    background:radial-gradient(50% 46% at 50% 40%, rgba(143,184,220,.17), rgba(110,147,184,.06) 60%, transparent 78%);}
-  .b3d.b3d-sm{margin:0;}
-  .b3d-hint{font-size:9.5px; color:var(--t3); text-align:center; letter-spacing:.08em; text-transform:uppercase; margin-top:4px;}
+  /* Wende-Karte: die 2D-Anatomie als echtes drehbares 3D-Objekt (Vorder-/Rückseite).
+     Horizontal ziehen dreht, vertikal scrollt die Seite weiter (touch-action:pan-y). */
+  .bflip{position:relative; margin:0 auto; perspective:1100px; touch-action:pan-y; cursor:grab;
+    user-select:none; -webkit-user-select:none;}
+  .bflip:active{cursor:grabbing;}
+  .bflip-inner{position:absolute; inset:0; transform-style:preserve-3d; will-change:transform;}
+  .bflip-face{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;}
+  .bflip-face.back{transform:rotateY(180deg);}
+  .bflip-face svg{width:auto; height:100%; filter:drop-shadow(0 12px 26px rgba(8,12,24,.5));}
+  /* weicher Boden-Schatten unter dem schwebenden Körper */
+  .bflip-shadow{position:absolute; left:50%; bottom:-2%; width:52%; height:5%; transform:translateX(-50%);
+    background:radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.5), transparent 72%); filter:blur(5px); pointer-events:none;}
+  .bflip-cap{text-align:center; margin-top:8px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--t3);}
+  .bflip-cap .bflip-lbl{color:var(--t2); font-weight:600;}
+  .bflip-cap .bflip-hint{color:var(--hl); opacity:.8; text-transform:none; letter-spacing:.02em;}
+  @media (prefers-reduced-motion:reduce){ .bflip-inner{transition:none;} }
   /* Landing: Feature-Showcase + Sticky-CTA */
   .lp-show{min-width:252px; max-width:268px; flex-shrink:0; scroll-snap-align:start; padding:14px; border-radius:16px;
     background:linear-gradient(168deg, rgba(255,255,255,.075), rgba(255,255,255,.02) 62%), rgba(20,23,31,.55);
@@ -1573,7 +1582,7 @@ function queueMounts(){
   if(_mountQ) return; _mountQ=1;
   setTimeout(()=>{ _mountQ=0;
     try{ GEIST.scan(); }catch(e){}
-    try{ if(typeof MG3D!=="undefined") MG3D.scan(); }catch(e){}
+    try{ if(typeof BFLIP!=="undefined") BFLIP.scan(); }catch(e){}
   },40);
 }
 try{ new MutationObserver(queueMounts).observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
@@ -5114,7 +5123,7 @@ function renderLanding(){
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">${icon("sparkle",12)} Der Beweis — live</p>
       <h2 class="lp-h2">Tippe eine Übung.<br>Sieh, was in dir arbeitet.</h2>
-      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App: Vorder- und Rückseite, jeder beanspruchte Muskel leuchtet auf.</p>
+      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App. Dreh den Körper mit dem Finger und sieh, was jede Übung trifft.</p>
       <div class="card" style="max-width:400px;margin:0 auto;padding:16px">
         <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
       </div>
@@ -6832,7 +6841,7 @@ function muscleBody(view,arg,sex){
   // bleiben unverändert (die echten, anatomisch korrekten Polygone werden nur proportioniert).
   const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95;
   const grp=(keys,sx,inner)=>`<g transform="translate(50,0) scale(${sx},1) translate(-50,0)">${inner}</g>`;
-  const glowMode=!!(arguments[3]&&arguments[3].glow), plainMode=!!(arguments[3]&&arguments[3].plain);
+  const glowMode=!!(arguments[3]&&arguments[3].glow), plainMode=!!(arguments[3]&&arguments[3].plain), bareMode=!!(arguments[3]&&arguments[3].bare);
   const TONE="#33404F"; // einheitlicher Körperton für die 3D-Projektion (KEINE Risslinien)
   const poly=(id,pts)=>{
     const c=col(id);
@@ -6873,6 +6882,7 @@ function muscleBody(view,arg,sex){
   const bg=`<ellipse cx="50" cy="112" rx="48" ry="124" fill="url(#${fid}a)" class="mg-aura"/>`;
   // Textur-Modi: reines SVG (für die 3D-Projektion), ohne Aura/Label
   if(glowMode||plainMode) return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -6 116 232">${defs}${body}</svg>`;
+  if(bareMode) return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -6 116 232">${defs}${bg}${body}</svg>`;
   return `<div style="text-align:center">
     <svg class="mg-svg" viewBox="-8 -6 116 232" width="100" height="200" aria-hidden="true">${defs}${bg}${body}</svg>
     <p class="xs t2" style="margin-top:2px;letter-spacing:.04em">${view==="front"?"VORDERSEITE":"RÜCKSEITE"}</p></div>`;
@@ -7245,9 +7255,74 @@ function body3d(arg,opts){
   if(arg&&typeof arg==="object"&&!Array.isArray(arg.p)&&typeof arg!=="function"){
     const map=arg; a=(id)=>map[id]||MG_BODY;
   }
-  const gap=opts.small?8:14;
-  return `<div style="display:flex;justify-content:center;gap:${gap}px;align-items:flex-start">${muscleBody("front",a,sex)}${muscleBody("back",a,sex)}</div>`;
+  // Kleine/kompakte Kontexte (Session-Fokus, Übungs-Mini): statische 2D-Paarung.
+  if(opts.small||opts.flip===false){
+    const gap=opts.small?8:14;
+    return `<div style="display:flex;justify-content:center;gap:${gap}px;align-items:flex-start">${muscleBody("front",a,sex)}${muscleBody("back",a,sex)}</div>`;
+  }
+  // Große Kontexte: die hochwertige 2D-Grafik als ECHTES drehbares 3D-Objekt
+  // (Wende-Karte: Vorderseite ⇄ Rückseite, mit dem Finger drehbar, Turntable-Idle).
+  const h=opts.h||300, w=Math.round(h*0.62);
+  const front=muscleBody("front",a,sex,{bare:true}), back=muscleBody("back",a,sex,{bare:true});
+  return `<div class="bflip" style="width:${w}px;height:${h}px" data-lbl-f="VORDERSEITE" data-lbl-b="RÜCKSEITE">
+      <div class="bflip-inner">
+        <div class="bflip-face front">${front}</div>
+        <div class="bflip-face back">${back}</div>
+      </div>
+      <div class="bflip-shadow" aria-hidden="true"></div>
+    </div>
+    <p class="bflip-cap"><span class="bflip-lbl">VORDERSEITE</span> · <span class="bflip-hint">${icon("undo",10)} ziehen zum Drehen</span></p>`;
 }
+/* ===== BFLIP: die 2D-Anatomie als drehbares 3D-Objekt =====
+   Turntable-Idle (langsame Eigenrotation als 3D-Hinweis) bis zur ersten
+   Berührung; danach Finger-Drag mit Trägheit + Einrasten auf Vorder-/Rückseite.
+   Pausiert unsichtbar (IntersectionObserver), respektiert reduced-motion. */
+const BFLIP={list:[],raf:0,reduced:false,
+  scan(){ document.querySelectorAll(".bflip:not([data-on])").forEach(el=>BFLIP.mount(el)); },
+  mount(el){
+    el.dataset.on="1";
+    const inner=el.querySelector(".bflip-inner");
+    const cap=el.parentElement&&el.parentElement.querySelector(".bflip-cap");
+    const lbl=cap&&cap.querySelector(".bflip-lbl");
+    const lf=el.dataset.lblF||"VORDERSEITE", lb=el.dataset.lblB||"RÜCKSEITE";
+    const st={el,inner,lbl,lf,lb,rot:0,vel:0,drag:null,idle:0,visible:true,touched:false,curLbl:""};
+    try{ new IntersectionObserver(es=>es.forEach(e=>st.visible=e.isIntersecting)).observe(el); }catch(e){}
+    el.addEventListener("pointerdown",e=>{ st.drag={x:e.clientX,r0:st.rot}; st.vel=0; st.touched=true; st.idle=0;
+      try{ el.setPointerCapture(e.pointerId); }catch(ex){} });
+    el.addEventListener("pointermove",e=>{ if(!st.drag) return;
+      const nr=st.drag.r0+(e.clientX-st.drag.x)*0.7; st.vel=nr-st.rot; st.rot=nr; });
+    const end=()=>{ st.drag=null; };
+    el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end);
+    BFLIP.list.push(st);
+    if(!BFLIP.raf) BFLIP.loop();
+  },
+  loop(){
+    const step=()=>{
+      BFLIP.list=BFLIP.list.filter(s=>s.el.isConnected);
+      if(!BFLIP.list.length){ BFLIP.raf=0; return; }
+      if(!document.hidden) for(const s of BFLIP.list){
+        if(!s.visible){ continue; }
+        if(s.drag){
+          // wird gezogen — Rotation folgt dem Finger (in pointermove gesetzt)
+        } else if(!s.touched && !BFLIP.reduced){
+          s.rot+=0.35;                                 // Turntable-Idle (3D-Hinweis)
+        } else {
+          s.rot+=s.vel; s.vel*=0.93;                   // Trägheit …
+          if(Math.abs(s.vel)<0.5){                     // … dann sanft auf 0/180 einrasten
+            const t=Math.round(s.rot/180)*180; s.rot+=(t-s.rot)*0.14;
+          }
+        }
+        s.inner.style.transform=`rotateY(${s.rot}deg)`;
+        // Label folgt der sichtbaren Seite
+        if(s.lbl){ const back=(((s.rot%360)+360)%360)>90 && (((s.rot%360)+360)%360)<270;
+          const nl=back?s.lb:s.lf; if(nl!==s.curLbl){ s.curLbl=nl; s.lbl.textContent=nl; } }
+      }
+      BFLIP.raf=requestAnimationFrame(step);
+    };
+    BFLIP.raf=requestAnimationFrame(step);
+  },
+};
+try{ BFLIP.reduced=matchMedia("(prefers-reduced-motion:reduce)").matches; }catch(e){}
 /* Griff-/Varianten-Vergleich (der „one grip change"-Effekt): dieselbe Übung,
    andere Betonung — Muskelkarte leuchtet je nach Griff anders auf. */
 const GRIP_VARIANTS={
