@@ -1,13 +1,12 @@
 /* METRICGYM Service Worker — App-Shell offline + Installierbarkeit.
    Strategie: Navigationen network-first (frische Version), statische Assets
    cache-first. Fremde Hosts (Supabase/Groq/CDNs) werden NICHT angefasst. */
-const CACHE = "metricgym-v9";
+const CACHE = "metricgym-v10";
 /* config.js wird BEWUSST nicht gecacht: Konfiguration soll immer frisch geladen
    werden, damit eine Key-Rotation sofort greift und keine alten Werte offline
    persistiert werden. */
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
-  "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png",
-  "./vendor/three.min.js"];
+  "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));
