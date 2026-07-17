@@ -1758,6 +1758,23 @@ const SB={
    "Failed to fetch" — beides heißt: Server nicht erreichbar (z. B. Supabase-
    Projekt pausiert, Funkloch, DNS). Das ist KEIN Nutzerfehler → die App fällt
    dann kontrolliert auf das lokale Konto-System zurück statt hart zu scheitern. */
+/* ---- Tier-Wahrheit liegt beim Server (C4): my_tier() prüft elite_accounts +
+   subscriptions. Client-Manipulation von S.tier wird beim nächsten Sync
+   überschrieben; ohne Server-Antwort wird nichts erzwungen (offline-fair). */
+SB.fetchTier=async()=>{
+  if(!SB.client||!SB.user) return null;
+  try{
+    const {data,error}=await SB.withTimeout(SB.client.rpc("my_tier"),8000);
+    if(error) throw error;
+    return (data==="pro"||data==="elite")?data:"free";
+  }catch(e){ return null; }
+};
+SB.syncTier=async(rerender)=>{
+  const t=await SB.fetchTier(); if(t===null) return;
+  S.tierSrv=t; S.tierSyncedAt=Date.now();
+  if(S.tier!==t){ S.tier=t; save(); if(rerender&&S.currentUser!=null){ try{ render(); }catch(e){} } }
+  else save();
+};
 SB.isNetErr=(ex)=>{
   const m=String(ex&&ex.message||ex||"").toLowerCase();
   return ex instanceof TypeError
@@ -2364,7 +2381,11 @@ const TIER_RANK={free:0,pro:1,elite:2};
    Vergaben gehören serverseitig (Supabase, RLS), nicht in eine hartkodierte Liste. */
 const COMP_ELITE=[];
 function currentEmail(){ try{ return ((S.users&&S.currentUser!=null&&S.users[S.currentUser]&&S.users[S.currentUser].email)||"").toLowerCase().trim(); }catch{ return ""; } }
-function ensureCompTier(){ if(COMP_ELITE.includes(currentEmail())){ S.tier="elite"; S.compElite=true; } }
+function ensureCompTier(){
+  // Mit Cloud-Konto entscheidet AUSSCHLIESSLICH der Server (my_tier / subscriptions).
+  if(typeof SB!=="undefined"&&SB.enabled()&&SB.user) return;
+  if(COMP_ELITE.includes(currentEmail())){ S.tier="elite"; S.compElite=true; }
+}
 /* v5/Phase 5: konkrete Preispunkte (monatlich/jährlich, Jahres-Abo ≈ −33 %).
    Anker: Pro = 9,99 — Premium-Fitness-Apps (Whoop/Oura-Segment) stützen den
    Preis, die Adaptation Engine differenziert. Vor Launch per A/B-Test
@@ -4479,6 +4500,12 @@ A.upgrade=(t)=>{
     <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Jetzt aktivieren</button>`);
 };
 A.confirmUpgrade=(t)=>{
+  // Cloud-Konten: Tier vergibt der SERVER (subscriptions) — kein Demo-Umschalten.
+  if(typeof SB!=="undefined"&&SB.enabled()&&SB.user&&!S.devMode){
+    overlay.innerHTML="";
+    modal(`<p class="ct">Fast bereit</p><p class="sm t2" style="line-height:1.6">Die Bezahlfunktion wird gerade angeschlossen. Dein Plan bleibt bis dahin <b>${TIER_LABEL[S.tier]}</b> — der 7-Tage-Test steht dir trotzdem offen.</p>`);
+    return;
+  }
   S.tier=t; save(); overlay.innerHTML=""; render();
   toast(`✓ ${TIER_LABEL[t]} aktiviert (Demo)`);
 };
@@ -5441,6 +5468,7 @@ function renderRegister(){
         }
         S.users=[{username:u,email:e,pwHash:""}]; S.currentUser=0; // Cloud-Konto, lokal gespiegelt
         SB.recordReferralIfNeeded();
+        SB.syncTier(false);
       }catch(ex){
         if(SB.isNetErr(ex)){
           // Cloud offline (z. B. pausiertes Projekt / Funkloch): Konto lokal anlegen,
@@ -5518,7 +5546,8 @@ function renderRecovery(){
       S.currentUser=0;
       try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
       S.screen=S.profile?"app":"onboarding"; S.tab="home";
-      save(); render(); setTimeout(()=>toast("Passwort aktualisiert — du bist angemeldet"),300);
+      save(); render(); SB.syncTier(true);
+      setTimeout(()=>toast("Passwort aktualisiert — du bist angemeldet"),300);
     }catch(ex){ err.textContent=authErrDE(ex); if(btn)btn.disabled=false; }
   };
   root.innerHTML=`<div class="fade" style="padding-top:8px">
@@ -5603,7 +5632,9 @@ function renderLogin(){
       S.loginAttempts=0; S.lockoutUntil=null;
       SB.recordReferralIfNeeded();
       S.screen=S.profile?"app":"onboarding"; S.tab="home";
-      save(); render(); return;
+      save(); render();
+      SB.syncTier(true); // Server-Tier nachziehen (überschreibt lokale Manipulation)
+      return;
     }
     if(await tryLocal(false)) return;
     S.loginAttempts=(S.loginAttempts||0)+1;
@@ -7829,9 +7860,15 @@ function aiProxyHeaders(){ const c=window.METRICGYM_CONFIG||{}; const tok=(typeo
 async function proxyComplete(system,user,opts){ opts=opts||{};
   const mode=(typeof user==="object"&&user&&user.images&&user.images.length)?"vision":"complete";
   const r=await fetch(aiProxyURL(),{method:"POST",headers:aiProxyHeaders(),body:JSON.stringify({mode,system,user,json:!!opts.json,max:opts.max,temp:opts.temp})});
+  if(r.status===429||r.status===401){ let m=r.status===429?"Tageslimit erreicht — morgen geht es weiter.":"Bitte melde dich an, um den Coach zu nutzen.";
+    try{ const j=await r.json(); m=(j&&j.error&&j.error.message)||m; }catch(e){}
+    const err=new Error(m); err.noFallback=true; throw err; }
   if(!r.ok)throw new Error("Proxy "+r.status); const j=await r.json(); if(j&&j.error)throw new Error(j.error.message||"Proxy"); return (j&&j.text)||""; }
 async function proxyStream(system,history,onDelta){
   const r=await fetch(aiProxyURL(),{method:"POST",headers:aiProxyHeaders(),body:JSON.stringify({mode:"stream",system,history})});
+  if(r.status===429||r.status===401){ let m=r.status===429?"Tageslimit erreicht — morgen geht es weiter.":"Bitte melde dich an, um den Coach zu nutzen.";
+    try{ const j=await r.json(); m=(j&&j.error&&j.error.message)||m; }catch(e){}
+    const err=new Error(m); err.noFallback=true; throw err; }
   if(!r.ok||!r.body)throw new Error("Proxy "+r.status);
   const reader=r.body.getReader(),dec=new TextDecoder(); let buf="",full="";
   while(true){ const {done,value}=await reader.read(); if(done)break; buf+=dec.decode(value,{stream:true}); const lines=buf.split("\n"); buf=lines.pop();
@@ -7949,7 +7986,7 @@ function aiContext(){
 // (z. B. 429-Quota) auf den nächsten zurück; erst wenn alle scheitern, wirft die Funktion.
 async function aiChain(runners){
   let lastErr;
-  for(const run of runners){ if(!run.on)continue; try{ return await run.fn(); }catch(e){ lastErr=e; } }
+  for(const run of runners){ if(!run.on)continue; try{ return await run.fn(); }catch(e){ if(e&&e.noFallback) throw e; lastErr=e; } }
   throw lastErr||new Error("Keine KI verfügbar");
 }
 async function aiStream(history,onDelta){
@@ -10727,6 +10764,7 @@ try{ render(); }catch(err){ root.innerHTML=_recover(err&&(err.message||err)); }
     SB.recordReferralIfNeeded();
     if(["landing","login","register"].includes(S.screen)||S.currentUser==null){ S.screen=S.profile?"app":"onboarding"; S.tab=S.tab||"home"; }
     save(); render();
+    SB.syncTier(true); // Boot-Resync: Tier kommt vom Server, nicht aus localStorage
   }catch(e){}
 })();
 </script>

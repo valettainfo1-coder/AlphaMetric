@@ -118,3 +118,79 @@ Browser-Daten der Seite entfernen.
 
 In `config.js` unter `eliteAccounts` gepflegt (z. B. Gründer/Familie):
 beim Login oder App-Start wird das Konto automatisch auf ELITE gesetzt.
+
+## 4. Abo-Tier serverseitig (Pflicht für Launch — verhindert DevTools-Freischaltung)
+
+```sql
+-- Abos (wird später vom Stripe-Webhook befüllt; bis dahin manuell pflegbar)
+create table if not exists subscriptions (
+  user_id            uuid primary key references auth.users(id) on delete cascade,
+  tier               text not null check (tier in ('pro','elite')),
+  status             text not null default 'active',   -- active | trialing | canceled | past_due
+  current_period_end timestamptz,
+  stripe_customer_id text,
+  updated_at         timestamptz not null default now()
+);
+alter table subscriptions enable row level security;
+create policy "subscriptions_read_own" on subscriptions for select using (auth.uid() = user_id);
+-- KEINE insert/update-Policy für Clients: schreiben darf nur der Server (Service-Role/Webhook).
+
+-- Dauerhafte Gratis-ELITE-Konten (Gründer, Familie, Presse) — ersetzt config.eliteAccounts
+create table if not exists elite_accounts (
+  email      text primary key,
+  note       text,
+  created_at timestamptz not null default now()
+);
+alter table elite_accounts enable row level security;  -- keine Policies: nur Service-Role liest
+
+-- Coach-Nutzung pro Tag (Rate-Limit des ai-proxy)
+create table if not exists ai_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day     date not null,
+  count   int  not null default 0,
+  primary key (user_id, day)
+);
+alter table ai_usage enable row level security;        -- keine Policies: nur Service-Role
+
+-- DIE Tier-Wahrheit: eine Funktion, die App und ai-proxy gleichermaßen fragen.
+create or replace function my_tier()
+returns text
+language sql security definer set search_path = public as $$
+  select coalesce(
+    (select 'elite' from elite_accounts
+      where lower(email) = lower(coalesce(auth.jwt()->>'email',''))
+      limit 1),
+    (select tier from subscriptions
+      where user_id = auth.uid()
+        and status in ('active','trialing')
+        and (current_period_end is null or current_period_end > now())
+      limit 1),
+    'free');
+$$;
+grant execute on function my_tier() to authenticated;
+```
+
+Gründer-Konto eintragen:
+```sql
+insert into elite_accounts (email, note) values ('lovisstumpfe@icloud.com', 'Gründer')
+on conflict (email) do nothing;
+```
+`config.js → eliteAccounts` ist damit **veraltet** (wird nicht mehr gelesen).
+
+## 5. ai-proxy deployen (JWT-Pflicht + Tier-Limits)
+
+Der Quellcode liegt im Repo: `supabase/functions/ai-proxy/index.ts`.
+
+```bash
+supabase functions deploy ai-proxy
+supabase secrets set GEMINI_API_KEY=... OPENROUTER_API_KEY=... GROQ_API_KEY=...
+```
+
+Verhalten: ohne gültiges Nutzer-JWT → 401 · Tageslimits FREE 5 / PRO 60 /
+ELITE 200 (Tabelle `ai_usage`) → 429 mit deutscher Meldung, die die App
+direkt anzeigt · Provider-Kette Gemini → OpenRouter → Groq (Streaming über
+die OpenAI-kompatiblen Provider).
+
+Hinweis Trial: Der lokale 7-Tage-Test schaltet die App-Ansichten frei; die
+Server-Limits folgen dem Server-Tier. Mit Stripe (Roadmap D4) wird der Trial
+als `status='trialing'` serverseitig geführt und beides ist deckungsgleich.
