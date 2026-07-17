@@ -4920,6 +4920,7 @@ function quickLogField(placeholder,handler,hideMic){
 function renderAuth(){
   if(S.screen==="register") return renderRegister();
   if(S.screen==="login") return renderLogin();
+  if(S.screen==="recovery") return renderRecovery();
   A.toRegister=()=>{S.screen="register";save();render();};
   A.toLogin=()=>{S.screen="login";save();render();};
   // Developer-Modus (v5/Phase 7): zwei Wege — leeres Profil direkt ins Menü
@@ -5488,9 +5489,76 @@ function renderRegister(){
     <p class="xs t2 mt16" style="text-align:center">Passwort sicher gehasht. Mit der Registrierung stimmst du den o. g. Bedingungen zu.</p></div>`;
 }
 
+/* Passwort-Recovery: erreicht über den E-Mail-Link (Supabase hängt
+   #access_token…&type=recovery an — der Boot-Code erkennt das und leitet her). */
+function renderRecovery(){
+  A.vPw=(el)=>{
+    const st=pwStrength(el.value), m=document.getElementById("pwmeter"), lbl=document.getElementById("pwlbl");
+    if(m){m.style.width=st.pct+"%";m.style.background=st.col;} if(lbl){lbl.textContent=el.value?("Stärke: "+st.lbl):"";}
+    el.classList.toggle("err",el.value.length>0&&el.value.length<8);el.classList.toggle("ok",el.value.length>=8);
+  };
+  A.recoverBack=()=>{ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} S.screen="login"; save(); render(); };
+  A.doRecover=async()=>{
+    const p=document.getElementById("rc-pw").value, p2=document.getElementById("rc-pw2").value;
+    const err=document.getElementById("rc-err"); err.textContent="";
+    if(p.length<8){err.textContent="Passwort: mindestens 8 Zeichen.";return;}
+    if(p!==p2){err.textContent="Passwörter stimmen nicht überein.";return;}
+    const btn=document.getElementById("rc-go"); if(btn)btn.disabled=true;
+    try{
+      await SB.init();
+      const {data:sd}=await SB.client.auth.getSession();
+      if(!sd||!sd.session) throw new Error("Der Link ist abgelaufen — fordere über Passwort-vergessen einen neuen an.");
+      const {error}=await SB.withTimeout(SB.client.auth.updateUser({password:p}),12000);
+      if(error) throw error;
+      SB.user=sd.session.user; SB.token=sd.session.access_token;
+      let cloud=null; try{ cloud=await SB.pull(); }catch(e){}
+      if(cloud) SB.hydrate(cloud);
+      const fname=(SB.user.user_metadata&&SB.user.user_metadata.first_name)||((SB.user.email||"").split("@")[0]);
+      if(!S.users||!S.users.length) S.users=[{username:fname,email:SB.user.email||"",pwHash:""}];
+      S.currentUser=0;
+      try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+      S.screen=S.profile?"app":"onboarding"; S.tab="home";
+      save(); render(); setTimeout(()=>toast("Passwort aktualisiert — du bist angemeldet"),300);
+    }catch(ex){ err.textContent=authErrDE(ex); if(btn)btn.disabled=false; }
+  };
+  root.innerHTML=`<div class="fade" style="padding-top:8px">
+    <div class="topbar"><button class="back" onclick="A.recoverBack()" aria-label="Zurück">‹</button><h2>Neues Passwort setzen</h2></div>
+    <p class="sm t2" style="margin:-14px 0 18px;line-height:1.5">Wähle ein neues Passwort für dein Konto — danach bist du direkt angemeldet.</p>
+    <div class="field"><label for="rc-pw">Neues Passwort</label>
+      <input type="password" id="rc-pw" autocomplete="new-password" oninput="A.vPw(this)" placeholder="mind. 8 Zeichen">
+      <div class="strength-meter"><div id="pwmeter" style="width:0"></div></div>
+      <p class="xs t2 mt8" id="pwlbl" style="min-height:14px"></p></div>
+    <div class="field"><label for="rc-pw2">Passwort bestätigen</label>
+      <input type="password" id="rc-pw2" autocomplete="new-password"></div>
+    <p class="fielderr mt8" id="rc-err" role="alert"></p>
+    <button class="btn volt mt8" id="rc-go" onclick="A.doRecover()">Passwort speichern</button></div>`;
+}
 function renderLogin(){
   A.back=()=>{S.screen="landing";save();render();};
-  A.forgot=()=>modal(`<p class="ct">Passwort vergessen?</p><p class="sm t2" style="line-height:1.6">Demo-Modus: Passwort-Reset via E-Mail ist nicht verfügbar — lösche den LocalStorage dieser Seite, um alle Konten zurückzusetzen.</p>`);
+  A.forgot=()=>{
+    if(!SB.enabled()){
+      modal(`<p class="ct">Passwort vergessen?</p><p class="sm t2" style="line-height:1.6">Dieses Konto liegt nur auf diesem Gerät (kein Cloud-Sync) — dafür gibt es keinen E-Mail-Reset. Lege bei Bedarf ein neues Konto an.</p>`);
+      return;
+    }
+    const pre=(document.getElementById("l-mail")||{}).value||"";
+    modal(`<p class="ct">Passwort zurücksetzen</p>
+      <p class="sm t2 mb12" style="line-height:1.6">Wir schicken dir einen Link — damit setzt du in einer Minute ein neues Passwort.</p>
+      <div class="field"><label for="fp-mail">E-Mail</label><input type="email" id="fp-mail" autocomplete="email" value="${esc(pre)}"></div>
+      <p class="fielderr" id="fp-err" role="alert"></p>
+      <button class="btn volt mt8" id="fp-go" onclick="A.sendReset()">Reset-Link senden</button>`);
+    A.sendReset=async()=>{
+      const e=(document.getElementById("fp-mail").value||"").trim().toLowerCase();
+      const err=document.getElementById("fp-err"); err.textContent="";
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)){err.textContent="Bitte gültige E-Mail-Adresse angeben.";return;}
+      const btn=document.getElementById("fp-go"); if(btn)btn.disabled=true;
+      try{
+        await SB.init();
+        const {error}=await SB.withTimeout(SB.client.auth.resetPasswordForEmail(e,{redirectTo:(location.origin+location.pathname)}),12000);
+        if(error) throw error;
+        A.closeModal(); toast("Wenn ein Konto existiert, ist der Reset-Link unterwegs — prüfe dein Postfach");
+      }catch(ex){ err.textContent=authErrDE(ex); if(btn)btn.disabled=false; }
+    };
+  };
   A.login=async()=>{
     const err=document.getElementById("l-err");
     err.textContent="";
@@ -10127,6 +10195,38 @@ async function openPhotoCompare(aIdx,bIdx){
 }
 let EP=null;
 function renderProfile(){
+  // ---- Konto-Sicherheit (nur Cloud-Konten) ----
+  A.chgPw=()=>{ modal(`<p class="ct">Passwort ändern</p>
+    <div class="field"><label for="cp-pw">Neues Passwort</label><input type="password" id="cp-pw" autocomplete="new-password" placeholder="mind. 8 Zeichen"></div>
+    <div class="field"><label for="cp-pw2">Bestätigen</label><input type="password" id="cp-pw2" autocomplete="new-password"></div>
+    <p class="fielderr" id="cp-err" role="alert"></p>
+    <button class="btn volt mt8" id="cp-go" onclick="A.doChgPw()">Speichern</button>`); };
+  A.doChgPw=async()=>{
+    const p=document.getElementById("cp-pw").value, p2=document.getElementById("cp-pw2").value;
+    const err=document.getElementById("cp-err"); err.textContent="";
+    if(p.length<8){err.textContent="Passwort: mindestens 8 Zeichen.";return;}
+    if(p!==p2){err.textContent="Passwörter stimmen nicht überein.";return;}
+    const b=document.getElementById("cp-go"); if(b)b.disabled=true;
+    try{ await SB.init(); const {error}=await SB.withTimeout(SB.client.auth.updateUser({password:p}),12000); if(error)throw error;
+      A.closeModal(); toast("Passwort aktualisiert"); }
+    catch(ex){ err.textContent=authErrDE(ex); if(b)b.disabled=false; } };
+  A.chgMail=()=>{ modal(`<p class="ct">E-Mail-Adresse ändern</p>
+    <p class="sm t2 mb12" style="line-height:1.6">Du bekommst an die alte UND die neue Adresse eine Bestätigungs-Mail — erst danach gilt die Änderung.</p>
+    <div class="field"><label for="cm-mail">Neue E-Mail</label><input type="email" id="cm-mail" autocomplete="email"></div>
+    <p class="fielderr" id="cm-err" role="alert"></p>
+    <button class="btn volt mt8" id="cm-go" onclick="A.doChgMail()">Bestätigungs-Mails senden</button>`); };
+  A.doChgMail=async()=>{
+    const e=(document.getElementById("cm-mail").value||"").trim().toLowerCase();
+    const err=document.getElementById("cm-err"); err.textContent="";
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)){err.textContent="Bitte gültige E-Mail-Adresse angeben.";return;}
+    const b=document.getElementById("cm-go"); if(b)b.disabled=true;
+    try{ await SB.init(); const {error}=await SB.withTimeout(SB.client.auth.updateUser({email:e}),12000); if(error)throw error;
+      A.closeModal(); toast("Bestätige die Änderung über beide E-Mails"); }
+    catch(ex){ err.textContent=authErrDE(ex); if(b)b.disabled=false; } };
+  A.logoutAll=async()=>{
+    try{ await SB.init(); await SB.withTimeout(SB.client.auth.signOut({scope:"global"}),8000); }catch(e){}
+    SB.user=null; SB.token=null; S.currentUser=null; S.screen="landing"; coachOpen=false;
+    save(); render(); setTimeout(()=>toast("Auf allen Geräten abgemeldet"),300); };
   const p=S.profile, u=S.users[S.currentUser]||{username:"—",email:"—"};
   A.logout=()=>{if(typeof SB!=="undefined"&&SB.user)SB.signOut();S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
   A.setWearActive=()=>{ const el=document.getElementById("wear-k"); const v=parseInt(el&&el.value);
@@ -10392,7 +10492,14 @@ function renderProfile(){
         <div class="avatar" style="width:48px;height:48px;font-size:19px">${esc(u.username.slice(0,1).toUpperCase())}</div>
         <div style="flex:1;min-width:0"><p style="font-weight:600">${esc(u.username)}${S.devMode?' <span class="badge info" style="font-size:8px">Dev</span>':""}</p>
         <p class="xs t2" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.email)}</p></div></div>
-      <button class="btn ghost mt12" style="justify-content:flex-start;padding-left:0;min-height:38px" onclick="A.logout()">${icon("undo",14)} Abmelden</button>`)}
+      <button class="btn ghost mt12" style="justify-content:flex-start;padding-left:0;min-height:38px" onclick="A.logout()">${icon("undo",14)} Abmelden</button>
+      ${(typeof SB!=="undefined"&&SB.enabled()&&SB.user)?`
+      <div style="border-top:1px solid var(--hairline);margin-top:8px;padding-top:12px">
+        <p class="label" style="margin-bottom:8px">Sicherheit</p>
+        <button class="btn mb8" onclick="A.chgPw()">${icon("lock",14)} Passwort ändern</button>
+        <button class="btn mb8" onclick="A.chgMail()">${icon("send",14)} E-Mail-Adresse ändern</button>
+        <button class="btn" onclick="A.logoutAll()">${icon("undo",14)} Alle Geräte abmelden</button>
+      </div>`:""}`)}
 
     ${acc("star","Dein Plan",`<span class="badge ${S.tier==="free"?"mute":"volt"}" style="font-size:8px">${TIER_LABEL[S.tier]}</span>`,`
       <div class="row"><div><p class="sm">${TIER_LABEL[S.tier]} · <span class="metric">${tierPriceLabel(S.tier,S.billing)}</span>${S.tier!=="free"?'<span class="xs t2"> (Demo)</span>':""}</p></div>
@@ -10599,11 +10706,18 @@ try{ render(); }catch(err){ root.innerHTML=_recover(err&&(err.message||err)); }
 // Supabase: bestehende Session wiederherstellen (geräteübergreifender Auto-Login + Cloud-Pull)
 (async()=>{
   try{
+    const wantsRecovery=/type=recovery/.test(location.hash||"");
     if(!SB.enabled()) return;
     await SB.init();
+    // Belt & Braces: Supabase meldet Recovery auch als Auth-Event
+    try{ SB.client.auth.onAuthStateChange((ev)=>{ if(ev==="PASSWORD_RECOVERY"&&S.screen!=="recovery"){ S.screen="recovery"; render(); } }); }catch(e){}
     const {data}=await SB.client.auth.getSession();
-    if(!data||!data.session) return;
+    if(!data||!data.session){
+      if(wantsRecovery){ S.screen="login"; save(); render(); setTimeout(()=>toast("Der Reset-Link ist abgelaufen — fordere einen neuen an"),400); }
+      return;
+    }
     SB.user=data.session.user; SB.token=data.session.access_token;
+    if(wantsRecovery){ S.screen="recovery"; save(); render(); return; }
     let cloud=null; try{ cloud=await SB.pull(); }catch(e){}
     if(cloud) SB.hydrate(cloud);
     migrateState(); // nach Cloud-Pull: alten Status verwerfen + Plan ggf. neu berechnen
