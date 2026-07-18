@@ -7208,11 +7208,109 @@ const EX_ACT={
   "Trizepsdrücken":{p:["triceps"],s:[]},"Bizeps-Curls":{p:["biceps"],s:["forearm"]},"Hammer-Curls":{p:["biceps"],s:["forearm"]},
   "Klimmzug":{p:["lats"],s:["biceps","traps","forearm"]},"Latzug":{p:["lats"],s:["biceps","traps","forearm"]},
   "Langhantelrudern":{p:["lats","traps"],s:["biceps","reardelts","lowerback","forearm"]},"Kabelrudern":{p:["lats","traps"],s:["biceps","reardelts","forearm"]},"Einarmiges KH-Rudern":{p:["lats"],s:["biceps","traps","reardelts","forearm"]},"Rudern am Tisch":{p:["traps","lats"],s:["biceps","reardelts","forearm"]},
-  "Kniebeuge":{p:["quads"],s:["glutes","hams","lowerback","adductors"]},"Goblet Squat":{p:["quads"],s:["glutes","abs","adductors"]},"Kniebeuge (Körpergewicht)":{p:["quads"],s:["glutes","adductors"]},"Beinpresse":{p:["quads"],s:["glutes","hams","adductors"]},"Ausfallschritte":{p:["quads"],s:["glutes","hams","adductors"]},"Bulgarian Split Squat":{p:["quads"],s:["glutes","hams","adductors"]},
+  "Kniebeuge":{p:["quads"],s:["glutes","hams","lowerback","adductors"]},"Goblet Squat":{p:["quads"],s:["glutes","abs","adductors"]},"Kniebeuge (Körpergewicht)":{p:["quads"],s:["glutes","adductors"]},"Beinpresse":{p:["quads"],s:["glutes","hams","adductors"]},"Ausfallschritte":{p:["quads"],s:["glutes","hams","adductors"]},"Bulgarian Split Squat":{p:["quads","glutes"],s:["hams","adductors"]},
   "Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback","forearm"]},"KH-Rumänisches Kreuzheben":{p:["hams"],s:["glutes","lowerback","forearm"]},"Kreuzheben":{p:["hams","lowerback"],s:["glutes","traps","quads","lats","forearm"]},"Hip Thrust":{p:["glutes"],s:["hams","adductors"]},
   "Beinbeuger":{p:["hams"],s:["calves"]},"Wadenheben":{p:["calves"],s:[]},
   "Plank":{p:["abs"],s:["obliques"]},"Dead Bug":{p:["abs"],s:["obliques"]},"Kabel-Crunch":{p:["abs"],s:["obliques"]},"Hängendes Beinheben":{p:["abs"],s:["obliques","forearm"]},"Liegendes Beinheben":{p:["abs"],s:["obliques"]},"Superman":{p:["lowerback"],s:["glutes","hams"]},"Zone-2 Cardio":{p:[],s:[]},
+  // ---- B1: handkuratierte Maps für die restlichen 71 Übungen (alle 112 abgedeckt;
+  // exActFor() bleibt nur noch Fallback für eigene Übungen). Anatomie-Notizen inline.
+  // Brust / Drücken
+  "Brustpresse (Maschine)":{p:["chest"],s:["delts","triceps"]},
+  "Kabel-Fliegende":{p:["chest"],s:["delts"]},
+  "Pec Deck":{p:["chest"],s:["delts"]},
+  "Band-Fliegende":{p:["chest"],s:["delts"]},
+  "Schräg-KH-Drücken":{p:["chest"],s:["delts","triceps"]},
+  "Dips":{p:["chest","triceps"],s:["delts"]},                       // vorgelehnt: untere Brust + Trizeps
+  "Erhöhte Liegestütze":{p:["chest"],s:["delts","triceps","abs"]},
+  "Vertiefte Liegestütze":{p:["chest"],s:["delts","triceps","abs"]},
+  "Archer Liegestütze":{p:["chest"],s:["delts","triceps","abs","obliques"]},
+  "Einarmige Liegestütze (Progression)":{p:["chest","triceps"],s:["delts","abs","obliques"]},
+  // Schultern
+  "Arnold Press":{p:["delts"],s:["triceps","traps"]},
+  "Landmine-Press":{p:["delts"],s:["chest","triceps","abs"]},
+  "Maschinen-Schulterdrücken":{p:["delts"],s:["triceps","traps"]},
+  "Kabel-Seitheben":{p:["delts"],s:["traps"]},
+  "Front-Heben":{p:["delts"],s:["traps"]},
+  "Reverse Pec Deck":{p:["reardelts"],s:["traps"]},
+  "Erhöhte Pike Push-ups":{p:["delts"],s:["triceps","traps","abs"]},
+  "Handstand Push-up (Wand)":{p:["delts"],s:["triceps","traps","abs"]},
+  // Trizeps
+  "Skullcrusher (SZ)":{p:["triceps"],s:["forearm"]},
+  "Überkopf-Trizepsstrecken (Kabel)":{p:["triceps"],s:[]},
+  "KH-Trizepsstrecken über Kopf":{p:["triceps"],s:[]},
+  "Kickbacks":{p:["triceps"],s:["reardelts"]},
+  "Bench Dips":{p:["triceps"],s:["chest","delts"]},
+  "Band-Trizepsdrücken":{p:["triceps"],s:[]},
+  // Bizeps
+  "SZ-Curls":{p:["biceps"],s:["forearm"]},
+  "Schrägbank-Curls":{p:["biceps"],s:["forearm"]},                  // Langhub durch Vordehnung des langen Kopfes
+  "Kabel-Curls":{p:["biceps"],s:["forearm"]},
+  "Preacher Curls":{p:["biceps"],s:["forearm"]},
+  "Konzentrations-Curls":{p:["biceps"],s:["forearm"]},
+  "Band-Curls":{p:["biceps"],s:["forearm"]},
+  // Rücken / Zug
+  "Unterstützter Klimmzug":{p:["lats"],s:["biceps","traps","forearm"]},
+  "Negativ-Klimmzug":{p:["lats"],s:["biceps","traps","forearm"]},
+  "Klimmzug (Untergriff)":{p:["lats","biceps"],s:["traps","forearm"]}, // Untergriff verlagert Last auf den Bizeps
+  "Latzug (enger Griff)":{p:["lats"],s:["biceps","traps","forearm"]},
+  "Pendlay Row":{p:["lats","traps"],s:["biceps","reardelts","lowerback","forearm"]},
+  "T-Bar-Rudern":{p:["lats","traps"],s:["biceps","reardelts","lowerback","forearm"]},
+  "Brustgestütztes KH-Rudern":{p:["lats","traps"],s:["biceps","reardelts","forearm"]}, // Bank nimmt den unteren Rücken raus
+  "Maschinenrudern":{p:["lats","traps"],s:["biceps","reardelts","forearm"]},
+  "Einarm-Kabelrudern":{p:["lats"],s:["biceps","traps","reardelts","forearm"]},
+  "Band-Rudern":{p:["lats","traps"],s:["biceps","reardelts","forearm"]},
+  "Archer-Rudern am Tisch":{p:["lats"],s:["biceps","traps","reardelts","forearm","obliques"]},
+  "KH-Pullover":{p:["lats"],s:["chest","triceps"]},
+  "Straight-Arm Pulldown":{p:["lats"],s:["triceps","abs"]},         // Lat-Isolation ohne Armbeuger
+  "KH-Shrugs":{p:["traps"],s:["forearm"]},
+  "Rückenstrecken (Bank)":{p:["lowerback"],s:["glutes","hams"]},
+  // Beine / Hüfte
+  "Frontkniebeuge":{p:["quads"],s:["glutes","abs","adductors"]},    // aufrechter Rumpf → mehr Quads, Core hält die Stange
+  "Hackenschmidt-Beuge":{p:["quads"],s:["glutes","adductors"]},
+  "Beinstrecker":{p:["quads"],s:[]},
+  "Sissy Squat":{p:["quads"],s:["abs"]},
+  "Pistol Squat (Progression)":{p:["quads","glutes"],s:["hams","calves","abs"]},
+  "Step-ups":{p:["quads","glutes"],s:["hams","calves"]},
+  "Hip Thrust (Langhantel)":{p:["glutes"],s:["hams","adductors"]},
+  "Glute Bridge":{p:["glutes"],s:["hams"]},
+  "Abduktoren-Maschine":{p:["glutes"],s:[]},                        // Gluteus medius/minimus — Karte hat keine eigene Abduktoren-Zone
+  "Sumo-Kreuzheben":{p:["glutes","adductors"],s:["hams","quads","lowerback","traps","forearm"]}, // breiter Stand → Adduktoren ziehen mit
+  "Nordic Curls":{p:["hams"],s:["glutes","calves"]},
+  "KB/KH-Swing":{p:["glutes","hams"],s:["lowerback","quads","forearm","delts"]},
+  "Sitzendes Wadenheben":{p:["calves"],s:[]},                       // gebeugtes Knie → Soleus
+  "Stehendes Wadenheben (Maschine)":{p:["calves"],s:[]},
+  // Core
+  "Rollout (Ab-Wheel/Langhantel)":{p:["abs"],s:["obliques","lats","triceps"]},
+  "Pallof Press":{p:["obliques"],s:["abs","delts"]},                // Anti-Rotation
+  "Seitstütz":{p:["obliques"],s:["abs","delts"]},
+  "Hollow Body Hold":{p:["abs"],s:["obliques","quads"]},
+  "Dragon Flag (Progression)":{p:["abs"],s:["obliques","lats"]},
+  "L-Sit (Progression)":{p:["abs"],s:["quads","triceps","obliques"]},
+  "Crunch (Zusatzgewicht)":{p:["abs"],s:["obliques"]},
+  "Farmer's Walk":{p:["forearm","traps"],s:["abs","obliques","quads","calves"]},
+  // Konditionierung (ehrliche Ganzkörper-Maps statt leerer Silhouette)
+  "Mountain Climbers":{p:["abs"],s:["obliques","quads","delts"]},
+  "Burpees":{p:["quads","chest"],s:["abs","delts","triceps","glutes","calves"]},
+  "Seilspringen":{p:["calves"],s:["quads","forearm","delts"]},
+  "Rudern (Ergometer)":{p:["lats","quads"],s:["biceps","traps","lowerback","hams"]},
 };
+/* Dev-Prüfung (B1): meldet EXDB-Übungen ohne kuratierte Map und Tippfehler in
+   Muskel-IDs. Aufruf in der Konsole: MGDEV.checkCoverage() → erwartet 112/112. */
+window.MGDEV={checkCoverage(){
+  const valid=new Set([...MG_ANT,...MG_POST].map(m=>m.id).filter(Boolean));
+  const all=Object.keys(EXDB);
+  const missing=all.filter(n=>!EX_ACT[n]);
+  const unknownIds=[];
+  for(const n in EX_ACT){ for(const id of [...(EX_ACT[n].p||[]),...(EX_ACT[n].s||[])])
+    if(!valid.has(id))unknownIds.push(n+" → "+id); }
+  const orphans=Object.keys(EX_ACT).filter(n=>!EXDB[n]);
+  const r={total:all.length,curated:all.length-missing.length,missing,unknownIds,orphans};
+  console.log(`EX_ACT-Abdeckung: ${r.curated}/${r.total} kuratiert`
+    +(missing.length?` — FEHLT: ${missing.join(", ")}`:" ✓")
+    +(unknownIds.length?` — UNBEKANNTE IDs: ${unknownIds.join(", ")}`:"")
+    +(orphans.length?` — verwaiste Einträge (nicht in EXDB): ${orphans.join(", ")}`:""));
+  return r;
+}};
 // Anatomische Muskelkarte: Front-/Rückansicht mit echten Muskelgruppen-Formen.
 // col(id) färbt jede Gruppe nach Aktivierung (primär/sekundär/neutral).
 const MG_BODY="#A7AFC0"; // Grundton des Körpers (neutrale Muskeln blenden ein → nur aktive leuchten)

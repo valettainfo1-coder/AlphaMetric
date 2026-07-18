@@ -145,6 +145,18 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - CSP: `script-src` um `'wasm-unsafe-eval'` ergänzt (nur WebAssembly, kein
   JS-eval — nötig für zxing).
 
+### 10. Muskel-Maps für alle 112 Übungen handkuratiert (B1)
+- Vorher waren nur 41 Übungen von Hand gemappt, der Rest lief über einen
+  groben Generator. Jetzt hat **jede der 112 Übungen** eine handkuratierte
+  Primär-/Sekundär-Muskelkarte (z. B. Face Pull: hintere Schulter primär,
+  Trapez sekundär; Sumo-Kreuzheben: Gluteus + Adduktoren primär; Dips:
+  Brust + Trizeps primär) — auch die Konditionierungs-Übungen (Burpees,
+  Seilspringen, Ergometer) zeigen ehrlich, was arbeitet.
+- Der Generator `exActFor()` ist nur noch Fallback für künftige eigene
+  Übungen. Neue Dev-Prüfung: `MGDEV.checkCoverage()` in der Konsole meldet
+  Abdeckung (aktuell 112/112), Tippfehler in Muskel-IDs und verwaiste
+  Einträge.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
