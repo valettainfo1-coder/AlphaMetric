@@ -188,6 +188,20 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   danach sind e1RM-Kraftkurven, Empfehlungen („Letztes Mal") und der
   Session-Verlauf sofort mit der alten Historie gefüllt.
 
+### 13. Supersets (B2)
+- Im Plan-Editor lassen sich zwei benachbarte Übungen **verketten**
+  (⛓-Button) — der Tag zeigt dann „Superset spart ~X Min" und die
+  Wochenübersicht rechnet die gesparte Zeit in die Dauer ein. Entkoppeln
+  jederzeit mit einem Tipp.
+- Der Player führt Paare **alternierend**: A1 → B1 ohne Pause, EINE Pause
+  pro Runde, danach automatisch zurück zu A („Runde 2"). Banner zeigt
+  Partner + Rundenstand. Logs landen normal bei beiden Übungen — e1RM,
+  Empfehlungen und der MEV–MRV-Wochenkorridor zählen jede Teilübung wie
+  gewohnt.
+- Bei Zeitknappheit im Assessment (Session ≤ 45 Min) schlägt die Engine
+  einmalig sinnvolle Antagonisten-Paare vor (Brust↔Rücken, Bizeps↔Trizeps,
+  Quads↔Beinbeuger) — nur benachbarte Übungen, im Editor jederzeit lösbar.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker

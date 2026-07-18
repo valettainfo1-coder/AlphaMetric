@@ -2428,6 +2428,7 @@ S.foodFavs=S.foodFavs||{};           // {foodKey:Anzahl} — foodKey: "f:<FOODS-
 // Geräte-Einstellungen (B4): Stangen-Gewicht für den Scheiben-Rechner
 S.settings=S.settings||{}; if(!(S.settings.barKg>=10))S.settings.barKg=20;
 S.importHashes=S.importHashes||{}; // B5: Duplikat-Schutz des CSV-Imports (Hash je Satz)
+S.supersets=S.supersets||{};       // B2: {typeKey:[["Bankdrücken","Langhantelrudern"],...]} — Paare nach NAMEN (überleben Plan-Neuberechnung)
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -8998,12 +8999,25 @@ function openPlanEditor(){
   A.peAddOpen=(k)=>{ peAddKey=(peAddKey===k?null:k); openPlanEditor(); };
   A.peAdd=(k,n)=>{ const arr=peExArr(k); if(arr.some(e=>e.n===n)){toast("Schon im Plan");return;} arr.push(peMk(n)); if(S.exOverrides)delete S.exOverrides[k]; peAddKey=null; try{navigator.vibrate&&navigator.vibrate(12)}catch{} save(); openPlanEditor(); };
   A.peDone=()=>{ peAddKey=null; overlay.innerHTML=""; toast("✓ Dein Plan ist gespeichert"); render(); };
+  // B2: zwei benachbarte Übungen zum Superset verketten / wieder lösen
+  A.peLink=(k,i)=>{ const arr=peExArr(k); const a=arr[i],b=arr[i+1]; if(!a||!b)return;
+    const L=S.supersets[k]=S.supersets[k]||[];
+    if(L.some(p=>p.includes(a.n)||p.includes(b.n))){ toast("Eine der Übungen ist schon verkettet"); return; }
+    L.push([a.n,b.n]); try{navigator.vibrate&&navigator.vibrate(12)}catch{} save(); openPlanEditor(); };
+  A.peUnlink=(k,n)=>{ S.supersets[k]=(S.supersets[k]||[]).filter(p=>!p.includes(n)); save(); openPlanEditor(); };
   const dayHTML=(k)=>{ const tk=parseTypeKey(k), meta=TYPE_META[tk.base]||{}, arr=peExArr(k);
-    return `<div class="card" style="margin-bottom:12px"><p class="ct" style="display:flex;align-items:center;gap:6px">${icon(meta.icon||"dumbbell",14)} ${esc(meta.label||k)}${tk.variant?` · Variante ${tk.variant}`:""}</p>
-      ${arr.map((e,i)=>`<div class="row" style="padding:8px 0;border-top:1px solid var(--hairline)">
-        <span class="sm" style="flex:1;line-height:1.3">${esc(e.n)}<br><span class="xs t2">${esc(e.reps||"")} Reps · ${e.rest}s Pause</span></span>
+    const saved=ssSavedMin(k);
+    return `<div class="card" style="margin-bottom:12px"><p class="ct" style="display:flex;align-items:center;gap:6px">${icon(meta.icon||"dumbbell",14)} ${esc(meta.label||k)}${tk.variant?` · Variante ${tk.variant}`:""}${saved?`<span class="badge volt" style="font-size:8.5px;margin-left:auto">Superset spart ~${saved} Min</span>`:""}</p>
+      ${arr.map((e,i)=>{
+        const paired=ssPairAt(k,arr,i), pairedPrev=i>0&&ssPairAt(k,arr,i-1);
+        return `<div class="row" style="padding:8px 0;border-top:1px solid var(--hairline);${pairedPrev?"border-top-style:dashed;border-top-color:rgba(143,184,220,.5);":""}">
+        <span class="sm" style="flex:1;line-height:1.3">${pairedPrev?`<span class="xs" style="color:var(--hl)">⚡ </span>`:""}${esc(e.n)}${paired?` <span class="xs" style="color:var(--hl)">⚡</span>`:""}<br><span class="xs t2">${esc(e.reps||"")} Reps · ${e.rest}s Pause</span></span>
         <div class="stepper" style="transform:scale(.82)"><button onclick="A.peSets('${k}',${i},-1)" aria-label="weniger">−</button><span class="metric" style="min-width:58px;text-align:center;font-size:13px">${e.sets} Sätze</span><button onclick="A.peSets('${k}',${i},1)" aria-label="mehr">+</button></div>
-        <button class="iconbtn" style="min-width:30px" onclick="A.peRemove('${k}',${i})" aria-label="entfernen">✕</button></div>`).join("")}
+        <button class="iconbtn" style="min-width:30px" onclick="A.peRemove('${k}',${i})" aria-label="entfernen">✕</button></div>
+        ${i<arr.length-1?(paired
+          ?`<button class="btn ghost" style="min-height:30px;font-size:11px;color:var(--hl);border-color:rgba(143,184,220,.4)" onclick="A.peUnlink('${k}','${esc(e.n)}')">⚡ Superset — abwechselnd, eine Pause pro Runde · Entkoppeln</button>`
+          :(!ssPartner(k,e.n)&&!ssPartner(k,arr[i+1].n)?`<button class="btn ghost" style="min-height:26px;font-size:10.5px;color:var(--t3)" onclick="A.peLink('${k}',${i})">⛓ Mit „${esc(arr[i+1].n)}" verketten (Superset)</button>`:""))
+        :""}`;}).join("")}
       <button class="btn ghost" style="min-height:38px;margin-top:8px" onclick="A.peAddOpen('${k}')">+ Übung hinzufügen</button>
       ${peAddKey===k?`<div class="chips" style="margin-top:8px">${(peCandidates(k).map(n=>`<button class="chip" onclick="A.peAdd('${k}','${esc(n)}')">+ ${esc(n)}</button>`).join(""))||'<span class="xs t2">Keine weiteren passenden Übungen</span>'}</div>`:""}
     </div>`; };
@@ -9155,7 +9169,7 @@ function renderTrain(){
     const isSel=isRot?(i===rotSelIdx):(i===focusDayIdx); const isToday=!isRot&&i===dow;
     const head=isRot?TYPES[t].label:`${WD[i]} · ${TYPES[t].label}`;
     return `<button onclick="${isRot?`A.selectRot(${i})`:`A.selectDay(${i})`}" style="text-align:left;background:${isSel?"var(--accent-soft)":"var(--s2)"};border:1px solid ${isSel?"var(--hl)":"var(--border)"};border-radius:14px;padding:11px 13px;cursor:pointer;font-family:inherit;color:var(--t1);width:100%">
-      <div class="row" style="margin-bottom:5px;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;min-width:0"><span style="display:inline-flex;color:var(--hl)">${icon(TYPES[t].icon,15)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${head}</span>${isToday?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">heute</span>':isNext?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">nächste</span>':""}</span><span class="xs t3" style="flex-shrink:0">${names.length} Üb.${TYPES[t].est?" · "+TYPES[t].est+" Min":""}</span></div>
+      <div class="row" style="margin-bottom:5px;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;min-width:0"><span style="display:inline-flex;color:var(--hl)">${icon(TYPES[t].icon,15)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${head}</span>${isToday?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">heute</span>':isNext?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">nächste</span>':""}</span><span class="xs t3" style="flex-shrink:0">${names.length} Üb.${TYPES[t].est?" · "+Math.max(15,TYPES[t].est-ssSavedMin(t))+" Min":""}</span></div>
       <p class="xs t2" style="line-height:1.5;margin:0">${names.slice(0,5).join(" · ")}${names.length>5?" …":""}</p>
     </button>`;};
   A.weekAll=()=>{ window._twa=!window._twa; renderTrain(); };
@@ -9467,6 +9481,50 @@ function plateHint(name,w){
   if(b.empty||!b.plates.length)return "";
   return `Stange ${b.bar} kg + je Seite: ${b.plates.map(x=>String(x).replace(".",",")).join(" · ")}${b.rest?" (Rest "+b.rest.toFixed(1).replace(".",",")+" kg)":""}`;
 }
+/* ---------- SUPERSETS (B2) ----------
+   Paare werden pro Einheit als Übungs-NAMEN gespeichert (S.supersets[typeKey]) —
+   so überleben sie Plan-Neuberechnung und Umsortieren. Der Player führt
+   alternierend (A1→B1 ohne Pause, EINE Pause pro Runde); der Wochen-Korridor
+   zählt jede Teilübung ganz normal weiter. */
+function ssPartner(type,name){
+  const L=(S.supersets&&S.supersets[type])||[];
+  const p=L.find(x=>x[0]===name||x[1]===name);
+  return p?(p[0]===name?p[1]:p[0]):null;
+}
+function ssPairAt(type,arr,i){ // sind Position i und i+1 als Paar verkettet?
+  const a=arr[i],b=arr[i+1]; if(!a||!b)return false;
+  return ssPartner(type,a.n)===b.n;
+}
+function ssSavedMin(type){ // grobe Zeitersparnis: eingesparte Pausen der Paare
+  const L=(S.supersets&&S.supersets[type])||[]; if(!L.length)return 0;
+  let sec=0;
+  try{ const day=TYPES[type];
+    L.forEach(([a,b])=>{ const ea=day.ex.find(e=>e[0]===a), eb=day.ex.find(e=>e[0]===b);
+      if(ea&&eb)sec+=(parseInt(ea[3],10)||90)*Math.min(parseInt(ea[1],10)||3,parseInt(eb[1],10)||3); });
+  }catch{}
+  return Math.round(sec/60);
+}
+/* Zeitknappheit (Session ≤ 45 Min laut Assessment) → einmalig sinnvolle
+   Antagonisten-Paare vorschlagen. Nur benachbarte Übungen, nie Nutzer-Paare
+   überschreiben; jederzeit im Plan-Editor entkoppelbar. */
+function autoSupersets(){
+  try{
+    if(S._ssAuto||!S.profile||!S.profile.a||!(S.profile.a.len<=45))return;
+    S._ssAuto=true;
+    const ANTA=[["chest","lats"],["lats","chest"],["biceps","triceps"],["triceps","biceps"],["quads","hams"],["hams","quads"]];
+    const prim=(n)=>((EX_ACT[n]||{}).p||[])[0];
+    for(const k of Object.keys(TYPES||{})){
+      const day=TYPES[k]; if(!day||!day.ex||(S.supersets[k]||[]).length)continue;
+      for(let i=0;i<day.ex.length-1;i++){
+        const a=day.ex[i][0], b=day.ex[i+1][0];
+        if(ANTA.some(([x,y])=>prim(a)===x&&prim(b)===y)){
+          (S.supersets[k]=S.supersets[k]||[]).push([a,b]); break; // max. 1 Paar je Einheit
+        }
+      }
+    }
+    save();
+  }catch{}
+}
 function renderPlayer(){
   const type=S.playerType||todayType();
   if(type==="rest"){S.tab="train";save();render();return;}
@@ -9563,6 +9621,37 @@ function renderPlayer(){
     const ll=document.getElementById("logged-list"); if(ll){ll.innerHTML=loggedRows();ll.style.display="block";}
     A.updateSessRing();
     A.refreshCta(); playerRestTick();
+    // ===== B2 SUPERSET: alternierend A→B ohne Pause, EINE Pause pro Runde =====
+    const ssP=ssPartner(type,name), ssPi=ssP?day.ex.findIndex(e=>e[0]===ssP):-1;
+    if(ssPi>=0){
+      const myC=S.logged.filter(l=>l.n===name).length;
+      const pT=weekSets(ssP,day.ex[ssPi][1]);
+      const pC=S.logged.filter(l=>l.n===ssP).length;
+      clearTimeout(window._adv); window._adv=null;
+      if(pC<pT&&pC<myC){
+        // Partner ist dran → Pause unterdrücken und rüberwechseln
+        S.restEnd=null; save(); const rs=document.getElementById("restslot"); if(rs)rs.innerHTML="";
+        window._adv=setTimeout(()=>{ window._adv=null; pw=null; toast("⚡ "+ssP); S.exIdx=ssPi; save(); renderPlayer(); },700);
+        return;
+      }
+      // Runde komplett → Pause läuft; für die nächste Runde zurück zum ersten Paar-Partner
+      const firstIdx=Math.min(S.exIdx,ssPi), firstName=day.ex[firstIdx][0];
+      const firstT=weekSets(firstName,day.ex[firstIdx][1]);
+      const firstC=S.logged.filter(l=>l.n===firstName).length;
+      if(firstC<firstT){
+        if(S.exIdx!==firstIdx)window._adv=setTimeout(()=>{ window._adv=null; pw=null; S.exIdx=firstIdx; save(); renderPlayer(); },900);
+        return;
+      }
+      if(myC>=targetSets&&pC>=pT){ // Paar komplett → hinter das Paar springen
+        const nextIdx=Math.max(S.exIdx,ssPi)+1;
+        if(nextIdx<day.ex.length){
+          window._adv=setTimeout(()=>{ window._adv=null; toast("→ "+day.ex[nextIdx][0]); pw=null; S.restEnd=null; clearTimeout(timerInt); S.exIdx=nextIdx; save(); renderPlayer(); },1800);
+          const cancel=()=>{ if(window._adv){clearTimeout(window._adv);window._adv=null;} removeEventListener("pointerdown",cancel,true); };
+          setTimeout(()=>addEventListener("pointerdown",cancel,true),80);
+        }
+      }
+      return;
+    }
     // AUTO-ADVANCE: Uebung voll geloggt -> nach 1,8 s automatisch weiter (jede Beruehrung bricht ab)
     if(cnt>=targetSets && !isLast){
       clearTimeout(window._adv);
@@ -9718,6 +9807,11 @@ function renderPlayer(){
       <div class="row mb4"><h2 style="font-size:19px">${name}</h2>
         <div style="display:flex;gap:4px">${day.main&&day.main[S.exIdx]?`<button class="iconbtn" onclick="A.swapMenu('${type}',${S.exIdx})" aria-label="Übung tauschen">${icon("undo",15)}</button>`:""}<button class="iconbtn" onclick="A.exInfo('${name}')" aria-label="Info">ⓘ</button></div></div>
       ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}</p>`:"";})()}
+      ${(()=>{ const p=ssPartner(type,name); if(!p||!day.ex.some(e=>e[0]===p))return "";
+        const myC=S.logged.filter(l=>l.n===name).length, pC=S.logged.filter(l=>l.n===p).length;
+        return `<p class="mb8" style="display:flex;align-items:center;gap:6px;background:var(--hl-soft,rgba(143,184,220,.12));border:1px solid rgba(143,184,220,.35);border-radius:10px;padding:7px 10px">
+          <span class="xs" style="color:var(--hl);font-weight:600">⚡ Superset mit ${esc(p)}</span>
+          <span class="xs t2" style="margin-left:auto">Runde ${Math.min(myC,pC)+1} · Pause erst nach der Runde</span></p>`; })()}
       ${rec?`<p class="sm volt-txt metric mb8">Letztes Mal: ${fmtKg(rec.w)} × ${rec.reps} — schon vorausgefüllt
         <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
         :(startEst>0?`<p class="sm volt-txt metric mb8">Vorschlag: ${fmtKg(startEst)} × 8 <span class="xs t2" style="font-family:var(--font-ui)">— auf ${fmtKg((S.profile&&S.profile.a&&S.profile.a.weight)||80)} Körpergewicht geschätzt, einfach anpassen</span></p>`
@@ -11589,6 +11683,7 @@ function regenerateUserPlan(){
 function migrateState(){
   try{
     if(S.checkinDate && S.checkinDate!==todayKey()){ S.checkin=null; S.checkinDate=null; }
+    autoSupersets(); // B2: bei Zeitknappheit (≤45 Min) einmalig Antagonisten-Paare vorschlagen
     // Neu berechnen, wenn Engine veraltet ODER der gespeicherte Plan inhaltlich kaputt ist.
     if(S.profile && ((S.planVersion||0) < ENGINE_VERSION || !planIsHealthy())){
       regenerateUserPlan(); save();
