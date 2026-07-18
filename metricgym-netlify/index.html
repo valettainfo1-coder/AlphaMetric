@@ -6020,17 +6020,21 @@ function legalDoc(type){
         • Nutzungsdaten der App (rein lokal/zur Funktion).</p>
       <p class="mt8"><b style="color:var(--t1)">3. Zwecke & Rechtsgrundlagen</b><br>
         Vertragserfüllung/Funktion der App (Art. 6 Abs. 1 b). Verarbeitung der Gesundheitsdaten ausschließlich auf Basis deiner <b style="color:var(--t1)">ausdrücklichen Einwilligung</b> (Art. 9 Abs. 2 a) — jederzeit widerrufbar.</p>
-      <p class="mt8"><b style="color:var(--t1)">4. Speicherung & Auftragsverarbeiter</b><br>
-        Daten liegen lokal auf deinem Gerät und — bei aktiviertem Konto — bei <b style="color:var(--t1)">Supabase</b> (Auftragsverarbeiter; Region/Serverstandort: ${lf('supabaseRegion')}). Mit Supabase ist ein AV-Vertrag abzuschließen (DPA).</p>
-      <p class="mt8"><b style="color:var(--t1)">5. KI-Funktion & Drittlandübermittlung</b><br>
-        Nur wenn du die KI nutzt, werden die jeweiligen Eingaben + Trainings-/Ernährungskontext an <b style="color:var(--t1)">Groq Inc. (USA)</b> übermittelt. Übermittlung in ein Drittland auf Grundlage deiner Einwilligung (Art. 49 Abs. 1 a) bzw. geeigneter Garantien. Ohne KI erfolgt keine solche Übermittlung.</p>
-      <p class="mt8"><b style="color:var(--t1)">6. Speicherdauer</b><br>Bis zur Löschung deines Kontos bzw. Widerruf. Lokale Daten löschst du jederzeit selbst.</p>
+      <p class="mt8"><b style="color:var(--t1)">4. Empfänger & Auftragsverarbeiter</b><br>
+        • <b style="color:var(--t1)">Supabase</b> (Datenbank/Login; Region: ${lf('supabaseRegion')}; AV-Vertrag/DPA erforderlich) — nur bei Cloud-Konto.<br>
+        • <b style="color:var(--t1)">Netlify</b> (Hosting; technische Server-Logs mit IP-Adressen, kurzfristig).<br>
+        • <b style="color:var(--t1)">Open Food Facts</b> (Lebensmittel-Suche/Barcode): es werden NUR Produkt-Suchbegriffe bzw. Barcodes übertragen — keine Konto- oder Gesundheitsdaten.<br>
+        • Fortschrittsfotos verlassen dein Gerät <b style="color:var(--t1)">nie</b> (nur lokale Speicherung).</p>
+      <p class="mt8"><b style="color:var(--t1)">5. KI-Coach & Drittlandübermittlung</b><br>
+        Nur wenn du den KI-Coach aktiv nutzt, werden deine Chat-Eingaben plus ein minimierter Trainings-/Ernährungskontext (Alter, Ziele, Kennzahlen — <b style="color:var(--t1)">nie Name oder E-Mail</b>) über unseren Server-Proxy an KI-Anbieter übermittelt: <b style="color:var(--t1)">Google (Gemini)</b>, <b style="color:var(--t1)">OpenRouter</b> und/oder <b style="color:var(--t1)">Groq</b> (jeweils ggf. USA). Diese Inhalte können Gesundheitsdaten enthalten. Grundlage: deine ausdrückliche Einwilligung (Art. 9 Abs. 2 a, Art. 49 Abs. 1 a DSGVO). Ohne KI-Nutzung erfolgt keine solche Übermittlung.</p>
+      <p class="mt8"><b style="color:var(--t1)">6. Speicherdauer</b><br>Konto- und Trainingsdaten: bis zur Löschung deines Kontos bzw. deinem Widerruf. Einwilligungs-Protokoll: bis zur Konto-Löschung (Nachweispflicht Art. 7). KI-Nutzungszähler: tagesbezogen. Server-Logs des Hostings: kurzfristig, technisch bedingt. Lokale Daten löschst du jederzeit selbst.</p>
       <p class="mt8"><b style="color:var(--t1)">7. Deine Rechte</b><br>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch, Widerruf der Einwilligung sowie Beschwerde bei einer Aufsichtsbehörde (Art. 15–21, 77 DSGVO) — direkt hier ausführbar:</p>
       <div class="grid2 mt8" style="gap:8px">
         <button class="btn" style="min-height:42px;font-size:12.5px" onclick="A.exportData()">Daten exportieren (Art. 20)</button>
         <button class="btn" style="min-height:42px;font-size:12.5px;border-color:rgba(255,77,77,.35);color:var(--danger)" onclick="A.closeModal();A.wipe()">Konto löschen (Art. 17)</button>
       </div>
       <p class="xs mt8" style="line-height:1.5">Widerruf der Art.-9-Einwilligung: Profil → Daten &amp; Konto → „Einwilligung Gesundheitsdaten widerrufen" — so einfach wie die Erteilung.</p>
+      <p class="xs mt8" style="line-height:1.5">Zuständige Aufsichtsbehörde (Art. 77 DSGVO): ${lf('authority')}.</p>
       <p class="mt8"><b style="color:var(--t1)">8. Cookies/Tracking</b><br>Kein Tracking, keine Werbe-Cookies. Es wird nur technisch notwendiger lokaler Speicher (localStorage) zur Funktion genutzt.</p></div>`,
     terms:`<p class="ct">Nutzungsbedingungen (AGB)</p><div class="sm t2" style="line-height:1.65">
       <p><b style="color:var(--t1)">1. Leistung</b><br>METRICGYM stellt Trainings-/Ernährungsempfehlungen auf Basis deiner Angaben bereit. Es handelt sich um allgemeine Fitness-Information, <b style="color:var(--t1)">keine medizinische, diätetische oder therapeutische Beratung</b>.</p>

@@ -275,6 +275,18 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - Die Datenschutzerklärung verlinkt Export und Löschung jetzt **direkt als
   Buttons** im Abschnitt „Deine Rechte".
 
+### 19. Verarbeitungs-Dokumentation (C5)
+- Neuer Ordner `compliance/` (versioniert): **VVT.md** (7 Verarbeitungs-
+  tätigkeiten inkl. Art.-9-Kennzeichnung), **TOMS.md** (RLS, TLS,
+  Datenminimierung, Löschkonzept), **AVV-STATUS.md** (DPA-Checkliste je
+  Auftragsverarbeiter — KI-Anbieter explizit, inkl. verifizierter
+  PII-Minimierung in `aiContext()`), **BREACH-SOP.md** (72-h-Meldeweg
+  Art. 33 mit Vorlage).
+- Datenschutzerklärung auf die Realität aktualisiert: alle echten
+  Empfänger (Supabase, Netlify, Google/OpenRouter/Groq via Proxy, Open
+  Food Facts nur mit Produktanfragen), Foto-lokal-Garantie, Speicherdauern,
+  zuständige Aufsichtsbehörde (config-Feld `legal.authority`, [BETREIBER]).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker

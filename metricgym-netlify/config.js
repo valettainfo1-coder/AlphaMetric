@@ -56,6 +56,7 @@ window.METRICGYM_CONFIG = {
     vatId: "",           // USt-IdNr. (falls vorhanden)
     responsible: "",     // Verantwortlich i.S.d. § 18 Abs. 2 MStV (meist = Name)
     supabaseRegion: "",  // Serverstandort/Region des Supabase-Projekts (z. B. „EU (Frankfurt)")
-    termsDate: ""        // Stand der AGB (z. B. „Juni 2026")
+    termsDate: "",       // Stand der AGB (z. B. „Juni 2026")
+    authority: ""        // zuständige Landesdatenschutzbehörde (z. B. „LDI NRW, www.ldi.nrw.de")
   }
 };
