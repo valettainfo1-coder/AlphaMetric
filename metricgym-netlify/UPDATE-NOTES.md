@@ -213,6 +213,20 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   über den Cloud-Zustand.
 - Löschen jederzeit im selben Sheet — die geloggte Historie bleibt erhalten.
 
+### 15. „Deine Woche im Beweis" — Nutrition-Insights (A5)
+- Neue Wochenkarte im Ernährungs-Tab mit vier Beweis-Zeilen aus den echten
+  letzten 7 Tagen: **Protein-Konstanz** (Tages-Punkte, „5/6 Tage ≥ Ziel"),
+  **Wochen-Kalorienbilanz** (Trainingstage zählen mit dem Trainings-Ziel,
+  Wearable-Tage mit dem echten Verbrauch — Eat-back; Bewertung passend zum
+  Ziel, nie moralisierend), **Ballaststoff-Schnitt** (nur aus echten
+  Produktdaten via Barcode/Open Food Facts — Ballaststoffe laufen jetzt
+  durchs Logging mit) und **dein ehrlichster Tag** (Logging-Konsistenz als
+  stärkster Erfolgs-Prädiktor).
+- Jede Zeile nennt ihre Datenbasis („Datenbasis: 6 geloggte Tage der
+  letzten 7") und verlinkt ins Studien-Erklärsystem (neue Einträge:
+  Wochen-Bilanz/Helms 2014, Ballaststoffe/DGE 30 g, Selbst-Monitoring/
+  Burke 2011). Unter 3 geloggten Tagen: ehrlicher Empty-State.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker

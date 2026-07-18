@@ -4265,7 +4265,7 @@ function phon(s){
 }
 /* Eigene Lebensmittel (A2) als FOODS-kompatible Zeile [Name, Basis-g, kcal, P, C, F].
    `_key` markiert die Herkunft für Favoriten-Zähler & Quell-Label. */
-function customRow(cf){ const r=[cf.name,cf.per||100,cf.kcal,cf.p||0,cf.c||0,cf.f||0]; r._key="c:"+cf.id; r._servG=cf.servG||null; return r; }
+function customRow(cf){ const r=[cf.name,cf.per||100,cf.kcal,cf.p||0,cf.c||0,cf.f||0]; r._key="c:"+cf.id; r._servG=cf.servG||null; r._fiber=cf.fiber||0; return r; }
 /* Suchreihenfolge überall (A1): eigene Lebensmittel VOR der lokalen Datenbank.
    (Open Food Facts ist async und hängt sich in der UI dahinter — nur online.) */
 function foodPool(){ return (S.customFoods||[]).map(customRow).concat(FOODS); }
@@ -4423,7 +4423,7 @@ function upsertOffFood(pr){
 function offRow(pr){
   pr.dispName=pr.dispName||(pr.name+(pr.brand?" ("+pr.brand+")":"")).slice(0,60);
   const r=[pr.dispName,pr.per||100,pr.kcal,pr.p||0,pr.c||0,pr.f||0];
-  r._off=pr; r._servG=pr.servG||null; return r;
+  r._off=pr; r._servG=pr.servG||null; r._fiber=pr.fiber||0; return r;
 }
 function nlogToday(){
   if(!S.nutritionLog[todayKey()])S.nutritionLog[todayKey()]={meals:[],water:0};
@@ -4434,6 +4434,7 @@ function addFood(food,gram){
   const mult=gram?gram/food[1]:1;
   const entry={n:food[0]+(gram&&gram!==food[1]?` (${gram} g)`:""),g:gram||food[1],
     k:Math.round(food[2]*mult),p:Math.round(food[3]*mult*10)/10,c:Math.round(food[4]*mult*10)/10,f:Math.round(food[5]*mult*10)/10};
+  if(food._fiber)entry.fb=Math.round(food._fiber*mult*10)/10; // Ballaststoffe (A5) — nur wo echte Daten existieren
   nlogToday().meals.push(entry); save();
   return entry;
 }
@@ -4986,6 +4987,9 @@ const EXPLAIN={
   kcalTarget:{t:"Kalorienziel",b:"Dein persönliches Tagesziel, abgeleitet aus deinem Verbrauch und deinen Zielen — mit Sicherheitsuntergrenze, nie unter dem Grundumsatz. Bei Aufbau + Abbau gleichzeitig hält dich die Engine nah am Verbrauch (±50 kcal).<br><br><span class='xs t2'>(Fachbegriff: Recomp-Protokoll, Helms et al., 2014)</span>"},
   protein:{t:"Proteinziel",b:"So viel Eiweiß braucht dein Körper täglich, um Muskeln aufzubauen und im Defizit zu schützen: 2,2 g pro kg Magermasse (bzw. 1,8 g/kg, wenn dein Körperfett unbekannt ist).<br><br><span class='xs t2'>(Fachbegriff: Muskelproteinsynthese, Morton et al., 2018)</span>"},
   status:{t:"Status-Score",b:"Eine Zahl, die sagt, wie belastbar du heute bist — aus Schlaf (30 %), Energie (25 %), Muskelkater (25 %) und Stress (20 %). Je mehr Tage du checkst, desto besser erkennt die Engine deine Erholungsmuster.<br><br><span class='xs t2'>(Fachbegriff: Readiness-Score)</span>"},
+  weekBalance:{t:"Wochen-Kalorienbilanz",b:"Die Woche zählt, nicht der Einzeltag: Deine 7-Tage-Bilanz vergleicht alles Gegessene mit der Summe deiner Tagesziele — Trainingstage zählen mit dem höheren Trainings-Ziel, Tage mit Wearable-Daten mit deinem echten Verbrauch (Eat-back). Ein Ausreißer-Tag ruiniert nichts, solange die Woche stimmt.<br><br><span class='xs t2'>(Fachbegriff: flexible Diätführung — Helms et al., 2014)</span>"},
+  fiber:{t:"Ballaststoffe",b:"Ziel: rund 30 g pro Tag (DGE-Referenz). Ballaststoffe sättigen pro Kalorie am stärksten, stabilisieren den Blutzucker und füttern dein Mikrobiom. Die Engine rechnet mit den echten Werten aus der Produkt-Datenbank — je mehr du per Barcode oder Online-Suche loggst, desto genauer der Schnitt.<br><br><span class='xs t2'>(Quelle: DGE-Referenzwert 30 g/Tag; Slavin, 2005)</span>"},
+  honestDay:{t:"Dein ehrlichster Tag",b:"Der Tag mit den meisten geloggten Einträgen. Warum das zählt: Konsequentes Selbst-Protokollieren ist in Studien der stärkste einzelne Prädiktor für erfolgreiche Gewichtsveränderung — noch vor der Diätform. Dein ehrlichster Tag zeigt, wie dein bestes Logging aussieht.<br><br><span class='xs t2'>(Quelle: Burke et al., 2011 — Self-Monitoring in Weight Loss)</span>"},
   trajectory:{t:"Deine Kraft-Prognose",b:"Die Linie zeigt, wohin sich deine Kraft entwickelt, wenn du so weitermachst — eine vorsichtig gedämpfte Trendlinie deiner echten Trainingsdaten (max. +15 % in 12 Wochen). Jede Session macht die Prognose treffsicherer; ab ~12 Sessions wird sie deutlich stabiler.<br><br><span class='xs t2'>(Fachbegriff: e1RM-Forecast — geschätztes 1-Wiederholungs-Maximum)</span>"},
   satiety:{t:"Sättigungs-Check",b:"Zeigt dir, wie lange eine Mahlzeit satt macht: viel Eiweiß bei moderater Energiedichte hält lange vor — energiedichte, eiweißarme Mahlzeiten machen schnell wieder hungrig.<br><br><span class='xs t2'>(Fachbegriff: Sättigungsindex, Holt et al., 1995)</span>"},
   micro:{t:"Bekommt dein Körper, was er braucht?",b:"Eine Richtungsanzeige für Vitamine & Mineralstoffe (Vitamin D, B12, Eisen, Magnesium) — geschätzt nur aus Lebensmitteln, die du wirklich geloggt hast. Kein vollständiges Tracking, kein Raten.<br><br><span class='xs t2'>(Fachbegriff: Mikronährstoffe, Referenzwerte der DGE)</span>"},
@@ -10687,6 +10691,62 @@ function restSnack(){
   if(!best) return null;
   return {name:best.name,grams:best.grams,addP:best.addP,addK:best.addK,gapP,remK,fits:best.fits};
 }
+/* ===== NUTRITION-INSIGHTS (A5): die Woche im Beweis =====
+   Vier Karten-Zeilen aus den ECHTEN letzten 7 Tagen: Protein-Konstanz,
+   Wochen-Kalorienbilanz (Trainings-Ziel an Trainingstagen, Wearable-Eat-back),
+   Ballaststoff-Schnitt (nur echte Produktdaten) und der ehrlichste Tag.
+   Jede Zeile nennt die Datenbasis; unter 3 Tagen: ehrlicher Empty-State. */
+function nutritionWeekInsights(){
+  const p=S.profile; if(!p)return "";
+  const days=[];
+  for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=dkey(d);
+    const l=S.nutritionLog[k]; if(!(l&&l.meals&&l.meals.length))continue;
+    const sum=l.meals.reduce((s,m)=>({k:s.k+(m.k||0),p:s.p+(m.p||0),fb:s.fb+(m.fb||0),n:s.n+1}),{k:0,p:0,fb:0,n:0});
+    const trained=S.trainingHistory.some(t=>t.date===k&&t.sets>0);
+    const wear=S.wearActive[k];
+    const tgK=wear!=null?Math.round(p.tg.rest.kcal+wear):(trained?p.tg.train.kcal:p.tg.rest.kcal);
+    days.push({k,d:new Date(k+"T12:00:00"),sum,tgK,wear:wear!=null,trained});
+  }
+  const base=(extra)=>`<p class="xs t3" style="margin-top:10px">Datenbasis: ${days.length} geloggte ${days.length===1?"Tag":"Tage"} der letzten 7${extra||""}.</p>`;
+  if(days.length<3)
+    return `<div class="card"><p class="ct">Deine Woche im Beweis</p>
+      <p class="sm t2" style="line-height:1.6">Noch nicht genug Daten — ab <b style="color:var(--t1)">3 geloggten Tagen</b> zeigt die Engine hier Protein-Konstanz, Wochen-Kalorienbilanz, Ballaststoff-Schnitt und deinen ehrlichsten Tag.</p>
+      ${days.length?base():""}</div>`;
+  const tgP=Math.round(p.tg.rest.p);
+  const okP=(x)=>x.sum.p>=tgP*0.95;
+  const pDays=days.filter(okP).length;
+  const kAct=days.reduce((s,x)=>s+x.sum.k,0), kTg=days.reduce((s,x)=>s+x.tgK,0), diff=Math.round(kAct-kTg);
+  const goalLoss=!!(p.a&&p.a.goals&&p.a.goals.includes("fat_loss"));
+  const onPoint=Math.abs(diff)<=days.length*60;
+  const fbDays=days.filter(x=>x.sum.fb>0);
+  const fbAvg=fbDays.length?Math.round(fbDays.reduce((s,x)=>s+x.sum.fb,0)/fbDays.length):0;
+  const honest=days.slice().sort((a,b)=>b.sum.n-a.sum.n||b.sum.k-a.sum.k)[0];
+  const WDs=["So","Mo","Di","Mi","Do","Fr","Sa"];
+  const dots=days.map(x=>`<span style="display:inline-block;width:24px;text-align:center"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${okP(x)?"var(--hl)":"transparent"};border:1.5px solid ${okP(x)?"var(--hl)":"var(--border)"}"></span><br><span class="t3" style="font-size:8.5px">${WDs[x.d.getDay()]}</span></span>`).join("");
+  const row=(inner)=>`<div style="padding:9px 0;border-top:1px solid var(--hairline)">${inner}</div>`;
+  return `<div class="card"><p class="ct">Deine Woche im Beweis</p>
+    ${row(`<div class="row"><span class="sm">Protein-Konstanz ${infoBtn("protein")}</span>
+      <span class="metric sm" style="color:${pDays>=days.length-1?"var(--hl)":"var(--t1)"}">${pDays} / ${days.length} Tage ≥ Ziel</span></div>
+      <div style="margin-top:6px">${dots}</div>`)}
+    ${row(`<div class="row"><span class="sm">Wochen-Kalorienbilanz ${infoBtn("weekBalance")}</span>
+      <span class="metric sm">${diff>0?"+":""}${nfi.format(diff)} kcal</span></div>
+      <p class="xs t2" style="margin-top:3px;line-height:1.5">${onPoint
+        ?"Fast punktgenau auf dem Wochenziel — genau so sieht planbarer Fortschritt aus."
+        :diff<0
+          ?`Unter dem Wochenziel${goalLoss?" — passt zu deinem Abnehm-Ziel.":" — für den Aufbau darfst du mutiger essen."}`
+          :`Über dem Wochenziel${goalLoss?" — kein Drama: die Woche zählt, nicht der Einzeltag. Morgen normal weiter.":" — passt zu deinem Aufbau-Ziel."}`}
+        ${days.some(x=>x.wear)?" Wearable-Tage sind mit deinem echten Verbrauch gerechnet (Eat-back).":""}</p>`)}
+    ${row(fbDays.length
+      ?`<div class="row"><span class="sm">Ballaststoffe ${infoBtn("fiber")}</span>
+        <span class="metric sm" style="color:${fbAvg>=30?"var(--hl)":"var(--t1)"}">Ø ${fbAvg} g / Tag</span></div>
+        <p class="xs t2" style="margin-top:3px">Referenz: 30 g (DGE) — aus ${fbDays.length} ${fbDays.length===1?"Tag":"Tagen"} mit Produktdaten.</p>`
+      :`<div class="row"><span class="sm">Ballaststoffe ${infoBtn("fiber")}</span><span class="xs t2">noch keine Daten</span></div>
+        <p class="xs t2" style="margin-top:3px">Logge per Barcode oder Online-Suche — dann rechnet die Engine deinen Ballaststoff-Schnitt mit echten Produktwerten.</p>`)}
+    ${row(`<div class="row"><span class="sm">Dein ehrlichster Tag ${infoBtn("honestDay")}</span>
+      <span class="metric sm">${WDs[honest.d.getDay()]} · ${honest.sum.n} ${honest.sum.n===1?"Eintrag":"Einträge"}</span></div>
+      <p class="xs t2" style="margin-top:3px">${nfi.format(honest.sum.k)} kcal · ${nfi.format(Math.round(honest.sum.p))} g Protein — so sieht dein bestes Logging aus.</p>`)}
+    ${base()}</div>`;
+}
 function renderNutrition(){
   const p=S.profile; let tg=p.tg[dayType==="train"?"train":"rest"];
   // Wearable: liegt für heute ein echter Aktiv-Verbrauch vor, ersetzt er die Schätzung
@@ -10992,6 +11052,8 @@ function renderNutrition(){
       ${macroBattery("Fett",sum.f,tg.f,"var(--warn)",false)}
       <p class="xs t2 mt4">Die Marke zeigt 90 % deines Ziels. Protein zuerst — der größte Hebel für Muskelaufbau und Sättigung.</p>
     </div>
+
+    ${nutritionWeekInsights()}
 
     ${(()=>{const r=recipeAlchemist(); if(!r)return "";
       return `<div class="card" style="background:linear-gradient(160deg,rgba(143,184,220,.12),transparent);border-color:rgba(143,184,220,.4)">
