@@ -2425,6 +2425,8 @@ S.consent=S.consent||null; // DSGVO-Einwilligung (AGB/Datenschutz + Gesundheitsd
 S.customFoods=S.customFoods||[];     // [{id,name,per:100,kcal,p,c,f,fiber,barcode,servG,src,createdAt}]
 S.mealTemplates=S.mealTemplates||[]; // [{id,name,items:[{n,g,k,p,c,f}],createdAt}]
 S.foodFavs=S.foodFavs||{};           // {foodKey:Anzahl} — foodKey: "f:<FOODS-Name>" | "c:<customFood-Id>"
+// Geräte-Einstellungen (B4): Stangen-Gewicht für den Scheiben-Rechner
+S.settings=S.settings||{}; if(!(S.settings.barKg>=10))S.settings.barKg=20;
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -9060,6 +9062,29 @@ function renderTrain(){
 // PLAYER
 // =====================================================================
 let pw=null,pr=null,prpe=8;
+// B4: Web-Audio-Beep fürs Pausen-Ende. Der Kontext wird bei der ersten
+// Nutzer-Geste (Satz loggen) angelegt/geweckt — Autoplay-Regeln der Browser.
+let _audioCtx=null;
+function primeAudio(){ try{ _audioCtx=_audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(_audioCtx.state==="suspended")_audioCtx.resume(); }catch{} }
+function restBeep(){ try{
+  if(!_audioCtx)return; if(_audioCtx.state==="suspended")_audioCtx.resume();
+  const t0=_audioCtx.currentTime;
+  [0,0.22].forEach((off,i)=>{ const o=_audioCtx.createOscillator(), g=_audioCtx.createGain();
+    o.type="sine"; o.frequency.value=i?1174:880; // A5 → D6: freundliches "fertig"-Intervall
+    g.gain.setValueAtTime(0.0001,t0+off);
+    g.gain.exponentialRampToValueAtTime(0.16,t0+off+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+off+0.18);
+    o.connect(g); g.connect(_audioCtx.destination); o.start(t0+off); o.stop(t0+off+0.22); });
+}catch{} }
+// Nächster Satz für die System-Benachrichtigung ("Pause vorbei — Satz 3 · Bankdrücken")
+function _restNextSet(){ try{
+  const day=TYPES[S.playerType||todayType()]; const ex=day&&day.ex&&day.ex[S.exIdx]; if(!ex)return "";
+  const n=ex[0], c=S.logged.filter(l=>l.n===n).length;
+  return `Satz ${c+1} · ${n}`;
+}catch{ return ""; } }
+// Hintergrund-Resync (B4): S.restEnd ist ein absoluter Zeitstempel in localStorage —
+// beim Zurückwechseln in die App rechnet der Tick sofort mit der echten Restzeit weiter.
+document.addEventListener("visibilitychange",()=>{ try{ if(!document.hidden&&S.restEnd&&document.getElementById("restslot"))playerRestTick(); }catch{} });
 let bulkMode=false; // Schnell-Eintrag: alle Sätze einer Übung in EINEM Zug (bleibt über Übungen hinweg an)
 let cardioMin=null; // Dauer der aktuellen Cardio-Einheit (Minuten) — Cardio ist NICHT satz-/gewichtsbasiert
 let pRestTotal=0; // Pausenlänge der aktuellen Übung (für den In-Place-Timer)
@@ -9075,8 +9100,9 @@ function playerRestTick(){
     // Pausen-Ende: einmalig Vibration + (falls App im Hintergrund) System-Benachrichtigung
     if(window._restAlerted!==S.restEnd){ window._restAlerted=S.restEnd;
       try{navigator.vibrate&&navigator.vibrate([0,90,70,90]);}catch{}
+      restBeep();
       try{ if(document.hidden&&"Notification" in window&&Notification.permission==="granted")
-        new Notification("Pause vorbei 💪",{body:"Zeit für den nächsten Satz",tag:"metricgym-rest"}); }catch{}
+        new Notification("Pause vorbei 💪",{body:_restNextSet()||"Zeit für den nächsten Satz",tag:"metricgym-rest"}); }catch{}
     }
     slot.innerHTML=`<div class="card row"><p class="metric volt-txt pulse" style="font-size:28px;font-weight:600">0:00</p>
       <button class="btn ghost" style="width:auto" onclick="A.skipRest()">OK</button></div>`;
@@ -9205,11 +9231,20 @@ function sessRingHTML(done,total){
   </div>`;
 }
 /* Scheiben-Rechner: was pro SEITE auf die 20-kg-Stange (nur Langhantel-Uebungen). */
+/* Scheiben-Beladung (B4): Zerlegung pro SEITE für das eingestellte Stangen-
+   Gewicht (S.settings.barKg — 20/15/10 kg im Scheiben-Rechner umstellbar). */
+function plateBreak(w,bar){
+  bar=bar||(S.settings&&S.settings.barKg)||20;
+  if(!(w>bar))return {bar,plates:[],rest:0,empty:true};
+  let per=(w-bar)/2; const plates=[];
+  for(const pl of [25,20,15,10,5,2.5,1.25]){ while(per>=pl-0.01){plates.push(pl);per-=pl;} }
+  return {bar,plates,rest:per>0.01?per:0};
+}
 function plateHint(name,w){
-  const d=EXDB[name]||{}; if(d.eq!=="barbell"||!(w>20))return "";
-  let per=(w-20)/2, out=[]; for(const pl of [25,20,15,10,5,2.5,1.25]){ while(per>=pl-0.01){out.push(pl);per-=pl;} }
-  if(!out.length)return "";
-  return `Stange 20 kg + je Seite: ${out.map(x=>String(x).replace(".",",")).join(" · ")}${per>0.01?" (Rest "+per.toFixed(1).replace(".",",")+" kg)":""}`;
+  const d=EXDB[name]||{}; if(d.eq!=="barbell")return "";
+  const b=plateBreak(w);
+  if(b.empty||!b.plates.length)return "";
+  return `Stange ${b.bar} kg + je Seite: ${b.plates.map(x=>String(x).replace(".",",")).join(" · ")}${b.rest?" (Rest "+b.rest.toFixed(1).replace(".",",")+" kg)":""}`;
 }
 function renderPlayer(){
   const type=S.playerType||todayType();
@@ -9299,6 +9334,7 @@ function renderPlayer(){
     if(!S.notifAsked&&rest>0&&"Notification" in window&&Notification.permission==="default"){ S.notifAsked=true; try{Notification.requestPermission();}catch{} }
     const sessFull=S.logged.length>=sessTotal&&sessTotal>0;
     try{navigator.vibrate&&navigator.vibrate(sessFull?[0,30,60,30]:24);}catch{}   // Satz: knackiger Puls · Session komplett: Finale
+    primeAudio(); // Nutzer-Geste → Audio-Kontext wecken, damit der Pausen-Beep darf
     save();
     // In-Place-Feedback statt Voll-Neuaufbau: Punkte, Liste, Session-Ring, Button, Timer.
     const cnt=S.logged.filter(l=>l.n===name).length;
@@ -9379,6 +9415,55 @@ function renderPlayer(){
     if(S.exIdx<day.ex.length-1){ S.exIdx++; save(); renderPlayer(); } else A.finish(); };
   A.skipRest=()=>{S.restEnd=null;clearTimeout(timerInt);save();const s=document.getElementById("restslot");if(s)s.innerHTML="";};
   A.jump=(i)=>{pw=null;S.restEnd=null;clearTimeout(timerInt);clearTimeout(window._adv);window._adv=null;S.exIdx=i;save();renderPlayer();};
+  // ===== B4: Verlauf inline — letzte 3 Sessions dieser Übung + e1RM-Sparkline =====
+  const histCard=(()=>{
+    const hist=liftHistory(name); if(!hist.length)return "";
+    const days={}; hist.forEach(s=>{ const k=dkey(new Date(s.t)); (days[k]=days[k]||[]).push(s); });
+    const keys=Object.keys(days).sort().filter(k=>k!==todayKey()); // heute läuft gerade — zählt noch nicht als "Session"
+    if(!keys.length)return "";
+    const topOf=(sets)=>sets.reduce((m,s)=>e1rm(s.w,s.reps,s.rpe)>e1rm(m.w,m.reps,m.rpe)?s:m,sets[0]);
+    const spark=(()=>{ const vals=keys.slice(-8).map(k=>Math.max(...days[k].map(s=>e1rm(s.w,s.reps,s.rpe))));
+      if(vals.length<2)return "";
+      const w=74,h=22,mn=Math.min(...vals),mx=Math.max(...vals),sp=mx-mn||1;
+      const pts=vals.map((v,i)=>`${(i/(vals.length-1)*(w-4)+2).toFixed(1)},${(h-3-((v-mn)/sp)*(h-6)).toFixed(1)}`).join(" ");
+      return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true" style="flex-shrink:0"><polyline points="${pts}" fill="none" stroke="${vals[vals.length-1]>=vals[0]?"#8FB8DC":"#D08B6E"}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`; })();
+    const rows=keys.slice(-3).reverse().map(k=>{ const sets=days[k], top=topOf(sets);
+      const d=new Date(k+"T12:00:00");
+      const lbl=d.toLocaleDateString("de-DE",{day:"numeric",month:"short"});
+      return `<div class="row" style="padding:3px 0"><span class="xs t2" style="flex:1">${lbl} · ${sets.length} ${sets.length===1?"Satz":"Sätze"}</span>
+        <span class="metric xs">${fmtKg(top.w)} × ${top.reps}</span>
+        <span class="metric xs t2" style="min-width:74px;text-align:right">e1RM ${nf.format(Math.round(e1rm(top.w,top.reps,top.rpe)))}</span></div>`; }).join("");
+    return `<div style="background:var(--s2);border-radius:12px;padding:10px 12px;margin-bottom:12px">
+      <div class="row mb4"><p class="xs t3" style="letter-spacing:.05em;text-transform:uppercase;font-size:9.5px;margin:0">Letzte 3 Sessions</p>${spark}</div>${rows}</div>`;
+  })();
+  // ===== B4: Warm-up-Rechner — beim ersten Satz ab 40 kg Zielgewicht =====
+  A.warmup=()=>{
+    const wel=document.getElementById("pw-in"); if(wel)A.setW(wel.value);
+    const isBar=(EXDB[name]||{}).eq==="barbell";
+    const rows=[[0.4,10],[0.6,5],[0.8,3]].map(([f,reps])=>({f,reps,w:Math.max(0,Math.round(pw*f/2.5)*2.5)}));
+    modal(`<p class="ct">${icon("flame",14)} Aufwärmen für ${fmtKg(pw)}</p>
+      <p class="xs t2 mb8" style="line-height:1.5">Kurz & spezifisch ans Arbeitsgewicht heranführen — nicht auspowern.</p>
+      ${rows.map(r=>{ const b=isBar?plateBreak(r.w):null;
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--hairline)">
+          <div class="row"><span class="sm">${Math.round(r.f*100)} %</span><span class="metric sm">${fmtKg(r.w)} × ${r.reps}</span></div>
+          ${b?(b.plates.length?`<p class="xs t2" style="margin-top:2px">je Seite: ${b.plates.map(x=>String(x).replace(".",",")).join(" · ")}</p>`:`<p class="xs t2" style="margin-top:2px">nur die Stange (${b.bar} kg)</p>`):""}</div>`; }).join("")}
+      <p class="xs t2 mt8">Danach direkt Satz 1 mit ${fmtKg(pw)} × ${pr}.</p>`);
+  };
+  // ===== B4: Scheiben-Rechner — Sheet mit Beladung pro Seite + Stangen-Gewicht =====
+  A.setBar=(b)=>{ S.settings.barKg=b; save(); _plateUpd(); A.plateCalc(); };
+  A.plateCalc=()=>{
+    const wel=document.getElementById("pw-in"); if(wel)A.setW(wel.value);
+    const b=plateBreak(pw), bar=(S.settings&&S.settings.barKg)||20;
+    modal(`<p class="ct">${icon("scale",14)} Scheiben-Rechner</p>
+      <p class="metric" style="font-size:28px;font-weight:600">${fmtKg(pw)}</p>
+      <p class="xs t2 mb4 mt8">Stangen-Gewicht</p>
+      <div class="chips mb12">${[20,15,10].map(x=>`<button class="chip ${bar===x?"sel":""}" onclick="A.setBar(${x})">${x} kg</button>`).join("")}</div>
+      ${b.empty?`<p class="sm t2">Gewicht ≤ Stange — ohne Scheiben starten.</p>`
+        :b.plates.length?`<p class="xs t2 mb4">Pro Seite</p>
+          <div class="chips">${b.plates.map(p=>`<span class="chip" style="pointer-events:none;font-weight:600">${String(p).replace(".",",")}</span>`).join("")}</div>
+          ${b.rest?`<p class="xs t2 mt8">Rest ${b.rest.toFixed(1).replace(".",",")} kg — nicht exakt beladbar, nimm den nächsten 2,5er-Schritt.</p>`:""}`
+        :`<p class="sm t2">Keine Scheiben nötig.</p>`}`);
+  };
   A.finish=()=>{
     pw=null;
     // Snapshot VOR der Mutation — erlaubt „Zurück & weiter loggen" ohne Doppelzählung.
@@ -9416,8 +9501,10 @@ function renderPlayer(){
         <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
         :(startEst>0?`<p class="sm volt-txt metric mb8">Vorschlag: ${fmtKg(startEst)} × 8 <span class="xs t2" style="font-family:var(--font-ui)">— auf ${fmtKg((S.profile&&S.profile.a&&S.profile.a.weight)||80)} Körpergewicht geschätzt, einfach anpassen</span></p>`
           :`<p class="sm volt-txt metric mb8">Körpergewicht <span class="xs t2" style="font-family:var(--font-ui)">— Zusatzlast bei Bedarf eintragen</span></p>`)}
+      ${histCard}
       <div class="row mb12"><p class="ct" style="margin:0">Sätze</p>
         <div class="setdots" id="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:Math.max(targetSets,logged.length)},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
+      ${logged.length===0&&pw>=40?`<button class="chip mb12" style="width:100%;justify-content:center;border-color:rgba(196,180,122,.45)" onclick="A.warmup()">${icon("flame",12)} Aufwärmen: 40 %×10 · 60 %×5 · 80 %×3</button>`:""}
       ${logged.length<targetSets?`<div class="logmode mb12" role="tablist" aria-label="Eintrage-Modus">
         <button role="tab" aria-selected="${!bulkMode}" class="${bulkMode?"":"on"}" onclick="A.bulkToggle(false)">Satz für Satz</button>
         <button role="tab" aria-selected="${bulkMode}" class="${bulkMode?"on":""}" onclick="A.bulkToggle(true)">⚡ Alle auf einmal</button>
@@ -9441,7 +9528,7 @@ function renderPlayer(){
       })():`
       <div class="lcells mb8">
         <div class="lcell">
-          <p class="lcell-l">Gewicht · kg</p>
+          <p class="lcell-l" style="display:flex;align-items:center;justify-content:space-between">Gewicht · kg${(EXDB[name]||{}).eq==="barbell"?`<button class="iconbtn" style="min-width:30px;min-height:30px;margin:-6px -4px -6px 0" onclick="A.plateCalc()" aria-label="Scheiben-Rechner">${icon("scale",14)}</button>`:""}</p>
           <div class="lcell-row"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" type="number" inputmode="decimal" step="${wStep}" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div>
           <p id="platehint" class="lcell-hint">${plateHint(name,pw)}</p>
         </div>

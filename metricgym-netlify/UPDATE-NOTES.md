@@ -157,6 +157,23 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Abdeckung (aktuell 112/112), Tippfehler in Muskel-IDs und verwaiste
   Einträge.
 
+### 11. Player-Upgrade: der beste Satz-Moment (B4)
+- **Verlauf inline**: direkt über den Log-Feldern eine kompakte Karte
+  „Letzte 3 Sessions" dieser Übung — Datum, Satzzahl, Topsatz, e1RM — plus
+  e1RM-Trend-Sparkline der letzten 8 Sessions.
+- **Warm-up-Rechner**: beim ersten Satz ab 40 kg Zielgewicht erscheint der
+  Chip „Aufwärmen: 40 %×10 · 60 %×5 · 80 %×3" — antippen zeigt die auf
+  2,5 kg gerundeten Gewichte inklusive Scheiben-Beladung pro Seite.
+- **Scheiben-Rechner**: Waage-Button am Gewichtsfeld (Langhantel-Übungen)
+  öffnet ein Sheet mit der Beladung pro Seite; das Stangen-Gewicht
+  (20/15/10 kg) ist umstellbar und bleibt gespeichert (`S.settings.barKg`).
+- **Hintergrund-fester Pausen-Timer**: Endzeit liegt als absoluter
+  Zeitstempel in localStorage; beim Zurückwechseln in die App resynct ein
+  `visibilitychange`-Hook sofort auf die echte Restzeit. Am Ende: Vibration,
+  **Web-Audio-Doppel-Beep** (Kontext wird bei der Satz-Geste geweckt —
+  Autoplay-sicher) und, wenn erlaubt und die App im Hintergrund ist, eine
+  System-Benachrichtigung „Pause vorbei — Satz 3 · Bankdrücken".
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
