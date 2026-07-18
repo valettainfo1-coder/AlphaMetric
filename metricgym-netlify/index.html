@@ -6025,7 +6025,12 @@ function legalDoc(type){
       <p class="mt8"><b style="color:var(--t1)">5. KI-Funktion & Drittlandübermittlung</b><br>
         Nur wenn du die KI nutzt, werden die jeweiligen Eingaben + Trainings-/Ernährungskontext an <b style="color:var(--t1)">Groq Inc. (USA)</b> übermittelt. Übermittlung in ein Drittland auf Grundlage deiner Einwilligung (Art. 49 Abs. 1 a) bzw. geeigneter Garantien. Ohne KI erfolgt keine solche Übermittlung.</p>
       <p class="mt8"><b style="color:var(--t1)">6. Speicherdauer</b><br>Bis zur Löschung deines Kontos bzw. Widerruf. Lokale Daten löschst du jederzeit selbst.</p>
-      <p class="mt8"><b style="color:var(--t1)">7. Deine Rechte</b><br>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch, Widerruf der Einwilligung sowie Beschwerde bei einer Aufsichtsbehörde (Art. 15–21, 77 DSGVO). In der App: Profil → Daten exportieren / Konto löschen.</p>
+      <p class="mt8"><b style="color:var(--t1)">7. Deine Rechte</b><br>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch, Widerruf der Einwilligung sowie Beschwerde bei einer Aufsichtsbehörde (Art. 15–21, 77 DSGVO) — direkt hier ausführbar:</p>
+      <div class="grid2 mt8" style="gap:8px">
+        <button class="btn" style="min-height:42px;font-size:12.5px" onclick="A.exportData()">Daten exportieren (Art. 20)</button>
+        <button class="btn" style="min-height:42px;font-size:12.5px;border-color:rgba(255,77,77,.35);color:var(--danger)" onclick="A.closeModal();A.wipe()">Konto löschen (Art. 17)</button>
+      </div>
+      <p class="xs mt8" style="line-height:1.5">Widerruf der Art.-9-Einwilligung: Profil → Daten &amp; Konto → „Einwilligung Gesundheitsdaten widerrufen" — so einfach wie die Erteilung.</p>
       <p class="mt8"><b style="color:var(--t1)">8. Cookies/Tracking</b><br>Kein Tracking, keine Werbe-Cookies. Es wird nur technisch notwendiger lokaler Speicher (localStorage) zur Funktion genutzt.</p></div>`,
     terms:`<p class="ct">Nutzungsbedingungen (AGB)</p><div class="sm t2" style="line-height:1.65">
       <p><b style="color:var(--t1)">1. Leistung</b><br>METRICGYM stellt Trainings-/Ernährungsempfehlungen auf Basis deiner Angaben bereit. Es handelt sich um allgemeine Fitness-Information, <b style="color:var(--t1)">keine medizinische, diätetische oder therapeutische Beratung</b>.</p>
@@ -11679,12 +11684,46 @@ function renderProfile(){
     EP=null; overlay.innerHTML=""; save(); render();
     toast("Engine neu berechnet — Kalorien, Makros & Plan aktualisiert");
   };
+  // C3 (Art. 20): Export als Bundle — maschinenlesbares JSON + lesbarer
+  // HTML-Bericht (Print-View) mit ALLEN Datenkategorien inkl. Consent-Historie.
+  const _dl=(content,name,type)=>{ const blob=new Blob([content],{type});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),4000); };
+  const _exportReport=()=>{
+    const u=S.users[S.currentUser]||{};
+    const days=Object.keys(S.nutritionLog||{}).length;
+    const meals=Object.values(S.nutritionLog||{}).reduce((s,l)=>s+((l.meals||[]).length),0);
+    const setsTotal=Object.values(S.liftLog||{}).reduce((s,a)=>s+a.length,0);
+    const c=S.consent||{};
+    const fmtT=(t)=>t?new Date(t).toLocaleString("de-DE"):"—";
+    const row=(k,v)=>`<tr><td>${k}</td><td>${v}</td></tr>`;
+    const sec=(t,inner)=>`<h2>${t}</h2><table>${inner}</table>`;
+    return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>METRICGYM — Datenexport ${todayKey()}</title>
+<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:760px;margin:32px auto;padding:0 16px;color:#1b2430;line-height:1.5}
+h1{font-size:22px}h2{font-size:15px;margin:22px 0 6px;border-bottom:2px solid #8FB8DC;padding-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}td{padding:4px 8px;border-bottom:1px solid #e4e8ee;vertical-align:top}
+td:first-child{color:#5a6b80;width:44%}p.small{font-size:12px;color:#5a6b80}</style></head><body>
+<h1>METRICGYM — Auskunft &amp; Datenübertragbarkeit (Art. 15/20 DSGVO)</h1>
+<p class="small">Erstellt am ${new Date().toLocaleString("de-DE")} · Die vollständigen Rohdaten liegen maschinenlesbar in der zugehörigen JSON-Datei.</p>
+${sec("Konto",row("Name",esc(u.username||"—"))+row("E-Mail",esc(u.email||"— (lokales Konto ohne E-Mail)"))+row("Konto-Typ",u.local?"Nur dieses Gerät (ohne Cloud)":(typeof SB!=="undefined"&&SB.user?"Cloud-Konto (Supabase, EU)":"Lokal"))+row("Tarif",esc(S.tier||"free")))}
+${sec("Einwilligungen (Art. 9 Abs. 2 a)",
+  row("Nutzungsbedingungen/Datenschutz",c.tos?`Version ${c.tos.ver} · erteilt ${fmtT(c.tos.at)}`:"—")
+ +row("Gesundheitsdaten",c.health?(c.health.revoked?`WIDERRUFEN am ${fmtT(c.health.revoked)} (erteilt ${fmtT(c.health.at)}, Version ${c.health.ver})`:`Version ${c.health.ver} · erteilt ${fmtT(c.health.at)}`):"—")
+ +row("Noch nicht ans Log übertragen",(S._consentQ||[]).length+" Einträge"))}
+${sec("Profil & Assessment",row("Größe / Gewicht",`${(S.profile&&S.profile.a.height)||S.a.height} cm / ${(S.profile&&S.profile.a.weight)||S.a.weight} kg`)+row("Ziele",esc(((S.profile&&S.profile.a.goals)||S.a.goals||[]).join(", ")||"—"))+row("Einschränkungen",esc((((S.profile&&S.profile.a)||S.a).injuries||[]).join(", ")||"keine")))}
+${sec("Training",row("Sessions in der Historie",(S.trainingHistory||[]).length)+row("Übungen mit Kraft-Log",Object.keys(S.liftLog||{}).length)+row("Geloggte Sätze gesamt",setsTotal)+row("Eigene Übungen",(S.customExercises||[]).map(x=>esc(x.name)).join(", ")||"—"))}
+${sec("Ernährung",row("Geloggte Tage",days)+row("Einträge gesamt",meals)+row("Eigene Lebensmittel",(S.customFoods||[]).length)+row("Mahlzeiten-Vorlagen",(S.mealTemplates||[]).length))}
+${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row("Status-Checks",(S.readinessHistory||[]).length)+row("Maß-Einträge",(S.measure||[]).length)+row("Fortschrittsfotos","nur lokal auf dem Gerät ("+(S.photos||[]).length+")"))}
+<p class="small">Dieser Bericht ist die lesbare Zusammenfassung. Rechte: Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17 — in der App: Profil → Daten &amp; Konto), Übertragbarkeit (Art. 20 — die JSON-Datei), Widerruf (Art. 7 Abs. 3 — in der App).</p>
+</body></html>`;
+  };
   A.exportData=()=>{
     try{
-      const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a"); a.href=url; a.download=`metricgym-export-${todayKey()}.json`; a.click();
-      URL.revokeObjectURL(url);
+      const bundle={meta:{app:"METRICGYM",format:2,exportedAt:new Date().toISOString()},
+        consent:S.consent,consentQueue:S._consentQ||[],state:S};
+      _dl(JSON.stringify(bundle,null,2),`metricgym-export-${todayKey()}.json`,"application/json");
+      setTimeout(()=>{ try{_dl(_exportReport(),`metricgym-bericht-${todayKey()}.html`,"text/html");}catch(e){} },350);
+      toast("✓ Export gestartet — JSON + lesbarer Bericht");
     }catch{ toast("Export fehlgeschlagen"); }
   };
   A.inviteLink=()=>{
@@ -11828,9 +11867,14 @@ function renderProfile(){
     S.weightLog=p?[{t:Date.now(),v:p.a.weight}]:[]; S.checkin=null; S.checkinDate=null;
     save(); render(); toast("Historie geleert — leerer Start");
   };
+  // C3 (Art. 17): Zweistufige Bestätigung — erst „LÖSCHEN" tippen, dann löschen.
   A.wipe=()=>{
-    modal(`<p class="ct">Alle Daten löschen?</p><p class="sm t2 mb8">Unwiderruflich — Konto, Profil, gesamte Historie.</p>
-      <button class="btn" style="border-color:rgba(255,77,77,.4);color:var(--danger)" onclick="A.wipeConfirm()">Endgültig löschen</button>`);
+    modal(`<p class="ct">Konto &amp; alle Daten löschen?</p>
+      <p class="sm t2 mb8" style="line-height:1.6">Unwiderruflich: Konto, Profil, gesamte Historie — ${typeof SB!=="undefined"&&SB.user?"auf dem Server UND auf diesem Gerät":"auf diesem Gerät"}. Sofort, ohne Kulanzfrist.</p>
+      <p class="xs t2 mb4">Zur Bestätigung tippe <b style="color:var(--danger)">LÖSCHEN</b>:</p>
+      <input type="text" id="wipe-in" autocomplete="off" autocapitalize="characters" style="width:100%;margin-bottom:10px" oninput="document.getElementById('wipe-go').disabled=this.value.trim().toUpperCase()!=='LÖSCHEN'">
+      <button class="btn" id="wipe-go" disabled style="border-color:rgba(255,77,77,.4);color:var(--danger)" onclick="A.wipeConfirm()">Endgültig löschen</button>
+      <button class="btn ghost mt8" onclick="A.closeModal()">Abbrechen</button>`);
   };
   // FRISCHER START: setzt Fortschritt & Plan auf 0 zurück, du durchläufst das Quiz neu —
   // ABER dein Konto/Login bleibt erhalten (kein Logout, keine Konto-Löschung).
@@ -11854,21 +11898,46 @@ function renderProfile(){
     toast("Frisch zurückgesetzt — los geht's!");
   };
   A.wipeConfirm=async()=>{
-    // DSGVO Art. 17: serverseitige Daten (Gesundheitsdaten) zuerst löschen, dann abmelden.
-    try{ if(typeof SB!=="undefined"&&SB.client&&SB.user){ await SB.client.from("user_state").delete().eq("user_id",SB.user.id); await SB.signOut(); } }catch(e){}
+    const go=document.getElementById("wipe-go"); if(go){go.disabled=true;go.textContent="Lösche …";}
+    // DSGVO Art. 17, VOLLSTÄNDIG: Edge Function löscht alle Server-Tabellen
+    // UND den Auth-User (Service-Role nur serverseitig). Fällt sie aus, wird
+    // trotzdem lokal gelöscht — mit ehrlichem Hinweis statt stillem Scheitern.
+    let srvFail=false;
+    try{
+      if(typeof SB!=="undefined"&&SB.client&&SB.user){
+        try{
+          const res=await SB.withTimeout(SB.client.functions.invoke("delete-account",{body:{confirm:true}}),15000);
+          if(res&&res.error)throw res.error;
+        }catch(fnErr){
+          srvFail=true;
+          // Fallback: wenigstens die Zustandsdaten direkt löschen (RLS erlaubt eigene Zeile)
+          try{ await SB.client.from("user_state").delete().eq("user_id",SB.user.id); }catch(e){}
+        }
+        try{ await SB.signOut(); }catch(e){}
+      }
+    }catch(e){}
+    // Lokal: localStorage + BEIDE IndexedDB-Datenbanken (Fotos + OFF-Cache).
     try{localStorage.removeItem(KEY);}catch{}
     try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
+    try{indexedDB.deleteDatabase("mg-photos");}catch{}
+    try{indexedDB.deleteDatabase("mg-off");}catch{}
     S={screen:"landing",users:[],currentUser:null,loginAttempts:0,lockoutUntil:null,devMode:false,step:0,
        a:{height:181,weight:82,sleep:7,goals:[],injuries:[]},profile:null,tab:"home",currentWeek:1,checkin:null,checkinDate:null,
        schedule:null,scheduleSuggestion:null,scheduleRationale:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
        liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
-       customFoods:[],mealTemplates:[],foodFavs:{},
+       customFoods:[],mealTemplates:[],foodFavs:{},importHashes:{},customExercises:[],supersets:{},progOverride:{},settings:{barKg:20},
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],hrvLog:[],sleepLog:[],
        planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
        seenFeatures:false,seenCatalog:false,precisionShown:false,billing:"monthly",
-       calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null,consent:null};
+       calAdjust:0,calAdjustAt:0,calAdjustMsg:null,wearActive:{},wearSteps:{},monthOffset:0,planUndo:null,consent:null,basisMode:false,_consentQ:[]};
     coachOpen=false; overlay.innerHTML=""; save(); render();
+    // Abschieds-Screen: ehrlich sagen, was passiert ist.
+    setTimeout(()=>{ modal(`<p class="ct">Alles gelöscht 👋</p>
+      <p class="sm t2" style="line-height:1.65">${srvFail
+        ?"Deine lokalen Daten sind vollständig gelöscht. <b style='color:var(--warn)'>Die Server-Löschung konnte gerade nicht bestätigt werden</b> — versuch es mit einer erneuten Anmeldung noch einmal oder kontaktiere den Support, damit dein Konto sicher entfernt wird."
+        :"Konto und Daten sind vollständig entfernt — auf dem Server und auf diesem Gerät. Danke, dass du dabei warst. Wenn du zurückkommst, startest du bei null: fair und sauber."}</p>
+      <button class="btn volt mt12" onclick="A.closeModal()">Okay</button>`); },350);
   };
   // Wiederverwendbares Aufklapp-Karten-Helferchen (Summary zeigt Titel + optional Badge).
   const acc=(ic,title,badge,body)=>`<details class="acc card" style="padding:0">

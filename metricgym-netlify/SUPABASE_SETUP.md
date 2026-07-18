@@ -222,3 +222,17 @@ create policy "consent_select_own" on consent_log
 Hinweis: Bei einer Änderung der Rechtstexte `LEGAL_VERSION` in `index.html`
 erhöhen — die App zeigt dann automatisch das Re-Consent-Sheet; Ablehnen
 schaltet in den Nur-Basis-Modus (kein Rauswurf).
+
+## 7. delete-account deployen (C3 — Art. 17)
+
+```bash
+supabase functions deploy delete-account
+```
+
+Die Funktion löscht für den ANGEMELDETEN Nutzer: `user_state`, `consent_log`,
+`subscriptions`, `ai_usage`, `referrals` (als Geworbener) und zuletzt den
+Auth-User selbst (`auth.admin.deleteUser`). Der Service-Role-Key bleibt
+ausschließlich serverseitig. Der Client ruft sie über
+`SB.client.functions.invoke("delete-account")` auf; scheitert der Aufruf,
+löscht die App trotzdem lokal und sagt das ehrlich ([BETREIBER]: Funktion
+deployen, sonst bleibt die Server-Löschung auf `user_state` beschränkt).

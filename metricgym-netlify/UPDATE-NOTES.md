@@ -260,6 +260,21 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Vornamen — keine E-Mail, kein Passwort. Privacy by Design als echte Wahl:
   Daten verlassen das Gerät nie, bis DU syncst.
 
+### 18. Betroffenenrechte end-to-end (C3)
+- **Export (Art. 20)**: Ein Tipp lädt zwei Dateien — das vollständige
+  maschinenlesbare JSON-Bundle (inkl. Consent-Historie) und einen lesbaren
+  **HTML-Bericht** (druckfähig) mit allen Kategorien: Konto, Einwilligungen,
+  Profil, Training, Ernährung, Körper/Status, Rechte-Übersicht.
+- **Löschung (Art. 17), vollständig**: Neue Edge Function `delete-account`
+  löscht serverseitig alle Tabellen UND den Auth-User (Service-Role nur
+  serverseitig). Client: Zweistufen-Bestätigung („LÖSCHEN" tippen), lokaler
+  Komplett-Wipe (localStorage + beide IndexedDB-Datenbanken: Fotos und
+  OFF-Cache), ehrlicher Abschieds-Screen — inklusive Warnung, falls die
+  Server-Löschung nicht bestätigt werden konnte. Bewusst ohne Kulanzfrist:
+  sofortige Löschung ist ehrlicher und belegbar.
+- Die Datenschutzerklärung verlinkt Export und Löschung jetzt **direkt als
+  Buttons** im Abschnitt „Deine Rechte".
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
