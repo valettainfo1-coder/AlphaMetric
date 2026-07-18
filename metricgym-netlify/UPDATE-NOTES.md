@@ -77,7 +77,56 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Rechner, Analytics, 3 Schritte, Wissenschaft, Final-CTA), dazu Title/OG-Meta,
   Auth-Screens und Plan-Genese in derselben Stimme.
 
+### 6. Passwort-Reset & Konto-Sicherheit (Level-Up C1)
+- „Passwort vergessen?" funktioniert jetzt end-to-end: E-Mail-Feld → Supabase-
+  Reset-Mail → Klick auf den Link öffnet einen eigenen **Recovery-Screen** in
+  der App (neues Passwort, 2× eingeben, Mindestlänge) → automatisch angemeldet.
+  Abgelaufene/kaputte Links landen mit klarer Meldung auf dem Login.
+- Antwort absichtlich ohne Konto-Verrat („Falls ein Konto existiert, ist die
+  Mail raus") — keine E-Mail-Enumeration.
+- Neu im Profil („Dein Konto" → Sicherheit, nur mit Cloud-Konto sichtbar):
+  **Passwort ändern**, **E-Mail ändern** (mit Bestätigungs-Mail) und
+  **überall abmelden** (Global-Logout aller Geräte).
+
+### 7. Abo-Tier serverseitig (Level-Up C4)
+- Der Plan (FREE/PRO/ELITE) kommt jetzt vom **Server** (`my_tier()`-RPC über
+  `subscriptions` + `elite_accounts`), nicht mehr aus dem lokal manipulierbaren
+  Gerätespeicher. Sync bei Login, Registrierung, Recovery und App-Start;
+  offline gilt der letzte bekannte Stand.
+- Der KI-Proxy prüft pro Aufruf: gültige Anmeldung (JWT), Tier und
+  **Tageslimit** (FREE 5 / PRO 60 / ELITE 200 Coach-Antworten). Limit-/
+  Login-Fehler kommen als ehrliche deutsche Meldung in der App an.
+- „Kauf" ohne echten Zahlungsanbieter ist für Cloud-Konten deaktiviert und
+  sagt ehrlich, dass Stripe noch fehlt ([BETREIBER]). SQL & Deploy-Schritte:
+  `SUPABASE_SETUP.md` Abschnitt 4–5.
+
+### 8. Ernährung v2: Open Food Facts, eigene Lebensmittel, Vorlagen (A1+A2)
+- **Open Food Facts angebunden** (~3 Mio. reale Produkte): Die Suche zeigt
+  jetzt vier Sektionen — Favoriten ★, Meine Lebensmittel, lokale Datenbank,
+  Open Food Facts (mit Quelle + Marke, z. B. „Open Food Facts · Milsani").
+  Jeder Treffer wird 30 Tage in IndexedDB gecacht → zweiter Abruf klappt
+  offline; ohne Netz fällt die Suche sichtbar sauber auf lokale Treffer
+  zurück („Online-Datenbank nicht erreichbar"). Höflich: max. 1 Request/s,
+  6-s-Timeout. CSP um `https://*.openfoodfacts.org` erweitert.
+- **Eigene Lebensmittel**: Die Schätzmaske für Unbekanntes hat eine Checkbox
+  „Als eigenes Lebensmittel speichern" (Standard an) — Werte werden auf
+  100 g normalisiert, der Eintrag überlebt Reload + Cloud-Sync und wird ab
+  sofort auch vom **Voice-Parser** erkannt („250 g Kaiserschmarrn"). Geloggte
+  OFF-Produkte werden automatisch als eigene Kopie übernommen (offlinefähig).
+- **Mahlzeiten-Vorlagen**: „Als Mahlzeit speichern" unter dem Tageslog macht
+  aus den heutigen Einträgen eine Vorlage; Vorlagen erscheinen als Chips im
+  Magic-Log — 1 Tipp lädt den Stack als Vorschau (Mengen editierbar, Makros
+  skalieren live mit), 2. Tipp loggt alles.
+- **Echte Favoriten**: Nutzungszähler statt Namensraterei — meistgeloggte
+  Lebensmittel stehen in Suche und Schnellzugriff zuoberst; Bestandsdaten
+  werden einmalig aus der Log-Historie übernommen.
+- **Portions-Chips**: nach Auswahl eines Treffers z. B. „100 g / Portion
+  (150 g)" — OFF-`serving_size` wird geparst, Stück-Basen der lokalen
+  Datenbank bleiben erhalten.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
-`vendor/three.min.js` (wird vom Service Worker vorgecacht; Cache-Version auf
-v9 erhöht — Nutzer bekommen das Update beim nächsten Besuch automatisch).
+`vendor/three.min.js` (wird vom Service Worker vorgecacht). Cache-Version
+aktuell **v11** — Nutzer bekommen Updates beim nächsten Besuch automatisch.
+Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
+SQL aus `SUPABASE_SETUP.md` Abschnitt 4 ausführen ([BETREIBER]).

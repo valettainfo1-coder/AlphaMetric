@@ -1806,6 +1806,60 @@ const PDB={db:null,
   async put(id,v){const db=await PDB.open();if(!db)return;return new Promise(r=>{const tx=db.transaction("p","readwrite");tx.objectStore("p").put(v,id);tx.oncomplete=()=>r();tx.onerror=()=>r();});},
   async get(id){const db=await PDB.open();if(!db)return null;return new Promise(r=>{const t=db.transaction("p","readonly").objectStore("p").get(id);t.onsuccess=()=>r(t.result||null);t.onerror=()=>r(null);});},
   async del(id){const db=await PDB.open();if(!db)return;return new Promise(r=>{const tx=db.transaction("p","readwrite");tx.objectStore("p").delete(id);tx.oncomplete=()=>r();tx.onerror=()=>r();});}};
+
+/* ---------- OPEN FOOD FACTS (A1) ----------
+   Offene Produktdatenbank (~3 Mio. Lebensmittel) als Online-Ergänzung zur lokalen
+   FOODS-Liste. Jeder Treffer wandert für 30 Tage in einen IndexedDB-Cache, damit
+   der zweite Abruf desselben Produkts auch offline funktioniert. Höflichkeit
+   gegenüber dem freien Dienst: max. 1 Request/Sekunde, 6-Sekunden-Timeout,
+   bei Fehlern stiller Rückfall auf die lokale Datenbank (nie ein harter Fehler). */
+const OFF={
+  TTL:30*24*3600*1000, _last:0,
+  open(){return new Promise((res)=>{try{const r=indexedDB.open("mg-off",1);
+    r.onupgradeneeded=()=>r.result.createObjectStore("c");
+    r.onsuccess=()=>res(r.result); r.onerror=()=>res(null);}catch{res(null);}});},
+  async cGet(key){const db=await OFF.open(); if(!db)return null;
+    const row=await new Promise(r=>{try{const t=db.transaction("c","readonly").objectStore("c").get(key);
+      t.onsuccess=()=>r(t.result||null); t.onerror=()=>r(null);}catch{r(null);}});
+    return (row&&Date.now()-row.t<OFF.TTL)?row.v:null;},
+  async cPut(key,v){const db=await OFF.open(); if(!db)return;
+    return new Promise(r=>{try{const tx=db.transaction("c","readwrite");
+      tx.objectStore("c").put({t:Date.now(),v},key); tx.oncomplete=()=>r(); tx.onerror=()=>r();}catch{r();}});},
+  // OFF-Produkt → einheitliches Format. null, wenn Name oder kcal fehlen (unbrauchbar).
+  norm(p){ if(!p)return null; const n=p.nutriments||{};
+    const kcal=Math.round(+n["energy-kcal_100g"]||(+n["energy_100g"]||0)/4.184);
+    const name=String(p.product_name_de||p.product_name||"").trim();
+    if(!name||!(kcal>0)||kcal>950)return null;
+    const sm=/([\d.,]+)\s*(?:g|ml)/i.exec(String(p.serving_size||""));
+    const servG=sm?Math.round(parseFloat(sm[1].replace(",", "."))):null;
+    return {name:name.slice(0,60), brand:String(p.brands||"").split(",")[0].trim().slice(0,30),
+      code:String(p.code||""), per:100, kcal,
+      p:Math.round((+n.proteins_100g||0)*10)/10, c:Math.round((+n.carbohydrates_100g||0)*10)/10,
+      f:Math.round((+n.fat_100g||0)*10)/10, fiber:Math.round((+n.fiber_100g||0)*10)/10,
+      sugar:Math.round((+n.sugars_100g||0)*10)/10, salt:Math.round((+n.salt_100g||0)*100)/100,
+      servG:(servG&&servG>0&&servG<2000)?servG:null};},
+  async _json(url){ // Drossel (1 req/s) + hartes 6-s-Timeout
+    const wait=OFF._last+1000-Date.now(); if(wait>0)await new Promise(r=>setTimeout(r,wait));
+    OFF._last=Date.now();
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),6000);
+    try{ const r=await fetch(url,{signal:ctl.signal}); if(!r.ok)throw new Error("off "+r.status); return await r.json(); }
+    finally{ clearTimeout(to); }},
+  async search(q){ q=String(q||"").trim().toLowerCase(); if(q.length<3)return [];
+    const key="s:"+q; const hit=await OFF.cGet(key); if(hit)return hit;
+    const fields="code,product_name_de,product_name,brands,nutriments,serving_size,quantity";
+    const j=await OFF._json("https://de.openfoodfacts.org/cgi/search.pl?search_terms="
+      +encodeURIComponent(q)+"&search_simple=1&action=process&json=1&page_size=12&fields="+fields);
+    const out=(j&&j.products||[]).map(OFF.norm).filter(Boolean).slice(0,8);
+    await OFF.cPut(key,out);
+    out.forEach(pr=>{ if(pr.code)OFF.cPut("p:"+pr.code,pr); }); // Produkt-Cache füllen (Barcode/A3)
+    return out;},
+  async product(code){ code=String(code||"").replace(/\D/g,""); if(!code)return null;
+    const key="p:"+code; const hit=await OFF.cGet(key); if(hit)return hit;
+    const fields="code,product_name_de,product_name,brands,nutriments,serving_size,quantity";
+    const j=await OFF._json("https://world.openfoodfacts.org/api/v2/product/"+code+".json?fields="+fields);
+    const pr=OFF.norm(j&&j.product); if(pr)await OFF.cPut(key,pr);
+    return pr;}
+};
 // Bild herunterskalieren (max 900px, JPEG) → kleine dataURL für Vergleichsansicht
 function downscaleImage(file,max,cb){
   const fr=new FileReader();
@@ -2364,6 +2418,11 @@ S.monthOffset=S.monthOffset||0; // Monats-Überblick: 0 = aktueller Monat
 S.calAdjust=S.calAdjust||0; S.calAdjustAt=S.calAdjustAt||0; S.calAdjustMsg=S.calAdjustMsg||null; // adaptiver Kalorien-Abgleich (Memory)
 S.wearActive=S.wearActive||{}; S.wearSteps=S.wearSteps||{}; // Wearable: Aktiv-Kalorien & Schritte je Tag
 S.consent=S.consent||null; // DSGVO-Einwilligung (AGB/Datenschutz + Gesundheitsdaten Art.9)
+// Ernährung v2 (A2): eigene Lebensmittel, Mahlzeiten-Vorlagen, Nutzungs-Favoriten.
+// Alles Teil von S → läuft automatisch über save() + Cloud-Sync.
+S.customFoods=S.customFoods||[];     // [{id,name,per:100,kcal,p,c,f,fiber,barcode,servG,src,createdAt}]
+S.mealTemplates=S.mealTemplates||[]; // [{id,name,items:[{n,g,k,p,c,f}],createdAt}]
+S.foodFavs=S.foodFavs||{};           // {foodKey:Anzahl} — foodKey: "f:<FOODS-Name>" | "c:<customFood-Id>"
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -4185,12 +4244,18 @@ function phon(s){
     .replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u")
     .replace(/(.)\1+/g,"$1");
 }
+/* Eigene Lebensmittel (A2) als FOODS-kompatible Zeile [Name, Basis-g, kcal, P, C, F].
+   `_key` markiert die Herkunft für Favoriten-Zähler & Quell-Label. */
+function customRow(cf){ const r=[cf.name,cf.per||100,cf.kcal,cf.p||0,cf.c||0,cf.f||0]; r._key="c:"+cf.id; r._servG=cf.servG||null; return r; }
+/* Suchreihenfolge überall (A1): eigene Lebensmittel VOR der lokalen Datenbank.
+   (Open Food Facts ist async und hängt sich in der UI dahinter — nur online.) */
+function foodPool(){ return (S.customFoods||[]).map(customRow).concat(FOODS); }
 /* Liefert {f, dist}: dist 0 = exakter Treffer, >0 = Tippfehler-/Hörfehler-Korrektur. */
 function matchFood(segment){
   const tokens=segment.toLowerCase().replace(/[^a-zäöüß0-9\s]/g," ").split(/\s+/)
     .filter(t=>t.length>=2&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute","zu","im","am","an","so","da","ja"].includes(t));
   let best=null;
-  for(const f of FOODS){
+  for(const f of foodPool()){
     const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=2);
     for(const w of words)for(const t of tokens){
       const dist=fuzzyDist(t,w);
@@ -4243,6 +4308,44 @@ function parseNutrition(input){
     items.push({raw:seg,food,gram:g,fuzzy:hit.dist>0,conf,_qty:!!(gram||count)});
   }
   return items;
+}
+/* ---------- Favoriten & eigene Lebensmittel (A2) ---------- */
+function favKeyOf(row){ return row&&row._key?row._key:(row?"f:"+row[0]:null); }
+function bumpFav(key){ if(!key)return; S.foodFavs[key]=(S.foodFavs[key]||0)+1; }
+/* Aufgelöste Favoriten, meistgeloggt zuerst. Tote Schlüssel (gelöschtes
+   customFood) werden still übersprungen. */
+function favList(){
+  return Object.entries(S.foodFavs||{}).sort((a,b)=>b[1]-a[1]).map(([key,cnt])=>{
+    if(key.slice(0,2)==="f:"){ const f=FOODS.find(x=>x[0]===key.slice(2)); return f?{key,cnt,row:f,src:"db"}:null; }
+    if(key.slice(0,2)==="c:"){ const cf=(S.customFoods||[]).find(x=>x.id===key.slice(2)); return cf?{key,cnt,row:customRow(cf),src:cf.src==="off"?"off":"eigen"}:null; }
+    return null;
+  }).filter(Boolean);
+}
+/* Bestandsnutzer: Favoriten einmalig aus der bisherigen Log-Historie ableiten,
+   damit die Favoriten-Sektion nicht leer startet. (Läuft hier, weil FOODS
+   erst an dieser Stelle im Script existiert.) */
+try{ if(S.foodFavs&&!Object.keys(S.foodFavs).length&&Object.keys(S.nutritionLog||{}).length){
+  Object.values(S.nutritionLog).forEach(l=>(l.meals||[]).forEach(m=>{
+    const base=String(m.n||"").replace(/ \(.*\)$/,""); const f=FOODS.find(x=>x[0]===base);
+    if(f)S.foodFavs["f:"+f[0]]=(S.foodFavs["f:"+f[0]]||0)+1; }));
+} }catch{}
+/* Geloggtes OFF-Produkt als eigenes Lebensmittel übernehmen: ab sofort offline
+   verfügbar, im Voice-Parser matchbar und als Favorit zählbar. */
+function upsertOffFood(pr){
+  const code=pr.code||"";
+  let cf=(code?(S.customFoods||[]).find(x=>x.barcode===code):null)
+    ||(S.customFoods||[]).find(x=>x.name===pr.dispName);
+  if(cf)return cf;
+  cf={id:"cf"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    name:pr.dispName,per:100,kcal:pr.kcal,p:pr.p,c:pr.c,f:pr.f,fiber:pr.fiber||0,
+    barcode:code||null,servG:pr.servG||null,src:"off",createdAt:Date.now()};
+  S.customFoods.push(cf); save(); return cf;
+}
+/* OFF-Produkt → FOODS-kompatible Zeile (Anzeige-Name inkl. Marke). */
+function offRow(pr){
+  pr.dispName=pr.dispName||(pr.name+(pr.brand?" ("+pr.brand+")":"")).slice(0,60);
+  const r=[pr.dispName,pr.per||100,pr.kcal,pr.p||0,pr.c||0,pr.f||0];
+  r._off=pr; r._servG=pr.servG||null; return r;
 }
 function nlogToday(){
   if(!S.nutritionLog[todayKey()])S.nutritionLog[todayKey()]={meals:[],water:0};
@@ -9665,6 +9768,9 @@ function renderAnalytics(){
 // ERNÄHRUNG (Voice-first, Multi-Item, Approval)
 // =====================================================================
 let dayType="train", pendingItems=null, pendingManual=null;
+// Ernährungs-Suche v2 (A1/A2): aktuelle Autocomplete-Zeilen, gewählter Eintrag,
+// Favoriten-Chips und Debounce-Timer für die Open-Food-Facts-Anfrage.
+let acRows=[], pendingFood=null, favChips=[], offT=0, offSeq=0;
 // Makro-„Batterie": horizontaler Füllbalken mit Zielmarke und Über-/Unterzustand
 function macroBattery(label,cur,target,col,priority){
   const pct=target?Math.min(100,cur/target*100):0;
@@ -9798,28 +9904,79 @@ function renderNutrition(){
     save(); try{navigator.vibrate&&navigator.vibrate(16);}catch{} renderNutrition();
     toast(`✓ Rezept geloggt — ${nfi.format(r.tot.k)} kcal, ${r.tot.p} g Protein`); };
   A.water=(d)=>{log.water=Math.max(0,Math.min(12,(log.water||0)+d));save();renderNutrition();};
+  // Ergebniszeile fürs Autocomplete: acRows hält die Daten, der Button nur den Index
+  // (kein Name im onclick → keine Quoting-Probleme, esc() fürs Anzeigen).
+  const acLine=(row,src)=>{ const i=acRows.push({row,src})-1;
+    const tag=src==="fav"?"★":src==="eigen"?"Eigenes":src==="off"?`Open Food Facts${row._off&&row._off.brand?" · "+esc(row._off.brand):""}`:"";
+    const label=src==="off"&&row._off?row._off.name:row[0]; // Marke steht schon im Quell-Tag
+    return `<button class="ac-item" onclick="A.pickAc(${i})">${esc(label)} <span class="xs t2">· ${nfi.format(row[2])} kcal / ${row[1]} g${tag?` · <span style="color:${src==="fav"?"var(--gold,#C4B47A)":"var(--t2)"}">${tag}</span>`:""}</span></button>`; };
   A.foodInput=(el)=>{
     const q=el.value.trim().toLowerCase(), ac=document.getElementById("food-autocomplete");
-    if(!ac)return;
+    pendingFood=null; const ch=document.getElementById("food-chips"); if(ch)ch.innerHTML="";
+    if(!ac)return; clearTimeout(offT);
     if(q.length<2){ac.style.display="none";ac.innerHTML="";return;}
-    let matches=FOODS.filter(f=>f[0].toLowerCase().includes(q)).slice(0,5);
+    acRows=[];
+    // Suchreihenfolge (A1): Favoriten → eigene Lebensmittel → lokale Datenbank → OFF (online)
+    const favs=favList().filter(x=>x.row[0].toLowerCase().includes(q)).slice(0,3);
+    const favNames=favs.map(x=>x.row[0]);
+    const own=(S.customFoods||[]).map(customRow).filter(r=>r[0].toLowerCase().includes(q)&&!favNames.includes(r[0])).slice(0,4);
+    let db=FOODS.filter(f=>f[0].toLowerCase().includes(q)&&!favNames.includes(f[0])).slice(0,5);
     // Kein wörtlicher Treffer? Tippfehler-/phonetische Erkennung als Fallback ("skier" → Skyr).
-    if(!matches.length){ const hit=matchFood(q); if(hit)matches=[hit.f]; }
-    if(!matches.length){ac.style.display="none";return;}
-    ac.style.display="block";
-    ac.innerHTML=matches.map((f)=>`<button class="ac-item" onclick="A.acPick(${FOODS.indexOf(f)})">${f[0]} <span class="xs t2">· ${nfi.format(f[2])} kcal / ${f[1]} g</span></button>`).join("");
+    if(!favs.length&&!own.length&&!db.length){ const hit=matchFood(q); if(hit)(hit.f._key?own:db).push(hit.f); }
+    const sec=(t,html)=>html?`<p class="xs t2" style="padding:6px 10px 2px;letter-spacing:.04em;text-transform:uppercase;font-size:9.5px">${t}</p>${html}`:"";
+    let html=sec("Favoriten ★",favs.map(x=>acLine(x.row,"fav")).join(""))
+      +sec("Meine Lebensmittel",own.map(r=>acLine(r,"eigen")).join(""))
+      +sec("Datenbank",db.map(f=>acLine(f,"db")).join(""));
+    // Open Food Facts asynchron anhängen — nur online, gedrosselt, mit sichtbarem Fallback.
+    if(q.length>=3){
+      if(navigator.onLine===false){ html+=`<p class="xs t2" style="padding:6px 10px">Online-Datenbank nicht erreichbar — lokale Treffer.</p>`; }
+      else{
+        html+=`<p class="xs t2" id="off-sec" style="padding:6px 10px"><span class="spin" style="width:10px;height:10px;border-width:1.5px;display:inline-block;vertical-align:-1px"></span> Open Food Facts …</p>`;
+        const seq=++offSeq;
+        offT=setTimeout(()=>{ OFF.search(q).then(list=>{
+            const elx=document.getElementById("off-sec"); const cur=document.getElementById("food-name");
+            if(!elx||seq!==offSeq||!cur||cur.value.trim().toLowerCase()!==q)return;
+            const fresh=list.filter(pr=>{ const r=offRow(pr); return !acRows.some(x=>x.row[0]===r[0]); }).slice(0,5);
+            elx.outerHTML=fresh.length
+              ?sec("Open Food Facts",fresh.map(pr=>acLine(offRow(pr),"off")).join(""))
+              :`<p class="xs t2" style="padding:6px 10px">Keine Online-Treffer für „${esc(q)}".</p>`;
+          }).catch(()=>{ const elx=document.getElementById("off-sec");
+            if(elx&&seq===offSeq)elx.outerHTML=`<p class="xs t2" style="padding:6px 10px">Online-Datenbank nicht erreichbar — lokale Treffer.</p>`; });
+        },450);
+      }
+    }
+    if(!html){ac.style.display="none";return;}
+    ac.style.display="block"; ac.innerHTML=html;
   };
-  A.acPick=(idx)=>{
-    document.getElementById("food-name").value=FOODS[idx][0];
-    const ac=document.getElementById("food-autocomplete"); if(ac)ac.style.display="none";
-    document.getElementById("food-gram").focus();
+  A.pickAc=(i)=>{
+    const x=acRows[i]; if(!x)return; pendingFood=x;
+    const nm=document.getElementById("food-name"); if(nm)nm.value=x.row[0];
+    const ac=document.getElementById("food-autocomplete"); if(ac){ac.style.display="none";ac.innerHTML="";}
+    // Portions-Chips (A2): 100 g / Portion / Basis-Menge — ein Tipp füllt das Gramm-Feld.
+    const ch=document.getElementById("food-chips");
+    if(ch){ const opts=[]; const base=x.row[1], serv=x.row._servG;
+      if(base!==100)opts.push([base,`Portion (${base} g)`]);
+      opts.push([100,"100 g"]);
+      if(serv&&serv!==base&&serv!==100)opts.push([serv,`Portion (${serv} g)`]);
+      ch.innerHTML=opts.map(([g,l])=>`<button class="chip" onclick="var el=document.getElementById('food-gram');el.value=${g};el.focus()">${l}</button>`).join("");
+    }
+    const gr=document.getElementById("food-gram"); if(gr)gr.focus();
   };
   A.addCustomFood=()=>{
     const name=document.getElementById("food-name").value.trim();
     const gram=parseInt(document.getElementById("food-gram").value)||null;
     if(!name){toast("Lebensmittel eingeben");return;}
-    const exact=FOODS.find(f=>f[0].toLowerCase()===name.toLowerCase())||FOODS.find(f=>f[0].toLowerCase().includes(name.toLowerCase()))||((matchFood(name)||{}).f);
-    if(exact){ const e=addFood(exact,gram); toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`); renderNutrition(); }
+    // 1) Aus dem Picker gewählt (Favorit/eigenes/OFF) — exakt diese Daten loggen.
+    if(pendingFood&&pendingFood.row[0].toLowerCase()===name.toLowerCase()){
+      const x=pendingFood; let row=x.row, key=favKeyOf(row);
+      if(row._off){ const cf=upsertOffFood(row._off); row=customRow(cf); key="c:"+cf.id; } // OFF → eigene Kopie (offline ab jetzt)
+      const e=addFood(row,gram||row._servG||null); bumpFav(key); pendingFood=null;
+      toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`); renderNutrition(); return;
+    }
+    // 2) Getippter Name: eigene Lebensmittel → Datenbank → Fuzzy (Reihenfolge A1).
+    const pool=foodPool();
+    const exact=pool.find(f=>f[0].toLowerCase()===name.toLowerCase())||pool.find(f=>f[0].toLowerCase().includes(name.toLowerCase()))||((matchFood(name)||{}).f);
+    if(exact){ const e=addFood(exact,gram); bumpFav(favKeyOf(exact)); toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`); renderNutrition(); }
     else { pendingManual={name,gram:gram||100}; renderNutrition(); }
   };
   A.manualSave=()=>{
@@ -9829,6 +9986,17 @@ function renderNutrition(){
     const f=parseFloat(document.getElementById("m-f").value)||0;
     if(k<=0){toast("Kalorien angeben");return;}
     nlogToday().meals.push({n:pendingManual.name+` (${pendingManual.gram} g)`,g:pendingManual.gram,k,p:pp,c,f});
+    // A2: als eigenes Lebensmittel merken (Default an) → nächstes Mal echter Treffer,
+    // auch im Voice-Parser. Werte werden auf 100 g normalisiert.
+    const cb=document.getElementById("m-own"), g=pendingManual.gram;
+    if(cb&&cb.checked&&g>0&&!(S.customFoods||[]).some(x=>x.name.toLowerCase()===pendingManual.name.toLowerCase())){
+      const cf={id:"cf"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+        name:pendingManual.name.slice(0,60),per:100,kcal:Math.round(k/g*100),
+        p:Math.round(pp/g*1000)/10,c:Math.round(c/g*1000)/10,f:Math.round(f/g*1000)/10,
+        src:"manuell",createdAt:Date.now()};
+      S.customFoods.push(cf); bumpFav("c:"+cf.id);
+      toast(`✓ Geloggt & als „${cf.name}" gemerkt`);
+    }
     pendingManual=null; save(); renderNutrition();
   };
   A.manualCancel=()=>{pendingManual=null;renderNutrition();};
@@ -9882,7 +10050,8 @@ function renderNutrition(){
     let n=0, addK=0, addP=0;
     for(const it of (pendingItems||[])){
       if(!it||typeof it!=="object"||it.loading) continue;       // defensiv: kaputte Posten überspringen
-      if(it.food){ const e=addFood(it.food,it.gram); addK+=e.k; addP+=e.p; n++; }
+      if(it.food){ const e=addFood(it.food,it.gram); bumpFav(favKeyOf(it.food)); addK+=e.k; addP+=e.p; n++; }
+      else if(it.tpl){ const k=Math.round(it.kcal),p=Math.round(it.p*10)/10; nlogToday().meals.push({n:it.name+(it.gram?` (${it.gram} g)`:""),g:it.gram||0,k,p,c:Math.round(it.c*10)/10,f:Math.round(it.f*10)/10,t:Date.now()}); addK+=k; addP+=p; n++; }
       else if(it.ai&&it.kcal>0){ const k=Math.round(it.kcal),p=Math.round(it.p||0); nlogToday().meals.push({n:(it.name||"Eintrag")+" (KI)",g:it.gram||0,k,p,c:Math.round(it.c||0),f:Math.round(it.f||0),t:Date.now()}); addK+=k; addP+=p; n++; }
     }
     save();
@@ -9892,7 +10061,46 @@ function renderNutrition(){
     renderNutrition();
   };
   A.cancelItems=()=>{pendingItems=null;renderNutrition();};
-  A.quick=(i)=>{const e=addFood(FOODS[i],null);floatReward(`+${nfi.format(e.k)} kcal · +${Math.round(e.p)} g P`);toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);renderNutrition();};
+  A.quick=(i)=>{const e=addFood(FOODS[i],null);bumpFav("f:"+FOODS[i][0]);floatReward(`+${nfi.format(e.k)} kcal · +${Math.round(e.p)} g P`);toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);renderNutrition();};
+  A.quickFav=(j)=>{const x=favChips[j]; if(!x)return; const e=addFood(x.row,null); bumpFav(x.key);
+    floatReward(`+${nfi.format(e.k)} kcal · +${Math.round(e.p)} g P`); toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`); renderNutrition();};
+  // ---- Mahlzeiten-Vorlagen (A2): heutige Auswahl als Template, 1 Tap = ganzer Stack ----
+  A.saveTemplate=()=>{
+    const meals=nlogToday().meals; if(!meals.length){toast("Heute ist noch nichts geloggt");return;}
+    modal(`<p class="ct">Als Mahlzeit speichern</p>
+      <p class="sm t2 mb8">Speichert die ${meals.length} heutigen Einträge als Vorlage — künftig mit einem Tipp geloggt.</p>
+      <input type="text" id="tpl-name" placeholder="z. B. Frühstück-Stack" maxlength="30" style="width:100%">
+      <div class="grid2 mt12"><button class="btn" onclick="A.closeModal()">Abbrechen</button>
+      <button class="btn volt" onclick="A.doSaveTemplate()">Speichern</button></div>`);
+    setTimeout(()=>{const el=document.getElementById("tpl-name");if(el)el.focus();},80);
+  };
+  A.doSaveTemplate=()=>{
+    const el=document.getElementById("tpl-name"); const name=(el&&el.value.trim())||"";
+    if(!name){toast("Gib der Mahlzeit einen Namen");return;}
+    // Gramm-Suffix aus dem Namen lösen — beim Loggen wird die DANN gewählte Menge angehängt.
+    const items=nlogToday().meals.map(m=>({n:String(m.n||"").replace(/ \(\d+ g\)$/,""),g:m.g||0,k:m.k||0,p:m.p||0,c:m.c||0,f:m.f||0}));
+    S.mealTemplates.push({id:"tp"+Date.now().toString(36),name:name.slice(0,30),items,createdAt:Date.now()});
+    save(); A.closeModal(); toast(`✓ Vorlage „${name}" gespeichert`); renderNutrition();
+  };
+  A.useTemplate=(id)=>{
+    const t=S.mealTemplates.find(x=>x.id===id); if(!t)return;
+    pendingItems=t.items.map(it=>({tpl:true,tplId:t.id,name:it.n,gram:it.g,kcal:it.k,p:it.p,c:it.c,f:it.f,
+      base:{g:it.g,k:it.k,p:it.p,c:it.c,f:it.f},conf:1}));
+    renderNutrition();
+    const pv=document.querySelector(".smartlog .warncard"); if(pv)pv.scrollIntoView({behavior:"smooth",block:"center"});
+  };
+  // Menge im Template-Preview editierbar: Makros skalieren über die Basis-Portion mit.
+  A.tplGram=(i,v)=>{
+    const it=(pendingItems||[])[i]; if(!it||!it.tpl||!it.base||!(it.base.g>0))return;
+    const g=Math.max(0,Math.min(2000,parseInt(v)||0)); const m=g/it.base.g;
+    it.gram=g; it.kcal=Math.round(it.base.k*m); it.p=Math.round(it.base.p*m*10)/10;
+    it.c=Math.round(it.base.c*m*10)/10; it.f=Math.round(it.base.f*m*10)/10;
+    const el=document.getElementById("tpl-kcal-"+i); if(el)el.textContent=`${nfi.format(it.kcal)} kcal · ${it.p} g P`;
+  };
+  A.delTemplate=(id)=>{
+    S.mealTemplates=S.mealTemplates.filter(x=>x.id!==id);
+    pendingItems=null; save(); toast("Vorlage gelöscht"); renderNutrition();
+  };
   // MOCK: Foto-Erkennung — wählt deterministisch (Dateigröße) ein Lebensmittel aus FOODS.
   // TODO Real: Vision-API (z. B. Claude/GPT-4V) für echte Lebensmittel-Erkennung + Mengenschätzung.
   A.photoPick=async(el)=>{
@@ -9916,12 +10124,12 @@ function renderNutrition(){
     }catch(e){ pendingItems=null; renderNutrition(); toast("Foto-Analyse fehlgeschlagen — versuch es nochmal"); }
   };
   A.explainSat=()=>A.explain("satiety");
-  // Ein-Tipp-Favoriten: meistgeloggte Lebensmittel, sonst sinnvolle Defaults
-  const tally={};
-  Object.values(S.nutritionLog).forEach(l=>(l.meals||[]).forEach(m=>{const base=m.n.replace(/ \(.*\)$/,"");tally[base]=(tally[base]||0)+1;}));
-  let favIdx=Object.entries(tally).sort((a,b)=>b[1]-a[1]).map(([n])=>FOODS.findIndex(f=>f[0]===n)).filter(i=>i>=0);
-  ["Hähnchenbrust","Magerquark","Haferflocken","Banane (1 mittel)","Reis (weiß, gekocht)","Ei (1 Stück)"].forEach(n=>{const i=FOODS.findIndex(f=>f[0]===n);if(i>=0&&!favIdx.includes(i))favIdx.push(i);});
-  favIdx=favIdx.slice(0,6);
+  // Ein-Tipp-Favoriten (A2): echte Nutzungszähler (S.foodFavs, inkl. eigener
+  // Lebensmittel & übernommener OFF-Produkte), aufgefüllt mit sinnvollen Defaults.
+  favChips=favList().slice(0,6).map(x=>({key:x.key,row:x.row}));
+  ["Hähnchenbrust","Magerquark","Haferflocken","Banane (1 mittel)","Reis (weiß, gekocht)","Ei (1 Stück)"].forEach(n=>{
+    if(favChips.length>=6)return; const f=FOODS.find(x=>x[0]===n);
+    if(f&&!favChips.some(x=>x.row[0]===n))favChips.push({key:"f:"+n,row:f}); });
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
     ${(()=>{ const tg=S.profile?(S.profile.tg[dayType]||S.profile.tg.train):null;
@@ -9983,7 +10191,8 @@ function renderNutrition(){
         <p class="xs t2" style="text-align:center">Tippen & sprechen — oder unten schreiben</p>
       </div>
       ${quickLogField("z. B. „2 Eier, Haferflocken mit Banane und ein Proteinshake“","A.parseFood",true)}
-      ${favIdx.length?`<p class="label" style="margin:16px 0 8px">Schnellzugriff</p><div class="chips mb4">${favIdx.map(i=>`<button class="chip" onclick="A.quick(${i})">+ ${FOODS[i][0].replace(/ \(.*\)$/,"")}</button>`).join("")}</div>`:""}
+      ${S.mealTemplates.length?`<p class="label" style="margin:16px 0 8px">Meine Mahlzeiten</p><div class="chips mb4">${S.mealTemplates.map(t=>`<button class="chip" style="border-color:rgba(196,180,122,.45)" onclick="A.useTemplate('${t.id}')">${icon("utensils",11)} ${esc(t.name)} <span class="xs t2">· ${t.items.length} Items</span></button>`).join("")}</div>`:""}
+      ${favChips.length?`<p class="label" style="margin:16px 0 8px">Schnellzugriff</p><div class="chips mb4">${favChips.map((x,j)=>`<button class="chip" onclick="A.quickFav(${j})">+ ${esc(x.row[0].replace(/ \(.*\)$/,""))}</button>`).join("")}</div>`:""}
       <div class="mt12" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn" style="white-space:nowrap" onclick="document.getElementById('vf-file').click()">${icon("camera",15)} Foto</button>
         <button class="btn" style="white-space:nowrap;font-size:14px" onclick="A.mealSuggest()">${icon("message",15)} Was essen?</button>
@@ -9995,15 +10204,21 @@ function renderNutrition(){
           <span class="sm t2">Coach Metric liest deinen Eintrag …</span></div></div>`
         :`<div class="warncard" style="margin-top:14px;border-color:rgba(143,184,220,.4);background:rgba(143,184,220,.06)">
         ${pendingItems.some(it=>it.ai)?`<p class="xs t2 mb8">${icon("sparkle",11)} ${pendingItems.some(it=>it.photo)?"Vom Foto erkannt":"Von der KI erkannt"} & geschätzt — vor dem Übernehmen kurz prüfen.</p>`:""}
-        ${pendingItems.map(it=>it.food?`
+        ${pendingItems.some(it=>it.tpl)?`<p class="xs t2 mb8">${icon("utensils",11)} Vorlage geladen — Mengen anpassbar, dann übernehmen.</p>`:""}
+        ${pendingItems.map((it,i)=>it.food?`
           <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${esc(it.raw.trim())}" erkannt als</span> `:""}${esc(it.food[0])} · <span class="metric">${it.gram} g</span></span>
           <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${Math.round(it.conf*100)} %</span></span></div>`
+          :it.tpl?`
+          <div class="row mb4"><span class="sm" style="display:flex;align-items:center;gap:6px;flex:1;min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</span>
+            ${it.base&&it.base.g>0?`<input type="number" value="${it.gram}" min="0" max="2000" inputmode="numeric" style="width:64px;padding:4px 8px;min-height:32px" oninput="A.tplGram(${i},this.value)"><span class="xs t2">g</span>`:""}</span>
+          <span class="metric xs t2" id="tpl-kcal-${i}">${nfi.format(it.kcal)} kcal · ${it.p} g P</span></div>`
           :it.ai?`
           <div class="row mb4"><span class="sm">${esc(it.name)} · <span class="metric">${it.gram?it.gram+" g":"Portion"}</span></span>
           <span class="metric xs t2">${nfi.format(it.kcal)} kcal · ${it.p} g P</span></div>`
           :`<p class="xs danger-txt mb4">„${esc(it.raw)}" nicht erkannt — tipp es unten bei „Suche & manuell" ein</p>`).join("")}
         <div class="grid2 mt8"><button class="btn" onclick="A.cancelItems()">Verwerfen</button>
-        <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div></div>`):""}
+        <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div>
+        ${pendingItems[0]&&pendingItems[0].tpl&&pendingItems[0].tplId?`<button class="btn ghost mt8" style="min-height:36px;font-size:12px;color:var(--t2)" onclick="A.delTemplate('${pendingItems[0].tplId}')">Vorlage löschen</button>`:""}</div>`):""}
     </div>
 
     <details class="acc"><summary>Suche &amp; manuell eingeben<span class="chev">${icon("chevron",15)}</span></summary>
@@ -10013,12 +10228,16 @@ function renderNutrition(){
         <input type="number" id="food-gram" placeholder="g" style="width:76px" min="1" max="2000" inputmode="numeric">
         <button class="btn volt" style="width:50px;min-width:50px" onclick="A.addCustomFood()" aria-label="Hinzufügen">+</button></div>
       <div id="food-autocomplete" class="ac-list" style="display:none"></div>
+      <div class="chips" id="food-chips" style="margin-top:6px"></div>
       ${pendingManual?`<div class="warncard mt8"><b>„${esc(pendingManual.name)}"</b> unbekannt — Nährwerte für ${pendingManual.gram} g schätzen:
         <div class="grid4 mt8">
           <input type="number" id="m-k" placeholder="kcal" inputmode="numeric">
           <input type="number" id="m-p" placeholder="P" inputmode="numeric">
           <input type="number" id="m-c" placeholder="C" inputmode="numeric">
           <input type="number" id="m-f" placeholder="F" inputmode="numeric"></div>
+        <label class="row xs t2" style="gap:8px;margin-top:10px;justify-content:flex-start;cursor:pointer">
+          <input type="checkbox" id="m-own" checked style="width:16px;height:16px;accent-color:var(--hl)">
+          Als eigenes Lebensmittel speichern (nächstes Mal automatisch erkannt)</label>
         <div class="grid2 mt8"><button class="btn" onclick="A.manualCancel()">Abbrechen</button>
         <button class="btn volt" onclick="A.manualSave()">Speichern</button></div></div>`:""}</div></details>
 
@@ -10043,7 +10262,8 @@ function renderNutrition(){
         return `<li><span>${m.n}${sat?` <button class="badge ${sat.cls}" style="cursor:pointer;border:none;font-size:9.5px;padding:2px 7px" onclick="A.explainSat()">${sat.lbl}</button>`:""}</span>
         <span style="display:flex;gap:10px;align-items:center"><span class="metric">${nfi.format(m.k)} kcal</span>
         <button class="iconbtn" style="min-width:32px;min-height:32px;font-size:13px" onclick="A.delMeal(${i})" aria-label="Löschen">✕</button></span></li>`;}).join("")}</ul>`
-      :`<p class="sm t2">Noch nichts geloggt — tipp oben auf einen Favoriten oder sprich deine Mahlzeit ein.</p>`}</div>
+      :`<p class="sm t2">Noch nichts geloggt — tipp oben auf einen Favoriten oder sprich deine Mahlzeit ein.</p>`}
+      ${log.meals.length?`<button class="btn mt12" style="min-height:42px" onclick="A.saveTemplate()">${icon("utensils",14)} Als Mahlzeit speichern</button>`:""}</div>
   `;
 }
 
@@ -10493,6 +10713,7 @@ function renderProfile(){
     try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
     S.profile=null; S.plan=null; S.planB=null; S.rotation=null; S.schedule=null; S.scheduleSuggestion=null; S.scheduleRationale=null;
     S.liftLog={}; S.trainingHistory=[]; S.nutritionLog={}; S.readinessHistory=[]; S.weightLog=[]; S.chat=[]; S.planChat=[];
+    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={};
     S.checkin=null; S.checkinDate=null; S.snapshots=[]; S.measure=[]; S.photos=[]; S.exOverrides={}; S.soreMode={};
     S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; S.currentWeek=1; S.planVersion=ENGINE_VERSION;
     S.seenFeatures=false; S.seenCatalog=false; S.tourDone=false; S.requiz=false;
@@ -10510,6 +10731,7 @@ function renderProfile(){
        a:{height:181,weight:82,sleep:7,goals:[],injuries:[]},profile:null,tab:"home",currentWeek:1,checkin:null,checkinDate:null,
        schedule:null,scheduleSuggestion:null,scheduleRationale:null,logged:[],exIdx:0,restEnd:null,prToday:null,playerType:null,
        liftLog:{},trainingHistory:[],nutritionLog:{},readinessHistory:[],weightLog:[],chat:[],
+       customFoods:[],mealTemplates:[],foodFavs:{},
        tier:"free",snapshots:[],recapReady:null,lastRecapWeek:null,dismissedBanners:[],
        viewMode:{train:"list",nutrition:"list"},soreMode:{},plan:null,planB:null,exOverrides:{},rhrLog:[],hrvLog:[],sleepLog:[],
        planMode:"week",rotation:null,rotationPos:0,photos:[],measure:[],aiKey:"",aiOn:false,
