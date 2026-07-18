@@ -2429,6 +2429,7 @@ S.foodFavs=S.foodFavs||{};           // {foodKey:Anzahl} — foodKey: "f:<FOODS-
 S.settings=S.settings||{}; if(!(S.settings.barKg>=10))S.settings.barKg=20;
 S.importHashes=S.importHashes||{}; // B5: Duplikat-Schutz des CSV-Imports (Hash je Satz)
 S.supersets=S.supersets||{};       // B2: {typeKey:[["Bankdrücken","Langhantelrudern"],...]} — Paare nach NAMEN (überleben Plan-Neuberechnung)
+S.customExercises=S.customExercises||[]; // B3: [{id,name,pattern,p,s,equipment,createdAt}] — eigene Übungen (Sync via S)
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -7518,6 +7519,31 @@ const EX_ACT={
   "Seilspringen":{p:["calves"],s:["quads","forearm","delts"]},
   "Rudern (Ergometer)":{p:["lats","quads"],s:["biceps","traps","lowerback","hams"]},
 };
+/* ---------- EIGENE ÜBUNGEN (B3) ----------
+   Registrierung in ALLE bestehenden Systeme: EXDB (Player/Editor), EX_ACT
+   (Muskel-Highlights/Heatmap), EX_PATTERN (Animation), MUSCLE_OF (Wochen-
+   Korridor aus geloggten Sätzen), VOL_SUBGROUP (Bizeps/Trizeps getrennt).
+   Läuft beim Boot und nach jedem Cloud-Pull erneut (idempotent). */
+const CX_GROUP={chest:"Brust",delts:"Schultern",reardelts:"Schultern",traps:"Rücken",lats:"Rücken",lowerback:"Rücken",
+  biceps:"Arme",triceps:"Arme",forearm:"Arme",abs:"Core",obliques:"Core",
+  quads:"Beine",hams:"Beine",glutes:"Beine",adductors:"Beine",calves:"Beine"};
+function registerCustomExercises(){
+  try{
+    (S.customExercises||[]).forEach(ce=>{
+      if(!ce||!ce.name)return;
+      const prim=(ce.p&&ce.p[0])||"chest", grp=CX_GROUP[prim]||"Brust";
+      EXDB[ce.name]=Object.assign(EXDB[ce.name]||{},{m:grp,eq:ce.equipment||"machine",
+        compound:((ce.p||[]).length+(ce.s||[]).length)>=3,tempo:"2-0-1-0",rir:"1–2",
+        custom:true,why:"Deine eigene Übung — Korridor, e1RM und Heatmap zählen sie ganz normal mit."});
+      EX_ACT[ce.name]={p:(ce.p||[]).slice(),s:(ce.s||[]).slice()};
+      if(ce.pattern)EX_PATTERN[ce.name]=ce.pattern;
+      MUSCLE_OF[ce.name]=grp;
+      if(prim==="biceps")VOL_SUBGROUP[ce.name]="Bizeps";
+      else if(prim==="triceps")VOL_SUBGROUP[ce.name]="Trizeps";
+    });
+  }catch(e){}
+}
+registerCustomExercises();
 /* Dev-Prüfung (B1): meldet EXDB-Übungen ohne kuratierte Map und Tippfehler in
    Muskel-IDs. Aufruf in der Konsole: MGDEV.checkCoverage() → erwartet 112/112. */
 window.MGDEV={checkCoverage(){
@@ -7557,7 +7583,7 @@ function muscleBody(view,arg,sex){
   // bleiben unverändert (die echten, anatomisch korrekten Polygone werden nur proportioniert).
   const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95;
   const grp=(keys,sx,inner)=>`<g transform="translate(50,0) scale(${sx},1) translate(-50,0)">${inner}</g>`;
-  const glowMode=!!(arguments[3]&&arguments[3].glow), plainMode=!!(arguments[3]&&arguments[3].plain), bareMode=!!(arguments[3]&&arguments[3].bare);
+  const glowMode=!!(arguments[3]&&arguments[3].glow), plainMode=!!(arguments[3]&&arguments[3].plain), bareMode=!!(arguments[3]&&arguments[3].bare), tapMode=!!(arguments[3]&&arguments[3].tap);
   const TONE="#33404F"; // einheitlicher Körperton für die 3D-Projektion (KEINE Risslinien)
   const poly=(id,pts)=>{
     const c=col(id);
@@ -7570,7 +7596,9 @@ function muscleBody(view,arg,sex){
       return `<polygon points="${pts}" fill="${c}" filter="url(#${fid}g)" stroke="#1C2534" stroke-width="0.5" stroke-opacity="0.35" stroke-linejoin="round"/>`;
     }
     const attrs=c===MG_BODY?`fill="${c}" opacity="0.5"`:`fill="${c}" filter="url(#${fid}g)" class="mg-on${isPrim(id)?"":" s2"}"`;
-    return `<polygon points="${pts}" ${attrs} stroke="#0A0E18" stroke-width="0.4" stroke-linejoin="round"/>`;
+    // Tap-Modus (B3): Muskel-Regionen klickbar machen — data-mid trägt die Muskel-ID
+    const tapAttr=tapMode&&id?` data-mid="${id}" style="cursor:pointer"`:"";
+    return `<polygon points="${pts}" ${attrs}${tapAttr} stroke="#0A0E18" stroke-width="0.4" stroke-linejoin="round"/>`;
   };
   let upperSvg="", lowerSvg="", silUp="", silLo="";
   // SILHOUETTE: alle Formen aufgeblasen in Koerperton uebereinander -> geschlossener Koerper,
@@ -9019,7 +9047,8 @@ function openPlanEditor(){
           :(!ssPartner(k,e.n)&&!ssPartner(k,arr[i+1].n)?`<button class="btn ghost" style="min-height:26px;font-size:10.5px;color:var(--t3)" onclick="A.peLink('${k}',${i})">⛓ Mit „${esc(arr[i+1].n)}" verketten (Superset)</button>`:""))
         :""}`;}).join("")}
       <button class="btn ghost" style="min-height:38px;margin-top:8px" onclick="A.peAddOpen('${k}')">+ Übung hinzufügen</button>
-      ${peAddKey===k?`<div class="chips" style="margin-top:8px">${(peCandidates(k).map(n=>`<button class="chip" onclick="A.peAdd('${k}','${esc(n)}')">+ ${esc(n)}</button>`).join(""))||'<span class="xs t2">Keine weiteren passenden Übungen</span>'}</div>`:""}
+      ${peAddKey===k?`<div class="chips" style="margin-top:8px">${(peCandidates(k).map(n=>`<button class="chip" onclick="A.peAdd('${k}','${esc(n)}')">+ ${esc(n)}</button>`).join(""))||'<span class="xs t2">Keine weiteren passenden Übungen</span>'}
+        <button class="chip" style="border-color:rgba(143,184,220,.5);color:var(--hl)" onclick="A.cxOpen('${k}')">✚ Eigene Übung erstellen</button></div>`:""}
     </div>`; };
   const bio=planBioCheck();
   const bioHTML=`<div class="card" style="border-color:rgba(126,215,224,.35);background:linear-gradient(160deg,rgba(126,215,224,.08),transparent)">
@@ -9037,6 +9066,83 @@ function openPlanEditor(){
   </div></div>`;
 }
 A.openPlanEditor=openPlanEditor;
+/* ---------- ÜBUNG ERSTELLEN (B3) ----------
+   Name + Equipment + Bewegungsmuster + Muskel-Tap-UI auf der 2D-Körperkarte:
+   1. Tipp = primär (blau), 2. Tipp = sekundär (gold), 3. Tipp = aus. */
+let cxDraft=null;
+const CX_PATTERNS=[["horizPress","Drücken horizontal (Bank)"],["vertPress","Drücken vertikal (Schulter)"],
+  ["horizPull","Zug horizontal (Rudern)"],["vertPull","Zug vertikal (Latzug)"],["raise","Heben (Seitheben/Fly)"],
+  ["curl","Curl (Beugen)"],["triExt","Trizeps-Strecken"],["squat","Kniebeuge-Muster"],["hinge","Hüftbeuge (Kreuzheben)"],
+  ["legCurl","Beinbeugen"],["calf","Wadenheben"],["core","Core/Halten"]];
+const CX_EQ=[["dumbbell","Kurzhantel"],["barbell","Langhantel"],["machine","Maschine"],["cable","Kabel"],["body","Körpergewicht"],["band","Band"]];
+function openCreateExercise(fromKey){
+  if(!cxDraft)cxDraft={name:"",equipment:"dumbbell",pattern:"horizPress",p:[],s:[],ret:fromKey||null};
+  A.cxName=(v)=>{ cxDraft.name=String(v).slice(0,40); };
+  A.cxEq=(v)=>{ cxDraft.equipment=v; };
+  A.cxPat=(v)=>{ cxDraft.pattern=v; };
+  A.cxTapEv=(ev)=>{ const t=ev.target&&ev.target.closest&&ev.target.closest("[data-mid]");
+    const id=t&&t.getAttribute("data-mid"); if(!id)return;
+    const nm=document.getElementById("cx-name"); if(nm)cxDraft.name=nm.value.slice(0,40); // Tipp-Eingabe nicht verlieren
+    const st=cxDraft.p.includes(id)?"p":cxDraft.s.includes(id)?"s":null;
+    cxDraft.p=cxDraft.p.filter(x=>x!==id); cxDraft.s=cxDraft.s.filter(x=>x!==id);
+    if(st===null)cxDraft.p.push(id); else if(st==="p")cxDraft.s.push(id);
+    try{navigator.vibrate&&navigator.vibrate(8)}catch{}
+    openCreateExercise(); };
+  A.cxCancel=()=>{ cxDraft=null; openPlanEditor(); };
+  A.cxDel=(id)=>{ const ce=(S.customExercises||[]).find(x=>x.id===id); if(!ce)return;
+    S.customExercises=S.customExercises.filter(x=>x.id!==id);
+    try{ if((EXDB[ce.name]||{}).custom)delete EXDB[ce.name];
+      delete EX_ACT[ce.name]; delete EX_PATTERN[ce.name]; delete MUSCLE_OF[ce.name]; delete VOL_SUBGROUP[ce.name]; }catch{}
+    try{ peDays().forEach(k=>{ const arr=peExArr(k); for(let i=arr.length-1;i>=0;i--)if(arr[i].n===ce.name&&arr.length>1)arr.splice(i,1);
+      S.supersets[k]=(S.supersets[k]||[]).filter(pp=>!pp.includes(ce.name)); }); }catch{}
+    save(); toast(`„${ce.name}" gelöscht — geloggte Historie bleibt erhalten`); openCreateExercise(); };
+  A.cxSave=()=>{
+    const nm=document.getElementById("cx-name"); if(nm)cxDraft.name=nm.value.trim().slice(0,40);
+    const n=cxDraft.name;
+    if(n.length<3){ toast("Gib der Übung einen Namen (mind. 3 Zeichen)"); return; }
+    if(EXDB[n]&&!(EXDB[n].custom)){ toast("Diese Übung gibt es schon in der Datenbank"); return; }
+    if((S.customExercises||[]).some(x=>x.name.toLowerCase()===n.toLowerCase())){ toast("Du hast schon eine Übung mit diesem Namen"); return; }
+    if(!cxDraft.p.length){ toast("Tippe mindestens einen Muskel als primär an"); return; }
+    const eqEl=document.getElementById("cx-eq"), patEl=document.getElementById("cx-pat");
+    const ce={id:"cx"+Date.now().toString(36),name:n,equipment:(eqEl&&eqEl.value)||cxDraft.equipment,
+      pattern:(patEl&&patEl.value)||cxDraft.pattern,p:cxDraft.p.slice(),s:cxDraft.s.slice(),createdAt:Date.now()};
+    S.customExercises.push(ce); registerCustomExercises(); save();
+    const ret=cxDraft.ret; cxDraft=null;
+    toast(`✓ „${n}" angelegt`);
+    if(ret){ A.peAdd(ret,n); } else openPlanEditor();
+  };
+  const MUSCLE_DE={chest:"Brust",delts:"Schultern",reardelts:"Hintere Schulter",traps:"Trapez",lats:"Lat",lowerback:"Unterer Rücken",
+    biceps:"Bizeps",triceps:"Trizeps",forearm:"Unterarm",abs:"Bauch",obliques:"Seitbauch",
+    quads:"Quadrizeps",hams:"Beinbeuger",glutes:"Gesäß",adductors:"Adduktoren",calves:"Waden"};
+  const colFn=(id)=>cxDraft.p.includes(id)?"#8FB8DC":cxDraft.s.includes(id)?"#C4B47A":MG_BODY;
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.cxCancel()"><div class="sheet fade">
+    <p class="display-m mb4">Eigene Übung</p>
+    <p class="xs t2 mb12" style="line-height:1.5">Sie zählt danach überall mit: Wochen-Korridor, e1RM-Kraftkurve, Heatmap, Empfehlungen.</p>
+    <input type="text" id="cx-name" placeholder="Name, z. B. Landmine Press" maxlength="40" value="${esc(cxDraft.name)}" style="width:100%;margin-bottom:10px" oninput="A.cxName(this.value)">
+    <div class="grid2 mb12">
+      <div><p class="xs t2 mb4">Equipment</p>
+        <select id="cx-eq" onchange="A.cxEq(this.value)" style="width:100%;min-height:42px;background:var(--s2);color:var(--t1);border:1px solid var(--border);border-radius:10px;padding:6px 10px">
+        ${CX_EQ.map(([v,l])=>`<option value="${v}" ${cxDraft.equipment===v?"selected":""}>${l}</option>`).join("")}</select></div>
+      <div><p class="xs t2 mb4">Bewegungsmuster</p>
+        <select id="cx-pat" onchange="A.cxPat(this.value)" style="width:100%;min-height:42px;background:var(--s2);color:var(--t1);border:1px solid var(--border);border-radius:10px;padding:6px 10px">
+        ${CX_PATTERNS.map(([v,l])=>`<option value="${v}" ${cxDraft.pattern===v?"selected":""}>${l}</option>`).join("")}</select></div>
+    </div>
+    <p class="sm mb4">Muskeln antippen</p>
+    <p class="xs t2 mb8">1. Tipp = <b style="color:#8FB8DC">primär</b> · 2. Tipp = <b style="color:#C4B47A">sekundär</b> · 3. Tipp = aus</p>
+    <div onclick="A.cxTapEv(event)" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>${muscleBody("front",colFn,curBodySex(),{tap:true})}</div>
+      <div>${muscleBody("back",colFn,curBodySex(),{tap:true})}</div>
+    </div>
+    <p class="xs mt8" style="line-height:1.7">${cxDraft.p.length?`<b style="color:#8FB8DC">Primär:</b> ${cxDraft.p.map(m=>MUSCLE_DE[m]||m).join(", ")}`:`<span class="t2">Noch kein Muskel gewählt.</span>`}
+      ${cxDraft.s.length?`<br><b style="color:#C4B47A">Sekundär:</b> ${cxDraft.s.map(m=>MUSCLE_DE[m]||m).join(", ")}`:""}</p>
+    ${(S.customExercises||[]).length?`<p class="xs t2" style="margin:14px 0 6px">Deine Übungen</p>
+      ${S.customExercises.map(ce=>`<div class="row" style="padding:5px 0;border-top:1px solid var(--hairline)"><span class="sm" style="flex:1">${esc(ce.name)}</span>
+        <button class="iconbtn" style="min-width:30px;min-height:30px;font-size:12px" onclick="A.cxDel('${ce.id}')" aria-label="Löschen">✕</button></div>`).join("")}`:""}
+    <div class="grid2 mt12"><button class="btn" onclick="A.cxCancel()">Abbrechen</button>
+    <button class="btn volt" onclick="A.cxSave()">Übung anlegen</button></div>
+  </div></div>`;
+}
+A.cxOpen=(k)=>{ cxDraft=null; openCreateExercise(k); };
 function renderTrain(){
   const sch=schedule(), dow=(new Date().getDay()+6)%7;
   const isDeload=S.currentWeek===4;
@@ -11448,7 +11554,7 @@ function renderProfile(){
     try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
     S.profile=null; S.plan=null; S.planB=null; S.rotation=null; S.schedule=null; S.scheduleSuggestion=null; S.scheduleRationale=null;
     S.liftLog={}; S.trainingHistory=[]; S.nutritionLog={}; S.readinessHistory=[]; S.weightLog=[]; S.chat=[]; S.planChat=[];
-    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={}; S.importHashes={};
+    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={}; S.importHashes={}; S.customExercises=[]; S.supersets={};
     S.checkin=null; S.checkinDate=null; S.snapshots=[]; S.measure=[]; S.photos=[]; S.exOverrides={}; S.soreMode={};
     S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; S.currentWeek=1; S.planVersion=ENGINE_VERSION;
     S.seenFeatures=false; S.seenCatalog=false; S.tourDone=false; S.requiz=false;
@@ -11684,6 +11790,7 @@ function migrateState(){
   try{
     if(S.checkinDate && S.checkinDate!==todayKey()){ S.checkin=null; S.checkinDate=null; }
     autoSupersets(); // B2: bei Zeitknappheit (≤45 Min) einmalig Antagonisten-Paare vorschlagen
+    registerCustomExercises(); // B3: eigene Übungen nach Cloud-Pull erneut in EXDB & Co. einhängen
     // Neu berechnen, wenn Engine veraltet ODER der gespeicherte Plan inhaltlich kaputt ist.
     if(S.profile && ((S.planVersion||0) < ENGINE_VERSION || !planIsHealthy())){
       regenerateUserPlan(); save();

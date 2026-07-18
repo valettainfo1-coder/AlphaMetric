@@ -202,6 +202,17 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   einmalig sinnvolle Antagonisten-Paare vor (Brust↔Rücken, Bizeps↔Trizeps,
   Quads↔Beinbeuger) — nur benachbarte Übungen, im Editor jederzeit lösbar.
 
+### 14. Eigene Übungen mit Body-Map-Tap (B3)
+- Im Plan-Editor („+ Übung hinzufügen" → „✚ Eigene Übung erstellen"): Name,
+  Equipment, Bewegungsmuster (12 Muster) und die Muskeln direkt auf der
+  2D-Körperkarte antippen — 1. Tipp primär (blau), 2. Tipp sekundär (gold),
+  3. Tipp aus. Vorder- und Rückseite nebeneinander.
+- Die eigene Übung zählt danach **überall** mit: Wochen-Korridor
+  (MEV–MRV, inkl. getrennter Bizeps-/Trizeps-Bänder), e1RM-Kraftkurven,
+  Muskel-Heatmap, Übungs-Detail, Player-Empfehlungen. Sync läuft automatisch
+  über den Cloud-Zustand.
+- Löschen jederzeit im selben Sheet — die geloggte Historie bleibt erhalten.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
