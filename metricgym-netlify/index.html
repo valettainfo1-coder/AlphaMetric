@@ -2430,6 +2430,7 @@ S.settings=S.settings||{}; if(!(S.settings.barKg>=10))S.settings.barKg=20;
 S.importHashes=S.importHashes||{}; // B5: Duplikat-Schutz des CSV-Imports (Hash je Satz)
 S.supersets=S.supersets||{};       // B2: {typeKey:[["Bankdrücken","Langhantelrudern"],...]} — Paare nach NAMEN (überleben Plan-Neuberechnung)
 S.customExercises=S.customExercises||[]; // B3: [{id,name,pattern,p,s,equipment,createdAt}] — eigene Übungen (Sync via S)
+S.progOverride=S.progOverride||{};       // B7: {Übungsname:{step:1.25|2.5|5, scheme:"linear"|"double"}}
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -3897,14 +3898,29 @@ const ALL_EXERCISES=[...new Set([...Object.keys(EXDB),"Dead Bug"])];
 // ---------- Datenzugriff (NUR echte Nutzerdaten — niemals erfunden) ----------
 function liftHistory(name){ return S.liftLog[name]||[]; }
 function bestE1(name){ return liftHistory(name).reduce((m,s)=>s.w>0?Math.max(m,e1rm(s.w,s.reps,s.rpe)):m,0); }
+/* Progression pro Übung (B7): optionales Override für Steigerungs-Schritt
+   und Schema. Default: Linear mit 2,5 kg — wie bisher. */
+function progFor(name){ const o=(S.progOverride||{})[name]||{}; return {step:o.step||2.5, scheme:o.scheme||"linear"}; }
+function repRange(name){ const m=String((EXDB[name]||{}).reps||"").match(/(\d+)\s*[–\-]\s*(\d+)/); return m?[+m[1],+m[2]]:[6,12]; }
 function recommend(name){
   const h=liftHistory(name);
   if(!h.length) return null; // ehrlich: keine Daten, keine Empfehlung
   const last=h[h.length-1];
   if(!isFinite(last.w)||last.w<0||!isFinite(last.reps)) return null; // defensiv: keine Müll-Empfehlung aus kaputter Historie
-  const inc=(last.rpe??8)<=8?2.5:0;
-  const deload=S.currentWeek===4?0.9:1;
-  return {w:Math.round((last.w+inc)*deload/2.5)*2.5, reps:Math.max(5,Math.round(last.reps))};
+  const pg=progFor(name), deload=S.currentWeek===4?0.9:1;
+  const easy=(last.rpe??8)<=8;
+  const grid=(w)=>Math.round(w*deload/pg.step)*pg.step;
+  if(pg.scheme==="double"){
+    // Double Progression: erst Wiederholungen bis zur Obergrenze der Range,
+    // DANN +Schritt aufs Gewicht und zurück auf die Untergrenze.
+    const [lo,hi]=repRange(name);
+    if(Math.round(last.reps)<hi)
+      return {w:grid(last.w), reps:Math.min(hi,Math.max(lo,Math.round(last.reps)+(easy?1:0))), dp:easy?"reps":"hold"};
+    if(easy) return {w:grid(last.w+pg.step), reps:lo, dp:"weight"};
+    return {w:grid(last.w), reps:Math.round(last.reps), dp:"hold"};
+  }
+  const inc=easy?pg.step:0;
+  return {w:grid(last.w+inc), reps:Math.max(5,Math.round(last.reps))};
 }
 /* Startgewicht-Schätzung OHNE Historie: anteilig am Körpergewicht je Übung,
    skaliert nach Erfahrung & Geschlecht. Bewusst konservativ (eher etwas leichter)
@@ -5006,8 +5022,18 @@ function infoBtn(k){return `<button class="iconbtn" style="min-width:30px;min-he
 function recWhy(name){
   const h=liftHistory(name); if(!h.length)return null;
   const last=h[h.length-1];
-  const inc=(last.rpe??8)<=8;
-  return `Letzte Session: ${fmtKg(last.w)} × ${last.reps} bei Anstrengung ${last.rpe??8}/10 → ${inc?"+2,5 kg, da du noch Wiederholungen in Reserve hattest":"Gewicht halten, da die Anstrengung über 8 lag"} (Helms et al., 2016).${S.currentWeek===4?` ${LABELS.deload}: zusätzlich −10 % Gewicht.`:""}`;
+  const pg=progFor(name), easy=(last.rpe??8)<=8;
+  const stepTxt=String(pg.step).replace(".",",");
+  const head=`Letzte Session: ${fmtKg(last.w)} × ${last.reps} bei Anstrengung ${last.rpe??8}/10 → `;
+  const tail=` (Helms et al., 2016).${S.currentWeek===4?` ${LABELS.deload}: zusätzlich −10 % Gewicht.`:""}`;
+  if(pg.scheme==="double"){
+    const [lo,hi]=repRange(name); const atTop=Math.round(last.reps)>=hi;
+    const move=atTop
+      ?(easy?`Obergrenze erreicht → +${stepTxt} kg und zurück auf ${lo} Wiederholungen`:`Obergrenze erreicht, aber Anstrengung über 8 → Gewicht halten und festigen`)
+      :(easy?`+1 Wiederholung — erst die Range füllen, dann das Gewicht`:`Anstrengung über 8 → erst bei diesem Gewicht stabilisieren`);
+    return `${head}${move}. Dein Schema: Double Progression (${lo}–${hi} Reps, dann +${stepTxt} kg)${tail}`;
+  }
+  return `${head}${easy?`+${stepTxt} kg, da du noch Wiederholungen in Reserve hattest`:"Gewicht halten, da die Anstrengung über 8 lag"}${pg.step!==2.5?` — dein eingestellter Schritt: ${stepTxt} kg`:""}${tail}`;
 }
 A.recWhy=(n)=>{const w=recWhy(n); if(w)modal(`<p class="ct">Warum diese Empfehlung?</p><p class="sm t2" style="line-height:1.6">${w}</p>`);};
 // MOCK: Tier-Wechsel lokal in S.tier — TODO Real: Stripe Checkout / In-App-Purchase
@@ -7428,6 +7454,83 @@ const EX_PATTERN={
   "Plank":"core","Dead Bug":"core","Kabel-Crunch":"core","Hängendes Beinheben":"core","Liegendes Beinheben":"core","Superman":"core","Zone-2 Cardio":"cardio",
 };
 const MOVE_TXT={horizPress:"Nach vorn/oben drücken, kontrolliert zurückführen.",vertPress:"Über Kopf drücken, langsam absenken.",raise:"Arme kontrolliert anheben, ohne Schwung.",curl:"Beugen, oben kurz halten, langsam senken.",triExt:"Bis zur vollen Streckung, dann kontrolliert beugen.",vertPull:"Hochziehen bis Kinn über den Griff, langsam ab.",horizPull:"Zum Körper ziehen, Schulterblätter zusammen.",squat:"Tief absenken, kraftvoll nach oben drücken.",hinge:"Hüfte nach hinten, Rücken gerade, dann aufrichten.",legCurl:"Fersen Richtung Gesäß, langsam zurück.",calf:"Hoch auf die Zehen, kurz halten, ab.",core:"Position halten, Körper als Linie, ruhig atmen.",cardio:"Gleichmäßiges, lockeres Tempo."};
+/* Pattern-Auflösung (B6) für ALLE Übungen: erst explizites Mapping, dann
+   Namens-Heuristik — so bekommen auch die 71 neueren + eigene Übungen die
+   passende Bewegungs-Animation und die kuratierten Fehler-Bullets. */
+function patternFor(name){
+  if(EX_PATTERN[name])return EX_PATTERN[name];
+  const n=String(name).toLowerCase();
+  if(/zone-2|cardio|seilspringen|burpee|mountain|ergometer/.test(n))return "cardio";
+  if(/waden/.test(n))return "calf";
+  if(/beinbeuger|nordic/.test(n))return "legCurl";
+  if(/kreuzheben|hip thrust|glute|swing|rückenstreck|superman|back extension/.test(n))return "hinge";
+  if(/kniebeuge|squat|beinpresse|ausfallschritt|split|step-?up|pistol|sissy|beinstrecker|hacken/.test(n))return "squat";
+  if(/klimmzug|latzug|pulldown|pullover/.test(n))return "vertPull";
+  if(/rudern|row/.test(n))return "horizPull";
+  if(/seithe|front-heben|fly|flieg|pull-apart|face pull|pec deck|shrug|abduktor/.test(n))return "raise";
+  if(/curl/.test(n))return "curl";
+  if(/trizep|skull|kickback|bench dips/.test(n))return "triExt";
+  if(/schulterdrücken|arnold|pike|handstand|landmine|press über|überkopf/.test(n))return "vertPress";
+  if(/drücken|liegestütze|dips|brustpresse|press/.test(n))return "horizPress";
+  if(/plank|crunch|beinheben|rollout|pallof|seitstütz|hollow|dragon|l-sit|dead bug|farmer/.test(n))return "core";
+  return "core";
+}
+/* Häufige Fehler je Bewegungsmuster (B6) — kuratiert, 2–3 pro Muster. */
+const PATTERN_FAULTS={
+  horizPress:["Ellbogen 90° nach außen geflärt — ~45° schonen die Schulter","Hüfte hebt beim Drücken von der Bank ab","Absenken unkontrolliert — die Senkphase ist der halbe Reiz"],
+  vertPress:["Ins Hohlkreuz ausgewichen — Rippen runter, Gesäß fest","Oben nicht voll gestreckt","Kopf statt nach vorn durchgeschoben — Stange wandert vor dem Gesicht, nicht drumherum"],
+  raise:["Schwung aus dem Oberkörper","Schultern zum Ohr hochgezogen — der Trapez übernimmt","Zu schwer gewählt: Ellbogen sackt unter Handhöhe"],
+  curl:["Ellbogen wandern nach vorn (Schulter übernimmt)","Anschwingen aus der Hüfte","Fallen lassen statt 2–3 s absenken"],
+  triExt:["Ellbogen weichen nach außen","Der Oberarm bewegt sich mit — nur der Unterarm streckt","Halber Weg statt voller Streckung"],
+  vertPull:["Nur mit den Armen gezogen — Schulterblätter zuerst nach unten","Kippen/Schwungholen","Oben nur halber Bewegungsweg"],
+  horizPull:["Runder Rücken beim Ziehen","Aufschwingen aus dem Oberkörper","Schulterblätter bleiben passiv — der Zug endet am Arm"],
+  squat:["Knie fallen nach innen (Valgus)","Fersen heben ab — Gewicht auf den ganzen Fuß","Mit rundem unterem Rücken aufgestanden"],
+  hinge:["Unterer Rücken rundet ein","Stange/Gewicht wandert vom Körper weg","Aus dem Rücken statt aus der Hüfte gehoben"],
+  legCurl:["Hüfte hebt vom Polster ab","Zurückschnellen lassen statt bremsen","Nur halber Bewegungsweg"],
+  calf:["Unten federn statt kurz in der Dehnung pausieren","Oben nur halbe Höhe","Tempo zu schnell — die Sehne arbeitet, nicht die Wade"],
+  core:["Hüfte hängt durch oder ragt nach oben","Luft anhalten statt ruhig weiteratmen","Schultern nicht über Ellbogen/Handgelenk gestapelt"],
+  cardio:["Zu schnell gestartet — Zone 2 heißt: Unterhaltung bleibt möglich","Ein-/Auslaufen weggelassen"],
+};
+/* Bewegungs-Animationen (B6): 13 Muster als reduzierte Linien-Figuren mit
+   SMIL-Loop — bewusst abstrakt (Trajektorie statt Pseudo-3D), Gold = das,
+   was sich bewegt. Kein Video-Hosting, keine Fremd-Assets. */
+function patternAnim(pat,size){
+  size=size||92;
+  const F='stroke="#5E7A96" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const G='stroke="#C4B47A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const gd='fill="#C4B47A" stroke="none"';
+  const T=(vals,dur)=>`<animateTransform attributeName="transform" type="translate" values="${vals}" dur="${dur||"2.4s"}" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>`;
+  const R=(vals,dur)=>`<animateTransform attributeName="transform" type="rotate" values="${vals}" dur="${dur||"2.4s"}" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>`;
+  const A={
+    horizPress:`<g ${F}><path d="M16 72 H84 M26 72 V82 M74 72 V82"/><circle cx="26" cy="63" r="5"/><path d="M34 65 H58 M58 65 L70 78"/></g>
+      <g ${G}><path d="M46 63 V40"/><path d="M34 38 H58"/><circle cx="46" cy="38" r="3.5" ${gd}/>${T("0 17;0 0;0 17")}</g>`,
+    vertPress:`<g ${F}><circle cx="42" cy="22" r="5"/><path d="M42 28 V58 M42 58 L33 84 M42 58 L51 84"/></g>
+      <g ${G}><path d="M55 30 V13"/><path d="M47 12 H63"/><circle cx="55" cy="12" r="3.5" ${gd}/>${T("0 17;0 0;0 17")}</g>`,
+    raise:`<g ${F}><circle cx="40" cy="22" r="5"/><path d="M40 28 V58 M40 58 L32 84 M40 58 L48 84"/></g>
+      <g ${G}><path d="M42 33 H64"/><circle cx="66" cy="33" r="4" ${gd}/>${R("55 42 33;0 42 33;55 42 33","2.6s")}</g>`,
+    curl:`<g ${F}><circle cx="40" cy="22" r="5"/><path d="M40 28 V58 M40 58 L32 84 M40 58 L48 84 M40 32 L43 47"/></g>
+      <g ${G}><path d="M43 47 H61"/><circle cx="63" cy="47" r="4" ${gd}/>${R("62 43 47;-42 43 47;62 43 47")}</g>`,
+    triExt:`<g ${F}><circle cx="40" cy="22" r="5"/><path d="M40 28 V58 M40 58 L32 84 M40 58 L48 84 M40 32 L44 45"/><path d="M58 14 V42" stroke-dasharray="2 5"/></g>
+      <g ${G}><path d="M44 45 H60"/><circle cx="62" cy="45" r="4" ${gd}/>${R("0 44 45;52 44 45;0 44 45")}</g>`,
+    vertPull:`<g ${F}><path d="M26 14 H74"/></g>
+      <g ${G}><circle cx="50" cy="36" r="5"/><path d="M50 42 V62 M50 62 L44 82 M50 62 L56 82 M46 32 L34 16 M54 32 L66 16"/>${T("0 13;0 0;0 13","2.6s")}</g>`,
+    horizPull:`<g ${F}><circle cx="34" cy="26" r="5"/><path d="M34 32 V60 M34 60 L52 60 L58 76"/><path d="M70 44 H90" stroke-dasharray="2 5"/></g>
+      <g ${G}><path d="M38 44 H62"/><circle cx="65" cy="44" r="4" ${gd}/>${T("13 0;0 0;13 0")}</g>`,
+    squat:`<g ${F}><path d="M42 58 L34 71 L37 86 M42 58 L50 71 L47 86"/></g>
+      <g ${G}><circle cx="42" cy="24" r="5"/><path d="M42 30 V58"/><path d="M28 35 H56"/>${T("0 0;0 13;0 0","2.6s")}</g>`,
+    hinge:`<g ${F}><path d="M50 60 L45 86 M50 60 L57 86"/></g>
+      <g ${G}><path d="M50 60 V32"/><circle cx="50" cy="26" r="5"/><path d="M50 42 V59" stroke-width="2.4"/>${R("-62 50 60;0 50 60;-62 50 60","2.6s")}</g>`,
+    legCurl:`<g ${F}><path d="M14 70 H72 M22 70 V80 M64 70 V80"/><circle cx="22" cy="62" r="5"/><path d="M29 64 H52 M52 64 L64 64"/></g>
+      <g ${G}><path d="M64 64 L80 64"/><circle cx="82" cy="64" r="4" ${gd}/>${R("0 64 64;-96 64 64;0 64 64")}</g>`,
+    calf:`<g ${F}><path d="M20 86 H80"/></g>
+      <g ${G}><circle cx="46" cy="20" r="5"/><path d="M46 26 V56 M46 56 L42 80 M46 56 L52 80"/>${T("0 6;0 0;0 6","2s")}</g>`,
+    core:`<g ${F}><circle cx="26" cy="56" r="5"/><path d="M32 60 L74 70 M36 62 L36 76 M70 69 L78 84"/></g>
+      <circle cx="52" cy="64" r="4" ${gd}><animate attributeName="r" values="3;5;3" dur="2.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;1;0.6" dur="2.6s" repeatCount="indefinite"/></circle>`,
+    cardio:`<g ${F}><path d="M14 56 H34 L42 40 L54 72 L62 56 H86"/></g>
+      <circle cx="50" cy="30" r="5" ${gd}><animate attributeName="r" values="4;6;4" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.55;1;0.55" dur="1.2s" repeatCount="indefinite"/></circle>`,
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="flex-shrink:0">${A[pat]||A.core}</svg>`;
+}
 // Muskel-Aktivierung je Übung (Region-IDs): p = primär, s = sekundär
 const EX_ACT={
   "Bankdrücken":{p:["chest"],s:["delts","triceps"]},"Schrägbankdrücken":{p:["chest"],s:["delts","triceps"]},"KH-Bankdrücken":{p:["chest"],s:["delts","triceps"]},
@@ -8256,7 +8359,11 @@ function exInfoFor(name){
   return {prim:(act.p||[]).map(x=>NICE[x]||x).join(", ")||d.m||"—",
           sek:(act.s||[]).map(x=>NICE[x]||x).join(", ")||"—", cues};
 }
+let _pgName=null; // aktuelle Übung im Detail-Modal (für die Progressions-Chips — Namen mit Sonderzeichen sicher)
+A.progStep=(s)=>{ if(!_pgName)return; S.progOverride[_pgName]=Object.assign(S.progOverride[_pgName]||{},{step:s}); save(); exDetailModal(_pgName); };
+A.progScheme=(s)=>{ if(!_pgName)return; S.progOverride[_pgName]=Object.assign(S.progOverride[_pgName]||{},{scheme:s}); save(); exDetailModal(_pgName); };
 function exDetailModal(name,gi){
+  _pgName=name;
   const inf=exInfoFor(name);
   const d=EXDB[name]||{};
   const warn=injuryWarn(name);
@@ -8289,6 +8396,17 @@ function exDetailModal(name,gi){
         <span style="width:20px;height:20px;min-width:20px;border-radius:50%;background:linear-gradient(135deg,#6E93B8,#8FB8DC);color:#fff;font-size:10.5px;font-weight:650;display:flex;align-items:center;justify-content:center">${i+1}</span>
         <span class="sm" style="line-height:1.45">${c}</span></div>`).join("")}
     </div>`:""}
+    ${(()=>{ if(isCardio)return ""; const pat=patternFor(name), faults=PATTERN_FAULTS[pat]||[];
+      return `<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
+        <div style="display:flex;gap:12px;align-items:center">
+          ${patternAnim(pat,84)}
+          <div style="flex:1;min-width:0"><p class="label" style="margin-bottom:4px">Bewegung</p>
+          <p class="sm t2" style="line-height:1.55;margin:0">${MOVE_TXT[pat]||""}</p></div>
+        </div>
+        ${faults.length?`<p class="label" style="margin:10px 0 6px;color:var(--warn)">Häufige Fehler</p>
+          ${faults.map(f=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:3px 0">
+            <span style="color:var(--warn);flex-shrink:0;font-weight:700;font-size:11px;line-height:1.6">✕</span><span class="xs t2" style="line-height:1.5">${f}</span></div>`).join("")}`:""}
+      </div>`; })()}
     ${warn?`<div class="warncard"><b>${icon("alert",13)} ${warn}:</b> Diese Übung belastet deine angegebene Einschränkung.<br>Alternative: <b style="color:var(--t1)">${INJURY_ALT[name]||"Variante mit reduzierter ROM"}</b></div>`:""}
     <details class="acc-i" style="margin-top:2px"><summary><span class="acc-ic">${icon("brain",14)}</span><span class="acc-t"><span class="acc-h">Warum diese Übung? · Empfehlung & Alternative</span><span class="acc-s">Beleg, Gewichts-Logik, Ausweich-Übung</span></span><span class="acc-ch">▾</span></summary>
       <div class="acc-b">
@@ -8296,6 +8414,12 @@ function exDetailModal(name,gi){
         <p class="sm t2" style="line-height:1.55;margin:0 0 8px">${why||"Erste Session: Gewicht selbst wählen — danach rechnet die Engine aus deinen Sätzen."}</p>
         ${best>0?`<p class="xs t2" style="margin:0 0 8px">Deine ${LABELS.e1rm}: <span class="metric">${fmtKg(best)}</span> ${infoBtn("e1rm")}</p>`:""}
         ${d.alt?`<p class="xs t2" style="margin:0">Bei Muskelkater/Beschwerden: <b style="color:var(--t1)">${d.alt}</b></p>`:""}
+        ${!isCardio?(()=>{ const pg=progFor(name), [lo,hi]=repRange(name);
+          return `<div style="border-top:1px solid var(--hairline);margin-top:10px;padding-top:10px">
+          <p class="xs mb4"><b style="color:var(--t1)">Progression einstellen</b> <span class="t2">— gilt nur für diese Übung</span></p>
+          <div class="chips mb4">${[1.25,2.5,5].map(s=>`<button class="chip ${pg.step===s?"sel":""}" onclick="A.progStep(${s})">+${String(s).replace(".",",")} kg</button>`).join("")}</div>
+          <div class="chips">${[["linear","Linear — jede Session +Gewicht"],["double",`Double Progression — erst ${lo}→${hi} Reps, dann +Gewicht`]].map(([v,l])=>`<button class="chip ${pg.scheme===v?"sel":""}" onclick="A.progScheme('${v}')">${l}</button>`).join("")}</div>
+        </div>`; })():""}
       </div></details>`);
 }
 // Global: Player & alle Screens nutzen dieselbe Übungs-Detailansicht.
@@ -11616,7 +11740,7 @@ function renderProfile(){
     try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
     S.profile=null; S.plan=null; S.planB=null; S.rotation=null; S.schedule=null; S.scheduleSuggestion=null; S.scheduleRationale=null;
     S.liftLog={}; S.trainingHistory=[]; S.nutritionLog={}; S.readinessHistory=[]; S.weightLog=[]; S.chat=[]; S.planChat=[];
-    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={}; S.importHashes={}; S.customExercises=[]; S.supersets={};
+    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={}; S.importHashes={}; S.customExercises=[]; S.supersets={}; S.progOverride={};
     S.checkin=null; S.checkinDate=null; S.snapshots=[]; S.measure=[]; S.photos=[]; S.exOverrides={}; S.soreMode={};
     S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; S.currentWeek=1; S.planVersion=ENGINE_VERSION;
     S.seenFeatures=false; S.seenCatalog=false; S.tourDone=false; S.requiz=false;

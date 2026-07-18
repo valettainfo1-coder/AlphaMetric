@@ -227,6 +227,21 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Wochen-Bilanz/Helms 2014, Ballaststoffe/DGE 30 g, Selbst-Monitoring/
   Burke 2011). Unter 3 geloggten Tagen: ehrlicher Empty-State.
 
+### 16. Übungs-Detail v2 & konfigurierbare Progression (B6+B7)
+- **Bewegungs-Animationen**: 13 Bewegungsmuster als reduzierte, animierte
+  Linien-Diagramme (Gold = das, was sich bewegt) — bewusst abstrakt statt
+  Pseudo-Video, ohne Fremd-Assets. Ein Pattern-Resolver ordnet alle 112
+  Übungen (und eigene) dem richtigen Muster zu.
+- **Häufige Fehler**: 2–3 kuratierte Fehler-Bullets je Bewegungsmuster im
+  Übungs-Detail (Terracotta, nie Alarm-Rot), zusätzlich zum bestehenden
+  Sicherheits-Hinweis bei Verletzungs-Flags.
+- **Progression einstellbar** (im Detail-Modal unter „Warum diese Übung?"):
+  Steigerungs-Schritt +1,25/+2,5/+5 kg und Schema **Linear** vs. **Double
+  Progression** (erst Wiederholungen bis zur Range-Obergrenze, dann
+  +Gewicht und zurück auf die Untergrenze) — pro Übung gespeichert. Die
+  Empfehlung rechnet nachweislich damit und erklärt die Logik im ⓘ
+  („Obergrenze erreicht → +2,5 kg und zurück auf 6").
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
