@@ -2427,6 +2427,7 @@ S.mealTemplates=S.mealTemplates||[]; // [{id,name,items:[{n,g,k,p,c,f}],createdA
 S.foodFavs=S.foodFavs||{};           // {foodKey:Anzahl} — foodKey: "f:<FOODS-Name>" | "c:<customFood-Id>"
 // Geräte-Einstellungen (B4): Stangen-Gewicht für den Scheiben-Rechner
 S.settings=S.settings||{}; if(!(S.settings.barKg>=10))S.settings.barKg=20;
+S.importHashes=S.importHashes||{}; // B5: Duplikat-Schutz des CSV-Imports (Hash je Satz)
 // ?ref=CODE aus der Einladung erkennen (einmalig vormerken)
 try{const rp=new URLSearchParams(location.search).get("ref"); if(rp&&!S.invitedBy&&rp!==S.refCode){S.invitedBy=rp;}}catch{}
 // Abgelaufenen Pro-Bonus zurücksetzen
@@ -4725,6 +4726,225 @@ A.scanLog=()=>{ const pr=SCAN.product; if(!pr)return;
 A.scanEstimate=()=>{ const code=SCAN.code; SCAN.stop();
   pendingManual={name:"",gram:100,barcode:code,askName:true};
   try{ if(S.tab!=="nutrition"){ S.tab="nutrition"; save(); } if(S.currentUser!=null&&S.screen==="app")render(); }catch{} };
+
+/* ---------- CSV-IMPORT (B5): Hevy & Strong ----------
+   Wechsler-Pipeline: CSV wählen → Format-Autodetektion an der Headerzeile →
+   Vorschau (Workouts/Sätze/Zeitraum, unbekannte Übungen zuordnen) →
+   Duplikat-Schutz (Hash je Satz) → Chunk-Import mit Fortschrittsbalken. */
+const IMPORT_MAP={
+  // Brust
+  "bench press":"Bankdrücken","bench press (barbell)":"Bankdrücken","barbell bench press":"Bankdrücken",
+  "incline bench press":"Schrägbankdrücken","incline bench press (barbell)":"Schrägbankdrücken",
+  "bench press (dumbbell)":"KH-Bankdrücken","dumbbell bench press":"KH-Bankdrücken",
+  "incline bench press (dumbbell)":"Schräg-KH-Drücken","incline dumbbell press":"Schräg-KH-Drücken",
+  "chest fly":"KH-Fliegende","chest fly (dumbbell)":"KH-Fliegende","dumbbell fly":"KH-Fliegende",
+  "cable fly":"Kabel-Fliegende","cable fly crossovers":"Kabel-Fliegende","cable crossover":"Kabel-Fliegende",
+  "chest press (machine)":"Brustpresse (Maschine)","machine chest press":"Brustpresse (Maschine)",
+  "chest fly (machine)":"Pec Deck","pec deck":"Pec Deck","butterfly":"Pec Deck",
+  "push up":"Liegestütze","push-up":"Liegestütze","push ups":"Liegestütze",
+  "chest dip":"Dips","dip":"Dips","dips":"Dips",
+  // Schultern
+  "overhead press":"Schulterdrücken","overhead press (barbell)":"Schulterdrücken","military press":"Schulterdrücken","shoulder press (barbell)":"Schulterdrücken",
+  "shoulder press (dumbbell)":"KH-Schulterdrücken","seated shoulder press":"KH-Schulterdrücken","seated overhead press (dumbbell)":"KH-Schulterdrücken",
+  "shoulder press (machine)":"Maschinen-Schulterdrücken","machine shoulder press":"Maschinen-Schulterdrücken",
+  "arnold press":"Arnold Press","arnold press (dumbbell)":"Arnold Press",
+  "lateral raise":"Seitheben","lateral raise (dumbbell)":"Seitheben","side lateral raise":"Seitheben",
+  "lateral raise (cable)":"Kabel-Seitheben","cable lateral raise":"Kabel-Seitheben",
+  "front raise":"Front-Heben","front raise (dumbbell)":"Front-Heben",
+  "face pull":"Face Pull","face pull (cable)":"Face Pull",
+  "rear delt fly":"Reverse Flys","rear delt reverse fly (dumbbell)":"Reverse Flys","reverse fly":"Reverse Flys",
+  "rear delt fly (machine)":"Reverse Pec Deck","reverse fly (machine)":"Reverse Pec Deck","reverse pec deck":"Reverse Pec Deck",
+  // Arme
+  "triceps pushdown":"Trizepsdrücken","tricep pushdown":"Trizepsdrücken","triceps pushdown (cable)":"Trizepsdrücken",
+  "skullcrusher":"Skullcrusher (SZ)","skull crusher":"Skullcrusher (SZ)","skullcrusher (barbell)":"Skullcrusher (SZ)","lying triceps extension":"Skullcrusher (SZ)",
+  "triceps extension (cable)":"Überkopf-Trizepsstrecken (Kabel)","overhead triceps extension":"Überkopf-Trizepsstrecken (Kabel)",
+  "triceps extension (dumbbell)":"KH-Trizepsstrecken über Kopf",
+  "triceps kickback":"Kickbacks","kickback":"Kickbacks",
+  "bench dip":"Bench Dips","bench dips":"Bench Dips",
+  "bicep curl (barbell)":"SZ-Curls","barbell curl":"SZ-Curls","ez bar curl":"SZ-Curls","ez-bar curl":"SZ-Curls",
+  "bicep curl (dumbbell)":"Bizeps-Curls","dumbbell curl":"Bizeps-Curls","biceps curl":"Bizeps-Curls",
+  "hammer curl":"Hammer-Curls","hammer curl (dumbbell)":"Hammer-Curls",
+  "bicep curl (cable)":"Kabel-Curls","cable curl":"Kabel-Curls",
+  "preacher curl":"Preacher Curls","preacher curl (machine)":"Preacher Curls",
+  "concentration curl":"Konzentrations-Curls","incline curl":"Schrägbank-Curls","incline dumbbell curl":"Schrägbank-Curls",
+  // Rücken
+  "pull up":"Klimmzug","pull-up":"Klimmzug","pullup":"Klimmzug","pull up (weighted)":"Klimmzug",
+  "chin up":"Klimmzug (Untergriff)","chin-up":"Klimmzug (Untergriff)","chinup":"Klimmzug (Untergriff)",
+  "lat pulldown":"Latzug","lat pulldown (cable)":"Latzug","lat pulldown (machine)":"Latzug",
+  "lat pulldown (close grip)":"Latzug (enger Griff)","close grip lat pulldown":"Latzug (enger Griff)",
+  "bent over row":"Langhantelrudern","bent over row (barbell)":"Langhantelrudern","barbell row":"Langhantelrudern",
+  "pendlay row":"Pendlay Row","t bar row":"T-Bar-Rudern","t-bar row":"T-Bar-Rudern",
+  "seated row":"Kabelrudern","seated cable row":"Kabelrudern","seated row (cable)":"Kabelrudern",
+  "seated row (machine)":"Maschinenrudern","machine row":"Maschinenrudern",
+  "dumbbell row":"Einarmiges KH-Rudern","bent over row (dumbbell)":"Einarmiges KH-Rudern","one arm dumbbell row":"Einarmiges KH-Rudern",
+  "chest supported row":"Brustgestütztes KH-Rudern","chest supported row (dumbbell)":"Brustgestütztes KH-Rudern",
+  "single arm cable row":"Einarm-Kabelrudern",
+  "pullover":"KH-Pullover","pullover (dumbbell)":"KH-Pullover","dumbbell pullover":"KH-Pullover",
+  "straight arm pulldown":"Straight-Arm Pulldown","straight arm lat pulldown (cable)":"Straight-Arm Pulldown",
+  "shrug":"KH-Shrugs","shrug (dumbbell)":"KH-Shrugs","dumbbell shrug":"KH-Shrugs","shrug (barbell)":"KH-Shrugs",
+  "back extension":"Rückenstrecken (Bank)","back extension (hyperextension)":"Rückenstrecken (Bank)","hyperextension":"Rückenstrecken (Bank)",
+  // Beine
+  "squat":"Kniebeuge","squat (barbell)":"Kniebeuge","barbell squat":"Kniebeuge","back squat":"Kniebeuge",
+  "front squat":"Frontkniebeuge","front squat (barbell)":"Frontkniebeuge",
+  "goblet squat":"Goblet Squat","goblet squat (kettlebell)":"Goblet Squat",
+  "hack squat":"Hackenschmidt-Beuge","hack squat (machine)":"Hackenschmidt-Beuge",
+  "leg press":"Beinpresse","leg press (machine)":"Beinpresse",
+  "lunge":"Ausfallschritte","lunge (dumbbell)":"Ausfallschritte","walking lunge":"Ausfallschritte",
+  "bulgarian split squat":"Bulgarian Split Squat","split squat":"Bulgarian Split Squat",
+  "romanian deadlift":"Rumänisches Kreuzheben","romanian deadlift (barbell)":"Rumänisches Kreuzheben",
+  "romanian deadlift (dumbbell)":"KH-Rumänisches Kreuzheben",
+  "deadlift":"Kreuzheben","deadlift (barbell)":"Kreuzheben",
+  "sumo deadlift":"Sumo-Kreuzheben","sumo deadlift (barbell)":"Sumo-Kreuzheben",
+  "hip thrust":"Hip Thrust (Langhantel)","hip thrust (barbell)":"Hip Thrust (Langhantel)","hip thrust (machine)":"Hip Thrust",
+  "glute bridge":"Glute Bridge",
+  "leg curl":"Beinbeuger","lying leg curl":"Beinbeuger","lying leg curl (machine)":"Beinbeuger","seated leg curl":"Beinbeuger","seated leg curl (machine)":"Beinbeuger",
+  "leg extension":"Beinstrecker","leg extension (machine)":"Beinstrecker",
+  "nordic curl":"Nordic Curls","nordic hamstring curl":"Nordic Curls",
+  "standing calf raise":"Wadenheben","calf raise":"Wadenheben","standing calf raise (machine)":"Stehendes Wadenheben (Maschine)",
+  "seated calf raise":"Sitzendes Wadenheben","seated calf raise (machine)":"Sitzendes Wadenheben",
+  "hip abduction (machine)":"Abduktoren-Maschine","hip abductor":"Abduktoren-Maschine",
+  "step up":"Step-ups","step-up":"Step-ups","kettlebell swing":"KB/KH-Swing",
+  // Core & Kondition
+  "plank":"Plank","side plank":"Seitstütz","dead bug":"Dead Bug",
+  "cable crunch":"Kabel-Crunch","crunch (cable)":"Kabel-Crunch",
+  "crunch":"Crunch (Zusatzgewicht)","crunch (weighted)":"Crunch (Zusatzgewicht)","weighted crunch":"Crunch (Zusatzgewicht)",
+  "hanging leg raise":"Hängendes Beinheben","hanging knee raise":"Hängendes Beinheben",
+  "lying leg raise":"Liegendes Beinheben","ab wheel":"Rollout (Ab-Wheel/Langhantel)","ab wheel rollout":"Rollout (Ab-Wheel/Langhantel)",
+  "pallof press":"Pallof Press","farmers walk":"Farmer's Walk","farmer's walk":"Farmer's Walk","farmers carry":"Farmer's Walk",
+  "burpee":"Burpees","mountain climber":"Mountain Climbers",
+};
+function parseCSV(text){
+  const rows=[]; let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=ch; }
+    else if(ch==='"')q=true;
+    else if(ch===","){ row.push(cell); cell=""; }
+    else if(ch==="\n"||ch==="\r"){ if(ch==="\r"&&text[i+1]==="\n")i++;
+      row.push(cell); cell="";
+      if(row.length>1||row[0].trim()!=="")rows.push(row);
+      row=[]; }
+    else cell+=ch; }
+  if(cell!==""||row.length){ row.push(cell); if(row.length>1||row[0].trim()!=="")rows.push(row); }
+  return rows;
+}
+function mapImportName(en){
+  const k=String(en||"").trim().toLowerCase();
+  if(IMPORT_MAP[k])return IMPORT_MAP[k];
+  const noPar=k.replace(/\s*\(.*?\)\s*/g," ").replace(/\s+/g," ").trim();
+  if(IMPORT_MAP[noPar])return IMPORT_MAP[noPar];
+  const de=Object.keys(EXDB).find(n=>n.toLowerCase()===k); // schon deutsch benannt
+  return de||null;
+}
+function extractCsvSets(text){
+  const rows=parseCSV(text); if(rows.length<2)return {err:"Die Datei ist leer oder keine CSV."};
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const iOf=(...names)=>{ for(const n of names){ const i=head.indexOf(n); if(i>=0)return i; } return -1; };
+  let fmt,cDate,cEx,cSet,cW,cR,cRpe,lb=false;
+  if(head.includes("exercise_title")){ fmt="Hevy";
+    cDate=iOf("start_time"); cEx=iOf("exercise_title"); cSet=iOf("set_index");
+    cW=iOf("weight_kg"); cR=iOf("reps"); cRpe=iOf("rpe");
+  }else if(head.includes("exercise name")){ fmt="Strong";
+    cDate=iOf("date"); cEx=iOf("exercise name"); cSet=iOf("set order");
+    cW=iOf("weight","weight (kg)","kg"); if(cW<0){ cW=iOf("weight (lb)","lb"); lb=cW>=0; }
+    cR=iOf("reps"); cRpe=iOf("rpe");
+  }else return {err:"Format nicht erkannt — die Headerzeile passt weder zu Hevy noch zu Strong."};
+  if(cDate<0||cEx<0||cW<0||cR<0)return {err:"Wichtige Spalten fehlen ("+fmt+"-Export erneut erzeugen)."};
+  const sets=[];
+  for(let i=1;i<rows.length;i++){ const r=rows[i]; if(!r||r.length<3)continue;
+    const reps=parseInt(r[cR],10); if(!(reps>0))continue;              // Cardio-/Dauer-Zeilen überspringen
+    let w=parseFloat(String(r[cW]||"").replace(",", ".")); if(!isFinite(w)||w<0)w=0;
+    if(lb)w=Math.round(w*0.45359*10)/10;
+    const ds=String(r[cDate]||"");
+    const m1=ds.match(/(\d{4})-(\d{2})-(\d{2})/), m2=ds.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    const date=m1?`${m1[1]}-${m1[2]}-${m1[3]}`:(m2?`${m2[3]}-${m2[2]}-${m2[1]}`:null);
+    if(!date)continue;
+    const rpeRaw=cRpe>=0?parseFloat(String(r[cRpe]||"").replace(",", ".")):NaN;
+    sets.push({date,ex:String(r[cEx]).trim(),set:cSet>=0?(parseInt(r[cSet],10)||0):sets.length,w,reps,
+      rpe:isFinite(rpeRaw)&&rpeRaw>=6?Math.min(10,Math.round(rpeRaw)):8});
+  }
+  return {fmt,sets};
+}
+function impHash(s,de){ const str=s.date+"|"+de+"|"+s.set+"|"+s.w+"|"+s.reps;
+  let h=5381; for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;
+  return h.toString(36)+str.length.toString(36); }
+let impData=null;
+A.importOpen=()=>{
+  let inp=document.getElementById("imp-file");
+  if(!inp){ inp=document.createElement("input"); inp.type="file"; inp.accept=".csv,text/csv"; inp.id="imp-file"; inp.style.display="none";
+    document.body.appendChild(inp); inp.addEventListener("change",()=>A.importFile(inp)); }
+  inp.value=""; inp.click();
+};
+A.importFile=async(inp)=>{
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  let text=""; try{ text=await f.text(); }catch(e){ toast("Datei konnte nicht gelesen werden"); return; }
+  A.importText(text);
+};
+A.importText=(text)=>{
+  const r=extractCsvSets(text);
+  if(r.err){ modal(`<p class="ct">CSV-Import</p><p class="sm t2" style="line-height:1.6">${esc(r.err)}</p>`); return; }
+  if(!r.sets.length){ modal(`<p class="ct">CSV-Import</p><p class="sm t2">Keine Kraft-Sätze in der Datei gefunden.</p>`); return; }
+  const seen={}; r.sets.forEach(s=>{ seen[s.ex]=1; });
+  const unknown=Object.keys(seen).filter(n=>!mapImportName(n));
+  impData={fmt:r.fmt,sets:r.sets,unknown,assign:{}};
+  A.importPreview();
+};
+A.importPreview=()=>{
+  if(!impData)return;
+  const dates=[...new Set(impData.sets.map(s=>s.date))].sort();
+  const unk=impData.unknown;
+  modal(`<p class="ct">${icon("send",14)} ${impData.fmt}-Import</p>
+    <p class="sm" style="line-height:1.7"><b>${dates.length}</b> Workouts · <b>${nfi.format(impData.sets.length)}</b> Sätze<br>
+    <span class="xs t2">${dates.length?esc(dates[0])+" bis "+esc(dates[dates.length-1]):"—"}</span></p>
+    ${unk.length?`<p class="sm mt8 mb4">Unbekannte Übungen (${unk.length}) — zuordnen oder überspringen:</p>
+      ${unk.slice(0,8).map((n,i)=>`<div class="mb8"><p class="xs t2 mb4">„${esc(n)}"</p>
+        <select id="imp-map-${i}" style="width:100%;min-height:40px;background:var(--s2);color:var(--t1);border:1px solid var(--border);border-radius:10px;padding:6px 10px">
+          <option value="">Überspringen</option>
+          ${Object.keys(EXDB).filter(x=>(EXDB[x]||{}).m!=="Herz").sort().map(x=>`<option>${esc(x)}</option>`).join("")}
+        </select></div>`).join("")}
+      ${unk.length>8?`<p class="xs t2 mb8">+ ${unk.length-8} weitere werden übersprungen — danach einfach erneut importieren.</p>`:""}`:""}
+    <p class="xs t2 mt8">Doppelte Sätze erkennt der Import automatisch — dieselbe Datei zweimal zu laden ist ungefährlich.</p>
+    <div class="grid2 mt12"><button class="btn" onclick="impData=null;A.closeModal()">Abbrechen</button>
+    <button class="btn volt" onclick="A.importRun()">Importieren</button></div>`);
+};
+A.importRun=()=>{
+  if(!impData)return;
+  impData.unknown.slice(0,8).forEach((n,i)=>{ const el=document.getElementById("imp-map-"+i); if(el&&el.value)impData.assign[n]=el.value; });
+  modal(`<p class="ct">Importiere …</p><div class="progress" style="height:10px"><div id="imp-bar" style="width:0%"></div></div><p class="xs t2 mt8" id="imp-msg">0 %</p>`);
+  const sets=impData.sets, assign=impData.assign;
+  let i=0, added=0, dup=0, skip=0; const perDay={};
+  const step=()=>{
+    const end=Math.min(sets.length,i+150);
+    for(;i<end;i++){ const s=sets[i];
+      const de=mapImportName(s.ex)||assign[s.ex]; if(!de||!EXDB[de]){skip++;continue;}
+      const h=impHash(s,de);
+      if(S.importHashes[h]){dup++;continue;}
+      S.importHashes[h]=1;
+      const t=new Date(s.date+"T12:00:00").getTime()+(s.set||0);
+      (S.liftLog[de]=S.liftLog[de]||[]).push({t,w:s.w,reps:s.reps,rpe:s.rpe});
+      const pd=perDay[s.date]=perDay[s.date]||{sets:0,vol:0,rpes:[]};
+      pd.sets++; pd.vol+=s.w*s.reps; pd.rpes.push(s.rpe); added++;
+    }
+    const pct=Math.round(i/sets.length*100);
+    const bar=document.getElementById("imp-bar"); if(bar)bar.style.width=pct+"%";
+    const msg=document.getElementById("imp-msg"); if(msg)msg.textContent=pct+" %";
+    if(i<sets.length){ (window.requestIdleCallback||((cb)=>setTimeout(cb,0)))(step); return; }
+    // Nur Tage mit NEUEN Sätzen in die Trainings-Historie schreiben
+    Object.entries(perDay).forEach(([date,d])=>{ if(!d.sets)return;
+      const ex=S.trainingHistory.find(t=>t.date===date&&t.type==="import");
+      if(ex){ ex.sets+=d.sets; ex.volume=Math.round((ex.volume||0)+d.vol); }
+      else S.trainingHistory.push({date,type:"import",sets:d.sets,volume:Math.round(d.vol),
+        avgRpe:d.rpes.length?Math.round(d.rpes.reduce((a,b)=>a+b,0)/d.rpes.length*10)/10:null});
+    });
+    S.trainingHistory.sort((a,b)=>a.date<b.date?-1:1);
+    Object.keys(S.liftLog).forEach(n=>S.liftLog[n].sort((a,b)=>a.t-b.t)); // Empfehlungen lesen "letzter Eintrag"
+    save(); impData=null;
+    modal(`<p class="ct">${icon("check",14)} Import fertig</p>
+      <p class="sm" style="line-height:1.7"><b>${nfi.format(added)}</b> Sätze übernommen${dup?` · <b>${nfi.format(dup)}</b> Duplikate übersprungen`:""}${skip?` · <b>${nfi.format(skip)}</b> ohne Zuordnung`:""}</p>
+      <p class="xs t2 mt8">Deine Kraftkurven aus der alten App sind jetzt in der Engine — ab heute mit Beweis.</p>
+      <button class="btn volt mt12" onclick="A.closeModal();try{render()}catch(e){}">Fertig</button>`);
+  };
+  step();
+};
 A.oauth=async(p)=>{ if(!SB.enabled()){toast("Cloud-Login nicht konfiguriert");return;}
   const name=(p==="google"?"Google":"Apple");
   toast(name+"-Anmeldung wird geöffnet …");
@@ -6087,7 +6307,8 @@ function renderOnboarding(){
       <label class="card row" style="cursor:pointer">
         <input type="checkbox" id="med" style="width:20px;height:20px;accent-color:var(--volt)" onchange="document.getElementById('mednext').disabled=!this.checked">
         <span class="sm" style="flex:1">Verstanden. Ich trainiere eigenverantwortlich.</span></label>
-      <button class="btn volt" id="mednext" disabled onclick="A.next()">Plan berechnen</button></div>`;
+      <button class="btn volt" id="mednext" disabled onclick="A.next()">Plan berechnen</button>
+      <button class="btn ghost mt8" style="min-height:40px;font-size:12.5px" onclick="A.importOpen()">Schon woanders trainiert? Hevy/Strong-CSV importieren</button></div>`;
     return;
   }
   // ---- Reveal (Plan-Bau) ----
@@ -11133,7 +11354,7 @@ function renderProfile(){
     try{(S.photos||[]).forEach(p=>PDB.del(p.id));}catch{}
     S.profile=null; S.plan=null; S.planB=null; S.rotation=null; S.schedule=null; S.scheduleSuggestion=null; S.scheduleRationale=null;
     S.liftLog={}; S.trainingHistory=[]; S.nutritionLog={}; S.readinessHistory=[]; S.weightLog=[]; S.chat=[]; S.planChat=[];
-    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={};
+    S.customFoods=[]; S.mealTemplates=[]; S.foodFavs={}; S.importHashes={};
     S.checkin=null; S.checkinDate=null; S.snapshots=[]; S.measure=[]; S.photos=[]; S.exOverrides={}; S.soreMode={};
     S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; S.currentWeek=1; S.planVersion=ENGINE_VERSION;
     S.seenFeatures=false; S.seenCatalog=false; S.tourDone=false; S.requiz=false;
@@ -11318,6 +11539,10 @@ function renderProfile(){
       <p class="xs t2 mb8">Synthetische 10-Wochen-Historie zum Testen aller Analytics-Module. Nur im Developer-Modus sichtbar — echte Konten starten immer leer.</p>
       <div class="grid2"><button class="btn" onclick="A.loadDemoData()">Demo-Daten laden</button>
         <button class="btn" onclick="A.clearDemoData()">Historie leeren</button></div>`):""}
+
+    ${acc("push","Aus anderer App importieren","",`
+      <p class="xs t2 mb8" style="line-height:1.6">Du kommst von <b style="color:var(--t1)">Hevy</b> oder <b style="color:var(--t1)">Strong</b>? Exportiere dort die Trainings-CSV und lade sie hier — deine komplette Kraft-Historie wandert in die Engine. Duplikate werden erkannt, ein Doppel-Import ist ungefährlich.</p>
+      <button class="btn" onclick="A.importOpen()">${icon("push",14)} Hevy/Strong-CSV wählen</button>`)}
 
     ${acc("settings","Daten & Konto","",`
       <button class="btn mb8" onclick="A.exportData()">${icon("send",14)} Daten exportieren (JSON)</button>

@@ -174,6 +174,20 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Autoplay-sicher) und, wenn erlaubt und die App im Hintergrund ist, eine
   System-Benachrichtigung „Pause vorbei — Satz 3 · Bankdrücken".
 
+### 12. Hevy/Strong-CSV-Import — die Wechsler-Pipeline (B5)
+- Neuer Einstieg im Profil („Aus anderer App importieren") und im Onboarding
+  (Medical-Schritt): CSV-Export aus **Hevy** oder **Strong** wählen — das
+  Format wird an der Headerzeile automatisch erkannt (inkl. lb→kg-Umrechnung
+  bei Strong).
+- Vorschau vor dem Import: Workouts, Sätze, Zeitraum; unbekannte Übungen
+  lassen sich per Dropdown einer der 112 Übungen zuordnen oder überspringen.
+  ~150 gängige EN-Namen sind vorgemappt (Bench Press→Bankdrücken …).
+- **Duplikat-Schutz**: jeder Satz bekommt einen Hash (Datum+Übung+Satz+
+  Gewicht+Reps) — dieselbe Datei zweimal zu importieren erzeugt 0 Dubletten.
+- Import läuft gechunkt mit Fortschrittsbalken (1.000 Zeilen ≈ 0,3 s);
+  danach sind e1RM-Kraftkurven, Empfehlungen („Letztes Mal") und der
+  Session-Verlauf sofort mit der alten Historie gefüllt.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
