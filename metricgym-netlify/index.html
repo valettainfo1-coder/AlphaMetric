@@ -1736,9 +1736,28 @@ const SB={
     if(error) throw error; return data?data.data:null;
   },
   push(){ if(!SB.client||!SB.user) return; clearTimeout(SB.pushTimer);
+    // C2: Widerruf/Basis-Modus → Verarbeitung stoppt SOFORT, keine Gesundheitsdaten mehr in die Cloud.
+    if(typeof healthAllowed==="function"&&!healthAllowed()) return;
     SB.pushTimer=setTimeout(async()=>{ try{
       await SB.client.from("user_state").upsert({user_id:SB.user.id,data:S,updated_at:new Date().toISOString()});
     }catch(e){} },1400);
+  },
+  /* C2: Einwilligungen serverseitig NACHWEISBAR machen (Art. 7 Abs. 1) —
+     Tabelle consent_log, offline-tolerant über eine Warteschlange in S. */
+  logConsent(kind,ver,granted){
+    (S._consentQ=S._consentQ||[]).push({kind,version:ver,
+      granted_at:granted?new Date().toISOString():null,
+      revoked_at:granted?null:new Date().toISOString()});
+    try{save();}catch(e){}
+    SB.flushConsent();
+  },
+  async flushConsent(){
+    if(!SB.client||!SB.user||!(S._consentQ&&S._consentQ.length)) return;
+    const q=S._consentQ.slice();
+    try{
+      await SB.withTimeout(SB.client.from("consent_log").insert(q.map(r=>Object.assign({user_id:SB.user.id},r))),8000);
+      S._consentQ=S._consentQ.slice(q.length); save();
+    }catch(e){} // offline → bleibt in der Warteschlange, nächster Versuch beim Login/Boot
   },
   // Cloud-Daten in den laufenden State übernehmen (überlagert, behält neue Default-Felder)
   hydrate(data){ if(!data||typeof data!=="object") return; for(const k in data) S[k]=data[k]; },
@@ -1772,6 +1791,7 @@ SB.fetchTier=async()=>{
   }catch(e){ return null; }
 };
 SB.syncTier=async(rerender)=>{
+  try{SB.flushConsent();}catch(e){} // C2: offene Consent-Log-Einträge nachreichen
   const t=await SB.fetchTier(); if(t===null) return;
   S.tierSrv=t; S.tierSyncedAt=Date.now();
   if(S.tier!==t){ S.tier=t; save(); if(rerender&&S.currentUser!=null){ try{ render(); }catch(e){} } }
@@ -2420,6 +2440,13 @@ S.monthOffset=S.monthOffset||0; // Monats-Überblick: 0 = aktueller Monat
 S.calAdjust=S.calAdjust||0; S.calAdjustAt=S.calAdjustAt||0; S.calAdjustMsg=S.calAdjustMsg||null; // adaptiver Kalorien-Abgleich (Memory)
 S.wearActive=S.wearActive||{}; S.wearSteps=S.wearSteps||{}; // Wearable: Aktiv-Kalorien & Schritte je Tag
 S.consent=S.consent||null; // DSGVO-Einwilligung (AGB/Datenschutz + Gesundheitsdaten Art.9)
+// C2: alten Consent ({tos:true,health:true,at,ver}) prüffest je Dokument normalisieren
+if(S.consent&&S.consent.tos===true){
+  const _cAt=S.consent.at||Date.now(), _cVer=S.consent.ver||1;
+  S.consent={tos:{ver:_cVer,at:_cAt},health:{ver:_cVer,at:_cAt,revoked:null},analytics:null};
+}
+S.basisMode=S.basisMode??false; // C2: Re-Consent abgelehnt → Nur-Basis-Modus (kein Rauswurf)
+S._consentQ=S._consentQ||[];   // C2: Offline-Warteschlange fürs serverseitige consent_log
 // Ernährung v2 (A2): eigene Lebensmittel, Mahlzeiten-Vorlagen, Nutzungs-Favoriten.
 // Alles Teil von S → läuft automatisch über save() + Cloud-Sync.
 S.customFoods=S.customFoods||[];     // [{id,name,per:100,kcal,p,c,f,fiber,barcode,servG,src,createdAt}]
@@ -5924,6 +5951,54 @@ function lpFX(){
 
 /* ===== Rechtliches (Vorlagen mit [PLATZHALTER] — vor Launch anwaltlich prüfen/füllen) ===== */
 const LEGAL_VERSION=1;
+/* C2: Einwilligungs-Zustand. Alt-/Demo-Konten ohne Datensatz gelten als
+   erlaubt (sie haben nie widerrufen); Widerruf/Basis-Modus stoppen sofort. */
+function healthAllowed(){
+  if(S.basisMode) return false;
+  const c=S.consent&&S.consent.health;
+  return c?!c.revoked:true;
+}
+function consentOutdated(){
+  const c=S.consent; if(!c||!c.tos||c.tos.ver==null) return false;
+  if(c.tos.ver<LEGAL_VERSION) return true;
+  return !!(c.health&&!c.health.revoked&&c.health.ver<LEGAL_VERSION);
+}
+function showReConsent(){
+  if(window._reconsentShown) return; window._reconsentShown=true;
+  modal(`<p class="ct">Aktualisierte Bedingungen</p>
+    <p class="sm t2" style="line-height:1.65">Unsere Nutzungsbedingungen und die Datenschutzerklärung wurden aktualisiert (Version ${LEGAL_VERSION}). Bitte wirf einen Blick hinein und stimme erneut zu — ohne Zustimmung läuft die App im Basis-Modus weiter (ohne Cloud-Sync & KI-Coach, kein Rauswurf).</p>
+    <p class="xs mt8"><a onclick="openLegal('terms')" style="color:var(--hl);text-decoration:underline;cursor:pointer">Nutzungsbedingungen ansehen</a> · <a onclick="openLegal('privacy')" style="color:var(--hl);text-decoration:underline;cursor:pointer">Datenschutzerklärung ansehen</a></p>
+    <button class="btn volt mt12" onclick="A.reConsentOk()">Zustimmen &amp; alles behalten</button>
+    <button class="btn ghost mt8" onclick="A.reConsentNo()">Ablehnen — Basis-Modus</button>`);
+}
+A.reConsentOk=()=>{ const at=Date.now();
+  S.consent=S.consent||{analytics:null};
+  S.consent.tos={ver:LEGAL_VERSION,at};
+  if(!(S.consent.health&&S.consent.health.revoked)) S.consent.health={ver:LEGAL_VERSION,at,revoked:null};
+  S.basisMode=false;
+  SB.logConsent("tos",LEGAL_VERSION,true);
+  if(S.consent.health&&!S.consent.health.revoked)SB.logConsent("health",LEGAL_VERSION,true);
+  save(); A.closeModal(); toast("✓ Danke — alles bleibt aktiv"); };
+A.reConsentNo=()=>{ S.basisMode=true; save(); A.closeModal();
+  toast("Basis-Modus aktiv — Zustimmung jederzeit im Profil möglich"); render(); };
+/* C2: Widerruf Art. 7 Abs. 3 — so einfach wie die Erteilung. */
+A.revokeHealth=()=>{ modal(`<p class="ct">Einwilligung Gesundheitsdaten widerrufen</p>
+  <p class="sm t2" style="line-height:1.65">Ab sofort stoppt jede Verarbeitung deiner Gesundheitsdaten: Cloud-Sync aus, KI-Coach aus. Die App läuft lokal im Basis-Umfang weiter. Was soll mit deinen bisherigen Daten passieren?</p>
+  <button class="btn mt12" onclick="A.revokeKeep()">Daten behalten — nur lokal auf diesem Gerät</button>
+  <button class="btn mt8" style="border-color:rgba(255,77,77,.35);color:var(--danger)" onclick="A.closeModal();A.wipe()">Alles endgültig löschen</button>
+  <button class="btn ghost mt8" onclick="A.closeModal()">Abbrechen</button>`); };
+A.revokeKeep=()=>{
+  if(!(S.consent&&S.consent.health)) S.consent=Object.assign(S.consent||{},{health:{ver:LEGAL_VERSION,at:Date.now()}});
+  S.consent.health.revoked=Date.now();
+  SB.logConsent("health",S.consent.health.ver||LEGAL_VERSION,false);
+  save(); A.closeModal(); toast("Widerruf gespeichert — Verarbeitung gestoppt"); render(); };
+A.regrantHealth=()=>{ S.basisMode=false;
+  S.consent=S.consent||{analytics:null};
+  // Zustimmung gilt immer den AKTUELLEN Dokumenten — beide Versionen anheben.
+  if(!(S.consent.tos&&S.consent.tos.ver>=LEGAL_VERSION)){ S.consent.tos={ver:LEGAL_VERSION,at:Date.now()}; SB.logConsent("tos",LEGAL_VERSION,true); }
+  S.consent.health={ver:LEGAL_VERSION,at:Date.now(),revoked:null};
+  SB.logConsent("health",LEGAL_VERSION,true);
+  save(); toast("✓ Einwilligung erteilt — alles wieder aktiv"); try{SB.push();}catch(e){} render(); };
 function legalDoc(type){
   // Betreiber-Identität aus config.js (METRICGYM_CONFIG.legal) — fehlt ein Feld, bleibt die
   // sichtbare Warnung [bitte ausfüllen], damit nie ein blankes Impressum live geht (DE-Pflicht).
@@ -5998,7 +6073,9 @@ function renderRegister(){
     const cTos=document.getElementById("c-tos"), cHealth=document.getElementById("c-health");
     if(!cTos||!cTos.checked){err.textContent="Bitte Nutzungsbedingungen & Datenschutz akzeptieren.";return;}
     if(!cHealth||!cHealth.checked){err.textContent="Für die Funktion ist die Einwilligung zur Verarbeitung deiner Gesundheitsdaten nötig.";return;}
-    S.consent={tos:true,health:true,at:Date.now(),ver:LEGAL_VERSION};
+    const _cat=Date.now();
+    S.consent={tos:{ver:LEGAL_VERSION,at:_cat},health:{ver:LEGAL_VERSION,at:_cat,revoked:null},analytics:null};
+    SB.logConsent("tos",LEGAL_VERSION,true); SB.logConsent("health",LEGAL_VERSION,true);
     const btn=document.getElementById("r-go"); if(btn)btn.disabled=true;
     const localSignup=async()=>{ // gemeinsamer lokaler Pfad (Cloud aus ODER Cloud nicht erreichbar)
       if(S.users.some(x=>x.email===e)){err.textContent="Auf diesem Gerät gibt es schon ein Konto mit dieser E-Mail — melde dich an.";if(btn)btn.disabled=false;return false;}
@@ -6063,8 +6140,35 @@ function renderRegister(){
       <span class="xs t2" style="flex:1;line-height:1.5">Ich willige ausdrücklich ein, dass meine <b style="color:var(--t1)">Gesundheits- & Fitnessdaten</b> (Gewicht, Training, Ernährung) zur Bereitstellung der App verarbeitet werden (Art. 9 Abs. 2 a DSGVO) — jederzeit widerrufbar.</span></label>
     <p class="fielderr mt8" id="r-err" role="alert"></p>
     <button class="btn volt mt8" id="r-go" onclick="A.register()">Konto erstellen — weiter zum Assessment</button>
+    <button class="btn ghost mt8" style="min-height:44px" onclick="A.localOnly()">${icon("lock",14)} Ohne Cloud starten — Daten bleiben auf dem Gerät</button>
     <p class="xs t2 mt16" style="text-align:center">Passwort sicher gehasht. Mit der Registrierung stimmst du den o. g. Bedingungen zu.</p></div>`;
 }
+/* C2: Datenminimierung als echte Wahl — lokales Konto ohne E-Mail (nur Vorname).
+   Privacy by Design: nichts verlässt das Gerät, bis der Nutzer selbst syncst. */
+A.localOnly=()=>{ modal(`<p class="ct">${icon("lock",14)} Ohne Cloud starten</p>
+  <p class="sm t2" style="line-height:1.65">Maximale Datenminimierung: kein Passwort, keine E-Mail — nur ein Vorname. Alles bleibt auf diesem Gerät (kein Backup, kein Gerätewechsel, bis du später ein Cloud-Konto verknüpfst).</p>
+  <input type="text" id="lo-name" placeholder="Dein Vorname" maxlength="24" style="width:100%;margin:12px 0 4px" autocomplete="given-name">
+  <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer;margin-top:8px">
+    <input type="checkbox" id="lo-tos" style="width:20px;height:20px;min-width:20px;accent-color:var(--accent);margin-top:1px">
+    <span class="xs t2" style="flex:1;line-height:1.5">Ich akzeptiere <a onclick="openLegal('terms')" style="color:var(--hl);text-decoration:underline;cursor:pointer">Nutzungsbedingungen</a> &amp; <a onclick="openLegal('privacy')" style="color:var(--hl);text-decoration:underline;cursor:pointer">Datenschutzerklärung</a>.</span></label>
+  <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer;margin-top:8px">
+    <input type="checkbox" id="lo-health" style="width:20px;height:20px;min-width:20px;accent-color:var(--accent);margin-top:1px">
+    <span class="xs t2" style="flex:1;line-height:1.5">Einwilligung zur lokalen Verarbeitung meiner <b style="color:var(--t1)">Gesundheits- &amp; Fitnessdaten</b> (Art. 9 Abs. 2 a DSGVO) — jederzeit widerrufbar.</span></label>
+  <p class="fielderr mt8" id="lo-err" role="alert"></p>
+  <button class="btn volt mt8" onclick="A.localOnlyGo()">Los — zum Assessment</button>`); };
+A.localOnlyGo=()=>{
+  const err=document.getElementById("lo-err");
+  const name=((document.getElementById("lo-name")||{}).value||"").trim();
+  if(name.length<2){ err.textContent="Bitte gib einen Vornamen ein."; return; }
+  const t=document.getElementById("lo-tos"), h=document.getElementById("lo-health");
+  if(!t||!t.checked){ err.textContent="Bitte Nutzungsbedingungen & Datenschutz akzeptieren."; return; }
+  if(!h||!h.checked){ err.textContent="Für die Funktion ist die Einwilligung zur Verarbeitung deiner Gesundheitsdaten nötig."; return; }
+  S.users.push({username:name.slice(0,24),email:null,pwHash:null,local:true});
+  S.currentUser=S.users.length-1;
+  const at=Date.now();
+  S.consent={tos:{ver:LEGAL_VERSION,at},health:{ver:LEGAL_VERSION,at,revoked:null},analytics:null};
+  S.step=0; S.screen="onboarding"; save(); A.closeModal(); render();
+};
 
 /* Passwort-Recovery: erreicht über den E-Mail-Link (Supabase hängt
    #access_token…&type=recovery an — der Boot-Code erkennt das und leitet her). */
@@ -8647,7 +8751,7 @@ async function proxyStream(system,history,onDelta){
   while(true){ const {done,value}=await reader.read(); if(done)break; buf+=dec.decode(value,{stream:true}); const lines=buf.split("\n"); buf=lines.pop();
     for(const ln of lines){ const t=ln.trim(); if(!t.startsWith("data:"))continue; const d=t.slice(5).trim(); if(!d||d==="[DONE]")continue; try{ const tok=JSON.parse(d).delta||""; if(tok){full+=tok;onDelta(full);} }catch{} } }
   return full.trim(); }
-function aiActive(){ return aiProxyOn() || geminiOn() || groqOn(); }
+function aiActive(){ return (aiProxyOn() || geminiOn() || groqOn()) && healthAllowed(); } // C2: Widerruf/Basis-Modus stoppt den Coach
 const GEMINI_MODEL="gemini-flash-latest";
 function geminiURL(stream){ return "https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":"+(stream?"streamGenerateContent?alt=sse":"generateContent"); }
 // dataURL ("data:image/jpeg;base64,…") → Gemini inline_data-Part
@@ -11931,6 +12035,14 @@ function renderProfile(){
       <button class="btn" onclick="A.importOpen()">${icon("push",14)} Hevy/Strong-CSV wählen</button>`)}
 
     ${acc("settings","Daten & Konto","",`
+      ${(()=>{ const c=S.consent&&S.consent.health;
+        if(S.basisMode) return `<div class="warncard mb8"><p class="xs" style="line-height:1.6">Nur-Basis-Modus aktiv — Cloud-Sync &amp; KI-Coach sind aus, bis du den aktualisierten Bedingungen zustimmst.</p>
+          <button class="btn mt8" onclick="A.regrantHealth()">Jetzt zustimmen &amp; alles freischalten</button></div>`;
+        if(c&&c.revoked) return `<div class="warncard mb8"><p class="xs" style="line-height:1.6">Einwilligung Gesundheitsdaten <b>widerrufen am ${new Date(c.revoked).toLocaleDateString("de-DE")}</b> — Cloud-Sync &amp; KI-Coach sind gestoppt, deine Daten liegen nur noch lokal.</p>
+          <button class="btn mt8" onclick="A.regrantHealth()">Einwilligung erneut erteilen</button></div>`;
+        if(c&&c.at) return `<button class="btn mb8" style="border-color:rgba(208,139,110,.4);color:var(--warn)" onclick="A.revokeHealth()">${icon("lock",14)} Einwilligung Gesundheitsdaten widerrufen</button>
+          <p class="xs t2 mb8" style="line-height:1.5">Erteilt am ${new Date(c.at).toLocaleDateString("de-DE")} (Dokument-Version ${c.ver}) — Widerruf ist so einfach wie die Erteilung (Art. 7 Abs. 3 DSGVO).</p>`;
+        return ""; })()}
       <button class="btn mb8" onclick="A.exportData()">${icon("send",14)} Daten exportieren (JSON)</button>
       <button class="btn mb8" style="border-color:rgba(208,139,110,.4);color:var(--warn)" onclick="A.resetAccount()">${icon("undo",14)} Account bei 0 neu starten</button>
       <p class="xs t2 mb8" style="line-height:1.5">Setzt Plan & gesamte Historie zurück und startet das Quiz neu — dein Login bleibt.</p>
@@ -12022,6 +12134,8 @@ try{ render(); }catch(err){ root.innerHTML=_recover(err&&(err.message||err)); }
     SB.syncTier(true); // Boot-Resync: Tier kommt vom Server, nicht aus localStorage
   }catch(e){}
 })();
+// C2: Rechtstexte aktualisiert? → Re-Consent-Sheet nach dem Boot (einmal pro Sitzung)
+setTimeout(()=>{ try{ if(S.currentUser!=null&&S.screen==="app"&&consentOutdated())showReConsent(); }catch(e){} },900);
 </script>
 </body>
 </html>

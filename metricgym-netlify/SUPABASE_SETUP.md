@@ -194,3 +194,31 @@ die OpenAI-kompatiblen Provider).
 Hinweis Trial: Der lokale 7-Tage-Test schaltet die App-Ansichten frei; die
 Server-Limits folgen dem Server-Tier. Mit Stripe (Roadmap D4) wird der Trial
 als `status='trialing'` serverseitig geführt und beides ist deckungsgleich.
+
+## 6. Einwilligungs-Log (C2 — Art. 7 Abs. 1 DSGVO)
+
+Einwilligungen müssen NACHWEISBAR sein. Die App schreibt jede Erteilung und
+jeden Widerruf (offline-tolerant, Warteschlange) in `consent_log`:
+
+```sql
+create table if not exists consent_log (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('tos','health','analytics')),
+  version int not null,
+  granted_at timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table consent_log enable row level security;
+-- Nutzer sehen und schreiben NUR eigene Zeilen; Ändern/Löschen ist nicht erlaubt
+-- (ein Log ist unveränderlich — genau das macht es prüffest).
+create policy "consent_insert_own" on consent_log
+  for insert with check (auth.uid() = user_id);
+create policy "consent_select_own" on consent_log
+  for select using (auth.uid() = user_id);
+```
+
+Hinweis: Bei einer Änderung der Rechtstexte `LEGAL_VERSION` in `index.html`
+erhöhen — die App zeigt dann automatisch das Re-Consent-Sheet; Ablehnen
+schaltet in den Nur-Basis-Modus (kein Rauswurf).

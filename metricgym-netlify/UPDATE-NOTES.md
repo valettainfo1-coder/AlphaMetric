@@ -242,6 +242,24 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Empfehlung rechnet nachweislich damit und erklärt die Logik im ⓘ
   („Obergrenze erreicht → +2,5 kg und zurück auf 6").
 
+### 17. Einwilligungs-Management Art. 9, prüffest (C2)
+- **Nachweisbar** (Art. 7 Abs. 1): Einwilligungen werden je Dokument mit
+  Version + Zeitstempel gespeichert und serverseitig in `consent_log`
+  protokolliert (RLS: nur eigene Zeilen, unveränderlich; offline-tolerante
+  Warteschlange). SQL: `SUPABASE_SETUP.md` Abschnitt 6.
+- **Re-Consent**: Wird `LEGAL_VERSION` erhöht, zeigt die App beim Start ein
+  Zustimmungs-Sheet mit Links auf die Dokumente. Ablehnen = **Nur-Basis-
+  Modus** (Cloud-Sync & KI-Coach aus, kein Rauswurf) — jederzeit im Profil
+  wieder aufhebbar.
+- **Widerruf so einfach wie die Erteilung** (Art. 7 Abs. 3): Profil →
+  Daten & Konto → „Einwilligung Gesundheitsdaten widerrufen" → sofortiger
+  Stopp (Sync nachweislich blockiert, Coach aus) mit Wahl „Daten behalten
+  (lokal)" oder „alles löschen"; `revoked_at` wird protokolliert. Erneute
+  Erteilung mit einem Tipp.
+- **„Ohne Cloud starten"** im Register-Screen: lokales Konto nur mit
+  Vornamen — keine E-Mail, kein Passwort. Privacy by Design als echte Wahl:
+  Daten verlassen das Gerät nie, bis DU syncst.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
