@@ -124,9 +124,31 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   (150 g)" — OFF-`serving_size` wird geparst, Stück-Basen der lokalen
   Datenbank bleiben erhalten.
 
+### 9. Barcode-Scanner & Voice-Parser v2 (A3+A4)
+- **Barcode-Scanner** (Icon neben dem Ernährungs-Suchfeld): Vollbild mit
+  Kamerabild, Zielrahmen und Taschenlampen-Toggle (wo die Kamera es kann).
+  Erkennung: nativer `BarcodeDetector` → **lokal gevendortes zxing-wasm**
+  (`vendor/zxing/`, kein CDN, offline via Service-Worker-Precache) → manuelle
+  EAN-Eingabe (immer sichtbar; abgelehnte Kamera-Permission sagt das klar).
+  Treffer → Open-Food-Facts-Preview mit Portions-Chips → loggen (wird als
+  eigenes Lebensmittel übernommen, Barcode gespeichert). Unbekannte EAN →
+  Schätzmaske mit Namensfeld + vorbefülltem Barcode.
+- **Voice-Parser v2**: Mengen-Synonyme („1 EL" → 15 g, „1 TL" → 5 g, „1 Tasse"
+  → 240 ml, „2 Scheiben", „eine halbe/ein viertel/anderthalb"), Marken-
+  Stripping („Ja! Magerquark" → Magerquark), robusteres Tippfehler-Matching
+  (Sellers-Distanz im Wortinneren + 80-%-Zeichenfolge-Kriterium: „häncxen
+  200 g" → Hähnchenbrust 200 g, aber „Schmaus" wird NICHT zu „Schmand").
+  Unerkannte Posten werden online bei Open Food Facts nachgeschlagen; offline
+  erscheinen sie als „nicht bestätigt" mit **Schätzen-Button** statt still
+  verworfen zu werden. Jeder Preview-Posten zeigt Quelle (DB/Eigenes/OFF) +
+  Konfidenz.
+- CSP: `script-src` um `'wasm-unsafe-eval'` ergänzt (nur WebAssembly, kein
+  JS-eval — nötig für zxing).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
-`vendor/three.min.js` (wird vom Service Worker vorgecacht). Cache-Version
-aktuell **v11** — Nutzer bekommen Updates beim nächsten Besuch automatisch.
+`vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
+vorgecacht). Cache-Version aktuell **v12** — Nutzer bekommen Updates beim
+nächsten Besuch automatisch.
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
 SQL aus `SUPABASE_SETUP.md` Abschnitt 4 ausführen ([BETREIBER]).

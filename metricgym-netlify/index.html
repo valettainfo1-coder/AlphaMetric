@@ -1378,6 +1378,8 @@ const ICONS={
   sparkle:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
   scale:'<path d="M12 3v3M7 21h10M12 6c-4 0-7 2-7 5h14c0-3-3-5-7-5Z"/><path d="M9 21v-5M15 21v-5"/>',
   undo:'<path d="M8 7 4 11l4 4"/><path d="M4 11h11a5 5 0 0 1 0 10h-3"/>',
+  barcode:'<path d="M4 7v10M8 7v10M11 7v10M15 7v10M20 7v10M17.5 7v10"/><path d="M2 4.5h3M19 4.5h3M2 19.5h3M19 19.5h3" stroke-width="1"/>',
+  torch:'<path d="M9 3h6l-1 4h-4L9 3ZM10 7h4v3a2 2 0 0 1-4 0V7Z"/><path d="M12 13v8"/>',
 };
 function icon(name,size){
   size=size||18;
@@ -4234,6 +4236,18 @@ function fuzzyDist(t,w){
   const d=Math.min(lev(t,w),phon(t)===phon(w)?0:lev(phon(t),phon(w))+0.5);
   return d<=tol?d:null;
 }
+/* Längste gemeinsame Teilfolge (klassisches DP) — misst, wie viele Zeichen des
+   Tippfehler-Worts sich in Reihenfolge im Kandidaten wiederfinden. */
+function lcsLen(a,b){
+  const m=a.length,n=b.length; if(!m||!n)return 0;
+  let prev=new Array(n+1).fill(0);
+  for(let i=1;i<=m;i++){
+    const cur=[0];
+    for(let j=1;j<=n;j++)cur[j]=a[i-1]===b[j-1]?prev[j-1]+1:Math.max(prev[j],cur[j-1]);
+    prev=cur;
+  }
+  return prev[n];
+}
 /* Phonetische Normalisierung (deutsch): gleich klingende Schreibweisen werden
    identisch — "skier"→"skir" und "skyr"→"skir" treffen sich so trotz
    2 Buchstaben Unterschied. */
@@ -4253,7 +4267,9 @@ function foodPool(){ return (S.customFoods||[]).map(customRow).concat(FOODS); }
 /* Liefert {f, dist}: dist 0 = exakter Treffer, >0 = Tippfehler-/Hörfehler-Korrektur. */
 function matchFood(segment){
   const tokens=segment.toLowerCase().replace(/[^a-zäöüß0-9\s]/g," ").split(/\s+/)
-    .filter(t=>t.length>=2&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute","zu","im","am","an","so","da","ja"].includes(t));
+    .filter(t=>t.length>=2&&!/^\d+$/.test(t)&&!["und","mit","ein","eine","einen","gramm","stück","etwas","noch","dann","heute","zu","im","am","an","so","da","ja",
+      "el","tl","esslöffel","teelöffel","essl","teel","tasse","tassen","glas","gläser","scheibe","scheiben","becher",
+      "halb","halbe","halber","halbes","halben","viertel","dreiviertel","anderthalb","eineinhalb"].includes(t));
   let best=null;
   for(const f of foodPool()){
     const words=f[0].toLowerCase().replace(/\(.*\)/,"").trim().split(/\s+/).filter(w=>w.length>=2);
@@ -4270,19 +4286,67 @@ function matchFood(segment){
         best={f,dist,w,exact};
     }
   }
+  // Fallback (A4): Wort-Ebene fand nichts → Tippfehler-Suche IM Namen (Sellers).
+  // "häncxen" sitzt so mitten in "hähnchenbrust", egal wo der Fehler steckt.
+  // Zwei Schutzmechanismen gegen Fehltreffer wie "kuchen"→"maultaschen":
+  // (1) die ersten zwei Buchstaben des Tokens müssen im Namen vorkommen (Anker),
+  // (2) 0.5 Malus, damit echte Wort-Treffer immer gewinnen.
+  if(!best){
+    for(const f of foodPool()){
+      const name=f[0].toLowerCase().replace(/\(.*\)/,"").trim();
+      const pn=phon(name);
+      for(const t of tokens){
+        if(t.length<5)continue;
+        if(!name.includes(t.slice(0,2))&&!pn.includes(phon(t).slice(0,2)))continue;
+        // Dreifach-Kriterium: Edit-Distanz ≤ len/3 UND ≥ 80 % der Zeichen in
+        // Reihenfolge wiederfindbar (LCS). "häncxen"→"hähnchen" teilt 6/7
+        // Zeichen (Treffer), "schmaus"→"Schmand" nur 5/7 (kein Treffer) —
+        // ein echtes fremdes Wort wird nicht zum nächstbesten Lebensmittel.
+        const ds=Math.min(levSub(t,name),levSub(phon(t),pn)+0.25);
+        if(ds>Math.floor(t.length/3))continue;
+        if(lcsLen(t,name)/t.length<0.8&&lcsLen(phon(t),pn)/phon(t).length<0.8)continue;
+        const dist=ds+0.5;
+        if(!best||dist<best.dist||(dist===best.dist&&f[0].length<best.f[0].length))
+          best={f,dist,w:name,exact:false};
+      }
+    }
+  }
   return best;
 }
+/* Mengen-Synonyme (A4): Küchenmaße → Gramm, wenn das Lebensmittel selbst keine
+   passende Stück-Basis mitbringt (sonst zählt die Basis, z. B. "Erdnussbutter (1 EL)"). */
+const UNIT_G={el:15,"esslöffel":15,essl:15,tl:5,"teelöffel":5,teel:5,
+  tasse:240,tassen:240,glas:200,"gläser":200,scheibe:25,scheiben:25,becher:250};
+/* Handelsmarken sagen nichts über Nährwerte — vor dem Matching entfernen
+   ("Ja! Magerquark" → "Magerquark", "Milbona Skyr" → "Skyr"). */
+const BRAND_RX=/(^|\s)(ja!|gut\s*&\s*günstig|k-classic|milbona|milsani|gutbio|rewe\s*(?:bio|beste\s*wahl)?|edeka|aldi|lidl|penny|netto|dm\s*bio|alnatura|kaufland|ehrmann|danone|nestlé)(?=\s|$)/g;
 function parseNutrition(input){
   // Multi-Item: "500g hähnchen und 300g reis, 2 tomaten"
   // Fehlt ein Komma zwischen zwei Posten ("200 g kartoffeln 100 gramm spätzle"), trennen wir
   // automatisch VOR jeder neuen Mengenangabe, die auf einen Buchstaben folgt.
-  const pre=input.trim().toLowerCase().replace(/([a-zäöüß])\s+(?=\d+\s*(?:g|gramm|gr|stück|stk)\b)/g,"$1, ");
-  const segments=pre.split(/\s*(?:,|\bund\b|\+|danach)\s*/).filter(Boolean);
+  const pre=input.trim().toLowerCase().replace(/([a-zäöüß])\s+(?=\d+\s*(?:g|gramm|gr|stück|stk|el|tl|scheiben?|tassen?|glas|gläser|becher)\b)/g,"$1, ");
+  const rawSegs=pre.split(/\s*(?:,|\bund\b|\+|danach)\s*/).filter(Boolean);
+  // Reine Mengen-Segmente ("häncxen, 200 g" — der Pre-Split hat sie abgetrennt)
+  // VOR dem Matching an das vorige Segment zurückhängen: so gehören Menge und
+  // Lebensmittel wieder zusammen, auch wenn das Wort erst per Fuzzy erkannt wird.
+  const segments=[];
+  for(const sg of rawSegs){
+    const hasWord=sg.replace(/\b\d+\s*(g|gramm|gr|ml|stück|stk|x|el|tl|scheiben?|tassen?|gläser|glas|becher)?\b/g," ").split(/\s+/).some(t=>t.length>=3);
+    if(!hasWord&&segments.length)segments[segments.length-1]+=" "+sg;
+    else segments.push(sg);
+  }
   const items=[];
-  for(const seg of segments){
-    const gramMatch=seg.match(/(\d+)\s*(g|gramm)\b/);
-    const countMatch=seg.match(/(\d+)\s*(stück|stk|x)\b/)||seg.match(/^(\d+)\s+/);
-    const wordCount={ein:1,eine:1,einen:1,zwei:2,drei:3,vier:4,fünf:5}[seg.split(/\s+/)[0]];
+  for(let seg of segments){
+    seg=seg.replace(BRAND_RX," ").replace(/\s{2,}/g," ").trim(); if(!seg)continue;
+    const gramMatch=seg.match(/(\d+)\s*(g|gramm|ml)\b/);
+    const countMatch=seg.match(/(\d+)\s*(stück|stk|x)\b/)||seg.match(/^(\d+(?:[.,]5)?)\s+/);
+    const unitMatch=seg.match(/\b(el|tl|esslöffel|teelöffel|essl|teel|tassen?|glas|gläser|scheiben?|becher)\b/);
+    const wordCount={ein:1,eine:1,einen:1,zwei:2,drei:3,vier:4,fünf:5,sechs:6}[seg.split(/\s+/)[0]];
+    // Bruch-Wörter: "eine halbe Banane" → 0,5 × Basis, "anderthalb" → 1,5 ×
+    const frac=/\b(anderthalb|eineinhalb)\b/.test(seg)?1.5
+      :/\bdreiviertel\b/.test(seg)?0.75
+      :/\bhalbe?[rsn]?\b/.test(seg)?0.5
+      :/\bviertel\b/.test(seg)?0.25:null;
     const hit=matchFood(seg);
     if(!hit){
       // Reine Mengenangabe ("…, 150 g") ohne Lebensmittelwort → der vorherigen erkannten
@@ -4294,18 +4358,27 @@ function parseNutrition(input){
         last._qty=true; last.conf=Math.min(0.97,(last.conf||0.55)+0.2);
         continue;
       }
-      items.push({raw:seg,food:null});continue;
+      // A4: unerkannt → Kandidat für die Online-Nachsuche (OFF) bzw. Schätz-Button.
+      items.push({raw:seg,food:null,gram:gramMatch?parseInt(gramMatch[1]):null,offTry:true});continue;
     }
     const food=hit.f;
     const gram=gramMatch?parseInt(gramMatch[1]):null;
-    const count=countMatch?parseInt(countMatch[1]):(wordCount||null);
-    const g=gram??(count?food[1]*count:food[1]);
-    let conf=0.55; if(gram||count)conf+=0.3; if(seg.includes(food[0].toLowerCase().split(" ")[0]))conf+=0.1;
+    let count=countMatch?parseFloat(countMatch[1].replace(",", ".")):(wordCount||null);
+    if(frac)count=(count||1)*frac;
+    // Mengen-Priorität: explizite Gramm → Stück-Basis des Lebensmittels ("(1 EL)",
+    // "(1 Scheibe)": zählen) → Küchenmaß-Synonym (EL 15 g, TL 5 g, Tasse 240 …) → Basis.
+    let g;
+    if(gram!=null) g=gram;
+    else if(unitMatch&&!/\(1 (el|tl|scheibe|stück|glas|tasse|becher)\)/i.test(food[0]))
+      g=Math.round((count||1)*(UNIT_G[unitMatch[1]]||25));
+    else if(count!=null) g=Math.round(food[1]*count);
+    else g=food[1];
+    let conf=0.55; if(gram||count||unitMatch)conf+=0.3; if(seg.includes(food[0].toLowerCase().split(" ")[0]))conf+=0.1;
     conf-=hit.dist*0.1; conf=Math.max(0.2,Math.min(0.97,conf));
     // Schwache Fuzzy-Treffer NICHT raten — lieber ehrlich "nicht erkannt" (manuell eintragbar),
     // statt einem Wort ein falsches Lebensmittel zuzuordnen.
-    if(hit.dist>0&&conf<0.45){ items.push({raw:seg,food:null}); continue; }
-    items.push({raw:seg,food,gram:g,fuzzy:hit.dist>0,conf,_qty:!!(gram||count)});
+    if(hit.dist>0&&conf<0.45){ items.push({raw:seg,food:null,gram,offTry:true}); continue; }
+    items.push({raw:seg,food,gram:g,fuzzy:hit.dist>0,conf,_qty:!!(gram||count||unitMatch)});
   }
   return items;
 }
@@ -4531,6 +4604,125 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
       appbarEl=document.getElementById("appbar"), fabEl=document.getElementById("fab");
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
+
+/* ---------- BARCODE-SCANNER (A3) ----------
+   Erkennungs-Reihenfolge: nativer BarcodeDetector → lokal gevendortes
+   zxing-wasm (vendor/zxing/, per Service Worker vorgecacht → offline) →
+   manuelle EAN-Eingabe (immer sichtbar; iOS-PWAs können getUserMedia erst
+   ab iOS 14.3, ältere fallen sauber auf die Eingabe zurück). */
+const SCAN={stream:null,timer:0,det:null,zx:null,zxReady:null,active:false,code:null,product:null,canvas:null};
+SCAN.stop=()=>{ SCAN.active=false; clearTimeout(SCAN.timer);
+  try{((SCAN.stream&&SCAN.stream.getTracks())||[]).forEach(t=>t.stop());}catch{}
+  SCAN.stream=null; SCAN.det=null; SCAN.zx=null;
+  const el=document.getElementById("scan-sheet"); if(el)el.remove(); };
+SCAN.zxing=()=>{ // zxing-wasm nur laden, wenn der native Detector fehlt
+  if(SCAN.zxReady)return SCAN.zxReady;
+  SCAN.zxReady=new Promise((res,rej)=>{
+    if(window.ZXingWASM){ try{ZXingWASM.prepareZXingModule({overrides:{locateFile:(p)=>"vendor/zxing/"+p}});}catch{} return res(window.ZXingWASM); }
+    const s=document.createElement("script"); s.src="vendor/zxing/zxing-reader.js";
+    s.onload=()=>{ try{ ZXingWASM.prepareZXingModule({overrides:{locateFile:(p)=>"vendor/zxing/"+p}}); res(window.ZXingWASM); }catch(e){ SCAN.zxReady=null; rej(e); } };
+    s.onerror=()=>{ SCAN.zxReady=null; rej(new Error("zxing nicht ladbar")); };
+    document.head.appendChild(s); });
+  return SCAN.zxReady; };
+SCAN.loop=async(video)=>{
+  if(!SCAN.active)return;
+  try{
+    if(SCAN.det){
+      const codes=await SCAN.det.detect(video);
+      if(codes&&codes[0]&&codes[0].rawValue){ SCAN.found(codes[0].rawValue); return; }
+    }else if(SCAN.zx&&video.videoWidth){
+      const c=SCAN.canvas||(SCAN.canvas=document.createElement("canvas"));
+      const w=Math.min(800,video.videoWidth), h=Math.round(w*video.videoHeight/video.videoWidth);
+      c.width=w; c.height=h;
+      const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(video,0,0,w,h);
+      const res=await SCAN.zx.readBarcodes(g.getImageData(0,0,w,h),{formats:["EAN-13","EAN-8","Code128"],maxNumberOfSymbols:1,tryHarder:true});
+      if(res&&res[0]&&(res[0].text||res[0].rawValue)){ SCAN.found(res[0].text||res[0].rawValue); return; }
+    }
+  }catch(e){}
+  SCAN.timer=setTimeout(()=>SCAN.loop(video),300);
+};
+SCAN.found=async(code)=>{
+  code=String(code||"").replace(/\D/g,""); if(code.length<8)return;
+  SCAN.code=code; SCAN.active=false; clearTimeout(SCAN.timer);
+  try{navigator.vibrate&&navigator.vibrate(24);}catch{}
+  const res=document.getElementById("scan-result"); if(!res)return;
+  res.innerHTML=`<div class="row" style="justify-content:center;gap:10px;padding:8px 0"><div class="spin" style="width:16px;height:16px;border-width:2px"></div><span class="sm t2">Suche ${esc(code)} …</span></div>`;
+  let pr=null; try{ pr=await OFF.product(code); }catch(e){}
+  if(!pr){
+    res.innerHTML=`<div class="warncard" style="margin-bottom:10px"><p class="sm"><b>${esc(code)}</b> ist nicht in der Online-Datenbank.</p>
+      <div class="grid2 mt8"><button class="btn" onclick="A.scanAgain()">Nochmal</button>
+      <button class="btn volt" onclick="A.scanEstimate()">Nährwerte schätzen</button></div></div>`;
+    return;
+  }
+  SCAN.product=pr;
+  res.innerHTML=`<div class="warncard" style="margin-bottom:10px;border-color:rgba(143,184,220,.4);background:rgba(143,184,220,.06)">
+    <p class="sm"><b>${esc(pr.name)}</b>${pr.brand?` <span class="xs t2">· ${esc(pr.brand)}</span>`:""}</p>
+    <p class="xs t2" style="margin:4px 0 8px">${nfi.format(pr.kcal)} kcal · ${pr.p} g P · ${pr.c} g C · ${pr.f} g F je 100 g · Open Food Facts</p>
+    <div class="row" style="gap:8px">
+      <input type="number" id="scan-gram" value="${pr.servG||100}" min="1" max="2000" inputmode="numeric" style="width:86px">
+      <span class="xs t2">g</span>
+      ${pr.servG&&pr.servG!==100?`<button class="chip" onclick="document.getElementById('scan-gram').value=${pr.servG}">Portion (${pr.servG} g)</button>`:""}
+      <button class="chip" onclick="document.getElementById('scan-gram').value=100">100 g</button></div>
+    <div class="grid2 mt8"><button class="btn" onclick="A.scanAgain()">Nochmal</button>
+    <button class="btn volt" onclick="A.scanLog()">Loggen</button></div></div>`;
+};
+A.scanFood=async()=>{
+  if(document.getElementById("scan-sheet"))return;
+  const d=document.createElement("div"); d.id="scan-sheet";
+  d.style.cssText="position:fixed;inset:0;z-index:400;background:#05070C;display:flex;flex-direction:column";
+  d.innerHTML=`
+    <div style="position:relative;flex:1;overflow:hidden;background:#000">
+      <video id="scan-video" playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+      <div style="position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(78vw,300px);height:150px;border-radius:14px;box-shadow:0 0 0 200vmax rgba(5,7,12,.55);outline:2px solid rgba(143,184,220,.9)"></div>
+      <button class="iconbtn" onclick="A.scanClose()" aria-label="Scanner schließen" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;background:rgba(10,14,22,.72)">${icon("x",18)}</button>
+      <button class="iconbtn" id="scan-torch" style="display:none;position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:14px;background:rgba(10,14,22,.72);opacity:.6" aria-label="Licht an/aus">${icon("torch",18)}</button>
+      <p id="scan-hint" class="sm" style="position:absolute;left:16px;right:16px;top:calc(42% + 92px);text-align:center;color:#E7ECF5;text-shadow:0 1px 8px #000">Richte den Strichcode im Rahmen aus</p>
+    </div>
+    <div style="background:#0B0F17;border-top:1px solid rgba(255,255,255,.08);padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px)">
+      <div id="scan-result"></div>
+      <p class="xs t2" id="scan-msg" style="margin-bottom:8px">Geht auch ohne Kamera: EAN eintippen.</p>
+      <div class="row" style="gap:8px"><input type="text" id="scan-ean" inputmode="numeric" autocomplete="off" placeholder="EAN, z. B. 4061458182974" style="flex:1">
+      <button class="btn" style="width:auto;min-width:92px" onclick="A.scanManual()">Suchen</button></div>
+    </div>`;
+  document.body.appendChild(d);
+  SCAN.active=true; SCAN.code=null; SCAN.product=null; SCAN.det=null; SCAN.zx=null;
+  const video=document.getElementById("scan-video");
+  const noCam=(msg)=>{ SCAN.active=false; const h=document.getElementById("scan-hint"); if(h)h.textContent=msg; };
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){ noCam("Kamera hier nicht verfügbar — EAN unten eintippen."); return; }
+  try{
+    SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}});
+    if(!document.getElementById("scan-sheet")){ SCAN.stop(); return; } // Sheet währenddessen geschlossen
+    video.srcObject=SCAN.stream; await video.play().catch(()=>{});
+    try{ const track=SCAN.stream.getVideoTracks()[0]; // Taschenlampe, wo die Kamera es kann
+      if(track&&track.getCapabilities&&track.getCapabilities().torch){
+        const bt=document.getElementById("scan-torch"); let on=false; bt.style.display="";
+        bt.onclick=async()=>{ on=!on; try{await track.applyConstraints({advanced:[{torch:on}]});}catch{} bt.style.opacity=on?"1":".6"; }; } }catch{}
+    if("BarcodeDetector" in window){ try{ SCAN.det=new BarcodeDetector({formats:["ean_13","ean_8","code_128"]}); }catch{ SCAN.det=null; } }
+    if(!SCAN.det){ try{ SCAN.zx=await SCAN.zxing(); }catch{ noCam("Scanner-Modul nicht ladbar — EAN unten eintippen."); return; } }
+    SCAN.loop(video);
+  }catch(e){
+    noCam((e&&(e.name==="NotAllowedError"||e.name==="SecurityError"))
+      ?"Kamera-Zugriff abgelehnt — EAN unten eintippen."
+      :"Kamera nicht verfügbar — EAN unten eintippen.");
+  }
+};
+A.scanClose=()=>SCAN.stop();
+A.scanAgain=()=>{ SCAN.code=null; SCAN.product=null;
+  const r=document.getElementById("scan-result"); if(r)r.innerHTML="";
+  const v=document.getElementById("scan-video");
+  if(v&&SCAN.stream&&(SCAN.det||SCAN.zx)){ SCAN.active=true; SCAN.loop(v); } };
+A.scanManual=()=>{ const el=document.getElementById("scan-ean");
+  const code=((el&&el.value)||"").replace(/\D/g,"");
+  if(code.length!==8&&code.length!==13){ const m=document.getElementById("scan-msg"); if(m)m.textContent="Eine EAN hat 8 oder 13 Ziffern."; return; }
+  SCAN.found(code); };
+A.scanLog=()=>{ const pr=SCAN.product; if(!pr)return;
+  const g=parseInt((document.getElementById("scan-gram")||{}).value)||pr.servG||100;
+  offRow(pr); const cf=upsertOffFood(pr); const e=addFood(customRow(cf),g); bumpFav("c:"+cf.id);
+  SCAN.stop(); toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);
+  try{ if(S.currentUser!=null&&S.screen==="app")render(); }catch{} };
+A.scanEstimate=()=>{ const code=SCAN.code; SCAN.stop();
+  pendingManual={name:"",gram:100,barcode:code,askName:true};
+  try{ if(S.tab!=="nutrition"){ S.tab="nutrition"; save(); } if(S.currentUser!=null&&S.screen==="app")render(); }catch{} };
 A.oauth=async(p)=>{ if(!SB.enabled()){toast("Cloud-Login nicht konfiguriert");return;}
   const name=(p==="google"?"Google":"Apple");
   toast(name+"-Anmeldung wird geöffnet …");
@@ -9980,26 +10172,59 @@ function renderNutrition(){
     else { pendingManual={name,gram:gram||100}; renderNutrition(); }
   };
   A.manualSave=()=>{
+    const nameEl=document.getElementById("m-name");
+    const name=(((pendingManual.askName&&nameEl)?nameEl.value.trim():pendingManual.name)||"").slice(0,60);
+    if(!name){toast("Gib dem Lebensmittel einen Namen");return;}
     const k=parseInt(document.getElementById("m-k").value)||0;
     const pp=parseFloat(document.getElementById("m-p").value)||0;
     const c=parseFloat(document.getElementById("m-c").value)||0;
     const f=parseFloat(document.getElementById("m-f").value)||0;
     if(k<=0){toast("Kalorien angeben");return;}
-    nlogToday().meals.push({n:pendingManual.name+` (${pendingManual.gram} g)`,g:pendingManual.gram,k,p:pp,c,f});
-    // A2: als eigenes Lebensmittel merken (Default an) → nächstes Mal echter Treffer,
-    // auch im Voice-Parser. Werte werden auf 100 g normalisiert.
-    const cb=document.getElementById("m-own"), g=pendingManual.gram;
-    if(cb&&cb.checked&&g>0&&!(S.customFoods||[]).some(x=>x.name.toLowerCase()===pendingManual.name.toLowerCase())){
+    nlogToday().meals.push({n:name+` (${pendingManual.gram} g)`,g:pendingManual.gram,k,p:pp,c,f});
+    // A2/A3: als eigenes Lebensmittel merken (Default an) → nächstes Mal echter
+    // Treffer, auch im Voice-Parser; gescannter Barcode wird mitgespeichert.
+    const cb=document.getElementById("m-own"), g=pendingManual.gram, bc=pendingManual.barcode||null;
+    if(cb&&cb.checked&&g>0&&!(S.customFoods||[]).some(x=>x.name.toLowerCase()===name.toLowerCase()||(bc&&x.barcode===bc))){
       const cf={id:"cf"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
-        name:pendingManual.name.slice(0,60),per:100,kcal:Math.round(k/g*100),
+        name,per:100,kcal:Math.round(k/g*100),
         p:Math.round(pp/g*1000)/10,c:Math.round(c/g*1000)/10,f:Math.round(f/g*1000)/10,
-        src:"manuell",createdAt:Date.now()};
+        barcode:bc,src:bc?"scan":"manuell",createdAt:Date.now()};
       S.customFoods.push(cf); bumpFav("c:"+cf.id);
       toast(`✓ Geloggt & als „${cf.name}" gemerkt`);
     }
     pendingManual=null; save(); renderNutrition();
   };
   A.manualCancel=()=>{pendingManual=null;renderNutrition();};
+  // A4: unerkannte Posten online bei Open Food Facts nachschlagen. Offline werden
+  // sie sofort als "unbestätigt" markiert → Preview zeigt den Schätz-Button
+  // statt still zu verwerfen.
+  const resolveViaOFF=()=>{
+    const list=pendingItems; if(!list)return;
+    const open=list.filter(it=>it&&!it.food&&it.offTry);
+    if(!open.length)return;
+    if(navigator.onLine===false){ open.forEach(it=>it.offTry=false); return; }
+    open.slice(3).forEach(it=>it.offTry=false); // Höflichkeit: max. 3 Nachsuchen pro Eingabe
+    open.slice(0,3).forEach(it=>{
+      const q=it.raw.replace(/\b\d+\s*(g|gramm|gr|ml|stück|stk|x|el|tl|scheiben?|tassen?|gläser|glas|becher)?\b/g," ")
+        .replace(/\s+/g," ").trim();
+      if(q.length<3){ it.offTry=false; return; }
+      OFF.search(q).then(res=>{ if(pendingItems!==list)return;
+        it.offTry=false; const pr=res&&res[0];
+        if(pr){ it.food=offRow(pr); it.gram=it.gram||pr.servG||100; it.conf=0.6; it.fuzzy=true; }
+        renderNutrition();
+      }).catch(()=>{ if(pendingItems!==list)return; it.offTry=false; renderNutrition(); });
+    });
+  };
+  // Unbestätigten Posten in die Schätzmaske übernehmen (Name vorbereinigt).
+  A.estimateRaw=(i)=>{
+    const it=(pendingItems||[])[i]; if(!it)return;
+    const nm=it.raw.replace(/\b\d+\s*(g|gramm|gr|ml|stück|stk|x|el|tl|scheiben?|tassen?|gläser|glas|becher)?\b/g," ")
+      .replace(/\s+/g," ").trim();
+    pendingManual={name:nm?nm[0].toUpperCase()+nm.slice(1):"Eintrag",gram:it.gram||100};
+    pendingItems.splice(i,1); if(!pendingItems.length)pendingItems=null;
+    renderNutrition();
+    const d=document.querySelector("details.acc"); if(d){ d.open=true; d.scrollIntoView({behavior:"smooth",block:"center"}); }
+  };
   A.parseFood=()=>{
     const el=document.getElementById("quicklog-in");
     const txt=(el&&el.value.trim())||""; if(!txt)return;
@@ -10007,8 +10232,8 @@ function renderNutrition(){
     // & Apfelmus"), korrigiert Tippfehler, schätzt Makros. Ohne KI → geprüfte Datenbank.
     if(aiActive()){ A.aiParse(txt); return; }
     const items=parseNutrition(txt);
-    if(items.some(i=>i.food)){ pendingItems=items; renderNutrition(); return; }
-    toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'");
+    if(!items.length){ toast("Nichts erkannt — z. B. '200 g Hähnchen und 150 g Reis'"); return; }
+    pendingItems=items; resolveViaOFF(); renderNutrition();
   };
   // KI-Parsing: ganze Eingabe → einzelne Posten mit geschätzten Nährwerten. Ergebnis wird
   // als Vorschau gezeigt (Übernehmen/Verwerfen) — nichts wird blind geloggt.
@@ -10016,7 +10241,7 @@ function renderNutrition(){
     txt=txt||((document.getElementById("quicklog-in")||{}).value||"").trim();
     if(!txt){toast("Schreib zuerst, was du gegessen hast");return;}
     const dbFallback=(silentMsg)=>{ const db=parseNutrition(txt);
-      if(db.some(i=>i.food)){ pendingItems=db; renderNutrition(); if(silentMsg)toast(silentMsg); }
+      if(db.length){ pendingItems=db; resolveViaOFF(); renderNutrition(); if(silentMsg)toast(silentMsg); }
       else { pendingItems=null; renderNutrition(); toast("Konnte nicht deuten — bitte etwas konkreter"); } };
     if(!aiActive()){ dbFallback(); return; }
     pendingItems=[{loading:true}]; renderNutrition();
@@ -10050,7 +10275,9 @@ function renderNutrition(){
     let n=0, addK=0, addP=0;
     for(const it of (pendingItems||[])){
       if(!it||typeof it!=="object"||it.loading) continue;       // defensiv: kaputte Posten überspringen
-      if(it.food){ const e=addFood(it.food,it.gram); bumpFav(favKeyOf(it.food)); addK+=e.k; addP+=e.p; n++; }
+      if(it.food){ let row=it.food;
+        if(row._off){ const cf=upsertOffFood(row._off); row=customRow(cf); } // Voice-OFF-Treffer → eigene Kopie (offline ab jetzt)
+        const e=addFood(row,it.gram); bumpFav(favKeyOf(row)); addK+=e.k; addP+=e.p; n++; }
       else if(it.tpl){ const k=Math.round(it.kcal),p=Math.round(it.p*10)/10; nlogToday().meals.push({n:it.name+(it.gram?` (${it.gram} g)`:""),g:it.gram||0,k,p,c:Math.round(it.c*10)/10,f:Math.round(it.f*10)/10,t:Date.now()}); addK+=k; addP+=p; n++; }
       else if(it.ai&&it.kcal>0){ const k=Math.round(it.kcal),p=Math.round(it.p||0); nlogToday().meals.push({n:(it.name||"Eintrag")+" (KI)",g:it.gram||0,k,p,c:Math.round(it.c||0),f:Math.round(it.f||0),t:Date.now()}); addK+=k; addP+=p; n++; }
     }
@@ -10207,7 +10434,9 @@ function renderNutrition(){
         ${pendingItems.some(it=>it.tpl)?`<p class="xs t2 mb8">${icon("utensils",11)} Vorlage geladen — Mengen anpassbar, dann übernehmen.</p>`:""}
         ${pendingItems.map((it,i)=>it.food?`
           <div class="row mb4"><span class="sm">${it.fuzzy?`<span class="xs t2">„${esc(it.raw.trim())}" erkannt als</span> `:""}${esc(it.food[0])} · <span class="metric">${it.gram} g</span></span>
-          <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${Math.round(it.conf*100)} %</span></span></div>`
+          <span class="metric xs t2">${nfi.format(it.food[2]*it.gram/it.food[1])} kcal <span class="conf">· ${it.food._off?"OFF":it.food._key?"Eigenes":"DB"} · ${Math.round(it.conf*100)} %</span></span></div>`
+          :it.offTry?`
+          <p class="xs t2 mb4"><span class="spin" style="width:10px;height:10px;border-width:1.5px;display:inline-block;vertical-align:-1px;margin-right:4px"></span>„${esc(it.raw)}" — Online-Datenbank wird durchsucht …</p>`
           :it.tpl?`
           <div class="row mb4"><span class="sm" style="display:flex;align-items:center;gap:6px;flex:1;min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</span>
             ${it.base&&it.base.g>0?`<input type="number" value="${it.gram}" min="0" max="2000" inputmode="numeric" style="width:64px;padding:4px 8px;min-height:32px" oninput="A.tplGram(${i},this.value)"><span class="xs t2">g</span>`:""}</span>
@@ -10215,21 +10444,27 @@ function renderNutrition(){
           :it.ai?`
           <div class="row mb4"><span class="sm">${esc(it.name)} · <span class="metric">${it.gram?it.gram+" g":"Portion"}</span></span>
           <span class="metric xs t2">${nfi.format(it.kcal)} kcal · ${it.p} g P</span></div>`
-          :`<p class="xs danger-txt mb4">„${esc(it.raw)}" nicht erkannt — tipp es unten bei „Suche & manuell" ein</p>`).join("")}
+          :`<div class="row mb4" style="align-items:center"><span class="xs danger-txt" style="flex:1">„${esc(it.raw)}" nicht bestätigt</span>
+          <button class="chip" style="flex-shrink:0" onclick="A.estimateRaw(${i})">Nährwerte schätzen</button></div>`).join("")}
         <div class="grid2 mt8"><button class="btn" onclick="A.cancelItems()">Verwerfen</button>
         <button class="btn volt" onclick="A.approveItems()">Übernehmen</button></div>
         ${pendingItems[0]&&pendingItems[0].tpl&&pendingItems[0].tplId?`<button class="btn ghost mt8" style="min-height:36px;font-size:12px;color:var(--t2)" onclick="A.delTemplate('${pendingItems[0].tplId}')">Vorlage löschen</button>`:""}</div>`):""}
     </div>
 
-    <details class="acc"><summary>Suche &amp; manuell eingeben<span class="chev">${icon("chevron",15)}</span></summary>
+    <details class="acc"${pendingManual?" open":""}><summary>Suche &amp; manuell eingeben<span class="chev">${icon("chevron",15)}</span></summary>
       <div class="accbody">
-      <div class="row mb8">
-        <input type="text" id="food-name" placeholder="Lebensmittel …" style="flex:1" oninput="A.foodInput(this)" autocomplete="off">
-        <input type="number" id="food-gram" placeholder="g" style="width:76px" min="1" max="2000" inputmode="numeric">
+      <div class="row mb8" style="gap:8px">
+        <input type="text" id="food-name" placeholder="Lebensmittel …" style="flex:1;min-width:0" oninput="A.foodInput(this)" autocomplete="off">
+        <input type="number" id="food-gram" placeholder="g" style="width:60px" min="1" max="2000" inputmode="numeric">
+        <button class="iconbtn" style="min-width:44px;min-height:44px;flex-shrink:0" onclick="A.scanFood()" aria-label="Barcode scannen">${icon("barcode",19)}</button>
         <button class="btn volt" style="width:50px;min-width:50px" onclick="A.addCustomFood()" aria-label="Hinzufügen">+</button></div>
       <div id="food-autocomplete" class="ac-list" style="display:none"></div>
       <div class="chips" id="food-chips" style="margin-top:6px"></div>
-      ${pendingManual?`<div class="warncard mt8"><b>„${esc(pendingManual.name)}"</b> unbekannt — Nährwerte für ${pendingManual.gram} g schätzen:
+      ${pendingManual?`<div class="warncard mt8">
+        ${pendingManual.askName
+          ?`<p class="sm mb8">${pendingManual.barcode?`Gescanntes Produkt <span class="metric xs t2">EAN ${esc(pendingManual.barcode)}</span> — `:""}Name &amp; Nährwerte je ${pendingManual.gram} g angeben:</p>
+             <input type="text" id="m-name" placeholder="Produktname …" maxlength="60" style="width:100%;margin-bottom:4px" value="${esc(pendingManual.name||"")}">`
+          :`<b>„${esc(pendingManual.name)}"</b> unbekannt — Nährwerte für ${pendingManual.gram} g schätzen:`}
         <div class="grid4 mt8">
           <input type="number" id="m-k" placeholder="kcal" inputmode="numeric">
           <input type="number" id="m-p" placeholder="P" inputmode="numeric">
