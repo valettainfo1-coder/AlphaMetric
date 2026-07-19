@@ -1,0 +1,37 @@
+# METRICGYM CI (D2): Playwright-Suiten headless gegen http-server.
+# Rot = kein Deploy: In Netlify die GitHub-Integration aktivieren und
+# "Deploy only when CI passes" (Checks) einschalten — dann blockt dieser
+# Workflow fehlerhafte Deploys. [BETREIBER: Netlify-Setting einmalig setzen]
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Playwright + Server installieren
+        run: |
+          npm i -g playwright http-server
+          npx playwright install --with-deps chromium
+
+      - name: App-Server starten
+        run: |
+          npx http-server metricgym-netlify -p 8896 -s &
+          for i in $(seq 1 30); do curl -sf http://localhost:8896/index.html >/dev/null && break; sleep 1; done
+
+      - name: App-Regression (Auth · Player · Ernährung · Import · Paywall)
+        run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/app-tests.mjs
+
+      - name: DSGVO-Regression (Consent · Widerruf · Export · Löschung)
+        run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/dsgvo-tests.mjs

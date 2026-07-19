@@ -308,6 +308,16 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   (Consent-Pflicht, Re-Consent, Widerruf-blockt-Sync, Export-Stichproben,
   Lösch-Flow bis Abschied) — Exit-Code ≠ 0 bei Rot, alle 12 Checks grün.
 
+### 21. CI-Pipeline (D2)
+- GitHub Action `.github/workflows/ci.yml`: startet die App headless
+  (`http-server`) und fährt zwei Playwright-Suiten: **App-Regression**
+  (`tests/app-tests.mjs`: Landing, Registrierung mit Offline-Fallback,
+  Player-Satz → Kraft-Log, Ernährungs-Log + Voice-Parser, 300-Zeilen-
+  CSV-Import inkl. Duplikat-Schutz, Paywall-Ehrlichkeit) und die
+  **DSGVO-Suite** aus C8. Rot = Workflow schlägt fehl.
+- `netlify.toml` + Anleitung: Netlify-GitHub-Checks aktivieren, damit nur
+  bei grünem CI deployt wird ([BETREIBER], einmalig im Dashboard).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker

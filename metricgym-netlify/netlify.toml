@@ -1,0 +1,9 @@
+# Netlify-Konfiguration für METRICGYM (statischer Ordner, kein Build).
+# Deploy-Gate (D2): In den Netlify-Site-Settings die GitHub-Integration
+# verbinden und unter "Deploys" → "Deploy notifications/Checks" festlegen,
+# dass nur bei grünem GitHub-Check (Workflow "CI") deployt wird.
+# [BETREIBER: einmalig im Netlify-Dashboard aktivieren]
+
+[build]
+  publish = "."
+  command = "echo 'statisches Deploy — Tests laufen in GitHub Actions (CI)'"
