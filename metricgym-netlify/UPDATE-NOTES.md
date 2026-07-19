@@ -287,6 +287,27 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   Food Facts nur mit Produktanfragen), Foto-lokal-Garantie, Speicherdauern,
   zuständige Aufsichtsbehörde (config-Feld `legal.authority`, [BETREIBER]).
 
+### 20. Security-Hardening, Foto/Voice-Transparenz, DSGVO-Testsuite (C6+C7+C8)
+- **Header**: HSTS (`max-age=31536000; includeSubDomains`) und
+  `img-src https://images.openfoodfacts.org` ergänzt.
+- **XSS-Audit mit echtem Fund & Fix**: Ein präparierter Open-Food-Facts-
+  Produktname (`<img onerror>`) wurde in Suche und Scanner korrekt escaped,
+  feuerte aber nach dem Loggen in der Tagesliste — die Liste (und die
+  Galerie-Kacheln) escapen jetzt; eigene Übungsnamen werden zusätzlich an
+  der Quelle von HTML-/Quote-Zeichen befreit. Automatisierte XSS-Probe
+  bleibt als Test bestehen.
+- **RLS-Review** aller Tabellen als Soll-Tabelle in `SUPABASE_SETUP.md`
+  (Abschnitt 8) + dokumentierte PKCE-Entscheidung (Abschnitt 9: bewusst
+  implicit, Umstellungsanleitung für den Betreiber).
+- **C7**: Einmaliger Hinweis vor der ersten Sprach-Eingabe (Audio geht an
+  den Browser-Anbieter; Texteingabe gleichwertig — mit „Lieber tippen"-
+  Ausweg), dauerhafter Hinweis „Fotos verlassen dein Gerät nie" an der
+  Foto-Sektion, beides in der Datenschutzerklärung nachlesbar; Hinweis
+  „Geräteschutz statt Konto" beim Ohne-Cloud-Start.
+- **C8**: CI-fähige DSGVO-Regressionssuite `tests/dsgvo-tests.mjs`
+  (Consent-Pflicht, Re-Consent, Widerruf-blockt-Sync, Export-Stichproben,
+  Lösch-Flow bis Abschied) — Exit-Code ≠ 0 bei Rot, alle 12 Checks grün.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker

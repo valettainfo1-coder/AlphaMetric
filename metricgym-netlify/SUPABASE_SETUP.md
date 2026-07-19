@@ -236,3 +236,28 @@ ausschließlich serverseitig. Der Client ruft sie über
 `SB.client.functions.invoke("delete-account")` auf; scheitert der Aufruf,
 löscht die App trotzdem lokal und sagt das ehrlich ([BETREIBER]: Funktion
 deployen, sonst bleibt die Server-Löschung auf `user_state` beschränkt).
+
+## 8. RLS-Review (C6) — Soll-Zustand aller Tabellen
+
+| Tabelle | Client-Policies | Begründung |
+|---|---|---|
+| `user_state` | select/insert/update/delete nur `auth.uid() = user_id` | der eigene Zustands-Blob |
+| `consent_log` | insert + select nur eigene Zeilen; KEIN update/delete | unveränderliches Nachweis-Log |
+| `subscriptions` | NUR select eigene Zeile | Tier wird ausschließlich serverseitig geschrieben (Stripe-Webhook/Betreiber) |
+| `elite_accounts` | KEINE Client-Policies | nur Service-Role (my_tier RPC liest security definer) |
+| `ai_usage` | KEINE Client-Policies | nur ai-proxy (Service-Role) zählt |
+| `referrals` | insert eigene referee-Zeile; select nur aggregiert via RPC | keine Fremddaten lesbar |
+
+Prüfen: Supabase Dashboard → Authentication → Policies — jede Tabelle muss
+RLS „enabled" zeigen; jede fehlende Zeile oben ist ein Launch-Blocker.
+
+## 9. Auth-Flow: bewusst `implicit` (Stand Juli 2026)
+
+supabase-js v2 kann PKCE auch ohne eigenes Backend. Wir bleiben VORERST bei
+`flowType:"implicit"`, weil der Passwort-Reset-Flow (C1) auf den
+`#access_token…type=recovery`-Hash aufbaut und ein Wechsel auf PKCE die
+Link-Formate ändert (`?code=` + `exchangeCodeForSession`). Umstellung ist
+vorbereitet, braucht aber einen Test gegen das echte Projekt:
+1. `flowType:"pkce"` in `SB.init` setzen,
+2. Boot-Code auf `?code=`-Erkennung + `exchangeCodeForSession` erweitern,
+3. Reset-/OAuth-Flows einmal real durchklicken. [BETREIBER]

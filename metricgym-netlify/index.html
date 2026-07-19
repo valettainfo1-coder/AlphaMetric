@@ -2446,6 +2446,7 @@ if(S.consent&&S.consent.tos===true){
   S.consent={tos:{ver:_cVer,at:_cAt},health:{ver:_cVer,at:_cAt,revoked:null},analytics:null};
 }
 S.basisMode=S.basisMode??false; // C2: Re-Consent abgelehnt → Nur-Basis-Modus (kein Rauswurf)
+S.voiceNoticeShown=S.voiceNoticeShown??false; // C7: einmaliger Hinweis vor der ersten Sprach-Eingabe
 S._consentQ=S._consentQ||[];   // C2: Offline-Warteschlange fürs serverseitige consent_log
 // Ernährung v2 (A2): eigene Lebensmittel, Mahlzeiten-Vorlagen, Nutzungs-Favoriten.
 // Alles Teil von S → läuft automatisch über save() + Cloud-Sync.
@@ -5496,6 +5497,16 @@ function banner(id,iconName,html){
     <button class="bx" onclick="A.dismissBanner('${id}')" aria-label="Hinweis schließen">${icon("x",15)}</button></div>`;
 }
 A.qlMic=(handler)=>{
+  // C7: Web Speech API schickt das Audio an den Sprach-Dienst deines Browsers
+  // (Apple/Google) — einmalig transparent machen, Texteingabe ist gleichwertig.
+  if(!S.voiceNoticeShown){
+    S.voiceNoticeShown=true; save();
+    modal(`<p class="ct">${icon("mic",14)} Kurz zur Sprach-Eingabe</p>
+      <p class="sm t2" style="line-height:1.65">Die Spracherkennung nutzt den Dienst deines Browsers (bei iPhone: Apple, bei Chrome: Google) — <b style="color:var(--t1)">dein Audio wird dorthin übertragen</b>. Die Texteingabe darunter kann exakt dasselbe, ganz ohne Übertragung.</p>
+      <button class="btn volt mt12" onclick="A.closeModal();A.qlMic('${String(handler).replace(/'/g,"")}')">Verstanden — Sprach-Eingabe nutzen</button>
+      <button class="btn ghost mt8" onclick="A.closeModal();const i=document.getElementById('quicklog-in');if(i)i.focus()">Lieber tippen</button>`);
+    return;
+  }
   const box=document.querySelector(".smartlog");
   const stop=()=>{ if(box)box.classList.remove("listening"); };
   if(box)box.classList.add("listening");
@@ -6024,7 +6035,8 @@ function legalDoc(type){
         • <b style="color:var(--t1)">Supabase</b> (Datenbank/Login; Region: ${lf('supabaseRegion')}; AV-Vertrag/DPA erforderlich) — nur bei Cloud-Konto.<br>
         • <b style="color:var(--t1)">Netlify</b> (Hosting; technische Server-Logs mit IP-Adressen, kurzfristig).<br>
         • <b style="color:var(--t1)">Open Food Facts</b> (Lebensmittel-Suche/Barcode): es werden NUR Produkt-Suchbegriffe bzw. Barcodes übertragen — keine Konto- oder Gesundheitsdaten.<br>
-        • Fortschrittsfotos verlassen dein Gerät <b style="color:var(--t1)">nie</b> (nur lokale Speicherung).</p>
+        • Fortschrittsfotos verlassen dein Gerät <b style="color:var(--t1)">nie</b> (nur lokale Speicherung).<br>
+        • Sprach-Eingabe (optional): nutzt die Spracherkennung deines Browsers — dabei wird das <b style="color:var(--t1)">Audio an dessen Anbieter</b> (z. B. Apple oder Google) übertragen. Die Texteingabe ist gleichwertig und überträgt nichts.</p>
       <p class="mt8"><b style="color:var(--t1)">5. KI-Coach & Drittlandübermittlung</b><br>
         Nur wenn du den KI-Coach aktiv nutzt, werden deine Chat-Eingaben plus ein minimierter Trainings-/Ernährungskontext (Alter, Ziele, Kennzahlen — <b style="color:var(--t1)">nie Name oder E-Mail</b>) über unseren Server-Proxy an KI-Anbieter übermittelt: <b style="color:var(--t1)">Google (Gemini)</b>, <b style="color:var(--t1)">OpenRouter</b> und/oder <b style="color:var(--t1)">Groq</b> (jeweils ggf. USA). Diese Inhalte können Gesundheitsdaten enthalten. Grundlage: deine ausdrückliche Einwilligung (Art. 9 Abs. 2 a, Art. 49 Abs. 1 a DSGVO). Ohne KI-Nutzung erfolgt keine solche Übermittlung.</p>
       <p class="mt8"><b style="color:var(--t1)">6. Speicherdauer</b><br>Konto- und Trainingsdaten: bis zur Löschung deines Kontos bzw. deinem Widerruf. Einwilligungs-Protokoll: bis zur Konto-Löschung (Nachweispflicht Art. 7). KI-Nutzungszähler: tagesbezogen. Server-Logs des Hostings: kurzfristig, technisch bedingt. Lokale Daten löschst du jederzeit selbst.</p>
@@ -6156,6 +6168,7 @@ function renderRegister(){
    Privacy by Design: nichts verlässt das Gerät, bis der Nutzer selbst syncst. */
 A.localOnly=()=>{ modal(`<p class="ct">${icon("lock",14)} Ohne Cloud starten</p>
   <p class="sm t2" style="line-height:1.65">Maximale Datenminimierung: kein Passwort, keine E-Mail — nur ein Vorname. Alles bleibt auf diesem Gerät (kein Backup, kein Gerätewechsel, bis du später ein Cloud-Konto verknüpfst).</p>
+  <p class="xs mt8" style="line-height:1.5;color:var(--warn)">Geräteschutz statt Konto: Sichere dein Gerät mit Code/Face ID — wer dein entsperrtes Gerät hat, sieht auch deine Daten.</p>
   <input type="text" id="lo-name" placeholder="Dein Vorname" maxlength="24" style="width:100%;margin:12px 0 4px" autocomplete="given-name">
   <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer;margin-top:8px">
     <input type="checkbox" id="lo-tos" style="width:20px;height:20px;min-width:20px;accent-color:var(--accent);margin-top:1px">
@@ -9339,6 +9352,9 @@ function openCreateExercise(fromKey){
     save(); toast(`„${ce.name}" gelöscht — geloggte Historie bleibt erhalten`); openCreateExercise(); };
   A.cxSave=()=>{
     const nm=document.getElementById("cx-name"); if(nm)cxDraft.name=nm.value.trim().slice(0,40);
+    // C6: Übungsnamen fließen in viele Templates & onclick-Attribute →
+    // HTML-/Quote-Zeichen an der Quelle entfernen (Namen brauchen sie nie).
+    cxDraft.name=cxDraft.name.replace(/[<>&"'`]/g,"").trim();
     const n=cxDraft.name;
     if(n.length<3){ toast("Gib der Übung einen Namen (mind. 3 Zeichen)"); return; }
     if(EXDB[n]&&!(EXDB[n].custom)){ toast("Diese Übung gibt es schon in der Datenbank"); return; }
@@ -11396,10 +11412,10 @@ function renderNutrition(){
         <button class="${S.viewMode.nutrition==="grid"?"sel":""}" onclick="A.vm('nutrition','grid')" aria-label="Galerie">${icon("grid",14)}</button></div></div>
       ${log.meals.length&&S.viewMode.nutrition==="grid"?`<div class="tiles">${log.meals.map((m,i)=>`
         <div class="tile"><div class="tart" style="background:linear-gradient(135deg,#F2EADF,#E9DECF);aspect-ratio:16/9"><span style="opacity:.6">${icon("utensils",26)}</span></div>
-        <div class="tbody"><b>${m.n}</b><span class="metric">${nfi.format(m.k)} kcal · ${nf.format(m.p)} P</span></div></div>`).join("")}</div>`
+        <div class="tbody"><b>${esc(m.n)}</b><span class="metric">${nfi.format(m.k)} kcal · ${nf.format(m.p)} P</span></div></div>`).join("")}</div>`
       :log.meals.length?`<ul class="list">${log.meals.map((m,i)=>{
         const sat=satiety(m);
-        return `<li><span>${m.n}${sat?` <button class="badge ${sat.cls}" style="cursor:pointer;border:none;font-size:9.5px;padding:2px 7px" onclick="A.explainSat()">${sat.lbl}</button>`:""}</span>
+        return `<li><span>${esc(m.n)}${sat?` <button class="badge ${sat.cls}" style="cursor:pointer;border:none;font-size:9.5px;padding:2px 7px" onclick="A.explainSat()">${sat.lbl}</button>`:""}</span>
         <span style="display:flex;gap:10px;align-items:center"><span class="metric">${nfi.format(m.k)} kcal</span>
         <button class="iconbtn" style="min-width:32px;min-height:32px;font-size:13px" onclick="A.delMeal(${i})" aria-label="Löschen">✕</button></span></li>`;}).join("")}</ul>`
       :`<p class="sm t2">Noch nichts geloggt — tipp oben auf einen Favoriten oder sprich deine Mahlzeit ein.</p>`}
@@ -12074,6 +12090,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
       <div class="grid2" style="gap:8px">
         <button class="btn" onclick="A.measOpen()">${icon("edit",14)} Maße eintragen</button>
         <button class="btn" onclick="document.getElementById('photo-file').click()">${icon("camera",14)} Foto hinzufügen</button></div>
+      <p class="xs mt8" style="line-height:1.5;color:var(--hl)">${icon("lock",11)} Deine Fotos verlassen dein Gerät nie — sie liegen nur lokal, werden nie synchronisiert und sind mit einem Tipp gelöscht.</p>
       <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="A.photoAdd(this)">
       ${S.photos.length?`<div class="row mt12" style="gap:6px;overflow-x:auto;padding-bottom:4px">
         ${S.photos.slice(-8).map(p=>`<div style="position:relative;flex-shrink:0">
