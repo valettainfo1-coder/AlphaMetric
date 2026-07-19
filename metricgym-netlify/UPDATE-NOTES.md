@@ -342,6 +342,28 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - Launch-Preise: PRO 4,99 €/M · 39,99 €/J (Anker), ELITE 9,99 €/M ·
   79,99 €/J. Setup-Schritte: `SUPABASE_SETUP.md` Abschnitt 10 ([BETREIBER]).
 
+### 24. Feedback-Runde: Quiz-Scroll, Partikel-Ball, Sprach-Sammeln, Paywall-X
+- **Quiz-Scroll-Bug behoben**: Beim Beantworten einer Frage bleibt die Seite
+  jetzt exakt stehen — der Scroll-Reset passiert nur noch bei echtem
+  Seiten-/Step-Wechsel.
+- **Rauch-Sphäre ersetzt durch den Partikel-Ball**: 5.000 Partikel auf einer
+  Fibonacci-Kugel (Canvas 2D, überall in der Software über dieselbe
+  Mount-API). Physikbasiert: Trägheits-Rotation mit Drall per Wisch
+  (horizontal wischen dreht, vertikal bleibt Scrollen), Masse-Feder-Dämpfer
+  je Partikel und quadratisch abfallende Abstoßung um den Finger — die
+  Kugel beult lokal aus und federt zurück. 30 fps, pausiert unsichtbar.
+- **Sprach-Eingabe sammelt jetzt ALLES**: Die Erkennung hört kontinuierlich
+  zu (Safari-Frühstopps werden automatisch neu gestartet), zeigt eine
+  Live-Vorschau im Eingabefeld und finalisiert erst nach ~2,8 s Stille,
+  per erneutem Mikro-Tipp (Toggle) oder 45-s-Obergrenze. „Hähnchen,
+  Hackfleisch, Skyr … drei Tomaten und eine Gurke" kommt jetzt komplett an.
+- **Paywall-Sheet schließbar**: deutliches ✕ oben rechts (zusätzlich zum
+  Tipp auf den Hintergrund) — z. B. beim Multi-Ziel-Teaser im Quiz.
+- **Landing aufgeräumt**: Der drehbare Körper ist auf der Startseite durch
+  das ruhige Vorder-/Rückseiten-Paar ersetzt (Auto-Drehen der Wende-Karte
+  ist generell deaktiviert — Drehen nur noch aktiv per Finger); das
+  Marquee-Laufband und die doppelte Analytics-Vorschau sind entfernt.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker

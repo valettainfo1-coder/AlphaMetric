@@ -1464,81 +1464,122 @@ function rauchkreis(size,opts){
 /* ===== GEIST: gemeinsamer Renderer für alle Rauch-Sphären der Seite =====
    Eine rAF-Schleife, beliebig viele kleine Canvases; unsichtbare Instanzen
    pausieren (IntersectionObserver), tote Canvases räumen sich selbst auf. */
+/* ===== PARTIKEL-BALL (ersetzt die Rauch-Sphäre) =====
+   5.000 Partikel auf einer Fibonacci-Kugel, Canvas 2D — kein WebGL nötig.
+   Physik statt Deko: Trägheits-Rotation (Drall per Wisch, gedämpft zurück
+   zum Grunddrift), Masse-Feder-Dämpfer je Partikel (radiales Displacement)
+   und quadratisch abfallende Abstoßung um den Finger/Cursor — die Kugel
+   beult lokal aus und federt physikalisch zurück. Gleiche Mount-API wie
+   zuvor (canvas.rk-gl, data-on, .rk gl-on, __pauseGL, 30 fps, Sichtbarkeits-
+   Pause), dadurch überall in der Software aktiv. */
 const GEIST={
   list:[], raf:0, ptr:{x:0,y:0,has:false}, reduced:false, bound:false,
-  VS:"attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}",
-  FS:`precision mediump float;
-uniform float t;uniform vec2 res;uniform vec2 look;uniform float seed;
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
-float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
-  return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
-float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.03+vec2(17.1,9.3);a*=.55;}return v;}
-void main(){
-  vec2 uv=(gl_FragCoord.xy*2.-res)/min(res.x,res.y);
-  float r=length(uv);
-  if(r>1.12){gl_FragColor=vec4(0.);return;}
-  float z=sqrt(max(0.,1.-r*r));
-  vec3 n=normalize(vec3(uv,max(z,.02)));
-  float T=t*.05+seed*7.;
-  /* Rauch: doppelt domänen-verzerrtes fbm — träge, organisch, nie gleich */
-  vec2 p=uv*1.9;
-  vec2 warp=vec2(fbm(p+vec2(T*1.7,-T)),fbm(p-vec2(T,T*1.3)));
-  float d1=fbm(p*1.6+warp*1.9+vec2(0.,T*2.2));
-  float d2=fbm(p*3.2-warp*1.5-vec2(T*1.7,0.));
-  float smoke=d1*.72+d2*.45;
-  /* Wandernder Gedanken-Kern: driftet selbst UND folgt sanft dem Finger */
-  vec2 core=vec2(sin(t*.21+seed*3.)*.32,cos(t*.16+seed*5.)*.28)+look*.3;
-  float g=exp(-dot(uv-core,uv-core)*4.5);
-  float lit=.5+.5*dot(n,normalize(vec3(-.45,.6,.66)));
-  float s=smoke*(.55+.65*lit);
-  vec3 deep=vec3(.024,.03,.075),mid=vec3(.17,.22,.44),hl=vec3(.561,.722,.863),top=vec3(.92,.955,1.);
-  vec3 col=mix(deep,mid,smoothstep(.14,.6,s));
-  col=mix(col,hl,smoothstep(.48,.9,s));
-  col=mix(col,top,smoothstep(.8,1.08,s)*.65);
-  /* Puls des Kerns: ruhiges Atmen + feines Flackern = „da denkt etwas" */
-  float breath=.55+.3*sin(t*.8+seed)+.12*sin(t*2.7+seed*9.);
-  col+=hl*g*breath*.6+top*g*g*.4;
-  float fres=pow(1.-z,3.2);
-  col+=vec3(.34,.45,.62)*fres*.14;
-  col*=.8+.2*z;
-  /* Randabfall folgt der RAUCHDICHTE — keine saubere Kreiskante, der Nebel
-     franst frei aus (plus g: der Licht-Kern darf immer durchscheinen) */
-  float alpha=smoothstep(1.1,.55,r)*clamp(.22+1.05*smoke+g*.8,0.,1.);
-  gl_FragColor=vec4(col*alpha,alpha);
-}`,
+  COLORS:["#C9D6EE","#AEC0E8","#90A8E4","#8FB8DC","#A9B8DA","#E2E8F4"],
   mount(cv){
     if(GEIST.reduced) return;
-    let gl=null;
-    try{ gl=cv.getContext("webgl",{alpha:true,antialias:false,premultipliedAlpha:true,powerPreference:"low-power"}); }catch(e){}
-    if(!gl) return; // CSS-Fallback bleibt einfach stehen
-    const mk=(ty,src)=>{const s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);
-      if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){return null;} return s;};
-    const vs=mk(gl.VERTEX_SHADER,GEIST.VS),fs=mk(gl.FRAGMENT_SHADER,GEIST.FS);
-    if(!vs||!fs) return;
-    const pr=gl.createProgram(); gl.attachShader(pr,vs); gl.attachShader(pr,fs); gl.linkProgram(pr);
-    if(!gl.getProgramParameter(pr,gl.LINK_STATUS)) return;
-    gl.useProgram(pr);
-    const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
-    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
-    const loc=gl.getAttribLocation(pr,"a"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-    const inst={cv,gl,pr,visible:true,seed:Math.random()*10,look:{x:0,y:0},
-      u:{t:gl.getUniformLocation(pr,"t"),res:gl.getUniformLocation(pr,"res"),look:gl.getUniformLocation(pr,"look"),seed:gl.getUniformLocation(pr,"seed")}};
+    let ctx=null;
+    try{ ctx=cv.getContext("2d",{alpha:true}); }catch(e){}
+    if(!ctx) return; // CSS-Fallback bleibt einfach stehen
     const DPR=Math.min(2,window.devicePixelRatio||1);
-    const r=cv.getBoundingClientRect();
-    cv.width=Math.max(8,Math.round(r.width*DPR)); cv.height=Math.max(8,Math.round(r.height*DPR));
-    gl.viewport(0,0,cv.width,cv.height);
+    const rect=cv.getBoundingClientRect();
+    const wCss=Math.max(8,rect.width), hCss=Math.max(8,rect.height);
+    cv.width=Math.round(wCss*DPR); cv.height=Math.round(hCss*DPR);
+    // Partikelzahl: jede „große" Sphäre (ab ~180 px) bekommt die vollen 5.000,
+    // nur Mini-Orbs (Plan-Bühne/KI-Hub) skalieren herunter — Dichte bleibt edel.
+    const N=wCss>=150?5000:Math.max(900,Math.round(5000*Math.pow(wCss/150,2)));
+    const dirs=new Float32Array(N*3), colIdx=new Uint8Array(N);
+    const GA=Math.PI*(3-Math.sqrt(5)); // goldener Winkel
+    for(let i=0;i<N;i++){
+      const y=1-(i+0.5)*2/N, rr=Math.sqrt(Math.max(0,1-y*y)), th=GA*i;
+      dirs[i*3]=Math.cos(th)*rr; dirs[i*3+1]=y; dirs[i*3+2]=Math.sin(th)*rr;
+      colIdx[i]=i%GEIST.COLORS.length;
+    }
+    const inst={cv,ctx,DPR,visible:true,dead:false,seed:Math.random()*10,
+      N,dirs,colIdx,
+      disp:new Float32Array(N), vel:new Float32Array(N),   // Feder-Zustand je Partikel
+      yaw:Math.random()*6.28, tilt:-0.28,                   // Orientierung
+      wy:0.22, wx:0,                                        // Winkelgeschwindigkeiten (rad/s)
+      drag:null};
+    // Drall per Finger: horizontal wischen dreht (vertikal bleibt Scrollen).
+    cv.style.touchAction="pan-y";
+    cv.addEventListener("pointerdown",(e)=>{ inst.drag={x:e.clientX,y:e.clientY,t:performance.now()};
+      try{cv.setPointerCapture(e.pointerId);}catch(err){} },{passive:true});
+    cv.addEventListener("pointermove",(e)=>{
+      if(!inst.drag)return;
+      const now=performance.now(), dt=Math.max(8,now-inst.drag.t)/1000;
+      const dx=e.clientX-inst.drag.x, dy=e.clientY-inst.drag.y;
+      inst.wy=Math.max(-4.5,Math.min(4.5,inst.wy-(dx/wCss)/dt*0.9));
+      inst.wx=Math.max(-2.5,Math.min(2.5,inst.wx+(dy/hCss)/dt*0.6));
+      inst.drag={x:e.clientX,y:e.clientY,t:now};
+    },{passive:true});
+    const endDrag=()=>{ inst.drag=null; };
+    cv.addEventListener("pointerup",endDrag,{passive:true});
+    cv.addEventListener("pointercancel",endDrag,{passive:true});
     try{ new IntersectionObserver((es)=>{es.forEach(e=>inst.visible=e.isIntersecting);}).observe(cv); }catch(e){}
-    cv.addEventListener("webglcontextlost",(e)=>{e.preventDefault();inst.dead=true;cv.closest(".rk")&&cv.closest(".rk").classList.remove("gl-on");},false);
     cv.dataset.on="1"; cv.closest(".rk")&&cv.closest(".rk").classList.add("gl-on");
     GEIST.list.push(inst);
-    GEIST.draw(inst,performance.now()/1000); // sofort ein erster Frame — kein leerer Kreis beim Reinscrollen
+    GEIST.draw(inst,performance.now()/1000,1/30); // sofort ein erster Frame
     GEIST.loop();
   },
-  draw(i,t){
-    const gl=i.gl;
-    gl.uniform1f(i.u.t,t+i.seed*20); gl.uniform2f(i.u.res,i.cv.width,i.cv.height);
-    gl.uniform2f(i.u.look,i.look.x,i.look.y); gl.uniform1f(i.u.seed,i.seed);
-    gl.drawArrays(gl.TRIANGLES,0,3);
+  draw(i,t,dt){
+    const {ctx,cv,N,dirs,disp,vel,colIdx}=i;
+    const W=cv.width,H=cv.height,cx=W/2,cy=H/2;
+    const R=Math.min(W,H)*0.42*(1+0.012*Math.sin(t*0.8+i.seed)); // ruhiges Atmen
+    // --- Physik: Rotation mit Trägheit, zurück zum Grunddrift gedämpft ---
+    i.wy+=(0.22-i.wy)*Math.min(1,1.1*dt);
+    i.wx+=(0-i.wx)*Math.min(1,1.6*dt);
+    i.yaw+=i.wy*dt; i.tilt=Math.max(-0.9,Math.min(0.9,i.tilt+i.wx*dt));
+    const sy=Math.sin(i.yaw),cyw=Math.cos(i.yaw),sx=Math.sin(i.tilt),cxw=Math.cos(i.tilt);
+    // Pointer in Canvas-Pixeln (Abstoßungszentrum)
+    let px0=1e9,py0=1e9;
+    if(GEIST.ptr.has){
+      const r=cv.getBoundingClientRect();
+      if(GEIST.ptr.x>=r.left-40&&GEIST.ptr.x<=r.right+40&&GEIST.ptr.y>=r.top-40&&GEIST.ptr.y<=r.bottom+40){
+        px0=(GEIST.ptr.x-r.left)*(W/Math.max(1,r.width));
+        py0=(GEIST.ptr.y-r.top)*(H/Math.max(1,r.height));
+      }
+    }
+    const RI=R*0.62, K=36, C=6.5, P=2.6, ptBase=Math.max(1.3,R/78);
+    ctx.clearRect(0,0,W,H);
+    // sanfter Kern-Glow hinter den Partikeln
+    const g=ctx.createRadialGradient(cx,cy,R*0.05,cx,cy,R*1.15);
+    g.addColorStop(0,"rgba(143,184,220,0.30)"); g.addColorStop(0.55,"rgba(60,90,140,0.10)"); g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g; ctx.fillRect(cx-R*1.2,cy-R*1.2,R*2.4,R*2.4);
+    // --- Partikel: rotieren, projizieren, Feder integrieren, in 2 Tiefen-Pässen malen ---
+    const xs=GEIST._xs&&GEIST._xs.length>=N?GEIST._xs:(GEIST._xs=new Float32Array(N));
+    const ys=GEIST._ys&&GEIST._ys.length>=N?GEIST._ys:(GEIST._ys=new Float32Array(N));
+    const zs=GEIST._zs&&GEIST._zs.length>=N?GEIST._zs:(GEIST._zs=new Float32Array(N));
+    for(let n=0;n<N;n++){
+      const x=dirs[n*3],y=dirs[n*3+1],z=dirs[n*3+2];
+      const x1=x*cyw+z*sy, z1=-x*sy+z*cyw;
+      const y2=y*cxw-z1*sx, z2=y*sx+z1*cxw;
+      const s=P/(P-z2);
+      const rr=R*(1+disp[n]);
+      const X=cx+x1*rr*s, Y=cy-y2*rr*s;
+      // Abstoßung: nur vorderseitige Partikel nahe dem Finger, F ~ (1-d/RI)²
+      let F=0;
+      if(px0<1e8&&z2>-0.2){
+        const ddx=X-px0,ddy=Y-py0,dp=Math.sqrt(ddx*ddx+ddy*ddy);
+        if(dp<RI){ const q=1-dp/RI; F=6.2*q*q; }
+      }
+      vel[n]+=(-K*disp[n]-C*vel[n]+F)*dt;
+      disp[n]+=vel[n]*dt;
+      xs[n]=X; ys[n]=Y; zs[n]=z2;
+    }
+    const cols=GEIST.COLORS, nc=cols.length;
+    for(let pass=0;pass<2;pass++){
+      ctx.globalAlpha=pass?0.92:0.32;
+      for(let c=0;c<nc;c++){
+        ctx.fillStyle=cols[c];
+        for(let n=c;n<N;n+=nc){
+          const z2=zs[n];
+          if(pass?z2<0:z2>=0)continue;
+          const s=P/(P-z2), sz=ptBase*(0.5+0.55*(z2+1)/2)*s;
+          ctx.fillRect(xs[n]-sz/2,ys[n]-sz/2,sz,sz);
+        }
+      }
+    }
+    ctx.globalAlpha=1;
   },
   scan(){
     if(GEIST.reduced) return;
@@ -1550,23 +1591,12 @@ void main(){
     const step=(now)=>{
       GEIST.list=GEIST.list.filter(i=>!i.dead&&i.cv.isConnected);
       if(!GEIST.list.length){GEIST.raf=0;return;}
-      // 30 fps reichen für träge Rauch-Bewegung — halbiert GPU-/Akku-Last.
+      // 30 fps: flüssig genug, halbiert die Akku-Last.
       if(window.__pauseGL||now-last<33){ GEIST.raf=requestAnimationFrame(step); return; }
-      last=now;
+      const dt=Math.min(0.066,(now-(last||now-33))/1000); last=now;
       if(!document.hidden){
         const t=performance.now()/1000;
-        for(const i of GEIST.list){
-          if(!i.visible) continue;
-          /* Blick zum Zeiger: normierter Vektor Canvas-Mitte -> Pointer, weich nachgeführt */
-          let lx=0,ly=0;
-          if(GEIST.ptr.has){
-            const r=i.cv.getBoundingClientRect();
-            const dx=GEIST.ptr.x-(r.left+r.width/2),dy=(r.top+r.height/2)-GEIST.ptr.y;
-            const m=Math.max(60,Math.hypot(dx,dy)); lx=dx/m; ly=dy/m;
-          }
-          i.look.x+=(lx-i.look.x)*.04; i.look.y+=(ly-i.look.y)*.04;
-          GEIST.draw(i,t);
-        }
+        for(const i of GEIST.list){ if(i.visible) GEIST.draw(i,t,dt); }
       }
       GEIST.raf=requestAnimationFrame(step);
     };
@@ -2648,7 +2678,9 @@ function openPaywall(key){
     ? `<button class="btn volt" onclick="A.startTrial('${tier}')">${TRIAL_DAYS} Tage kostenlos starten</button>`
     : `<button class="btn volt" onclick="A.upgrade('${tier}')">${TIER_LABEL[tier]} aktivieren</button>`;
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
-    <div class="sheet fade pw-sheet">
+    <div class="sheet fade pw-sheet" style="position:relative">
+      <button class="iconbtn" onclick="A.closeModal()" aria-label="Schließen"
+        style="position:absolute;top:10px;right:12px;z-index:3;min-width:38px;min-height:38px;background:rgba(10,14,22,.65);border-radius:50%">${icon("x",17)}</button>
       <div class="pw-glow"></div>
       <p class="pw-eyebrow">${icon("lock",12)} ${TIER_LABEL[tier]}-Funktion</p>
       <p class="display-m" style="margin:2px 0 4px;line-height:1.15">${x.t}</p>
@@ -4659,18 +4691,52 @@ function modal(html){
   overlay.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)A.closeModal()"><div class="modal fade">${html}
     <button class="btn mt16" onclick="A.closeModal()">Schließen</button></div></div>`;
 }
-function speech(onResult,btnId,onEnd){
-  const done=()=>{ try{onEnd&&onEnd();}catch{} };
+/* Spracherkennung v2 (Bug-Report: „hat nach 3 Lebensmitteln gestoppt"):
+   hört KONTINUIERLICH zu und sammelt alle Sätze. Fertig ist sie erst nach
+   ~2,8 s Stille, per erneutem Mic-Tipp oder nach 45 s Obergrenze — nicht
+   mehr nach der ersten Sprechpause. Safari/iOS beendet die Engine gern
+   selbstständig nach kurzen Pausen → onend startet sie dann einfach neu.
+   onInterim (optional) liefert den Zwischenstand für eine Live-Vorschau.
+   Rückgabe: stop()-Funktion (finalisiert sofort mit dem Gesammelten). */
+function speech(onResult,btnId,onEnd,onInterim){
+  const fail=(msg)=>{ try{onEnd&&onEnd();}catch{} if(msg)toast(msg); };
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){toast("Spracherkennung nicht unterstützt — bitte tippen");done();return;}
-  try{
-    const rec=new SR();
-    rec.lang="de-DE"; rec.interimResults=false; rec.maxAlternatives=1;
-    rec.start();
-    rec.onresult=(e)=>{ done(); onResult(e.results[0][0].transcript); };
-    rec.onerror=()=>{ done(); toast("Spracherkennung fehlgeschlagen"); };
-    rec.onend=()=>{ done(); };
-  }catch{ done(); toast("Spracherkennung nicht verfügbar"); }
+  if(!SR){fail("Spracherkennung nicht unterstützt — bitte tippen");return null;}
+  let rec; try{ rec=new SR(); }catch{ fail("Spracherkennung nicht verfügbar"); return null; }
+  const finals=[]; let stopped=false, silenceT=0, hardT=0;
+  const collected=()=>finals.join(" ").replace(/\s+/g," ").trim();
+  const finish=()=>{
+    if(stopped)return; stopped=true;
+    clearTimeout(silenceT); clearTimeout(hardT);
+    try{rec.stop();}catch(e){}
+    try{onEnd&&onEnd();}catch(e){}
+    const txt=collected();
+    if(txt)onResult(txt);
+    else toast("Nichts verstanden — sprich direkt nach dem Tipp aufs Mikro");
+  };
+  const arm=(ms)=>{ clearTimeout(silenceT); silenceT=setTimeout(finish,ms); };
+  rec.lang="de-DE"; rec.maxAlternatives=1;
+  rec.interimResults=true; try{rec.continuous=true;}catch(e){}
+  rec.onresult=(e)=>{
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const r=e.results[i];
+      if(r.isFinal)finals.push(r[0].transcript); else interim+=r[0].transcript;
+    }
+    try{ onInterim&&onInterim((collected()+" "+interim).replace(/\s+/g," ").trim()); }catch(e){}
+    arm(2800); // 2,8 s Stille nach dem letzten Wort = Eingabe fertig
+  };
+  rec.onerror=(ev)=>{
+    const code=ev&&ev.error;
+    if(code==="no-speech"){ arm(1500); return; }        // noch nichts gesagt → kurz weiterwarten
+    if(code==="aborted")return;                          // eigener stop()
+    finish();
+  };
+  rec.onend=()=>{ if(!stopped){ try{rec.start();}catch(e){ finish(); } } }; // iOS beendet früh → weiterlauschen
+  try{rec.start();}catch(e){ fail("Spracherkennung nicht verfügbar"); return null; }
+  arm(8000);                       // nie gesprochen → nach 8 s sauber aufgeben
+  hardT=setTimeout(finish,45000);  // absolute Obergrenze
+  return finish;
 }
 // Dopamin-Reward: aufsteigender Makro-Chip + Haptik nach erfolgreichem Loggen.
 function floatReward(text){
@@ -5229,11 +5295,14 @@ function render(){
     root.className="wrap";
     renderAppbar(); renderTabbar(); renderFab(); renderApp();
   }
-  window.scrollTo(0,0);
-  // Wow-FX nur bei echtem Seitenwechsel (nicht bei In-Place-Re-Renders) -> Zahlen
-  // zaehlen hoch, Ringe zeichnen sich, Inhalt blendet elegant ein.
-  const view=(S.screen||"")+"/"+(S.tab||"")+"/"+(inApp?"app":"auth");
-  if(view!==_lastView){ _lastView=view; root.classList.remove("page-enter"); void root.offsetWidth; root.classList.add("page-enter");
+  // Scroll-Reset NUR bei echtem Seitenwechsel: Beim Beantworten einer Quiz-Frage
+  // (gleicher Step) oder anderen In-Place-Re-Renders bleibt die Position stehen —
+  // vorher sprang die Seite nach jeder Antwort nach oben (Bug-Report).
+  const view=(S.screen||"")+"/"+(S.tab||"")+"/"+(S.screen==="onboarding"?S.step:"")+"/"+(inApp?"app":"auth");
+  if(view!==_lastView){ _lastView=view;
+    window.scrollTo(0,0);
+    // Wow-FX nur bei echtem Seitenwechsel -> Zahlen zaehlen hoch, Inhalt blendet ein.
+    root.classList.remove("page-enter"); void root.offsetWidth; root.classList.add("page-enter");
     requestAnimationFrame(()=>animateCounts()); }
 }
 let _lastView="";
@@ -5570,16 +5639,22 @@ A.qlMic=(handler)=>{
       <button class="btn ghost mt8" onclick="A.closeModal();const i=document.getElementById('quicklog-in');if(i)i.focus()">Lieber tippen</button>`);
     return;
   }
+  // Läuft schon? → zweiter Tipp aufs Mikro beendet die Aufnahme sofort (Toggle).
+  if(window._speechStop){ const s=window._speechStop; window._speechStop=null; try{s();}catch(e){} return; }
   const box=document.querySelector(".smartlog");
-  const stop=()=>{ if(box)box.classList.remove("listening"); };
+  const el0=document.getElementById("quicklog-in");
+  const prefix=(el0&&el0.value.trim())?el0.value.trim()+" ":"";
+  const stop=()=>{ window._speechStop=null; if(box)box.classList.remove("listening"); };
   if(box)box.classList.add("listening");
-  setTimeout(stop,12000);                           // Sicherheitsnetz, falls kein Event feuert
-  speech((txt)=>{
+  window._speechStop=speech((txt)=>{
     const el=document.getElementById("quicklog-in");
-    if(el)el.value=(el.value.trim()?el.value.trim()+" ":"")+txt;
+    if(el)el.value=(prefix+txt).trim();
     const fn=handler.split(".").reduce((o,k)=>o&&o[k],window);
     if(typeof fn==="function")fn();
-  },"ql-mic",stop);
+  },"ql-mic",stop,(live)=>{ // Live-Vorschau: man SIEHT, dass sie noch zuhört
+    const el=document.getElementById("quicklog-in");
+    if(el)el.value=(prefix+live).trim();
+  });
 };
 function quickLogField(placeholder,handler,hideMic){
   return `<div class="quick-log">
@@ -5741,7 +5816,7 @@ const LP_DEMO_EX=[["Bankdrücken","Brust"],["Klimmzug","Rücken"],["Kniebeuge","
 function lpAnatInner(n){
   const act=EX_ACT[n]||exActFor(n); const d=EXDB[n]||{};
   return `<div class="chips" style="justify-content:center;margin-bottom:10px">${LP_DEMO_EX.map(([ex,lbl])=>`<button class="chip ${ex===n?"sel":""}" onclick="A.lpDemo('${ex}')">${lbl}</button>`).join("")}</div>
-    ${body3d(act,{h:280,sex:"male"})}
+    ${body3d(act,{h:250,sex:"male",flip:false})}
     <p class="sm" style="font-weight:600;text-align:center;margin:8px 0 2px">${n}</p>
     <p class="xs t2" style="text-align:center;line-height:1.5;max-width:300px;margin:0 auto">${d.why||""}</p>`;
 }
@@ -5782,11 +5857,7 @@ function renderLanding(){
       </div>
     </section>
 
-    <!-- MARQUEE: endloses Beweis-Band -->
-    <div class="lp-marq" aria-hidden="true"><div class="lp-marq-in">
-      ${Array(2).fill(["MEV–MRV-Engine","112 Übungen","DUP · Tag A/B","Israetel 2017","Kraft-Orakel","Zourdos 2016","Lengthened Partials","Schoenfeld 2016","Stoffwechsel-Zwilling","Verletzungs-Schutz","40+ Studien","Helms 2016"]).flat()
-        .map(x=>`<span>${x}</span><i>✦</i>`).join("")}
-    </div></div>
+    <!-- (Marquee-Laufband entfernt — Deko ohne Aussage, Landing-Straffung) -->
 
     <!-- ZAHLEN, DIE TRAGEN -->
     <section class="lp-sec" style="padding-top:0">
@@ -5801,7 +5872,7 @@ function renderLanding(){
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">${icon("sparkle",12)} Der Beweis — live</p>
       <h2 class="lp-h2">Tippe eine Übung.<br>Sieh, was in dir arbeitet.</h2>
-      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App. Dreh den Körper mit dem Finger und sieh, was jede Übung trifft.</p>
+      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App: Vorder- und Rückseite zeigen live, was jede Übung trifft.</p>
       <div class="card" style="max-width:400px;margin:0 auto;padding:16px">
         <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
       </div>
@@ -5900,13 +5971,7 @@ function renderLanding(){
       </div>
     </section>
 
-    <!-- ANALYTICS-VORSCHAU -->
-    <section class="lp-sec" style="padding-top:0">
-      <p class="lp-eyebrow">Schwarz auf weiß</p>
-      <h2 class="lp-h2">Fortschritt musst du hier<br>nicht fühlen. Du siehst ihn.</h2>
-      <p class="lp-lead mb16">Kraft, Erholung, Ernährung — Woche für Woche als Kurve statt als Gefühl.</p>
-      ${lpAnalyticsPreview()}
-    </section>
+    <!-- (Analytics-Vorschau entfernt — doppelte sich mit dem Feature-Showcase; Landing-Straffung) -->
 
     <!-- SO FUNKTIONIERT'S -->
     <section class="lp-sec" style="padding-top:0">
@@ -8347,8 +8412,11 @@ const BFLIP={list:[],raf:0,reduced:false,
         if(!s.visible){ continue; }
         if(s.drag){
           // wird gezogen — Rotation folgt dem Finger (in pointermove gesetzt)
-        } else if(!s.touched && !BFLIP.reduced){
-          s.rot+=0.35;                                 // Turntable-Idle (3D-Hinweis)
+        } else if(false){
+          // Turntable-Idle DEAKTIVIERT (Nutzer-Feedback: Auto-Drehen beim
+          // Scrollen wirkt bei 2D-Grafik befremdlich) — Drehen nur noch aktiv
+          // per Finger-Drag; der „ziehen zum Drehen"-Hinweis bleibt sichtbar.
+          s.rot+=0.35;
         } else {
           s.rot+=s.vel; s.vel*=0.93;                   // Trägheit …
           if(Math.abs(s.vel)<0.5){                     // … dann sanft auf 0/180 einrasten
