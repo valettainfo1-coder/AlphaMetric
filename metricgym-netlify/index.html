@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="METRICGYM">
 <meta name="theme-color" content="#080A0F">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.</title>
 <meta name="description" content="METRICGYM baut deinen Trainingsplan aus über 40 Studien, misst ihn Woche für Woche an deinen echten Zahlen und zeigt dir, warum du stärker wirst. Ernährung in 10 Sekunden, anatomische Muskel-Engine, ehrliche Statistiken.">
@@ -1411,57 +1412,41 @@ function spherePoints(n,ry,rx){
   }
   return out.sort((a,b)=>a.z-b.z);
 }
-/* Marken-Logo: cleaner Gradient-Orb-Disc (passt zum Smoke-Orb, performant & crisp). */
-function logoSVG(h){
-  h=h||24; const id="lg"+Math.random().toString(36).slice(2,6); const c=h/2, r=h*0.44;
-  return `<svg width="${h}" height="${h}" viewBox="0 0 ${h} ${h}" aria-hidden="true" style="display:inline-block">
-    <defs><radialGradient id="${id}" cx="38%" cy="34%" r="72%">
-      <stop offset="0%" stop-color="#EAF1FF"/><stop offset="38%" stop-color="#A9C4DE"/>
-      <stop offset="72%" stop-color="#8FB8DC"/><stop offset="100%" stop-color="#363B86"/>
+/* Marken-Logo: dieselbe Partikel-Sphäre wie der interaktive Hero-Ball —
+   identische Fibonacci-Geometrie (spherePoints), feste Lichtrichtung von
+   oben links vorn. Licht steuert die Farbe (LOGO_RAMP), Tiefe steuert
+   Punktgröße + Deckkraft, darunter ein weicher Core-Glow. Deterministisch
+   (kein Zufall in der Geometrie) → das Logo sieht überall identisch aus
+   und skaliert crisp von 16 px (Topbar) bis 512 px (App-Icon). */
+const LOGO_RAMP=["#49579B","#5E6FB4","#7D92D6","#90A8E4","#A9C0EA","#C9D6EE","#EAF1FF"];
+function logoSVG(h,n){
+  h=h||24;
+  const V=96, c=V/2, R=V*0.455, small=h<=28;
+  n=n||(small?92:150);
+  const base=V*(small?0.0345:0.026), id="lg"+Math.random().toString(36).slice(2,6);
+  const pts=spherePoints(n,0.5,-0.35);
+  let dots="";
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i], t=(p.z+1)/2;                          /* 0 = hinten · 1 = vorn */
+    const nx=p.x/p.persp, ny=p.y/p.persp;                 /* Kugel-Normale nach Rotation */
+    const lit=Math.max(0,Math.min(1,-nx*0.34-ny*0.48+p.z*0.72+0.18));
+    const col=LOGO_RAMP[Math.round(lit*(LOGO_RAMP.length-1))];
+    const a=(0.22+0.74*t*(0.55+0.45*lit)).toFixed(2);
+    const r=base*(0.58+0.72*t);
+    dots+=`<circle cx="${(c+p.x*R).toFixed(1)}" cy="${(c+p.y*R).toFixed(1)}" r="${r.toFixed(2)}" fill="${col}" opacity="${a}"/>`;
+  }
+  return `<svg width="${h}" height="${h}" viewBox="0 0 ${V} ${V}" aria-hidden="true" style="display:inline-block;flex-shrink:0">
+    <defs><radialGradient id="${id}" cx="44%" cy="40%" r="56%">
+      <stop offset="0%" stop-color="#8FB8DC" stop-opacity=".38"/>
+      <stop offset="55%" stop-color="#5A6BB4" stop-opacity=".14"/>
+      <stop offset="100%" stop-color="#5A6BB4" stop-opacity="0"/>
     </radialGradient></defs>
-    <circle cx="${c}" cy="${c}" r="${r.toFixed(2)}" fill="url(#${id})"/>
-    <circle cx="${(c-r*0.26).toFixed(2)}" cy="${(c-r*0.3).toFixed(2)}" r="${(r*0.3).toFixed(2)}" fill="#fff" opacity=".38"/>
-  </svg>`;
+    <circle cx="${c}" cy="${c}" r="${(V*0.5).toFixed(0)}" fill="url(#${id})"/>
+    ${dots}</svg>`;
 }
-/* Größere Partikel-Sphäre als Marke (Hero/Splash/Reveal). */
-function logoMark(size){
-  size=size||72; const R=size*0.44, c=size/2;
-  const pts=spherePoints(120,0.5,-0.35);
-  const dots=pts.map((p,i)=>{const a=(0.35+0.65*(p.z+1)/2).toFixed(2);const rad=(size*0.022)*(0.7+0.7*(p.z+1)/2);
-    return `<circle cx="${(c+p.x*R).toFixed(2)}" cy="${(c+p.y*R).toFixed(2)}" r="${rad.toFixed(2)}" fill="${PART_COLORS[i%PART_COLORS.length]}" opacity="${a}"/>`;}).join("");
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="display:block">${dots}</svg>`;
-}
-/* Animierter Rauch-/Wolken-Orb (SVG feTurbulence + Displacement): morphende
-   Nebel-Kugel in den Markenfarben — passt zur Oura-Designsprache, ersetzt die
-   Partikelkugel. Bewegt/verformt sich kontinuierlich (SMIL-Animation). */
-function smokeOrb(size,opts){
-  opts=opts||{}; const id="so"+Math.random().toString(36).slice(2,7); const dur=opts.dur||"16s";
-  const sc=(size*0.32).toFixed(0), bl=(size*0.012).toFixed(2);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="display:block;overflow:visible">
-    <defs>
-      <radialGradient id="${id}g" cx="42%" cy="36%" r="66%">
-        <stop offset="0%" stop-color="#F2F6FF"/><stop offset="30%" stop-color="#A9C0F2"/>
-        <stop offset="58%" stop-color="#8FB8DC"/><stop offset="82%" stop-color="#5A57B0"/>
-        <stop offset="100%" stop-color="#2A2A5E" stop-opacity="0"/>
-      </radialGradient>
-      <radialGradient id="${id}h" cx="50%" cy="52%" r="52%">
-        <stop offset="0%" stop-color="#A9C4DE" stop-opacity=".55"/>
-        <stop offset="60%" stop-color="#8FB8DC" stop-opacity=".14"/>
-        <stop offset="100%" stop-color="#8FB8DC" stop-opacity="0"/>
-      </radialGradient>
-      <filter id="${id}f" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.011 0.018" numOctaves="3" seed="7" result="n">
-          <animate attributeName="baseFrequency" dur="${dur}" values="0.011 0.018;0.018 0.012;0.013 0.02;0.011 0.018" repeatCount="indefinite"/>
-          <animate attributeName="seed" dur="${dur}" values="7;9;7" repeatCount="indefinite"/>
-        </feTurbulence>
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="${sc}" xChannelSelector="R" yChannelSelector="G"/>
-        <feGaussianBlur stdDeviation="${bl}"/>
-      </filter>
-    </defs>
-    <circle cx="${size/2}" cy="${size/2}" r="${(size*0.47).toFixed(0)}" fill="url(#${id}h)" opacity=".75"/>
-    <g filter="url(#${id}f)"><circle cx="${size/2}" cy="${size/2}" r="${(size*0.33).toFixed(0)}" fill="url(#${id}g)"/></g>
-  </svg>`;
-}
+/* Größere Partikel-Sphäre als Marke (Hero/Splash/Reveal) — gleiche Geometrie,
+   nur mehr Punkte. */
+function logoMark(size){ return logoSVG(size||72,200); }
 /* Rauchkreis-Komponente: mystische Rauch-Sphäre (WebGL-Shader) + Aura — EIN Markup überall.
    Der Shader zeichnet echten, driftenden Volumen-Rauch in einer Kugel mit einem
    wandernden Licht-Kern („der Geist denkt") und schaut subtil zum Finger/Cursor.

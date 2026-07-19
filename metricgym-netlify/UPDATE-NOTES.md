@@ -375,10 +375,26 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   sichtbar mit „Nährwerte schätzen"-Button stehen. Der getippte Weg über
   „Analysieren" behält bewusst die Vorschau mit Übernehmen/Verwerfen.
 
+### 26. Marken-Logo = Partikel-Sphäre (ein System überall)
+- Das Logo ist jetzt **dieselbe Partikel-Sphäre wie der interaktive
+  Hero-Ball**: identische Fibonacci-Geometrie, feste Lichtquelle oben
+  links vorn (Licht steuert Farbe, Tiefe steuert Punktgröße + Deckkraft),
+  weicher Core-Glow darunter. Deterministisch — das Logo sieht in Topbar,
+  Landing-Header, App-Icon und Link-Vorschau identisch aus.
+- **Alle Markenassets neu gerendert**: `icon-512.png`, `icon-192.png`,
+  `apple-touch-icon.png` (Homescreen) und `og-image.png` (Link-Vorschau
+  mit Wortmarke + Claim) — Punktdichte skaliert mit der Größe, feiner
+  deterministischer Jitter macht große Darstellungen organisch wie den
+  Live-Ball. Favicon-Link ergänzt (vorher lief `/favicon.ico` ins Leere).
+- Alte Markenreste entfernt: Gradient-Disc-Logo und der ungenutzte
+  feTurbulence-Smoke-Orb sind raus; `logoMark` nutzt dieselbe Pipeline.
+- Service-Worker-Cache auf **v15** (Icons sind vorgecacht → Update greift
+  beim nächsten Besuch automatisch).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
-vorgecacht). Cache-Version aktuell **v12** — Nutzer bekommen Updates beim
+vorgecacht). Cache-Version aktuell **v15** — Nutzer bekommen Updates beim
 nächsten Besuch automatisch.
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
 SQL aus `SUPABASE_SETUP.md` Abschnitt 4 ausführen ([BETREIBER]).
