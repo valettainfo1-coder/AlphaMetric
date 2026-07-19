@@ -2487,7 +2487,8 @@ function ensureCompTier(){
    Anker: Pro = 9,99 — Premium-Fitness-Apps (Whoop/Oura-Segment) stützen den
    Preis, die Adaptation Engine differenziert. Vor Launch per A/B-Test
    (Van Westendorp) feinjustieren; Demo: kein echtes Payment. */
-const TIER_PRICE={free:{monthly:0,yearly:0},pro:{monthly:9.99,yearly:79.99},elite:{monthly:19.99,yearly:159.99}};
+// D4: Launch-Preise — PRO als Anker bei 4,99/Monat bzw. 39,99/Jahr (≈ −33 %).
+const TIER_PRICE={free:{monthly:0,yearly:0},pro:{monthly:4.99,yearly:39.99},elite:{monthly:9.99,yearly:79.99}};
 const eurFmt=new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtEUR=(v)=>v===0?"€0":"€"+eurFmt.format(v);
 const tierPriceLabel=(t,billing)=>{
@@ -5108,10 +5109,39 @@ A.upgrade=(t)=>{
     <p class="xs t2 mt8" style="line-height:1.6">Sichere Zahlung über Stripe (Anbindung folgt) · jederzeit kündbar · keine versteckten Kosten.</p>
     <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Jetzt aktivieren</button>`);
 };
+/* D4: echter Kauf über Stripe Checkout — Preis-IDs & Keys nur serverseitig.
+   stripeEnabled=false → ehrlicher Hinweis statt Schein-Kauf (wie bisher). */
+const stripeOn=()=>{ try{ return !!(window.METRICGYM_CONFIG&&window.METRICGYM_CONFIG.stripeEnabled); }catch(e){ return false; } };
+A.startCheckout=async(t)=>{
+  modal(`<div style="text-align:center;padding:8px 0"><div class="spin" style="margin:0 auto 12px"></div><p class="sm t2">Sichere Kasse wird geöffnet …</p></div>`);
+  try{
+    const res=await SB.withTimeout(SB.client.functions.invoke("create-checkout",{body:{tier:t,billing:S.billing||"monthly"}}),15000);
+    if(res&&res.error)throw res.error;
+    const url=res&&res.data&&res.data.url;
+    if(!url)throw new Error("keine URL");
+    location.href=url; // Stripe-Checkout (7-Tage-Test, Kündigen jederzeit im Portal)
+  }catch(e){ A.closeModal(); toast("Kasse gerade nicht erreichbar — versuch es gleich noch einmal"); }
+};
+// §312k BGB: Verträge müssen SO einfach kündbar sein wie der Abschluss.
+A.manageSub=async()=>{
+  if(!(typeof SB!=="undefined"&&SB.enabled()&&SB.user&&stripeOn())){
+    modal(`<p class="ct">Abo verwalten &amp; kündigen</p><p class="sm t2" style="line-height:1.6">${S.tier==="free"?"Du hast aktuell kein laufendes Abo — es gibt nichts zu kündigen.":"Dein Zugang läuft ohne Zahlungsanbieter (lokal/Aktion) — es gibt kein Abo, das gekündigt werden müsste."}</p>`);
+    return;
+  }
+  modal(`<div style="text-align:center;padding:8px 0"><div class="spin" style="margin:0 auto 12px"></div><p class="sm t2">Kundenportal wird geöffnet …</p></div>`);
+  try{
+    const res=await SB.withTimeout(SB.client.functions.invoke("create-portal",{body:{}}),15000);
+    if(res&&res.error)throw res.error;
+    const url=res&&res.data&&res.data.url;
+    if(!url)throw new Error("keine URL");
+    location.href=url;
+  }catch(e){ A.closeModal(); toast("Portal gerade nicht erreichbar — versuch es gleich noch einmal"); }
+};
 A.confirmUpgrade=(t)=>{
   track("checkout",{tier:t}); // D3: Funnel-Endpunkt
   // Cloud-Konten: Tier vergibt der SERVER (subscriptions) — kein Demo-Umschalten.
   if(typeof SB!=="undefined"&&SB.enabled()&&SB.user&&!S.devMode){
+    if(stripeOn()){ A.startCheckout(t); return; }
     overlay.innerHTML="";
     modal(`<p class="ct">Fast bereit</p><p class="sm t2" style="line-height:1.6">Die Bezahlfunktion wird gerade angeschlossen. Dein Plan bleibt bis dahin <b>${TIER_LABEL[S.tier]}</b> — der 7-Tage-Test steht dir trotzdem offen.</p>`);
     return;
@@ -11511,6 +11541,7 @@ function renderPricing(){
     <div class="card" style="text-align:center">
       <p class="sm" style="font-weight:600;line-height:1.6">Risikofrei testen</p>
       <p class="xs t2" style="line-height:1.7;margin-top:4px">${upTo?`${TRIAL_DAYS} Tage voller Zugriff, keine Zahlung im Voraus. `:""}Jederzeit in einem Tippen kündbar. Dein Datenexport (DSGVO) ist in jedem Plan inklusive — du bist nie eingesperrt.</p>
+      <button class="btn ghost mt8" style="min-height:42px;font-size:13px" onclick="A.manageSub()">Verträge hier kündigen · Abo verwalten</button>
     </div>
     <p class="xs t2" style="text-align:center;line-height:1.7">Sichere Zahlung über Stripe (Anbindung folgt vor Launch).</p>`;
 }

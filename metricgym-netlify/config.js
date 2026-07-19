@@ -40,6 +40,13 @@ window.METRICGYM_CONFIG = {
   sentryDsn: "",
   plausibleDomain: "",
 
+  /* ===== STRIPE (D4) =====
+     Erst auf true setzen, wenn die Edge Functions create-checkout,
+     stripe-webhook (--no-verify-jwt) und create-portal deployt sind und
+     alle STRIPE_*-Secrets gesetzt wurden (siehe SUPABASE_SETUP.md §10).
+     Solange false: die App verkauft NICHTS und sagt das ehrlich. */
+  stripeEnabled: false,
+
   /* ===== KI-PROXY (für Produktion erforderlich) =====
      Auf true setzen, NACHDEM die Edge Function 'ai-proxy' deployt ist und die
      Secrets serverseitig gesetzt sind. Dann laufen ALLE KI-Aufrufe (Coach,

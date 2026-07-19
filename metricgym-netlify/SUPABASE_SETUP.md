@@ -261,3 +261,27 @@ vorbereitet, braucht aber einen Test gegen das echte Projekt:
 1. `flowType:"pkce"` in `SB.init` setzen,
 2. Boot-Code auf `?code=`-Erkennung + `exchangeCodeForSession` erweitern,
 3. Reset-/OAuth-Flows einmal real durchklicken. [BETREIBER]
+
+## 10. Stripe anschließen (D4) [BETREIBER]
+
+1. **Produkte/Preise** im Stripe-Dashboard anlegen:
+   PRO 4,99 €/Monat + 39,99 €/Jahr, ELITE 9,99 €/Monat + 79,99 €/Jahr
+   (wiederkehrend, Steuer nach Bedarf). Die vier `price_...`-IDs notieren.
+2. **Functions deployen & Secrets setzen**:
+   ```bash
+   supabase functions deploy create-checkout
+   supabase functions deploy create-portal
+   supabase functions deploy stripe-webhook --no-verify-jwt
+   supabase secrets set STRIPE_SECRET_KEY=sk_live_... \
+     STRIPE_WEBHOOK_SECRET=whsec_... APP_URL=https://deine-domain.tld \
+     STRIPE_PRICE_PRO_MONTHLY=price_... STRIPE_PRICE_PRO_YEARLY=price_... \
+     STRIPE_PRICE_ELITE_MONTHLY=price_... STRIPE_PRICE_ELITE_YEARLY=price_...
+   ```
+3. **Webhook** in Stripe: Endpoint = URL der Function `stripe-webhook`,
+   Events: `checkout.session.completed`, `customer.subscription.updated`,
+   `customer.subscription.deleted`. Kundenportal in Stripe aktivieren
+   (Billing → Customer portal), Kündigen erlauben.
+4. `config.js → stripeEnabled: true` setzen. Ab dann: Upgrade-Button öffnet
+   die echte Kasse (7-Tage-Trial), „Verträge hier kündigen" öffnet das
+   Stripe-Portal, der Webhook pflegt `subscriptions` → `my_tier()` liefert
+   den bezahlten Tier, die App resynct beim Boot (C4).

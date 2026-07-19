@@ -329,6 +329,19 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   CSP um plausible.io + sentry-cdn/ingest erweitert; Datenschutzerklärung
   nennt beide (Abschnitt 8).
 
+### 23. Stripe-Zahlung angeschlossen (D4)
+- Drei neue Edge Functions: **create-checkout** (7-Tage-Trial, Preis-IDs
+  serverseitig), **stripe-webhook** (Signatur-geprüft, pflegt
+  `subscriptions` → `my_tier()` liefert ab dann den bezahlten Tier),
+  **create-portal** (Stripe-Kundenportal).
+- Client: Upgrade-Button öffnet die echte Kasse, sobald
+  `config.js → stripeEnabled: true` gesetzt ist — vorher bleibt der ehrliche
+  „Bezahlfunktion kommt"-Hinweis (kein Schein-Kauf). Neuer Button
+  **„Verträge hier kündigen · Abo verwalten"** auf der Preisseite
+  (§ 312k BGB) öffnet das Kundenportal.
+- Launch-Preise: PRO 4,99 €/M · 39,99 €/J (Anker), ELITE 9,99 €/M ·
+  79,99 €/J. Setup-Schritte: `SUPABASE_SETUP.md` Abschnitt 10 ([BETREIBER]).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
