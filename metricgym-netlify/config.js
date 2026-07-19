@@ -32,6 +32,14 @@ window.METRICGYM_CONFIG = {
   supabaseUrl: "https://nsdziafvhhzuuhrctozl.supabase.co",
   supabaseAnonKey: "sb_publishable_Be3Xcvik1HiQnHfPblaSKQ_-nt9rf0c",
 
+  /* ===== OBSERVABILITY (D3, optional) =====
+     sentryDsn: EU-DSN aus sentry.io (Region Frankfurt wählen!) — Fehler-
+     berichte werden vor dem Senden von PII befreit (beforeSend).
+     plausibleDomain: die Site-Domain aus plausible.io (EU, cookielos —
+     ohne Consent-Banner nutzbar). Leer = beides komplett aus. */
+  sentryDsn: "",
+  plausibleDomain: "",
+
   /* ===== KI-PROXY (für Produktion erforderlich) =====
      Auf true setzen, NACHDEM die Edge Function 'ai-proxy' deployt ist und die
      Secrets serverseitig gesetzt sind. Dann laufen ALLE KI-Aufrufe (Coach,

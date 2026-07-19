@@ -2447,6 +2447,8 @@ if(S.consent&&S.consent.tos===true){
 }
 S.basisMode=S.basisMode??false; // C2: Re-Consent abgelehnt → Nur-Basis-Modus (kein Rauswurf)
 S.voiceNoticeShown=S.voiceNoticeShown??false; // C7: einmaliger Hinweis vor der ersten Sprach-Eingabe
+S.firstUseAt=S.firstUseAt||Date.now(); // D3: Basis für den d7_active-Meilenstein
+S._ev=S._ev||{};                       // D3: einmalig gefeuerte Funnel-Events
 S._consentQ=S._consentQ||[];   // C2: Offline-Warteschlange fürs serverseitige consent_log
 // Ernährung v2 (A2): eigene Lebensmittel, Mahlzeiten-Vorlagen, Nutzungs-Favoriten.
 // Alles Teil von S → läuft automatisch über save() + Cloud-Sync.
@@ -4613,6 +4615,36 @@ function toastAction(msg,label,fn){
   document.body.appendChild(el);
   toastTimer=setTimeout(()=>el.remove(),5000);
 }
+/* ---------- OBSERVABILITY (D3) ----------
+   Plausible: cookieloses Zählen (EU) — läuft nur, wenn der Betreiber eine
+   Domain in config.js setzt. Sentry: Fehlerberichte mit PII-Strip. Funnel-
+   Events feuern EINMALIG pro Konto (S._ev), track() ist immer no-op-sicher. */
+function track(evt,props){ try{ if(window.plausible)window.plausible(evt,props?{props}:undefined); }catch(e){} }
+function trackOnce(evt,props){ try{ if(S._ev&&!S._ev[evt]){ S._ev[evt]=Date.now(); save(); track(evt,props); } }catch(e){} }
+(function(){
+  try{
+    const c=window.METRICGYM_CONFIG||{};
+    if(c.plausibleDomain){
+      const s=document.createElement("script"); s.defer=true;
+      s.src="https://plausible.io/js/script.js"; s.setAttribute("data-domain",c.plausibleDomain);
+      document.head.appendChild(s);
+    }
+    if(c.sentryDsn){
+      const s=document.createElement("script"); s.crossOrigin="anonymous";
+      s.src="https://browser.sentry-cdn.com/8.55.0/bundle.min.js";
+      s.onload=()=>{ try{ window.Sentry&&window.Sentry.init({dsn:c.sentryDsn,
+        beforeSend(ev){ try{
+          delete ev.user; delete ev.request; delete ev.server_name;   // keine Identitäten/Header
+          const scrub=(x)=>String(x).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,"[email]");
+          if(ev.message)ev.message=scrub(ev.message);
+          ((ev.exception&&ev.exception.values)||[]).forEach(v=>{ if(v.value)v.value=scrub(v.value); });
+          if(ev.breadcrumbs)ev.breadcrumbs=ev.breadcrumbs.filter(b=>b.category!=="console").map(b=>{ if(b.message)b.message=scrub(b.message); return b; });
+        }catch(e){} return ev; }
+      }); }catch(e){} };
+      document.head.appendChild(s);
+    }
+  }catch(e){}
+})();
 function toast(msg){
   // Eigene Ebene: darf offene Sheets/Modals im #overlay nicht zerstören.
   clearTimeout(toastTimer);
@@ -5077,6 +5109,7 @@ A.upgrade=(t)=>{
     <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Jetzt aktivieren</button>`);
 };
 A.confirmUpgrade=(t)=>{
+  track("checkout",{tier:t}); // D3: Funnel-Endpunkt
   // Cloud-Konten: Tier vergibt der SERVER (subscriptions) — kein Demo-Umschalten.
   if(typeof SB!=="undefined"&&SB.enabled()&&SB.user&&!S.devMode){
     overlay.innerHTML="";
@@ -6047,7 +6080,7 @@ function legalDoc(type){
       </div>
       <p class="xs mt8" style="line-height:1.5">Widerruf der Art.-9-Einwilligung: Profil → Daten &amp; Konto → „Einwilligung Gesundheitsdaten widerrufen" — so einfach wie die Erteilung.</p>
       <p class="xs mt8" style="line-height:1.5">Zuständige Aufsichtsbehörde (Art. 77 DSGVO): ${lf('authority')}.</p>
-      <p class="mt8"><b style="color:var(--t1)">8. Cookies/Tracking</b><br>Kein Tracking, keine Werbe-Cookies. Es wird nur technisch notwendiger lokaler Speicher (localStorage) zur Funktion genutzt.</p></div>`,
+      <p class="mt8"><b style="color:var(--t1)">8. Cookies/Tracking &amp; Fehlerdiagnose</b><br>Keine Werbe-Cookies, kein personenbezogenes Tracking. Es wird technisch notwendiger lokaler Speicher (localStorage) genutzt. Sofern aktiviert: <b style="color:var(--t1)">Plausible Analytics</b> (EU, cookielos, aggregierte Reichweitenmessung ohne Personenbezug) und <b style="color:var(--t1)">Sentry</b> (EU-Region) zur Fehlerdiagnose — Fehlerberichte werden vor dem Senden automatisch von personenbezogenen Angaben (E-Mail-Adressen, Nutzerkennungen) bereinigt.</p></div>`,
     terms:`<p class="ct">Nutzungsbedingungen (AGB)</p><div class="sm t2" style="line-height:1.65">
       <p><b style="color:var(--t1)">1. Leistung</b><br>METRICGYM stellt Trainings-/Ernährungsempfehlungen auf Basis deiner Angaben bereit. Es handelt sich um allgemeine Fitness-Information, <b style="color:var(--t1)">keine medizinische, diätetische oder therapeutische Beratung</b>.</p>
       <p class="mt8"><b style="color:var(--t1)">2. Eigenverantwortung & Mindestalter</b><br>Training erfolgt auf eigene Verantwortung. Mindestalter 16 Jahre (bzw. mit Zustimmung der Sorgeberechtigten).</p>
@@ -6102,6 +6135,7 @@ function renderRegister(){
       if(S.users.some(x=>x.email===e)){err.textContent="Auf diesem Gerät gibt es schon ein Konto mit dieser E-Mail — melde dich an.";if(btn)btn.disabled=false;return false;}
       const pwHash=await hashPw(p);
       S.users.push({username:u,email:e,pwHash}); S.currentUser=S.users.length-1;
+      trackOnce("register"); // D3
       return true;
     };
     if(SB.enabled()){
@@ -6189,6 +6223,7 @@ A.localOnlyGo=()=>{
   S.currentUser=S.users.length-1;
   const at=Date.now();
   S.consent={tos:{ver:LEGAL_VERSION,at},health:{ver:LEGAL_VERSION,at,revoked:null},analytics:null};
+  trackOnce("register"); // D3
   S.step=0; S.screen="onboarding"; save(); A.closeModal(); render();
 };
 
@@ -6486,6 +6521,7 @@ function renderOnboarding(){
       S.plan=plan; S.planB=generateTrainingPlan({a},"B"); S.rotation=null;
       const opt=generateOptimalSchedule(a);
       S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+      trackOnce("onboard_done"); // D3
       // Beim WIEDERHOLEN des Quiz Verläufe NICHT löschen — nur beim allerersten Mal anlegen.
       if(!S.weightLog||!S.weightLog.length) S.weightLog=[{t:Date.now(),v:a.weight}];
       if(S.requiz) S.schedule=opt.schedule.slice(); // neuen Wochenplan übernehmen
@@ -9977,6 +10013,7 @@ function renderPlayer(){
     const sessFull=S.logged.length>=sessTotal&&sessTotal>0;
     try{navigator.vibrate&&navigator.vibrate(sessFull?[0,30,60,30]:24);}catch{}   // Satz: knackiger Puls · Session komplett: Finale
     primeAudio(); // Nutzer-Geste → Audio-Kontext wecken, damit der Pausen-Beep darf
+    trackOnce("first_log"); // D3
     save();
     // In-Place-Feedback statt Voll-Neuaufbau: Punkte, Liste, Session-Ring, Button, Timer.
     const cnt=S.logged.filter(l=>l.n===name).length;
@@ -11430,6 +11467,7 @@ function renderNutrition(){
 // PRICING — Good-Better-Better, Pro als Anker (Decoy-Reihenfolge)
 // =====================================================================
 function renderPricing(){
+  track("paywall_view"); // D3
   const feats={
     free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Voice-/Foto-Logging unlimitiert","Status-Check + Streak","1 Engine-Insight pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
     pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Bekommt dein Körper, was er braucht?","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
@@ -12226,6 +12264,11 @@ try{ render(); }catch(err){ root.innerHTML=_recover(err&&(err.message||err)); }
 })();
 // C2: Rechtstexte aktualisiert? → Re-Consent-Sheet nach dem Boot (einmal pro Sitzung)
 setTimeout(()=>{ try{ if(S.currentUser!=null&&S.screen==="app"&&consentOutdated())showReConsent(); }catch(e){} },900);
+// D3: Funnel-Basis — Landing-View + 7-Tage-Aktivitäts-Meilenstein
+setTimeout(()=>{ try{
+  if(S.screen==="landing")track("land");
+  if(S.currentUser!=null&&Date.now()-S.firstUseAt>=7*86400000)trackOnce("d7_active");
+}catch(e){} },1200);
 </script>
 </body>
 </html>

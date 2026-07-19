@@ -318,6 +318,17 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - `netlify.toml` + Anleitung: Netlify-GitHub-Checks aktivieren, damit nur
   bei grünem CI deployt wird ([BETREIBER], einmalig im Dashboard).
 
+### 22. Observability (D3)
+- **Plausible Analytics** (EU, cookielos — ohne Consent-Banner nutzbar) und
+  **Sentry** (EU-DSN) sind integriert, aber komplett aus, bis der Betreiber
+  `plausibleDomain`/`sentryDsn` in `config.js` setzt ([BETREIBER]).
+- Sentry-Berichte werden vor dem Senden von PII bereinigt (`beforeSend`:
+  user/request raus, E-Mail-Adressen maskiert, Console-Breadcrumbs raus).
+- Funnel-Events (einmalig pro Konto, wo sinnvoll): `land` → `register` →
+  `onboard_done` → `first_log` → `d7_active` → `paywall_view` → `checkout`.
+  CSP um plausible.io + sentry-cdn/ingest erweitert; Datenschutzerklärung
+  nennt beide (Abschnitt 8).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
