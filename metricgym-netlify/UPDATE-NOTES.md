@@ -364,6 +364,17 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   ist generell deaktiviert — Drehen nur noch aktiv per Finger); das
   Marquee-Laufband und die doppelte Analytics-Vorschau sind entfernt.
 
+### 25. Magic-Log per Stimme: reinreden → automatisch drin
+- Mikro antippen → das Textfeld leuchtet auf, ein „Ich höre zu"-Status
+  erscheint und die gesprochenen Wörter schreiben sich **live** ins Feld.
+- Nach dem Sprechen (2,8 s Stille oder erneuter Mikro-Tipp) analysiert die
+  Engine automatisch und **trägt erkannte Posten sofort ein** — Reward-Chip,
+  Tageszahlen springen um, und ein 5-Sekunden-**„Rückgängig"** im Toast
+  nimmt bei Bedarf exakt diese Posten (inkl. Favoriten-Zähler) wieder raus.
+- Ehrlich bleibt ehrlich: Unerkanntes wird nie blind gebucht — es bleibt
+  sichtbar mit „Nährwerte schätzen"-Button stehen. Der getippte Weg über
+  „Analysieren" behält bewusst die Vorschau mit Übernehmen/Verwerfen.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
 `vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
