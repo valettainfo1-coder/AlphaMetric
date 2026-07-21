@@ -1387,8 +1387,6 @@ const ICONS={
   sparkle:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
   scale:'<path d="M12 3v3M7 21h10M12 6c-4 0-7 2-7 5h14c0-3-3-5-7-5Z"/><path d="M9 21v-5M15 21v-5"/>',
   undo:'<path d="M8 7 4 11l4 4"/><path d="M4 11h11a5 5 0 0 1 0 10h-3"/>',
-  barcode:'<path d="M4 7v10M8 7v10M11 7v10M15 7v10M20 7v10M17.5 7v10"/><path d="M2 4.5h3M19 4.5h3M2 19.5h3M19 19.5h3" stroke-width="1"/>',
-  torch:'<path d="M9 3h6l-1 4h-4L9 3ZM10 7h4v3a2 2 0 0 1-4 0V7Z"/><path d="M12 13v8"/>',
 };
 function icon(name,size){
   size=size||18;
@@ -1897,14 +1895,7 @@ const OFF={
       +encodeURIComponent(q)+"&search_simple=1&action=process&json=1&page_size=12&fields="+fields);
     const out=(j&&j.products||[]).map(OFF.norm).filter(Boolean).slice(0,8);
     await OFF.cPut(key,out);
-    out.forEach(pr=>{ if(pr.code)OFF.cPut("p:"+pr.code,pr); }); // Produkt-Cache füllen (Barcode/A3)
-    return out;},
-  async product(code){ code=String(code||"").replace(/\D/g,""); if(!code)return null;
-    const key="p:"+code; const hit=await OFF.cGet(key); if(hit)return hit;
-    const fields="code,product_name_de,product_name,brands,nutriments,serving_size,quantity";
-    const j=await OFF._json("https://world.openfoodfacts.org/api/v2/product/"+code+".json?fields="+fields);
-    const pr=OFF.norm(j&&j.product); if(pr)await OFF.cPut(key,pr);
-    return pr;}
+    return out;}
 };
 // Bild herunterskalieren (max 900px, JPEG) → kleine dataURL für Vergleichsansicht
 function downscaleImage(file,max,cb){
@@ -4748,125 +4739,6 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
 
-/* ---------- BARCODE-SCANNER (A3) ----------
-   Erkennungs-Reihenfolge: nativer BarcodeDetector → lokal gevendortes
-   zxing-wasm (vendor/zxing/, per Service Worker vorgecacht → offline) →
-   manuelle EAN-Eingabe (immer sichtbar; iOS-PWAs können getUserMedia erst
-   ab iOS 14.3, ältere fallen sauber auf die Eingabe zurück). */
-const SCAN={stream:null,timer:0,det:null,zx:null,zxReady:null,active:false,code:null,product:null,canvas:null};
-SCAN.stop=()=>{ SCAN.active=false; clearTimeout(SCAN.timer);
-  try{((SCAN.stream&&SCAN.stream.getTracks())||[]).forEach(t=>t.stop());}catch{}
-  SCAN.stream=null; SCAN.det=null; SCAN.zx=null;
-  const el=document.getElementById("scan-sheet"); if(el)el.remove(); };
-SCAN.zxing=()=>{ // zxing-wasm nur laden, wenn der native Detector fehlt
-  if(SCAN.zxReady)return SCAN.zxReady;
-  SCAN.zxReady=new Promise((res,rej)=>{
-    if(window.ZXingWASM){ try{ZXingWASM.prepareZXingModule({overrides:{locateFile:(p)=>"vendor/zxing/"+p}});}catch{} return res(window.ZXingWASM); }
-    const s=document.createElement("script"); s.src="vendor/zxing/zxing-reader.js";
-    s.onload=()=>{ try{ ZXingWASM.prepareZXingModule({overrides:{locateFile:(p)=>"vendor/zxing/"+p}}); res(window.ZXingWASM); }catch(e){ SCAN.zxReady=null; rej(e); } };
-    s.onerror=()=>{ SCAN.zxReady=null; rej(new Error("zxing nicht ladbar")); };
-    document.head.appendChild(s); });
-  return SCAN.zxReady; };
-SCAN.loop=async(video)=>{
-  if(!SCAN.active)return;
-  try{
-    if(SCAN.det){
-      const codes=await SCAN.det.detect(video);
-      if(codes&&codes[0]&&codes[0].rawValue){ SCAN.found(codes[0].rawValue); return; }
-    }else if(SCAN.zx&&video.videoWidth){
-      const c=SCAN.canvas||(SCAN.canvas=document.createElement("canvas"));
-      const w=Math.min(800,video.videoWidth), h=Math.round(w*video.videoHeight/video.videoWidth);
-      c.width=w; c.height=h;
-      const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(video,0,0,w,h);
-      const res=await SCAN.zx.readBarcodes(g.getImageData(0,0,w,h),{formats:["EAN-13","EAN-8","Code128"],maxNumberOfSymbols:1,tryHarder:true});
-      if(res&&res[0]&&(res[0].text||res[0].rawValue)){ SCAN.found(res[0].text||res[0].rawValue); return; }
-    }
-  }catch(e){}
-  SCAN.timer=setTimeout(()=>SCAN.loop(video),300);
-};
-SCAN.found=async(code)=>{
-  code=String(code||"").replace(/\D/g,""); if(code.length<8)return;
-  SCAN.code=code; SCAN.active=false; clearTimeout(SCAN.timer);
-  try{navigator.vibrate&&navigator.vibrate(24);}catch{}
-  const res=document.getElementById("scan-result"); if(!res)return;
-  res.innerHTML=`<div class="row" style="justify-content:center;gap:10px;padding:8px 0"><div class="spin" style="width:16px;height:16px;border-width:2px"></div><span class="sm t2">Suche ${esc(code)} …</span></div>`;
-  let pr=null; try{ pr=await OFF.product(code); }catch(e){}
-  if(!pr){
-    res.innerHTML=`<div class="warncard" style="margin-bottom:10px"><p class="sm"><b>${esc(code)}</b> ist nicht in der Online-Datenbank.</p>
-      <div class="grid2 mt8"><button class="btn" onclick="A.scanAgain()">Nochmal</button>
-      <button class="btn volt" onclick="A.scanEstimate()">Nährwerte schätzen</button></div></div>`;
-    return;
-  }
-  SCAN.product=pr;
-  res.innerHTML=`<div class="warncard" style="margin-bottom:10px;border-color:rgba(143,184,220,.4);background:rgba(143,184,220,.06)">
-    <p class="sm"><b>${esc(pr.name)}</b>${pr.brand?` <span class="xs t2">· ${esc(pr.brand)}</span>`:""}</p>
-    <p class="xs t2" style="margin:4px 0 8px">${nfi.format(pr.kcal)} kcal · ${pr.p} g P · ${pr.c} g C · ${pr.f} g F je 100 g · Open Food Facts</p>
-    <div class="row" style="gap:8px">
-      <input type="number" id="scan-gram" value="${pr.servG||100}" min="1" max="2000" inputmode="numeric" style="width:86px">
-      <span class="xs t2">g</span>
-      ${pr.servG&&pr.servG!==100?`<button class="chip" onclick="document.getElementById('scan-gram').value=${pr.servG}">Portion (${pr.servG} g)</button>`:""}
-      <button class="chip" onclick="document.getElementById('scan-gram').value=100">100 g</button></div>
-    <div class="grid2 mt8"><button class="btn" onclick="A.scanAgain()">Nochmal</button>
-    <button class="btn volt" onclick="A.scanLog()">Loggen</button></div></div>`;
-};
-A.scanFood=async()=>{
-  if(document.getElementById("scan-sheet"))return;
-  const d=document.createElement("div"); d.id="scan-sheet";
-  d.style.cssText="position:fixed;inset:0;z-index:400;background:#05070C;display:flex;flex-direction:column";
-  d.innerHTML=`
-    <div style="position:relative;flex:1;overflow:hidden;background:#000">
-      <video id="scan-video" playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
-      <div style="position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(78vw,300px);height:150px;border-radius:14px;box-shadow:0 0 0 200vmax rgba(5,7,12,.55);outline:2px solid rgba(143,184,220,.9)"></div>
-      <button class="iconbtn" onclick="A.scanClose()" aria-label="Scanner schließen" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;background:rgba(10,14,22,.72)">${icon("x",18)}</button>
-      <button class="iconbtn" id="scan-torch" style="display:none;position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:14px;background:rgba(10,14,22,.72);opacity:.6" aria-label="Licht an/aus">${icon("torch",18)}</button>
-      <p id="scan-hint" class="sm" style="position:absolute;left:16px;right:16px;top:calc(42% + 92px);text-align:center;color:#E7ECF5;text-shadow:0 1px 8px #000">Richte den Strichcode im Rahmen aus</p>
-    </div>
-    <div style="background:#0B0F17;border-top:1px solid rgba(255,255,255,.08);padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px)">
-      <div id="scan-result"></div>
-      <p class="xs t2" id="scan-msg" style="margin-bottom:8px">Geht auch ohne Kamera: EAN eintippen.</p>
-      <div class="row" style="gap:8px"><input type="text" id="scan-ean" inputmode="numeric" autocomplete="off" placeholder="EAN, z. B. 4061458182974" style="flex:1">
-      <button class="btn" style="width:auto;min-width:92px" onclick="A.scanManual()">Suchen</button></div>
-    </div>`;
-  document.body.appendChild(d);
-  SCAN.active=true; SCAN.code=null; SCAN.product=null; SCAN.det=null; SCAN.zx=null;
-  const video=document.getElementById("scan-video");
-  const noCam=(msg)=>{ SCAN.active=false; const h=document.getElementById("scan-hint"); if(h)h.textContent=msg; };
-  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){ noCam("Kamera hier nicht verfügbar — EAN unten eintippen."); return; }
-  try{
-    SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}});
-    if(!document.getElementById("scan-sheet")){ SCAN.stop(); return; } // Sheet währenddessen geschlossen
-    video.srcObject=SCAN.stream; await video.play().catch(()=>{});
-    try{ const track=SCAN.stream.getVideoTracks()[0]; // Taschenlampe, wo die Kamera es kann
-      if(track&&track.getCapabilities&&track.getCapabilities().torch){
-        const bt=document.getElementById("scan-torch"); let on=false; bt.style.display="";
-        bt.onclick=async()=>{ on=!on; try{await track.applyConstraints({advanced:[{torch:on}]});}catch{} bt.style.opacity=on?"1":".6"; }; } }catch{}
-    if("BarcodeDetector" in window){ try{ SCAN.det=new BarcodeDetector({formats:["ean_13","ean_8","code_128"]}); }catch{ SCAN.det=null; } }
-    if(!SCAN.det){ try{ SCAN.zx=await SCAN.zxing(); }catch{ noCam("Scanner-Modul nicht ladbar — EAN unten eintippen."); return; } }
-    SCAN.loop(video);
-  }catch(e){
-    noCam((e&&(e.name==="NotAllowedError"||e.name==="SecurityError"))
-      ?"Kamera-Zugriff abgelehnt — EAN unten eintippen."
-      :"Kamera nicht verfügbar — EAN unten eintippen.");
-  }
-};
-A.scanClose=()=>SCAN.stop();
-A.scanAgain=()=>{ SCAN.code=null; SCAN.product=null;
-  const r=document.getElementById("scan-result"); if(r)r.innerHTML="";
-  const v=document.getElementById("scan-video");
-  if(v&&SCAN.stream&&(SCAN.det||SCAN.zx)){ SCAN.active=true; SCAN.loop(v); } };
-A.scanManual=()=>{ const el=document.getElementById("scan-ean");
-  const code=((el&&el.value)||"").replace(/\D/g,"");
-  if(code.length!==8&&code.length!==13){ const m=document.getElementById("scan-msg"); if(m)m.textContent="Eine EAN hat 8 oder 13 Ziffern."; return; }
-  SCAN.found(code); };
-A.scanLog=()=>{ const pr=SCAN.product; if(!pr)return;
-  const g=parseInt((document.getElementById("scan-gram")||{}).value)||pr.servG||100;
-  offRow(pr); const cf=upsertOffFood(pr); const e=addFood(customRow(cf),g); bumpFav("c:"+cf.id);
-  SCAN.stop(); toast(`✓ ${e.n} — ${nfi.format(e.k)} kcal`);
-  try{ if(S.currentUser!=null&&S.screen==="app")render(); }catch{} };
-A.scanEstimate=()=>{ const code=SCAN.code; SCAN.stop();
-  pendingManual={name:"",gram:100,barcode:code,askName:true};
-  try{ if(S.tab!=="nutrition"){ S.tab="nutrition"; save(); } if(S.currentUser!=null&&S.screen==="app")render(); }catch{} };
-
 /* ---------- CSV-IMPORT (B5): Hevy & Strong ----------
    Wechsler-Pipeline: CSV wählen → Format-Autodetektion an der Headerzeile →
    Vorschau (Workouts/Sätze/Zeitraum, unbekannte Übungen zuordnen) →
@@ -6158,7 +6030,7 @@ function legalDoc(type){
       <p class="mt8"><b style="color:var(--t1)">4. Empfänger & Auftragsverarbeiter</b><br>
         • <b style="color:var(--t1)">Supabase</b> (Datenbank/Login; Region: ${lf('supabaseRegion')}; AV-Vertrag/DPA erforderlich) — nur bei Cloud-Konto.<br>
         • <b style="color:var(--t1)">Netlify</b> (Hosting; technische Server-Logs mit IP-Adressen, kurzfristig).<br>
-        • <b style="color:var(--t1)">Open Food Facts</b> (Lebensmittel-Suche/Barcode): es werden NUR Produkt-Suchbegriffe bzw. Barcodes übertragen — keine Konto- oder Gesundheitsdaten.<br>
+        • <b style="color:var(--t1)">Open Food Facts</b> (Lebensmittel-Suche): es werden NUR Produkt-Suchbegriffe übertragen — keine Konto- oder Gesundheitsdaten.<br>
         • Fortschrittsfotos verlassen dein Gerät <b style="color:var(--t1)">nie</b> (nur lokale Speicherung).<br>
         • Sprach-Eingabe (optional): nutzt die Spracherkennung deines Browsers — dabei wird das <b style="color:var(--t1)">Audio an dessen Anbieter</b> (z. B. Apple oder Google) übertragen. Die Texteingabe ist gleichwertig und überträgt nichts.</p>
       <p class="mt8"><b style="color:var(--t1)">5. KI-Coach & Drittlandübermittlung</b><br>
@@ -11125,7 +10997,7 @@ function nutritionWeekInsights(){
         <span class="metric sm" style="color:${fbAvg>=30?"var(--hl)":"var(--t1)"}">Ø ${fbAvg} g / Tag</span></div>
         <p class="xs t2" style="margin-top:3px">Referenz: 30 g (DGE) — aus ${fbDays.length} ${fbDays.length===1?"Tag":"Tagen"} mit Produktdaten.</p>`
       :`<div class="row"><span class="sm">Ballaststoffe ${infoBtn("fiber")}</span><span class="xs t2">noch keine Daten</span></div>
-        <p class="xs t2" style="margin-top:3px">Logge per Barcode oder Online-Suche — dann rechnet die Engine deinen Ballaststoff-Schnitt mit echten Produktwerten.</p>`)}
+        <p class="xs t2" style="margin-top:3px">Logge per Online-Suche — dann rechnet die Engine deinen Ballaststoff-Schnitt mit echten Produktwerten.</p>`)}
     ${row(`<div class="row"><span class="sm">Dein ehrlichster Tag ${infoBtn("honestDay")}</span>
       <span class="metric sm">${WDs[honest.d.getDay()]} · ${honest.sum.n} ${honest.sum.n===1?"Eintrag":"Einträge"}</span></div>
       <p class="xs t2" style="margin-top:3px">${nfi.format(honest.sum.k)} kcal · ${nfi.format(Math.round(honest.sum.p))} g Protein — so sieht dein bestes Logging aus.</p>`)}
@@ -11222,8 +11094,7 @@ function renderNutrition(){
     else { pendingManual={name,gram:gram||100}; renderNutrition(); }
   };
   A.manualSave=()=>{
-    const nameEl=document.getElementById("m-name");
-    const name=(((pendingManual.askName&&nameEl)?nameEl.value.trim():pendingManual.name)||"").slice(0,60);
+    const name=((pendingManual.name)||"").slice(0,60);
     if(!name){toast("Gib dem Lebensmittel einen Namen");return;}
     const k=parseInt(document.getElementById("m-k").value)||0;
     const pp=parseFloat(document.getElementById("m-p").value)||0;
@@ -11231,14 +11102,14 @@ function renderNutrition(){
     const f=parseFloat(document.getElementById("m-f").value)||0;
     if(k<=0){toast("Kalorien angeben");return;}
     nlogToday().meals.push({n:name+` (${pendingManual.gram} g)`,g:pendingManual.gram,k,p:pp,c,f});
-    // A2/A3: als eigenes Lebensmittel merken (Default an) → nächstes Mal echter
-    // Treffer, auch im Voice-Parser; gescannter Barcode wird mitgespeichert.
-    const cb=document.getElementById("m-own"), g=pendingManual.gram, bc=pendingManual.barcode||null;
-    if(cb&&cb.checked&&g>0&&!(S.customFoods||[]).some(x=>x.name.toLowerCase()===name.toLowerCase()||(bc&&x.barcode===bc))){
+    // A2: als eigenes Lebensmittel merken (Default an) → nächstes Mal echter
+    // Treffer, auch im Voice-Parser.
+    const cb=document.getElementById("m-own"), g=pendingManual.gram;
+    if(cb&&cb.checked&&g>0&&!(S.customFoods||[]).some(x=>x.name.toLowerCase()===name.toLowerCase())){
       const cf={id:"cf"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
         name,per:100,kcal:Math.round(k/g*100),
         p:Math.round(pp/g*1000)/10,c:Math.round(c/g*1000)/10,f:Math.round(f/g*1000)/10,
-        barcode:bc,src:bc?"scan":"manuell",createdAt:Date.now()};
+        src:"manuell",createdAt:Date.now()};
       S.customFoods.push(cf); bumpFav("c:"+cf.id);
       toast(`✓ Geloggt & als „${cf.name}" gemerkt`);
     }
@@ -11548,15 +11419,11 @@ function renderNutrition(){
       <div class="row mb8" style="gap:8px">
         <input type="text" id="food-name" placeholder="Lebensmittel …" style="flex:1;min-width:0" oninput="A.foodInput(this)" autocomplete="off">
         <input type="number" id="food-gram" placeholder="g" style="width:60px" min="1" max="2000" inputmode="numeric">
-        <button class="iconbtn" style="min-width:44px;min-height:44px;flex-shrink:0" onclick="A.scanFood()" aria-label="Barcode scannen">${icon("barcode",19)}</button>
         <button class="btn volt" style="width:50px;min-width:50px" onclick="A.addCustomFood()" aria-label="Hinzufügen">+</button></div>
       <div id="food-autocomplete" class="ac-list" style="display:none"></div>
       <div class="chips" id="food-chips" style="margin-top:6px"></div>
       ${pendingManual?`<div class="warncard mt8">
-        ${pendingManual.askName
-          ?`<p class="sm mb8">${pendingManual.barcode?`Gescanntes Produkt <span class="metric xs t2">EAN ${esc(pendingManual.barcode)}</span> — `:""}Name &amp; Nährwerte je ${pendingManual.gram} g angeben:</p>
-             <input type="text" id="m-name" placeholder="Produktname …" maxlength="60" style="width:100%;margin-bottom:4px" value="${esc(pendingManual.name||"")}">`
-          :`<b>„${esc(pendingManual.name)}"</b> unbekannt — Nährwerte für ${pendingManual.gram} g schätzen:`}
+        <b>„${esc(pendingManual.name)}"</b> unbekannt — Nährwerte für ${pendingManual.gram} g schätzen:
         <div class="grid4 mt8">
           <input type="number" id="m-k" placeholder="kcal" inputmode="numeric">
           <input type="number" id="m-p" placeholder="P" inputmode="numeric">

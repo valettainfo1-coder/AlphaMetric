@@ -391,10 +391,26 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - Service-Worker-Cache auf **v15** (Icons sind vorgecacht → Update greift
   beim nächsten Besuch automatisch).
 
+### 27. Barcode-Scanner entfernt (A3 zurückgebaut)
+- Der Barcode-/EAN-Scanner in der Ernährungs-Eingabe ist **komplett raus**:
+  Kamera-Vollbild, `BarcodeDetector`/`zxing-wasm`-Erkennung, EAN-Handeingabe
+  und der Scanner-Button neben dem Suchfeld. Lebensmittel werden weiter über
+  die **Online-Suche (Open Food Facts)**, eigene Lebensmittel, Vorlagen,
+  Favoriten und die Sprach-/Texteingabe geloggt.
+- Mit entfernt: das gevendorte `vendor/zxing/` (~1 MB, war SW-vorgecacht),
+  der `OFF.product(barcode)`-Lookup samt Code-Cache, die `barcode`/`torch`-
+  Icons und die tote „Produktname eingeben"-Maske. Das `barcode`-Feld an
+  eigenen Lebensmitteln bleibt (die OFF-Suche setzt es weiter) — nur der
+  Scanner-Zufluss fällt weg.
+- **CSP verschlankt**: `'wasm-unsafe-eval'` gestrichen (wurde nur von
+  zxing gebraucht). Keine WASM-Ausführung mehr im Client.
+- Service-Worker-Cache auf **v16** (zxing aus der SHELL-Precache-Liste
+  entfernt).
+
 ## Deploy
-Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Neu dabei:
-`vendor/three.min.js` und `vendor/zxing/` (werden vom Service Worker
-vorgecacht). Cache-Version aktuell **v15** — Nutzer bekommen Updates beim
-nächsten Besuch automatisch.
+Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
+Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch
+automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
+ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
 SQL aus `SUPABASE_SETUP.md` Abschnitt 4 ausführen ([BETREIBER]).
