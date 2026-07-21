@@ -1447,10 +1447,11 @@ function logoSVG(h,n){
 /* Größere Partikel-Sphäre als Marke (Hero/Splash/Reveal) — gleiche Geometrie,
    nur mehr Punkte. */
 function logoMark(size){ return logoSVG(size||72,200); }
-/* Rauchkreis-Komponente: mystische Rauch-Sphäre (WebGL-Shader) + Aura — EIN Markup überall.
-   Der Shader zeichnet echten, driftenden Volumen-Rauch in einer Kugel mit einem
-   wandernden Licht-Kern („der Geist denkt") und schaut subtil zum Finger/Cursor.
-   Ohne WebGL bleibt die bisherige CSS-Sphäre als Fallback sichtbar. */
+/* Sphären-Komponente: interaktiver Partikel-Ball + Aura — EIN Markup überall.
+   Der Canvas wird vom PARTIKEL-BALL-Modul (siehe unten) bespielt: Fibonacci-
+   Kugel aus tausenden Punkten, Trägheits-Rotation und Finger-Abstoßung.
+   Ohne Canvas bleibt die CSS-Kern-Sphäre (.rk-core) als Fallback sichtbar.
+   Name „rauchkreis" ist historisch — das Markup/die Klassen bleiben stabil. */
 function rauchkreis(size,opts){
   return `<div class="rk" style="width:${size}px;height:${size}px;--d:${size}px" aria-hidden="true"><span class="rk-aura"></span><div class="rk-core"><i></i><i></i><i></i></div><canvas class="rk-gl"></canvas></div>`;
 }
