@@ -6884,6 +6884,19 @@ const STEPS=[
    opts:[["fast","Schnell","Muskelkater ist nach 1 Tag weg"],["average","Normal","1–2 Tage"],["slow","Eher langsam","Oft 2–3 Tage Muskelkater"]]},
   {id:"act",q:"Alltag ohne Training",type:"single",key:"act",
    opts:[["sedentary","Sitzend"],["light","Etwas Bewegung"],["moderate","Regelmäßig auf den Beinen"],["active","Aktiver Beruf"],["very_active","Schwere Arbeit"]]},
+  // ===== Ausdauer-Personas (Cyclist / Runner / Hybrid) — verzweigter Funnel =====
+  {id:"cyc_goal",q:"Dein Ziel auf dem Rad",type:"single",key:"cyc_goal",
+   opts:[["ftp","FTP steigern","Mehr Dauerleistung — Watt pro Kilo rauf"],["gran_fondo","Lange Distanzen / Gran Fondo","100–200 km durchhalten"],["climb","Bergfahren","Leichter & stärker am Anstieg"],["race","Rennen / Kriterien","Spitze & Wiederholbarkeit"],["endurance","Grundlagen-Ausdauer","Fitter & ausdauernder werden"],["weight","Abnehmen auf dem Rad","Fett runter, gelenkschonend"]]},
+  {id:"cyc_ftp",q:"Deine FTP (falls bekannt)",hint:"Functional Threshold Power in Watt — die Leistung, die du ~1 h halten kannst. Weißt du sie nicht? Überspringen — wir schätzen sie aus deinen ersten Fahrten.",type:"dial",key:"cyc_ftp",min:100,max:400,step:5,unit:"W",def:220,skip:true},
+  {id:"cyc_hours",q:"Wochenstunden auf dem Rad",type:"cells",key:"cyc_hours",opts:[3,5,8,12,15],unit:"Std"},
+  {id:"run_goal",q:"Dein Ziel beim Laufen",type:"single",key:"run_goal",
+   opts:[["5k","5 km","Schneller auf der Kurzstrecke"],["10k","10 km","Tempo & Ausdauer kombiniert"],["half","Halbmarathon","21,1 km durchlaufen"],["marathon","Marathon","42,2 km — das große Ziel"],["endurance","Grundlagen-Ausdauer","Fitter & ausdauernder werden"],["weight","Abnehmen","Fett runter beim Laufen"]]},
+  {id:"run_pace",q:"Deine Schwellen-Pace (falls bekannt)",hint:"Ungefähres Tempo, das du ~1 h halten kannst. Unsicher? Überspringen — wir schätzen es aus deinen ersten Läufen.",type:"single",key:"run_pace",skip:true,
+   opts:[[255,"4:15/km oder schneller"],[285,"~4:45/km"],[315,"~5:15/km"],[345,"~5:45/km"],[390,"6:30/km oder langsamer"]]},
+  {id:"run_km",q:"Wochenkilometer",type:"cells",key:"run_km",opts:[10,20,30,50,70],unit:"km"},
+  {id:"endur_disc",q:"Deine Ausdauer-Disziplin",hint:"Zusätzlich zum Krafttraining.",type:"single",key:"endur_disc",
+   opts:[["cycling","Radfahren","Watt, FTP, Power-Analyse"],["running","Laufen","Pace, Zonen, Distanzen"]]},
+  {id:"endur_vol",q:"Ausdauer-Einheiten pro Woche",type:"cells",key:"endur_vol",opts:[1,2,3,4],unit:"×"},
   {id:"medical",type:"medical"},
   {id:"reveal",type:"reveal"},
 ];
@@ -6900,6 +6913,33 @@ const OBLOCKS=[
   ["focus","schedule_pref"],
   ["recovery","act"],
 ];
+// Persona-abhängige Block-Sequenz: der Funnel passt sich zwingend an, WAS der Nutzer sucht.
+// Cyclist/Runner bekommen disziplin-spezifische Fragen statt Split/Equipment; Gym bleibt unverändert.
+function oblocks(){
+  const m=(S.a&&S.a.mode)||"gym";
+  if(m==="cycling") return [["sex","age"],["height","weight"],["cyc_goal","exp"],["cyc_ftp","cyc_hours"],["days","injury"]];
+  if(m==="running") return [["sex","age"],["height","weight"],["run_goal","exp"],["run_pace","run_km"],["days","injury"]];
+  if(m==="hybrid")  return [...OBLOCKS,["endur_disc","endur_vol"]];
+  return OBLOCKS; // gym (unverändert → App-Test-Pfad bleibt identisch)
+}
+// Die vier Personas — die allererste Weiche im Funnel.
+const PERSONAS=[
+  ["gym","dumbbell","Muskeln & Kraft","Trainingsplan, Progression, Physique — der klassische Kraftweg."],
+  ["cycling","bike","Radfahren","FTP, Power-Zonen, Trainingslast — die komplette Rad-Intelligenz."],
+  ["running","activity","Laufen","Pace-Zonen, Distanz-Ziele, Form — dein Lauf-Coach."],
+  ["hybrid","zap","Hybrid — Kraft + Ausdauer","Beides verzahnt: eine Trainingslast, ein Plan, eine Bereitschaft."],
+];
+function renderPersonaGate(){
+  root.innerHTML=onbBar(1,10,"Los geht’s")+`<div class="fade">
+    <h2>Wofür bist du hier?</h2>
+    <p class="hint">Danach richtet sich alles — deine Fragen, dein Plan, deine Auswertungen. Du kannst später jederzeit erweitern.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+      ${PERSONAS.map(([id,ic,t,d])=>`<button class="card acc-i" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px" onclick="A.pickMode('${id}')">
+        <span style="width:46px;height:46px;border-radius:13px;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon(ic,22)}</span>
+        <span style="flex:1;min-width:0"><span class="acc-h" style="display:block;font-size:16px;font-weight:700">${t}</span><span class="acc-s" style="display:block;font-size:12.5px;color:var(--t2);line-height:1.4;margin-top:2px">${d}</span></span>
+        <span class="mi-chev">${icon("chevronR",16)}</span></button>`).join("")}
+    </div></div>`;
+}
 function onbBar(cur,total,label){ return `<div class="topbar">
   <button class="back" onclick="A.back()" aria-label="Zurück">‹</button>
   <div class="progress"><div style="width:${Math.round(cur/total*100)}%"></div></div>
@@ -6961,12 +7001,17 @@ function quizRec(st){
   }
 }
 function renderOnboarding(){
-  const totalBlocks=OBLOCKS.length;                 // 8 Zwei-Fragen-Blöcke
+  // Persona-Weiche ganz vorn: ohne gewählten Modus zeigt der Funnel erst die Persona-Frage.
+  A.pickMode=(m)=>{ S.a.mode=m; S.step=0; save(); render(); };
+  if(!S.a.mode && !S.requiz){ renderPersonaGate(); return; }
+  const BLK=oblocks();                              // persona-abhängige Block-Sequenz
+  const totalBlocks=BLK.length;
   const MED=totalBlocks, REVEAL=totalBlocks+1;      // danach: Medical-Gate, dann Reveal
   if(typeof S.step!=="number"||S.step<0) S.step=0;
   if(S.step>REVEAL) S.step=REVEAL;
   // ---- Navigation & Eingabe-Handler ----
   A.back=()=>{ if(S.step>0){S.step--;save();render();}
+    else if(S.a.mode && !S.requiz){ S.a.mode=null; save(); render(); } // Schritt 0 → zurück zur Persona-Frage
     else if(S.requiz){ S.requiz=false; S.screen="app"; S.tab="profile"; save(); render(); } // Quiz-Wiederholung abbrechen → zurück ins Profil
     else {S.currentUser=null;S.screen="landing";save();render();} };
   A.next=()=>{ S.step++; save(); render(); };
@@ -6997,6 +7042,10 @@ function renderOnboarding(){
     root.innerHTML=`<div class="center"><div class="spin" style="width:46px;height:46px;border-width:3px"></div><p class="sm t2" style="margin-top:14px">Engine berechnet deinen Plan …</p></div>`;
     setTimeout(()=>{
       const a={...S.a,days:S.a.days||4,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
+      a.mode=a.mode||"gym";
+      // Ausdauer-Personas: Ziel auf endurance/fat_loss mappen, damit Ernährung & Projektion passen.
+      if((a.mode==="cycling"||a.mode==="running")&&(!a.goals||!a.goals.length)){
+        const dg=a.mode==="cycling"?a.cyc_goal:a.run_goal; a.goals=[dg==="weight"?"fat_loss":"endurance"]; }
       if(!a.goals||!a.goals.length)a.goals=["muscle_gain"];
       a.equipment=a.equipment||"gym_full"; a.focus=a.focus||[]; a.split=a.split||"auto";
       a.schedule_pref=a.schedule_pref||"consistent"; a.recovery_profile=a.recovery_profile||"average";
@@ -7006,6 +7055,12 @@ function renderOnboarding(){
       a.len=ests.length?Math.round(ests.reduce((s,x)=>s+x,0)/ests.length):60;
       const bmr=bmrCalc(a), td=tdeeCalc(bmr,a.act,effWeight(a),a.len,a.days);
       S.profile={a,bmr,td,tg:multiTargets(a,bmr,td)};
+      // Ausdauer-Athletprofil aus dem Funnel vorbefüllen (Cyclist/Runner/Hybrid) → Modul startklar.
+      try{ if(window.ENDUR){ const en=window.ENDUR.st();
+        if(a.mode==="cycling"){ en.sport="cycling"; if(a.cyc_ftp)en.athlete.cycling.ftp=a.cyc_ftp; }
+        else if(a.mode==="running"){ en.sport="running"; if(a.run_pace)en.athlete.running.thrPace=a.run_pace; }
+        else if(a.mode==="hybrid"&&a.endur_disc){ en.sport=a.endur_disc; }
+        if(a.weight)en.athlete.weight=a.weight; } }catch(e){}
       S.plan=plan; S.planB=generateTrainingPlan({a},"B"); S.rotation=null;
       const opt=generateOptimalSchedule(a);
       S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
@@ -7018,7 +7073,7 @@ function renderOnboarding(){
     return;
   }
   // ---- Frage-Block: 2 Fragen + EIN Weiter-Button ----
-  const block=OBLOCKS[Math.min(S.step,totalBlocks-1)].map(id=>STEP_BY_ID[id]).filter(Boolean);
+  const block=BLK[Math.min(S.step,totalBlocks-1)].map(id=>STEP_BY_ID[id]).filter(Boolean);
   const ready=block.every(st=>{ if(st.skip)return true; const v=S.a[st.key];
     if(st.type==="multi")return Array.isArray(v)&&v.length>0;
     if(st.type==="dial")return true; return v!=null&&v!==""; });

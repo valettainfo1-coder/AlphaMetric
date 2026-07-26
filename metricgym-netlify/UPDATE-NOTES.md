@@ -497,6 +497,23 @@ Die zwei letzten Nähte zwischen Gym und Ausdauer geschlossen:
 - +3 CI-Tests (31 Ausdauer-Tests grün); Gym-Kalorien- und Readiness-Engine
   angefasst, App- & DSGVO-Suite bleiben grün.
 
+### 33. Verzweigter Funnel: jede Persona bekommt „die perfekte App"
+Das Onboarding fragt jetzt **ganz vorn**: „Wofür bist du hier?" → **Muskeln & Kraft ·
+Radfahren · Laufen · Hybrid**. Danach **verzweigt der Funnel zwingend**:
+- **Cyclist** bekommt Rad-Ziel (FTP steigern / Gran Fondo / Bergfahren / Rennen …),
+  **FTP** (überspringbar → wird aus Fahrten geschätzt) und Wochenstunden — **statt**
+  Split/Equipment.
+- **Runner** bekommt Lauf-Ziel (5 km … Marathon), **Schwellen-Pace** und
+  Wochenkilometer.
+- **Hybrid** = voller Gym-Funnel + Ausdauer-Disziplin & -Umfang.
+- **Gym** bleibt **exakt** wie bisher (Regressions-Pfad unverändert).
+Am Ende füllt der Funnel das **Ausdauer-Athletprofil** vor (FTP/Pace/Sport) und
+mappt das Ziel korrekt in Ernährung & Projektion → ein Cyclist landet mit
+gesetztem FTP und startklarem Ausdauer-Dashboard **statt bei null**.
+Technik: `oblocks()` liefert die persona-abhängige Blocksequenz, Persona-Gate als
+Vorstufe. +4 CI-Tests. Außerdem behoben: „Du wirst mehr Muskeln" → „Du wirst
+muskulöser"; Command-Palette-Header sauber formatiert (✕ oben rechts).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
 Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch

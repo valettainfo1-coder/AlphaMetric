@@ -180,6 +180,24 @@ check('Readiness-Naht: Basis-Score aus Status-Check', rdy.base >= 70, rdy.base);
 check('Readiness-Naht: hohe Gesamt-Last senkt die Bereitschaft', rdy.loaded != null && rdy.loaded < rdy.base, { base: rdy.base, loaded: rdy.loaded });
 check('Readiness-Naht: Trainingslast als Grund ausgewiesen', rdy.parts.some(x => /Trainingslast/.test(x)), rdy.parts);
 
+// ---------- Funnel-Persona: Cyclist-Onboarding befüllt das Ausdauer-Profil ----------
+const funnel = await page.evaluate(async () => {
+  return await new Promise((resolve) => {
+    S.currentUser = 't@t'; S.users = [{ email: 't@t', username: 'test' }];
+    S.a = { height: 180, weight: 76, sleep: 7, goals: [], mode: 'cycling', sex: 'male', age: 31, cyc_goal: 'ftp', exp: 'intermediate', cyc_ftp: 275, cyc_hours: 8, days: 4 };
+    delete S.profile; delete S.requiz;
+    const BLK = oblocks(); S.step = BLK.length + 1; S.screen = 'onboarding'; save(); render();
+    setTimeout(() => {
+      S.a.mode = 'gym'; const gymSame = JSON.stringify(oblocks()) === JSON.stringify(OBLOCKS);
+      resolve({ hasProfile: !!(S.profile && S.profile.tg), mode: S.profile && S.profile.a.mode, ftp: S.endur && S.endur.athlete.cycling.ftp, sport: S.endur && S.endur.sport, goals: S.profile && S.profile.a.goals, gymSame });
+    }, 1700);
+  });
+});
+check('Funnel: Cyclist-Persona erzeugt valides Profil', funnel.hasProfile && funnel.mode === 'cycling', funnel.mode);
+check('Funnel: FTP aus dem Quiz landet im Ausdauer-Profil', funnel.ftp === 275 && funnel.sport === 'cycling', { ftp: funnel.ftp, sport: funnel.sport });
+check('Funnel: Ausdauer-Ziel gemappt (endurance)', Array.isArray(funnel.goals) && funnel.goals.includes('endurance'), funnel.goals);
+check('Funnel: Gym-Pfad unverändert (OBLOCKS)', funnel.gymSame === true, funnel.gymSame);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();
