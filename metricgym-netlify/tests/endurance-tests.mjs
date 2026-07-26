@@ -89,6 +89,54 @@ check('GPX-Import: VI > 1', imp.vi > 1, imp.vi);
 check('GPX-Import: HF-Entkopplung positiv (Drift)', imp.decoup > 0, imp.decoup);
 check('GPX-Import: Aktivität in IndexedDB gespeichert', imp.stored === 1 && imp.streamLen === 900, imp);
 
+// ---------- TCX-Import ----------
+function makeTcx() {
+  const n = 600, t0 = Date.now() - 7200e3; let tps = '';
+  for (let i = 0; i < n; i++) {
+    const ph = i / n * Math.PI * 2, time = new Date(t0 + i * 1000).toISOString();
+    const lat = (48.2 + 0.008 * Math.sin(ph)).toFixed(6), lng = (11.6 + 0.01 * Math.cos(ph)).toFixed(6);
+    const ele = (500 + 30 * Math.sin(ph * 2)).toFixed(1), dist = (i * 7).toFixed(1);
+    const hr = Math.round(140 + 15 * (i / n)), power = Math.round(200 + 80 * Math.sin(i / 35) + (i % 100 < 25 ? 60 : 0));
+    tps += `<Trackpoint><Time>${time}</Time><Position><LatitudeDegrees>${lat}</LatitudeDegrees><LongitudeDegrees>${lng}</LongitudeDegrees></Position><AltitudeMeters>${ele}</AltitudeMeters><DistanceMeters>${dist}</DistanceMeters><HeartRateBpm><Value>${hr}</Value></HeartRateBpm><Cadence>90</Cadence><Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Watts>${power}</Watts></TPX></Extensions></Trackpoint>`;
+  }
+  return `<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity Sport="Biking"><Lap><Track>${tps}</Track></Lap></Activity></Activities></TrainingCenterDatabase>`;
+}
+const tcx = await page.evaluate(async (x) => { const s = await window.ENDUR.importText(x, 'ausfahrt.tcx'); return { sport: s.sport, dur: s.dur, np: s.np, tss: s.tss, avgHr: s.avgHr, stored: window.ENDUR.st().activities.length }; }, makeTcx());
+check('TCX-Import: Sport=Biking → cycling', tcx.sport === 'cycling', tcx.sport);
+check('TCX-Import: Dauer ~600 s', tcx.dur >= 595 && tcx.dur <= 601, tcx.dur);
+check('TCX-Import: NP & TSS berechnet', tcx.np > 0 && tcx.tss > 0, { np: tcx.np, tss: tcx.tss });
+check('TCX-Import: HF gelesen', tcx.avgHr > 140 && tcx.avgHr < 160, tcx.avgHr);
+check('TCX-Import: 2 Aktivitäten insgesamt', tcx.stored === 2, tcx.stored);
+
+// ---------- FIT-Import (Node baut eine minimale, gültige FIT-Binärdatei) ----------
+function makeFit() {
+  const FIT_EPOCH = 631065600, SC = Math.pow(2, 31) / 180, data = [];
+  const u8 = v => data.push(v & 0xFF), u16 = v => { data.push(v & 0xFF); data.push((v >> 8) & 0xFF); };
+  const u32 = v => { v = v >>> 0; data.push(v & 0xFF); data.push((v >> 8) & 0xFF); data.push((v >> 16) & 0xFF); data.push((v >> 24) & 0xFF); };
+  u8(0x40); u8(0); u8(0); u16(20); u8(8); // record-Definition (local 0, global 20)
+  [[253, 4, 0x86], [7, 2, 0x84], [3, 1, 0x02], [4, 1, 0x02], [5, 4, 0x86], [0, 4, 0x85], [1, 4, 0x85], [2, 2, 0x84]].forEach(f => { u8(f[0]); u8(f[1]); u8(f[2]); });
+  const n = 300, startUnix = Math.floor(Date.now() / 1000) - 3600;
+  for (let i = 0; i < n; i++) {
+    const ph = i / n * Math.PI * 2; u8(0x00); // Daten-Message local 0
+    u32(startUnix + i - FIT_EPOCH); u16(Math.round(210 + 85 * Math.sin(i / 40) + (i % 110 < 28 ? 65 : 0)));
+    u8(Math.round(138 + 20 * (i / n))); u8(92); u32(Math.round(i * 7.5 * 100));
+    u32(Math.round((48.15 + 0.009 * Math.sin(ph)) * SC)); u32(Math.round((11.58 + 0.012 * Math.cos(ph)) * SC));
+    u16(Math.round((510 + 25 * Math.sin(ph * 2) + 500) * 5));
+  }
+  const out = [12, 0x10, 0, 0, data.length & 0xFF, (data.length >> 8) & 0xFF, (data.length >> 16) & 0xFF, (data.length >> 24) & 0xFF, 0x2E, 0x46, 0x49, 0x54];
+  for (const b of data) out.push(b); out.push(0, 0); // CRC (Parser ignoriert)
+  return out;
+}
+const fit = await page.evaluate(async (arr) => { const u = new Uint8Array(arr); const s = await window.ENDUR.importFit(u.buffer, 'fahrt.fit'); const streams = await window.ENDUR.EDB.get(s.id); return { sport: s.sport, dur: s.dur, np: s.np, avgP: s.avgP, tss: s.tss, vi: s.vi, avgHr: s.avgHr, distKm: Math.round(s.dist / 100) / 10, hasGps: streams.lat.some(x => x != null), stored: window.ENDUR.st().activities.length }; }, makeFit());
+check('FIT-Import: als Radfahren erkannt', fit.sport === 'cycling', fit.sport);
+check('FIT-Import: Dauer ~300 s', fit.dur >= 295 && fit.dur <= 301, fit.dur);
+check('FIT-Import: NP > Ø (variable Leistung)', fit.np > fit.avgP + 2, { np: fit.np, avg: fit.avgP });
+check('FIT-Import: TSS & VI berechnet', fit.tss > 0 && fit.vi > 1, { tss: fit.tss, vi: fit.vi });
+check('FIT-Import: HF dekodiert', fit.avgHr > 135 && fit.avgHr < 165, fit.avgHr);
+check('FIT-Import: GPS aus Semicircles dekodiert', fit.hasGps === true, fit.hasGps);
+check('FIT-Import: Distanz plausibel', fit.distKm > 1, fit.distKm + ' km');
+check('FIT-Import: 3 Aktivitäten insgesamt', fit.stored === 3, fit.stored);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();

@@ -2010,6 +2010,93 @@ window.ENDUR = (() => {
     return { sport, start: t0 * 1000, streams: resample1Hz(raw) };
   }
 
+  // ------------------------------------------------------------------ PARSER (TCX)
+  function parseTCX(text) {
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    if (doc.querySelector("parsererror")) throw new Error("TCX ungültig");
+    const tps = [...doc.getElementsByTagName("Trackpoint")];
+    if (!tps.length) throw new Error("Keine Trackpunkte in der TCX-Datei");
+    const actEl = doc.getElementsByTagName("Activity")[0];
+    const sportAttr = actEl ? (actEl.getAttribute("Sport") || "") : "";
+    const txt = (el, tag) => { const e = el && el.getElementsByTagName(tag)[0]; return e ? num(e.textContent) : null; };
+    const raw = []; let t0 = null;
+    for (const tp of tps) {
+      const timeEl = tp.getElementsByTagName("Time")[0];
+      const ts = timeEl ? Date.parse(timeEl.textContent) / 1000 : (raw.length ? raw[raw.length - 1].t + 1 : 0);
+      if (t0 == null) t0 = ts;
+      const pos = tp.getElementsByTagName("Position")[0];
+      const hrEl = tp.getElementsByTagName("HeartRateBpm")[0];
+      const ext = tp.getElementsByTagName("Extensions")[0];
+      let power = null, speed = null;
+      if (ext) { const w = ext.getElementsByTagName("Watts")[0] || ext.getElementsByTagNameNS("*", "Watts")[0]; power = w ? num(w.textContent) : null;
+        const sp = ext.getElementsByTagName("Speed")[0] || ext.getElementsByTagNameNS("*", "Speed")[0]; speed = sp ? num(sp.textContent) : null; }
+      raw.push({ t: ts - t0, power, hr: hrEl ? txt(hrEl, "Value") : null, cad: txt(tp, "Cadence"),
+        lat: pos ? txt(pos, "LatitudeDegrees") : null, lng: pos ? txt(pos, "LongitudeDegrees") : null,
+        ele: txt(tp, "AltitudeMeters"), dist: txt(tp, "DistanceMeters"), speed });
+    }
+    if (raw.every(p => p.dist == null)) { let cum = 0, prev = null; for (const p of raw) { if (prev && p.lat != null && prev.lat != null) cum += haversine(prev, p); p.dist = cum; if (p.lat != null) prev = p; } }
+    const sport = /run/i.test(sportAttr) ? "running" : (/bik|cycl/i.test(sportAttr) ? "cycling" : (raw.some(p => p.power != null) ? "cycling" : "cycling"));
+    return { sport, start: t0 * 1000, streams: resample1Hz(raw) };
+  }
+
+  // ------------------------------------------------------------------ PARSER (FIT, binär)
+  // Minimaler, robuster FIT-Decoder: liest record-Messages (Global 20) + Sport (12/18).
+  // Behandelt Definition-/Daten-Messages, LE/BE, Developer-Felder (Größe wird übersprungen),
+  // Invalid-Sentinels und Compressed-Timestamp-Header. Semicircles→Grad, FIT-Epoche 1989.
+  function parseFIT(buf) {
+    const bytes = new Uint8Array(buf), dv = new DataView(buf);
+    if (bytes.length < 14) throw new Error("FIT-Datei zu klein");
+    if (String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]) !== ".FIT") throw new Error("Keine gültige FIT-Datei");
+    const headerSize = bytes[0], dataSize = dv.getUint32(4, true);
+    const end = Math.min(headerSize + dataSize, bytes.length - 2);
+    const FIT_EPOCH = 631065600, SC = 180 / Math.pow(2, 31);
+    const defs = {}; const raw = []; let sport = null, t0 = null; let pos = headerSize;
+    const invalid = (v, base) => { const n = base & 0x1f; return (n === 2 || n === 10) ? v === 0xFF : (n === 4 || n === 11) ? v === 0xFFFF : (n === 6 || n === 12) ? v === 0xFFFFFFFF : (n === 1) ? v === 0x7F : (n === 3) ? v === 0x7FFF : (n === 5) ? v === 0x7FFFFFFF : false; };
+    const s32 = (u) => u > 0x7FFFFFFF ? u - 0x100000000 : u;
+    function readData(def, p) {
+      const rec = {};
+      for (const f of def.fields) {
+        let v; const le = def.le;
+        if (f.size === 1) v = bytes[p];
+        else if (f.size === 2) v = le ? (bytes[p] | (bytes[p + 1] << 8)) : ((bytes[p] << 8) | bytes[p + 1]);
+        else if (f.size === 4) v = le ? ((bytes[p] | (bytes[p + 1] << 8) | (bytes[p + 2] << 16) | (bytes[p + 3] << 24)) >>> 0) : (((bytes[p] << 24) | (bytes[p + 1] << 16) | (bytes[p + 2] << 8) | bytes[p + 3]) >>> 0);
+        else v = bytes[p];
+        if (invalid(v, f.base)) v = null;
+        rec[f.num] = v; p += f.size;
+      }
+      p += def.devSize || 0;
+      handle(def.globalNum, rec); return p;
+    }
+    function handle(gnum, rec) {
+      if ((gnum === 12 || gnum === 18) && rec[5] != null && sport == null) sport = rec[5] === 1 ? "running" : rec[5] === 2 ? "cycling" : null;
+      if (gnum === 20) {
+        const ts = rec[253]; if (ts != null && t0 == null) t0 = ts;
+        const lat = rec[0] != null ? s32(rec[0]) * SC : null, lng = rec[1] != null ? s32(rec[1]) * SC : null;
+        const ele = rec[78] != null ? rec[78] / 5 - 500 : (rec[2] != null ? rec[2] / 5 - 500 : null);
+        const speed = rec[73] != null ? rec[73] / 1000 : (rec[6] != null ? rec[6] / 1000 : null);
+        raw.push({ t: ts != null ? ts - (t0 != null ? t0 : ts) : raw.length, power: rec[7] != null ? rec[7] : null, hr: rec[3] != null ? rec[3] : null, cad: rec[4] != null ? rec[4] : null, lat, lng, ele, dist: rec[5] != null ? rec[5] / 100 : null, speed });
+      }
+    }
+    while (pos < end) {
+      const rh = bytes[pos++];
+      if (rh & 0x80) { const def = defs[(rh >> 5) & 0x3]; if (!def) break; pos = readData(def, pos); continue; }
+      const localType = rh & 0x0F;
+      if (rh & 0x40) {
+        const le = bytes[pos + 1] === 0;
+        const gnum = le ? (bytes[pos + 2] | (bytes[pos + 3] << 8)) : ((bytes[pos + 2] << 8) | bytes[pos + 3]);
+        const nf = bytes[pos + 4]; let p = pos + 5; const fields = [];
+        for (let i = 0; i < nf; i++) { fields.push({ num: bytes[p], size: bytes[p + 1], base: bytes[p + 2] }); p += 3; }
+        let devSize = 0; if (rh & 0x20) { const ndf = bytes[p]; p += 1; for (let i = 0; i < ndf; i++) { devSize += bytes[p + 1]; p += 3; } }
+        defs[localType] = { globalNum: gnum, le, fields, devSize }; pos = p; continue;
+      }
+      const def = defs[localType]; if (!def) break; pos = readData(def, pos);
+    }
+    if (!raw.length) throw new Error("Keine Aufzeichnungsdaten (record) in der FIT-Datei");
+    if (!sport) sport = "cycling";
+    const start = (t0 != null ? t0 + FIT_EPOCH : Math.floor(Date.now() / 1000)) * 1000;
+    return { sport, start, streams: resample1Hz(raw) };
+  }
+
   // ------------------------------------------------------------------ SUMMARIZE
   function summarize(parsed, athlete) {
     const st = parsed.streams, sec = st.power.length; const sport = parsed.sport;
@@ -2054,8 +2141,7 @@ window.ENDUR = (() => {
     const days = []; for (let d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) { const k = dayKey(d.getTime()); days.push({ date: k, tss: byDay[k] || 0 }); }
     return eng.pmc(days);
   }
-  async function importText(text, filename) {
-    const parsed = parseGPX(text);
+  async function finishImport(parsed, filename) {
     if (!parsed.streams || !parsed.streams.power.length) throw new Error("Datei enthält keine auswertbaren Daten");
     const sum = summarize(parsed, athlete());
     sum.name = filename ? filename.replace(/\.(gpx|tcx|fit)$/i, "") : (SPORTS[sum.sport].label + " " + new Date(sum.start).toLocaleDateString("de-DE"));
@@ -2068,11 +2154,17 @@ window.ENDUR = (() => {
     }
     save(); return sum;
   }
+  // Text-Formate (GPX/TCX) automatisch am Inhalt erkennen.
+  async function importText(text, filename) {
+    const parsed = /<TrainingCenterDatabase|<Trackpoint/i.test(text) ? parseTCX(text) : parseGPX(text);
+    return finishImport(parsed, filename);
+  }
+  async function importFit(buf, filename) { return finishImport(parseFIT(buf), filename); }
 
-  return { eng, EDB, parseGPX, summarize, importText, st, athlete, activities, pmcSeries, defaults, SPORTS, CURVE_DUR,
+  return { eng, EDB, parseGPX, parseTCX, parseFIT, summarize, importText, importFit, finishImport, st, athlete, activities, pmcSeries, defaults, SPORTS, CURVE_DUR,
     // ---- Handler (aus onclick) ----
     nav(v, id) { st().view = v; if (id !== undefined) st().sel = id; save(); render(); if (window.scrollTo) window.scrollTo(0, 0); },
-    pick() { let inp = document.getElementById("endur-file"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = ".gpx"; inp.id = "endur-file"; inp.style.display = "none"; inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const fr = new FileReader(); fr.onload = async () => { try { toast("Analysiere " + f.name + " …"); const s = await window.ENDUR.importText(String(fr.result), f.name); toast("✓ " + (s.name || "Aktivität") + " analysiert"); window.ENDUR.nav("detail", s.id); } catch (e) { toast("Import fehlgeschlagen: " + (e && e.message || "unbekannt")); } inp.value = ""; }; fr.onerror = () => toast("Datei nicht lesbar"); fr.readAsText(f); }; document.body.appendChild(inp); } inp.click(); },
+    pick() { let inp = document.getElementById("endur-file"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = ".gpx,.tcx,.fit"; inp.id = "endur-file"; inp.style.display = "none"; inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const isFit = /\.fit$/i.test(f.name); const fr = new FileReader(); fr.onload = async () => { try { toast("Analysiere " + f.name + " …"); const s = isFit ? await window.ENDUR.importFit(fr.result, f.name) : await window.ENDUR.importText(String(fr.result), f.name); toast("✓ " + (s.name || "Aktivität") + " analysiert"); window.ENDUR.nav("detail", s.id); } catch (e) { toast("Import fehlgeschlagen: " + (e && e.message || "unbekannt")); } inp.value = ""; }; fr.onerror = () => toast("Datei nicht lesbar"); if (isFit) fr.readAsArrayBuffer(f); else fr.readAsText(f); }; document.body.appendChild(inp); } inp.click(); },
     async del(id) { await EDB.del(id); st().activities = (st().activities || []).filter(a => a.id !== id); st().sel = null; st().view = "dashboard"; save(); render(); toast("Aktivität gelöscht"); },
     saveAthlete() {
       const g = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) || null : null; };
@@ -2161,8 +2253,8 @@ function eRenderDashboard() {
     + (acts.length === 0 ? `<div class="card" style="padding:28px 20px;text-align:center">
         <div style="width:64px;height:64px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">${icon("push", 30)}</div>
         <p class="display-m" style="font-size:19px;margin-bottom:6px">Erste Aktivität importieren</p>
-        <p class="sm t2" style="max-width:300px;margin:0 auto 16px;line-height:1.55">Lade eine <b>GPX</b>-Datei (Export aus Strava, Garmin, Komoot, Wahoo …). Die Engine berechnet NP, IF, TSS, Power-Kurve, Zonen und mehr — komplett auf deinem Gerät.</p>
-        <button class="btn volt" style="max-width:280px;margin:0 auto" onclick="ENDUR.pick()">${icon("push", 16)} GPX-Datei wählen</button></div>`
+        <p class="sm t2" style="max-width:300px;margin:0 auto 16px;line-height:1.55">Lade eine <b>GPX-, TCX- oder FIT</b>-Datei (Export aus Strava, Garmin, Wahoo, Komoot, Zwift …). Die Engine berechnet NP, IF, TSS, Power-Kurve, Zonen und mehr — komplett auf deinem Gerät.</p>
+        <button class="btn volt" style="max-width:280px;margin:0 auto" onclick="ENDUR.pick()">${icon("push", 16)} Datei wählen (GPX · TCX · FIT)</button></div>`
       : `<div class="card" style="padding:18px 18px 6px;margin-bottom:12px">
           <p class="xs t2" style="text-transform:uppercase;letter-spacing:.08em;color:var(--hl)">Form · Fitness · Ermüdung</p>
           <div class="row" style="align-items:flex-end;margin-top:8px">

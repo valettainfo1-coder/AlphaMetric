@@ -30,15 +30,18 @@ agnostisch aufgebaut (Radfahren + Laufen ab Tag 1, erweiterbar auf Swim/Tri/Row)
   Mean-Maximal-Power/Power-Curve, Critical Power & W′ (2-Parameter-Modell),
   FTP-Schätzung (mehrere Methoden + Konfidenz), **PMC** (CTL/ATL/TSB,
   Impulsantwort), Power-Zonen (Coggan), HF-Zonen (Friel), Pace-Zonen, rTSS.
-- **GPX-Import** (Strava/Garmin/Wahoo/Komoot-Export) → 1-Hz-Streams → Summary.
+- **Import GPX · TCX · FIT** — GPX/TCX (XML) + ein eigener **FIT-Binär-Decoder**
+  (Definition-/Daten-Messages, LE/BE, Developer-Felder, Invalid-Sentinels,
+  Compressed-Timestamp, Semicircle-GPS, FIT-Epoche). Deckt Strava/Garmin/Wahoo/
+  Komoot/Zwift-Exporte ab → 1-Hz-Streams → Summary.
 - **UI:** Ausdauer-Modus (über Menü) mit **Dashboard** (Form/Fitness/Ermüdung aus
   PMC, Wochen-Volumen, FTP W/kg, letzte Aktivitäten), **Aktivitäts-Detail**
   (Offline-Route, Metrik-Kacheln, Zeit-in-Zonen, Verlaufskurve, ehrliche
   Auswertung), **Athlet-Profil** (FTP/Schwellen/HF pro Sport).
 - Lokal-first (IndexedDB), additiv, bricht keinen Gym-Flow (App+DSGVO-Suite grün).
 
-### ▢ Phase 2 — Import & Planung
-- **TCX + FIT** Parser (FIT = Binär-Decoder). Apple-Health-/Strava-Datei-Import.
+### ▢ Phase 2 — Planung
+- ✅ TCX + FIT Import (in Phase 1 vorgezogen — komplett).
 - Strukturierter **Workout-Builder + Player** (Ziele: Power/HF/Pace/Zeit; ohne ERG).
 - **Adaptive Trainingspläne** (FTP-Aufbau, 100/200 km, Gran Fondo, Rennen, Klettern,
   Zeitfahren, Abnehmen) — Periodisierung passt sich an erledigte Einheiten an.

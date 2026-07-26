@@ -458,8 +458,9 @@ berührt). Erreichbar über das Menü → „Ausdauer — Cycling & Running".
 - **Wissenschaftliche Engine (18 CI-Tests):** NP, IF, TSS, VI, EF, aerobe
   Entkopplung, Power-Curve/MMP, Critical Power & W′, FTP-Schätzung, PMC
   (CTL/ATL/TSB = Fitness/Ermüdung/Form), Coggan-Power-Zonen, Friel-HF-Zonen.
-- **GPX-Import** (Export aus Strava/Garmin/Wahoo/Komoot) → volle Analyse, komplett
-  auf dem Gerät. TCX/FIT folgen.
+- **Import GPX · TCX · FIT** — inkl. eigenem FIT-Binär-Decoder (Garmins/Wahoos
+  natives Format) → volle Analyse, komplett auf dem Gerät. Deckt Strava/Garmin/
+  Wahoo/Komoot/Zwift-Exporte ab.
 - **UI:** Dashboard (Form/Fitness/Ermüdung, Wochen-Volumen, FTP W/kg),
   Aktivitäts-Detail (Offline-Route-Karte, NP/IF/TSS/VI/EF, Zeit-in-Zonen,
   Verlaufskurve, ehrliche Auswertung), Athlet-Profil je Sport.
