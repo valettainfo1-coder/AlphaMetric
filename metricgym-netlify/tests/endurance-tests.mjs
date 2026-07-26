@@ -137,6 +137,24 @@ check('FIT-Import: GPS aus Semicircles dekodiert', fit.hasGps === true, fit.hasG
 check('FIT-Import: Distanz plausibel', fit.distKm > 1, fit.distKm + ' km');
 check('FIT-Import: 3 Aktivitäten insgesamt', fit.stored === 3, fit.stored);
 
+// ---------- Integration / „Zahnräder" (Gym + Ausdauer greifen ineinander) ----------
+const hub = await page.evaluate(() => {
+  const E = window.ENDUR;
+  const sl20 = E.strengthLoad({ sets: 20, avgRpe: 8, type: 'push' });
+  const slRest = E.strengthLoad({ type: 'rest', sets: 0 });
+  const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  S.trainingHistory = [{ date: today, type: 'push', sets: 20, volume: 5000, avgRpe: 8 }];
+  S.weightLog = [{ t: Date.now() - 86400000, v: 70 }, { t: Date.now(), v: 72.5 }];
+  const uld = E.unifiedDailyLoad(), upmc = E.unifiedPMC();
+  return { sl20, slRest, totalToday: uld.byDay[today], strToday: uld.br[today] ? uld.br[today].str : 0, endurToday: uld.br[today] ? uld.br[today].endur : 0, ctlLast: upmc.length ? upmc[upmc.length - 1].ctl : 0, bw: E.bodyWeight() };
+});
+check('Kraft-Last: 20 Sätze @ RPE8 → TSS-Äq (55–80)', hub.sl20 >= 55 && hub.sl20 <= 80, hub.sl20);
+check('Kraft-Last: Ruhetag = 0', hub.slRest === 0, hub.slRest);
+check('Zahnrad: Gym-Last fließt in gemeinsame Tages-Last', hub.strToday > 0 && hub.totalToday >= hub.strToday + hub.endurToday - 1, { str: hub.strToday, endur: hub.endurToday, total: hub.totalToday });
+check('Zahnrad: Ausdauer-Last ist ebenfalls im selben Tag', hub.endurToday > 0, hub.endurToday);
+check('Unified-PMC: Fitness reflektiert Gym+Ausdauer (CTL>0)', hub.ctlLast > 0, hub.ctlLast);
+check('Zahnrad: eine Gewichtsquelle (letzter weightLog = 72.5)', hub.bw === 72.5, hub.bw);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();

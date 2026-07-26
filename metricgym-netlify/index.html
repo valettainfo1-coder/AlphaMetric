@@ -2121,7 +2121,7 @@ window.ENDUR = (() => {
       const thrSpeed = (athlete.running && athlete.running.thrPace) ? 1000 / athlete.running.thrPace : null;
       S.avgP = null; S.np = null; S.if = thrSpeed ? +(speedAvg / thrSpeed).toFixed(2) : null;
       S.tss = thrSpeed ? Math.round(eng.runTss(sec, speedAvg, thrSpeed)) : Math.round(sec / 3600 * 50);
-      S.kcal = Math.round((athlete.weight || 75) * (dist / 1000) * 1.036);
+      S.kcal = Math.round(bodyWeight() * (dist / 1000) * 1.036);
     }
     return S;
   }
@@ -2141,6 +2141,43 @@ window.ENDUR = (() => {
     const days = []; for (let d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) { const k = dayKey(d.getTime()); days.push({ date: k, tss: byDay[k] || 0 }); }
     return eng.pmc(days);
   }
+
+  // ====================== INTEGRATION / „ZAHNRÄDER" ======================
+  // Naht 1 — EINE Gewichtsquelle: der Gym-weightLog führt (letzter gemessener Wert),
+  // Fallback auf das Athlet-Profil. So kann FTP-W/kg nie auseinanderlaufen.
+  function bodyWeight() {
+    try { const w = (S.weightLog || []).filter(x => x && x.v != null); if (w.length) return w[w.length - 1].v; } catch (e) {}
+    return (st().athlete && st().athlete.weight) || 75;
+  }
+  // Naht 2 — Kraft-Session → TSS-äquivalente Last. Heuristik (klar gekennzeichnet, tunbar):
+  // Dauer ≈ Sätze × 3,5 min; sRPE (Foster) = RPE × Dauer; TSS-Äq = sRPE × 0,12, damit eine
+  // harte Krafteinheit ~ einer soliden Ausdauerstunde entspricht. → gemeinsame Trainingslast.
+  function strengthLoad(sess) {
+    if (!sess || sess.type === "rest") return 0;
+    const sets = sess.sets || 0; if (sets <= 0) return 0;
+    const durMin = Math.max(20, Math.min(150, sets * 3.5)), rpe = sess.avgRpe || 7.5;
+    return Math.round(rpe * durMin * 0.12);
+  }
+  // Eine gemeinsame Tages-Last (Kraft + Ausdauer). dkey (Gym) == dayKey (Ausdauer) → Merge direkt.
+  function unifiedDailyLoad() {
+    const byDay = {}, br = {};
+    for (const a of (st().activities || [])) { const k = dayKey(a.start); byDay[k] = (byDay[k] || 0) + (a.tss || 0); (br[k] = br[k] || { endur: 0, str: 0 }).endur += (a.tss || 0); }
+    try { for (const t of (S.trainingHistory || [])) { const k = t.date; if (!k) continue; const l = strengthLoad(t); byDay[k] = (byDay[k] || 0) + l; (br[k] = br[k] || { endur: 0, str: 0 }).str += l; } } catch (e) {}
+    return { byDay, br };
+  }
+  // Eine PMC über ALLES (Gesamt-Fitness/Ermüdung/Form). Ersetzt die Ausdauer-only-PMC im Dashboard.
+  function unifiedPMC() {
+    const { byDay } = unifiedDailyLoad(); const keys = Object.keys(byDay).sort();
+    if (!keys.length) return [];
+    const first = new Date(keys[0] + "T00:00:00"); if (isNaN(first)) return [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = []; for (let d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) { const k = dayKey(d.getTime()); days.push({ date: k, tss: byDay[k] || 0 }); }
+    return eng.pmc(days);
+  }
+  // Naht 3 — Ausdauer-Energie eines Tages (kcal) für die Kalorienbilanz.
+  function burnForDay(dk) { let s = 0; for (const a of (st().activities || [])) if (dayKey(a.start) === dk && a.kcal) s += a.kcal; return s; }
+  function todayBurn() { return burnForDay(dayKey(Date.now())); }
+
   async function finishImport(parsed, filename) {
     if (!parsed.streams || !parsed.streams.power.length) throw new Error("Datei enthält keine auswertbaren Daten");
     const sum = summarize(parsed, athlete());
@@ -2162,6 +2199,7 @@ window.ENDUR = (() => {
   async function importFit(buf, filename) { return finishImport(parseFIT(buf), filename); }
 
   return { eng, EDB, parseGPX, parseTCX, parseFIT, summarize, importText, importFit, finishImport, st, athlete, activities, pmcSeries, defaults, SPORTS, CURVE_DUR,
+    bodyWeight, strengthLoad, unifiedDailyLoad, unifiedPMC, burnForDay, todayBurn,
     // ---- Handler (aus onclick) ----
     nav(v, id) { st().view = v; if (id !== undefined) st().sel = id; save(); render(); if (window.scrollTo) window.scrollTo(0, 0); },
     pick() { let inp = document.getElementById("endur-file"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = ".gpx,.tcx,.fit"; inp.id = "endur-file"; inp.style.display = "none"; inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const isFit = /\.fit$/i.test(f.name); const fr = new FileReader(); fr.onload = async () => { try { toast("Analysiere " + f.name + " …"); const s = isFit ? await window.ENDUR.importFit(fr.result, f.name) : await window.ENDUR.importText(String(fr.result), f.name); toast("✓ " + (s.name || "Aktivität") + " analysiert"); window.ENDUR.nav("detail", s.id); } catch (e) { toast("Import fehlgeschlagen: " + (e && e.message || "unbekannt")); } inp.value = ""; }; fr.onerror = () => toast("Datei nicht lesbar"); if (isFit) fr.readAsArrayBuffer(f); else fr.readAsText(f); }; document.body.appendChild(inp); } inp.click(); },
@@ -2244,7 +2282,10 @@ function eTile(label, value, sub, accent) {
 }
 function eRenderDashboard() {
   const acts = window.ENDUR.activities(); const ath = window.ENDUR.athlete();
-  const series = window.ENDUR.pmcSeries(); const last = series.length ? series[series.length - 1] : { ctl: 0, atl: 0, tsb: 0 };
+  const series = window.ENDUR.unifiedPMC(); const last = series.length ? series[series.length - 1] : { ctl: 0, atl: 0, tsb: 0 };
+  const _uld = window.ENDUR.unifiedDailyLoad(); const _from7 = Date.now() - 7 * 864e5;
+  let wkEndur = 0, wkStr = 0; for (const k in _uld.br) { const ms = new Date(k + "T00:00:00").getTime(); if (!isNaN(ms) && ms >= _from7) { wkEndur += _uld.br[k].endur; wkStr += _uld.br[k].str; } }
+  const _todayBurn = window.ENDUR.todayBurn();
   const now = Date.now(), wk = acts.filter(a => a.start > now - 7 * 864e5);
   const wkHours = wk.reduce((s, a) => s + a.dur, 0) / 3600, wkDist = wk.reduce((s, a) => s + a.dist, 0), wkTss = wk.reduce((s, a) => s + (a.tss || 0), 0), wkElev = wk.reduce((s, a) => s + a.elev, 0);
   const form = last.tsb, formLabel = form > 5 ? "frisch" : form > -10 ? "neutral" : form > -30 ? "produktiv" : "überlastet";
@@ -2256,18 +2297,22 @@ function eRenderDashboard() {
         <p class="sm t2" style="max-width:300px;margin:0 auto 16px;line-height:1.55">Lade eine <b>GPX-, TCX- oder FIT</b>-Datei (Export aus Strava, Garmin, Wahoo, Komoot, Zwift …). Die Engine berechnet NP, IF, TSS, Power-Kurve, Zonen und mehr — komplett auf deinem Gerät.</p>
         <button class="btn volt" style="max-width:280px;margin:0 auto" onclick="ENDUR.pick()">${icon("push", 16)} Datei wählen (GPX · TCX · FIT)</button></div>`
       : `<div class="card" style="padding:18px 18px 6px;margin-bottom:12px">
-          <p class="xs t2" style="text-transform:uppercase;letter-spacing:.08em;color:var(--hl)">Form · Fitness · Ermüdung</p>
+          <p class="xs t2" style="text-transform:uppercase;letter-spacing:.08em;color:var(--hl)">Form · Fitness · Ermüdung · gesamt</p>
           <div class="row" style="align-items:flex-end;margin-top:8px">
             <div style="flex:1"><p class="hero-num" style="font-size:40px;line-height:1;color:${formColor}">${form > 0 ? "+" : ""}${Math.round(form)}</p><p class="xs t2" style="margin-top:2px">Form (TSB) · ${formLabel}</p></div>
             <div style="text-align:right"><p class="metric" style="font-size:20px">${Math.round(last.ctl)}</p><p class="xs t2">Fitness (CTL)</p></div>
             <div style="text-align:right;margin-left:16px"><p class="metric" style="font-size:20px">${Math.round(last.atl)}</p><p class="xs t2">Ermüdung (ATL)</p></div>
           </div>
-          ${series.length >= 2 ? `<canvas id="e-pmc" style="width:100%;height:96px;margin-top:12px;display:block"></canvas>` : `<p class="xs t2" style="margin-top:10px">Fitness-Kurve erscheint ab der zweiten Trainingswoche.</p>`}</div>
+          ${series.length >= 2 ? `<canvas id="e-pmc" style="width:100%;height:96px;margin-top:12px;display:block"></canvas>` : `<p class="xs t2" style="margin-top:10px">Fitness-Kurve erscheint ab der zweiten Trainingswoche.</p>`}
+          <div class="row" style="justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline)">
+            <span class="xs t2">Woche · Last: <b style="color:var(--hl)">${Math.round(wkEndur)}</b> Ausdauer · <b style="color:var(--t1)">${Math.round(wkStr)}</b> Kraft</span>
+            ${_todayBurn > 0 ? `<span class="xs t2" style="white-space:nowrap">Heute ${_todayBurn} kcal</span>` : ""}
+          </div></div>
         <div class="grid2" style="gap:10px;margin-bottom:12px">
           ${eTile("Woche · Zeit", (wkHours >= 1 ? wkHours.toFixed(1) + " h" : Math.round(wkHours * 60) + " min"), wk.length + (wk.length === 1 ? " Aktivität" : " Aktivitäten"))}
           ${eTile("Woche · Distanz", eFmtDist(wkDist), wkElev + " hm")}
-          ${eTile("Woche · TSS", Math.round(wkTss), "Trainingslast")}
-          ${eTile("FTP", ath.cycling.ftp + " W", (ath.cycling.ftp / (ath.weight || 75)).toFixed(2) + " W/kg")}
+          ${eTile("Woche · TSS", Math.round(wkTss), "nur Ausdauer")}
+          ${eTile("FTP", ath.cycling.ftp + " W", (ath.cycling.ftp / window.ENDUR.bodyWeight()).toFixed(2) + " W/kg")}
         </div>
         <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 8px">Letzte Aktivitäten</p>
         ${acts.slice(0, 6).map(eActRow).join("")}`);
@@ -2353,7 +2398,8 @@ function eRenderAthlete() {
   root.innerHTML = eHeader("Athlet-Profil", "Deine Schwellen steuern alle Zonen & Metriken") + eTabs("athlete")
     + `<div class="card" style="padding:18px;margin-bottom:12px">
         <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Allgemein</p>
-        <div class="field-row"><label class="sm">Körpergewicht (kg)</label><input type="number" id="ath-weight" value="${a.weight || ""}" inputmode="decimal"></div>
+        <div class="field-row"><label class="sm">Körpergewicht (kg)</label><input type="number" id="ath-weight" value="${window.ENDUR.bodyWeight()}" inputmode="decimal"></div>
+        <p class="xs t2" style="margin-top:6px;line-height:1.45">${(S.weightLog && S.weightLog.length) ? "Aus deinen Gewichts-Messungen übernommen — eine Quelle für App &amp; Ausdauer." : "Wird mit deinen Gewichts-Messungen synchronisiert, sobald du welche einträgst."}</p>
       </div>
       <div class="card" style="padding:18px;margin-bottom:12px">
         <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">${icon("bike", 13)} Radfahren</p>

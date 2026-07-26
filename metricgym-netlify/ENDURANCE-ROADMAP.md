@@ -40,6 +40,18 @@ agnostisch aufgebaut (Radfahren + Laufen ab Tag 1, erweiterbar auf Swim/Tri/Row)
   Auswertung), **Athlet-Profil** (FTP/Schwellen/HF pro Sport).
 - Lokal-first (IndexedDB), additiv, bricht keinen Gym-Flow (App+DSGVO-Suite grün).
 
+### ✅ Integration / „Zahnräder" (Gym ↔ Ausdauer) — GELIEFERT
+Damit es *ein* Produkt ist statt zweier Systeme:
+- **Eine Trainingslast:** Kraft-Sessions → TSS-äquivalente Last (Foster-sRPE:
+  RPE × geschätzte Dauer × 0,12, dokumentierte Heuristik) + Ausdauer-TSS →
+  **eine gemeinsame PMC** (Fitness/Ermüdung/Form über *alles*). Das Dashboard
+  zeigt „gesamt" + die Wochen-Aufteilung Ausdauer/Kraft.
+- **Eine Gewichtsquelle:** die Ausdauer liest den Gym-`weightLog` (letzter
+  gemessener Wert) → FTP-W/kg kann nie auseinanderlaufen.
+- **Energie:** Ausdauer-kcal je Tag stehen für die Kalorienbilanz bereit
+  (`burnForDay`/`todayBurn`), im Dashboard sichtbar; die tiefe Einrechnung in
+  das Makro-Ziel folgt als vorsichtiger nächster Schritt.
+
 ### ▢ Phase 2 — Planung
 - ✅ TCX + FIT Import (in Phase 1 vorgezogen — komplett).
 - Strukturierter **Workout-Builder + Player** (Ziele: Power/HF/Pace/Zeit; ohne ERG).

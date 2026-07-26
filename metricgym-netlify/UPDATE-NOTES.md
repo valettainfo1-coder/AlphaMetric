@@ -471,6 +471,19 @@ berührt). Erreichbar über das Menü → „Ausdauer — Cycling & Running".
   Temporal Dead Zone) wurde vermieden — die App bootet sauber, Lazy-Init in
   `ENDUR.st()`.
 
+### 31. Ausdauer × Gym: die Zahnräder greifen ineinander
+Damit Kraft und Ausdauer *ein* System sind statt zwei nebeneinander:
+- **Eine gemeinsame Trainingslast.** Kraft-Einheiten werden in eine
+  TSS-äquivalente Last umgerechnet (Foster-sRPE, dokumentierte Heuristik) und
+  mit der Ausdauer-TSS zu **einer PMC** zusammengeführt. Das Ausdauer-Dashboard
+  zeigt jetzt Fitness/Ermüdung/Form **„gesamt"** und die Wochen-Aufteilung
+  „X Ausdauer · Y Kraft".
+- **Eine Gewichtsquelle.** FTP-W/kg und Lauf-Kalorien nutzen den Gym-`weightLog`
+  (letzter gemessener Wert) — kein zweiter, divergierender Wert mehr.
+- **Energie sichtbar.** Der Tages-Kalorienverbrauch aus Rad/Lauf steht bereit
+  und wird im Dashboard angezeigt (tiefe Einrechnung ins Makro-Ziel folgt).
+- 6 zusätzliche CI-Tests (jetzt 28 Ausdauer-Tests grün).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
 Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch
