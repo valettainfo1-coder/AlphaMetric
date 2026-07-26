@@ -7035,11 +7035,11 @@ function goalProjections(a,tg,pLo,pHi){
   const fatLo=Math.max(2,Math.round(w*0.04)), fatHi=Math.max(fatLo+1,Math.round(w*0.07));
   const musc={beginner:[2,4],novice:[2,3],intermediate:[1,2],advanced:[1,2]}[exp]||[2,3];
   const D={
-    fat_loss:{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"leichter werden",sub:"Körperfett weg in 12 Wochen",icon:"activity"},
-    muscle_gain:{lo:musc[0],hi:musc[1],prefix:"+",unit:"kg",headline:"mehr Muskeln",sub:"realistischer Aufbau in 12 Wochen",icon:"dumbbell"},
-    strength:{lo:pLo,hi:pHi,prefix:"+",unit:"%",headline:"stärker werden",sub:"mehr Maximalkraft in 12 Wochen",icon:"flame"},
+    fat_loss:{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"leichter",sub:"Körperfett weg in 12 Wochen",icon:"activity"},
+    muscle_gain:{lo:musc[0],hi:musc[1],prefix:"+",unit:"kg",headline:"muskulöser",sub:"realistischer Aufbau in 12 Wochen",icon:"dumbbell"},
+    strength:{lo:pLo,hi:pHi,prefix:"+",unit:"%",headline:"stärker",sub:"mehr Maximalkraft in 12 Wochen",icon:"flame"},
     recomp:{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"schlanker & stärker",sub:"Fett runter, Kraft rauf",icon:"activity"},
-    general:{lo:pLo,hi:pHi,prefix:"+",unit:"%",headline:"fitter werden",sub:"mehr Leistung & Energie",icon:"zap"},
+    general:{lo:pLo,hi:pHi,prefix:"+",unit:"%",headline:"fitter",sub:"mehr Leistung & Energie",icon:"zap"},
     endurance:{lo:pLo,hi:Math.round(pHi*1.2),prefix:"+",unit:"%",headline:"ausdauernder",sub:"mehr Kondition in 12 Wochen",icon:"activity"},
     mobility:{lo:null,word:"spürbar",headline:"beweglicher",sub:"mehr Bewegungsfreiheit & weniger Schmerz",icon:"activity"},
   };
@@ -8021,10 +8021,11 @@ function openFeatureHub(){
     <div class="sheet fade fh-sheet" style="max-height:88vh;display:flex;flex-direction:column">
       <div class="fh-head">
         <div class="fh-halo" aria-hidden="true"></div>
-        <div class="row" style="position:relative">
-          <div style="display:flex;align-items:center;gap:13px">${rauchkreis(44)}<div><p class="display-m" style="margin:0 0 3px">${gr.g}</p>
-            <p class="xs" style="margin:0;color:var(--hl);display:flex;align-items:center;gap:5px">${icon("activity",11)} ${gr.status}</p></div></div>
-          <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen">✕</button></div>
+        <div class="row" style="position:relative;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">${rauchkreis(42)}<div style="min-width:0">
+            <p class="display-m" style="margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gr.g}</p>
+            <p class="xs" style="margin:0;color:var(--hl);display:flex;align-items:center;gap:5px;min-width:0"><span style="flex-shrink:0;display:flex">${icon("activity",11)}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gr.status}</span></p></div></div>
+          <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen" style="flex-shrink:0;margin-top:1px">✕</button></div>
       </div>
       <div class="row" style="gap:8px;margin-bottom:4px">
         <input class="fh-search" type="search" placeholder="Sag oder tipp, was du brauchst …" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen" style="margin-bottom:0;flex:1">
