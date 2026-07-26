@@ -514,9 +514,37 @@ Technik: `oblocks()` liefert die persona-abhängige Blocksequenz, Persona-Gate a
 Vorstufe. +4 CI-Tests. Außerdem behoben: „Du wirst mehr Muskeln" → „Du wirst
 muskulöser"; Command-Palette-Header sauber formatiert (✕ oben rechts).
 
+### 34. Abnehmen-Persona + wissenschaftliche Grundlage (reale Studien)
+Zwei Dinge, ein Prinzip — **„Beweis statt Bauchgefühl"**, jetzt sichtbar hinterlegt.
+
+**(A) Fünfte Persona: „Abnehmen".** Das Persona-Gate bietet nun **Muskeln & Kraft ·
+Abnehmen · Radfahren · Laufen · Hybrid**. Der Abnehm-Pfad verzweigt eigenständig:
+statt Split/Ziel-Wahl kommt die **wissenschaftlich entscheidende Frage — das Tempo**
+(„Wie schnell willst du abnehmen?": langsam ~0,25 · **moderat ~0,5 ★** · zügig ~0,7 kg/
+Woche). Das Tempo **koppelt direkt das Kaloriendefizit** (`calorieDirection`): sanft
+−12 %, moderat −20 % (= bisheriger Standard, **App-Test-Pfad byte-identisch**), zügig
+−22…−25 % nur bei höherem Körperfett. Das Ziel wird sauber auf **Fettabbau** gemappt →
+die volle Cut-Engine greift (Protein hoch nach Helms, Muskelerhalt, ehrlicher
+12-Monats-Pfad). Krafttraining bleibt der Kern des Plans — nicht nur Cardio.
+
+**(B) „Wissenschaftliche Grundlage" — reale, korrekt attribuierte Papers.** Ein neues,
+gemeinsames Studien-Modul (`SCIENCE_REFS`) hinterlegt die Ausdauer- **und** Abnehm-Pfade
+mit **echten** Originalquellen, im vorhandenen Zitier-Stil (Info-Icon, Quelle in Akzent):
+- **Ausdauer (6):** Allen & Coggan (NP/IF/TSS/PMC) · Banister 1975 (Fitness-Ermüdung) ·
+  Seiler 2010 (polarisiert 80/20) · Monod & Scherrer 1965 / Jones 2017 (Critical Power) ·
+  Daniels (VDOT-Pace) · Friel (Entkopplung & HF-Zonen).
+- **Abnehmen (5):** Garthe 2011 (Tempo schützt Muskeln) · Helms 2014 (Protein im Defizit) ·
+  Longland 2016 (Kraft + Protein baut auf, während Fett fällt) · Fothergill/Hall 2016
+  (adaptive Thermogenese — warum Crash-Diäten zurückschlagen) · Wishnofsky 1958
+  (~7 700 kcal/kg) — **ehrlich eingeordnet** als Näherung, weil sich der Stoffwechsel
+  anpasst (Metric prüft dein echtes Ergebnis nach statt stur zu rechnen).
+Sichtbar an drei Stellen: **Reveal** (persona-/ziel-abhängig), **Ausdauer-Dashboard**
+(dauerhaft) und **Ernährungsseite** bei Abnehm-Zielen (dauerhaft). Alles nur echte
+Quellen — nichts erfunden. +7 CI-Tests (Persona, Defizit-Kopplung, Studien-Attribution).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v17** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

@@ -2317,7 +2317,8 @@ function eRenderDashboard() {
           ${eTile("FTP", ath.cycling.ftp + " W", (ath.cycling.ftp / window.ENDUR.bodyWeight()).toFixed(2) + " W/kg")}
         </div>
         <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 8px">Letzte Aktivitäten</p>
-        ${acts.slice(0, 6).map(eActRow).join("")}`);
+        ${acts.slice(0, 6).map(eActRow).join("")}`)
+    + scienceRefsPanelHTML("endurance", "Wissenschaftliche Grundlage · Ausdauer");
   if (series.length >= 2) { eDrawSpark(document.getElementById("e-pmc"), series.map(x => x.ctl), "#8FB8DC", true); }
 }
 function eActRow(a) {
@@ -2466,7 +2467,16 @@ function calorieDirection(a){
     if(g0==="fat_loss")    return {dir:bmi>=30?-0.20:-0.15, label:"Recomp · Fettabbau-Fokus (moderates Defizit)", mode:"recomp_fat"};
     return {dir:-0.08, label:"Recomp · ausgewogen (leichtes Defizit)", mode:"recomp_bal"};
   }
-  if(hasFat) return {dir:bmi>=30?-0.22:-0.20, label:"Defizit "+(bmi>=30?"−22 %":"−20 %"), mode:"cut"};
+  if(hasFat){
+    // Tempo aus der Abnehmen-Persona koppelt das Defizit. Ohne loss_rate bleibt der
+    // Standard byte-identisch (App-Test-Pfad unverändert). Grundlage: ~0,5–0,7 %/Woche
+    // erhält Muskeln/Kraft, doppelt so schnell kostet Magermasse (Garthe et al. 2011).
+    const lr=a.loss_rate;
+    if(lr==="easy") return {dir:-0.12, label:"Defizit −12 % · sanft", mode:"cut"};
+    if(lr==="fast") return {dir:bmi>=27?-0.25:-0.22, label:"Defizit "+(bmi>=27?"−25 %":"−22 %")+" · zügig", mode:"cut"};
+    // "mod" & Default: der wissenschaftliche Sweet Spot (~0,5 %/Woche)
+    return {dir:bmi>=30?-0.22:-0.20, label:"Defizit "+(bmi>=30?"−22 %":"−20 %"), mode:"cut"};
+  }
   if(hasGain){ if(bmi>=30)return{dir:-0.12,label:"Fettabbau-Phase (empfohlen)",mode:"gain_highbf"};
     if(bmi>=27)return{dir:0,label:"Erhaltung · Lean-Gain-Start",mode:"leangain"};
     return{dir:0.10,label:"Aufbau-Überschuss +10 %",mode:"bulk"}; }
@@ -6897,6 +6907,9 @@ const STEPS=[
   {id:"endur_disc",q:"Deine Ausdauer-Disziplin",hint:"Zusätzlich zum Krafttraining.",type:"single",key:"endur_disc",
    opts:[["cycling","Radfahren","Watt, FTP, Power-Analyse"],["running","Laufen","Pace, Zonen, Distanzen"]]},
   {id:"endur_vol",q:"Ausdauer-Einheiten pro Woche",type:"cells",key:"endur_vol",opts:[1,2,3,4],unit:"×"},
+  // ===== Abnehmen-Persona: das Tempo ist die wissenschaftlich entscheidende Frage =====
+  {id:"loss_rate",q:"Wie schnell willst du abnehmen?",hint:"Studienlage: bis ~0,7 % Körpergewicht/Woche schützt die Muskulatur — schneller kostet Muskeln statt Fett (Garthe et al. 2011).",type:"single",key:"loss_rate",
+   opts:[["easy","Langsam & sicher","~0,25 kg/Woche · Muskeln maximal geschützt"],["mod","Moderat ★","~0,5 kg/Woche · der wissenschaftliche Sweet Spot"],["fast","Zügig","~0,7 kg/Woche · nur bei höherem Körperfett sinnvoll"]]},
   {id:"medical",type:"medical"},
   {id:"reveal",type:"reveal"},
 ];
@@ -6917,6 +6930,7 @@ const OBLOCKS=[
 // Cyclist/Runner bekommen disziplin-spezifische Fragen statt Split/Equipment; Gym bleibt unverändert.
 function oblocks(){
   const m=(S.a&&S.a.mode)||"gym";
+  if(m==="loss")    return [["sex","age"],["height","weight"],["bf","loss_rate"],["exp","injury"],["days","time"],["equipment","act"]];
   if(m==="cycling") return [["sex","age"],["height","weight"],["cyc_goal","exp"],["cyc_ftp","cyc_hours"],["days","injury"]];
   if(m==="running") return [["sex","age"],["height","weight"],["run_goal","exp"],["run_pace","run_km"],["days","injury"]];
   if(m==="hybrid")  return [...OBLOCKS,["endur_disc","endur_vol"]];
@@ -6925,6 +6939,7 @@ function oblocks(){
 // Die vier Personas — die allererste Weiche im Funnel.
 const PERSONAS=[
   ["gym","dumbbell","Muskeln & Kraft","Trainingsplan, Progression, Physique — der klassische Kraftweg."],
+  ["loss","scale","Abnehmen","Fett verlieren, Muskeln halten — moderat & studienbasiert statt Crash-Diät."],
   ["cycling","bike","Radfahren","FTP, Power-Zonen, Trainingslast — die komplette Rad-Intelligenz."],
   ["running","activity","Laufen","Pace-Zonen, Distanz-Ziele, Form — dein Lauf-Coach."],
   ["hybrid","zap","Hybrid — Kraft + Ausdauer","Beides verzahnt: eine Trainingslast, ein Plan, eine Bereitschaft."],
@@ -7046,6 +7061,7 @@ function renderOnboarding(){
       // Ausdauer-Personas: Ziel auf endurance/fat_loss mappen, damit Ernährung & Projektion passen.
       if((a.mode==="cycling"||a.mode==="running")&&(!a.goals||!a.goals.length)){
         const dg=a.mode==="cycling"?a.cyc_goal:a.run_goal; a.goals=[dg==="weight"?"fat_loss":"endurance"]; }
+      if(a.mode==="loss"&&(!a.goals||!a.goals.length)) a.goals=["fat_loss"]; // Abnehmen → Fettabbau-Engine
       if(!a.goals||!a.goals.length)a.goals=["muscle_gain"];
       a.equipment=a.equipment||"gym_full"; a.focus=a.focus||[]; a.split=a.split||"auto";
       a.schedule_pref=a.schedule_pref||"consistent"; a.recovery_profile=a.recovery_profile||"average";
@@ -7252,6 +7268,12 @@ function renderReveal(){
           <span style="flex:1"><span class="sm" style="line-height:1.45">${t}</span><br><span class="xs" style="color:var(--t3)">${c}</span></span></div>`).join("")}
       <p class="xs t2 mt10" style="line-height:1.5">Dein Plan kombiniert <b style="color:var(--t1)">alle vier Hebel gleichzeitig</b> und passt sie an deine Daten an. Ein Standard- oder Bauchgefühl-Plan trifft meist nur einen davon.</p>
     </div>
+
+    <!-- STUDIENBASIS: passt sich der Persona/dem Ziel an — nur echte, attribuierte Papers -->
+    ${(()=>{ const g=(tg.goals||[]); let html="";
+      if(g.includes("fat_loss")||a.mode==="loss") html+=scienceRefsPanelHTML("weightloss","Studienbasis · Abnehmen");
+      if(a.mode==="cycling"||a.mode==="running"||a.mode==="hybrid"||g.includes("endurance")) html+=scienceRefsPanelHTML("endurance","Studienbasis · Ausdauer");
+      return html; })()}
 
     <button class="btn volt mt16" onclick="A.startApp()">Plan aktivieren — jetzt starten</button>
     <button class="btn mt8" onclick="A.startAppCustom()">${icon("calendar",15)} Tage lieber selbst festlegen</button>
@@ -10395,6 +10417,48 @@ function sessionRationale(key){
     return gears;
   }catch(e){ return []; }
 }
+/* =====================================================================
+   WISSENSCHAFTLICHE GRUNDLAGE — reale, korrekt attribuierte Studien.
+   Metric-Prinzip „Beweis statt Bauchgefühl": jede Kernmetrik & jede
+   Ernährungs-/Trainingsentscheidung steht auf einer Originalquelle.
+   AUSSCHLIESSLICH echte, nachprüfbare Papers — nichts erfunden.
+   Als hoisted function declaration → auch aus dem Ausdauer-Modul (window.ENDUR,
+   früher im Skript definiert) zur Laufzeit gefahrlos aufrufbar.
+   ===================================================================== */
+function SCIENCE_REFS(cat){
+  const R={
+    endurance:[
+      {h:"Trainingslast: NP · IF · TSS · Form-Kurve", b:"Normalized Power, Intensitätsfaktor, Trainings-Stress-Score und die Form-Kurve (CTL/ATL/TSB) rechnet die Engine exakt nach dem etablierten Power-Meter-Standard.", src:"Allen H, Coggan A, McGregor S. Training and Racing with a Power Meter, 3. Aufl., VeloPress 2019"},
+      {h:"Form = Fitness − Ermüdung", b:"Fitness (CTL), Ermüdung (ATL) und Form (TSB) folgen dem Fitness-Ermüdungs-Modell — der Impulsantwort auf Trainingsreize.", src:"Banister EW et al. A systems model of training for athletic performance. Aust J Sports Med 1975;7:57–61"},
+      {h:"80/20 — polarisierte Intensität", b:"Der Großteil im lockeren Grundlagenbereich, ein kleiner harter Anteil: die belegte Intensitätsverteilung bei Ausdauer-Spitzenathleten.", src:"Seiler S. Int J Sports Physiol Perform 2010;5(3):276–291"},
+      {h:"Critical Power & W′", b:"Deine Dauerleistungs-Schwelle und die anaerobe Reserve stammen aus dem Zwei-Parameter-Modell der Leistungs-Zeit-Kurve.", src:"Monod H, Scherrer J. Ergonomics 1965;8:329–338 · Jones AM, Vanhatalo A. Sports Med 2017"},
+      {h:"Laufen: VDOT & Pace-Zonen", b:"Tempo-Zonen und Leistungsäquivalente beim Laufen leiten sich aus Laufökonomie und VO₂max nach dem VDOT-Modell ab.", src:"Daniels J. Daniels' Running Formula, Human Kinetics"},
+      {h:"Aerobe Entkopplung & HF-Zonen", b:"Der Pw:Hr-Drift als Ausdauer-Marker und die HF-Schwellenzonen folgen der etablierten Schwellen-Methodik.", src:"Friel J. The Cyclist's Training Bible, VeloPress"},
+    ],
+    weightloss:[
+      {h:"Tempo: langsam schützt die Muskeln", b:"Moderater Fettabbau (~0,5–0,7 % Körpergewicht/Woche) erhielt bzw. steigerte die Magermasse — der doppelt so schnelle Verlust kostete Muskeln und Kraft. Genau darum fragt Metric im Funnel nach deinem Tempo.", src:"Garthe I et al. Int J Sport Nutr Exerc Metab 2011;21(2):97–104"},
+      {h:"Protein im Defizit", b:"2,3–3,1 g Protein pro kg fettfreier Masse schützen die Muskulatur, wenn die Energie knapp ist — dein Tagesziel liegt genau in diesem Fenster.", src:"Helms ER, Aragon AA, Fitschen PJ. J Int Soc Sports Nutr 2014;11:20"},
+      {h:"Kraft + Protein baut auf, während Fett fällt", b:"Im Defizit bauten Probanden mit hohem Protein und hartem Training sogar Magermasse auf und verloren gleichzeitig Fett — deshalb bleibt Krafttraining der Kern des Abnehm-Plans, nicht nur Cardio.", src:"Longland TM et al. Am J Clin Nutr 2016;103(3):738–746"},
+      {h:"Warum Crash-Diäten zurückschlagen", b:"Nach starkem, schnellem Gewichtsverlust sinkt der Ruheumsatz stärker, als es das Gewicht erklärt (adaptive Thermogenese) — der Grund, warum Metric moderat plant statt zu hungern.", src:"Fothergill E et al. (Hall KD). Obesity 2016;24(8):1612–1619"},
+      {h:"Der ~7 700 kcal/kg-Richtwert — ehrlich eingeordnet", b:"Die klassische Faustregel (1 kg Fett ≈ 7 700 kcal) nutzen wir nur als Näherung. Sie überschätzt langfristig, weil sich der Stoffwechsel anpasst — deshalb prüft Metric dein echtes Ergebnis nach und korrigiert das Ziel adaptiv, statt stur zu rechnen.", src:"Wishnofsky M. Am J Clin Nutr 1958;6(5):542–546 · Näherung, dynamisches Modell: Hall KD, Lancet 2011"},
+    ],
+  };
+  return R[cat]||[];
+}
+function scienceRefsPanelHTML(cat,title){
+  try{
+    const rows=SCIENCE_REFS(cat); if(!rows.length) return "";
+    const body=rows.map(x=>`<div style="margin:0 0 13px">
+      <p class="sm" style="font-weight:600;margin:0 0 2px">${x.h}</p>
+      <p class="sm t2" style="line-height:1.55;margin:0">${x.b}</p>
+      <p class="xs" style="color:var(--hl);margin-top:3px">${icon("info",11)} ${esc(x.src)}</p></div>`).join("");
+    return `<details class="acc-i" style="margin-top:14px">
+      <summary><span class="acc-ic">${icon("brain",15)}</span><span class="acc-t"><span class="acc-h">${esc(title||"Wissenschaftliche Grundlage")}</span><span class="acc-s">${rows.length} reale Studien · Beweis statt Bauchgefühl</span></span><span class="acc-ch">▾</span></summary>
+      <div class="acc-b">${body}
+        <p class="xs t2" style="margin:2px 0 0;line-height:1.5">Jede Kernzahl in Metric ist die Umsetzung eines belegten Prinzips — nachprüfbar an der Originalquelle.</p>
+      </div></details>`;
+  }catch(e){ return ""; }
+}
 // Session-Fortschritts-Ring (Prio 1): füllt sich über ALLE Sätze der Einheit, schließt mit Glanz.
 function sessRingHTML(done,total){
   const sz=58,st=6,r=(sz-st)/2,c=2*Math.PI*r,pct=total?Math.min(1,done/total):0,full=(done>=total&&total>0);
@@ -12045,6 +12109,7 @@ function renderNutrition(){
         <button class="iconbtn" style="min-width:32px;min-height:32px;font-size:13px" onclick="A.delMeal(${i})" aria-label="Löschen">✕</button></span></li>`;}).join("")}</ul>`
       :`<p class="sm t2">Noch nichts geloggt — tipp oben auf einen Favoriten oder sprich deine Mahlzeit ein.</p>`}
       ${log.meals.length?`<button class="btn mt12" style="min-height:42px" onclick="A.saveTemplate()">${icon("utensils",14)} Als Mahlzeit speichern</button>`:""}</div>
+    ${(p.a&&p.a.goals&&p.a.goals.includes("fat_loss"))?scienceRefsPanelHTML("weightloss","Wissenschaftliche Grundlage · Abnehmen"):""}
   `;
 }
 

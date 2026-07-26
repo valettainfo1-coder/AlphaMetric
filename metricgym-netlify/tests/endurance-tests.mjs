@@ -198,6 +198,50 @@ check('Funnel: FTP aus dem Quiz landet im Ausdauer-Profil', funnel.ftp === 275 &
 check('Funnel: Ausdauer-Ziel gemappt (endurance)', Array.isArray(funnel.goals) && funnel.goals.includes('endurance'), funnel.goals);
 check('Funnel: Gym-Pfad unverändert (OBLOCKS)', funnel.gymSame === true, funnel.gymSame);
 
+// ---------- Funnel-Persona: Abnehmen → Fettabbau-Engine + Tempo-gekoppeltes Defizit ----------
+const loss = await page.evaluate(async () => {
+  return await new Promise((resolve) => {
+    S.currentUser = 't@t'; S.users = [{ email: 't@t', username: 'test' }];
+    S.a = { mode: 'loss', sex: 'male', age: 32, height: 182, weight: 92, bodyFat: 22, loss_rate: 'mod', exp: 'novice', days: 4, sessionTime: 60, equipment: 'gym_full', act: 'light', goals: [] };
+    delete S.profile; delete S.requiz;
+    const hasLossRate = oblocks().flat().includes('loss_rate');
+    const hasPersona = typeof PERSONAS !== 'undefined' && PERSONAS.some((x) => x[0] === 'loss');
+    // Defizit-Kopplung: mod == Default (App-Test-Pfad), easy sanfter, fast härter
+    const dNone = calorieDirection({ ...S.a, loss_rate: undefined, goals: ['fat_loss'] }).dir;
+    const dMod = calorieDirection({ ...S.a, loss_rate: 'mod', goals: ['fat_loss'] }).dir;
+    const dEasy = calorieDirection({ ...S.a, loss_rate: 'easy', goals: ['fat_loss'] }).dir;
+    const dFast = calorieDirection({ ...S.a, loss_rate: 'fast', goals: ['fat_loss'] }).dir;
+    const BLK = oblocks(); S.step = BLK.length + 1; S.screen = 'onboarding'; save(); render();
+    setTimeout(() => {
+      resolve({ hasLossRate, hasPersona, goals: S.profile && S.profile.a.goals,
+        deficit: S.profile && S.profile.tg.dir < 0,
+        dNone, dMod, dEasy, dFast });
+    }, 1700);
+  });
+});
+check('Funnel: Abnehmen-Persona registriert (+ loss_rate-Frage)', loss.hasPersona && loss.hasLossRate, { p: loss.hasPersona, q: loss.hasLossRate });
+check('Funnel: Abnehmen → goals=[fat_loss] + echtes Defizit', Array.isArray(loss.goals) && loss.goals.includes('fat_loss') && loss.deficit === true, loss.goals);
+check('Defizit-Kopplung: mod == Default (App-Test-Pfad byte-identisch)', loss.dMod === loss.dNone, { dMod: loss.dMod, dNone: loss.dNone });
+check('Defizit-Kopplung: easy sanfter, fast härter als moderat', loss.dEasy > loss.dMod && loss.dFast < loss.dMod, { easy: loss.dEasy, mod: loss.dMod, fast: loss.dFast });
+
+// ---------- Wissenschaftliche Grundlage: nur reale, attribuierte Studien ----------
+const sci = await page.evaluate(() => {
+  const E = SCIENCE_REFS('endurance'), W = SCIENCE_REFS('weightloss');
+  const allHaveSrc = (arr) => arr.length > 0 && arr.every((x) => x.h && x.b && x.src);
+  return {
+    nE: E.length, nW: W.length,
+    endurReal: ['Coggan', 'Banister', 'Seiler', 'Monod', 'Daniels'].every((n) => E.some((x) => x.src.includes(n))),
+    lossReal: ['Garthe', 'Helms', 'Longland', 'Fothergill', 'Wishnofsky'].every((n) => W.some((x) => x.src.includes(n))),
+    honestCaveat: W.some((x) => /Näherung|überschätzt/.test(x.b)), // Wishnofsky ehrlich eingeordnet
+    allSrc: allHaveSrc(E) && allHaveSrc(W),
+    panelRenders: /details/.test(scienceRefsPanelHTML('weightloss', 'x')) && /details/.test(scienceRefsPanelHTML('endurance', 'x')),
+  };
+});
+check('Studien: Ausdauer-Referenzen real & attribuiert', sci.nE >= 6 && sci.endurReal && sci.allSrc, { n: sci.nE, real: sci.endurReal });
+check('Studien: Abnehmen-Referenzen real & attribuiert', sci.nW >= 5 && sci.lossReal, { n: sci.nW, real: sci.lossReal });
+check('Studien: ~7700-kcal-Regel ehrlich eingeordnet (Metric-Prinzip)', sci.honestCaveat === true, sci.honestCaveat);
+check('Studien: Panels rendern (details.acc-i)', sci.panelRenders === true, sci.panelRenders);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();
