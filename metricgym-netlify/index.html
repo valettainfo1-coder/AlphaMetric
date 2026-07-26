@@ -7705,7 +7705,7 @@ function renderHome(){
     <!-- IMMERSIVE TODAY-HERO (Oura/Apple-würdig): atmosphärische Szene, Score, Serif-Voice, USP-CTA -->
     ${(()=>{
       const isRest=tType==="rest", tLabel=(TYPE_META[tType]||{}).label||"Training";
-      const headline=r?(r.score>=80?"Du bist heute voll belastbar.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Wie bereit bist du heute?";
+      const headline=r?(r.score>=80?"Du bist heute voll belastbar.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Deine Tagesform — in 10 Sek.";
       const sub=isRest?"Dein Plan gibt dir heute frei — Erholung ist Teil des Fortschritts."
         :r?(r.score>=80?`Dein Körper ist bereit — heute steht <b style="color:var(--t1)">${tLabel}</b> an. Geh an die obere Range deiner Sätze.`
               :r.score>=60?`Heute steht <b style="color:var(--t1)">${tLabel}</b> an — trainier wie geplant.`
@@ -7730,7 +7730,7 @@ function renderHome(){
             return `<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Bereitschaft ${r.score} — ${tier}">${ringSVG(r.score,tier,184)}</button>`;})()
             :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
                 <div style="width:184px;height:184px;border-radius:50%;border:7px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-                  <span style="font-size:32px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.4">Bereit für heute?<br>Check in 10 Sek.</span>
+                  <span style="font-size:32px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.4">Tagesform<br>messen</span>
                 </div></button>`}
         </div>
         <p class="th-lbl">${r?"Bereitschaft":"Tages-Check"}</p>
