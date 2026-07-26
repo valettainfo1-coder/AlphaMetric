@@ -2656,7 +2656,7 @@ function showUpgradeTeaser(key){ openPaywall(key); }
 const GOAL_IDENTITY={muscle:"sichtbar mehr Muskeln aufzubauen",strength:"spürbar stärker zu werden",loss:"deinen Körperfettanteil zu senken",cut:"definierter zu werden",health:"langfristig fit & gesund zu bleiben",performance:"athletischer zu werden"};
 function openPaywall(key){
   S.paywallSeen=(S.paywallSeen||0)+1; save();
-  const x=TEASER_TEXT[key]||{t:"Mehr Tiefe freischalten",b:"Diese Funktion ist Teil eines höheren Plans."};
+  const x=TEASER_TEXT[key]||{t:"Das vollständige Bild",b:"Diese Auswertung ist in einem höheren Plan enthalten."};
   const tier=TEASER_TIER[key]||"pro";
   const b=S.billing||"yearly"; // Jahres-Anker als Default
   const fc=paywallForecast();
@@ -2672,7 +2672,7 @@ function openPaywall(key){
       <button class="iconbtn" onclick="A.closeModal()" aria-label="Schließen"
         style="position:absolute;top:10px;right:12px;z-index:3;min-width:38px;min-height:38px;background:rgba(10,14,22,.65);border-radius:50%">${icon("x",17)}</button>
       <div class="pw-glow"></div>
-      <p class="pw-eyebrow">${icon("lock",12)} ${TIER_LABEL[tier]}-Funktion</p>
+      <p class="pw-eyebrow">${icon("lock",12)} In ${TIER_LABEL[tier]} enthalten</p>
       <p class="display-m" style="margin:2px 0 4px;line-height:1.15">${x.t}</p>
       <p class="sm t2" style="line-height:1.55;margin-bottom:${identityLine?"12px":"16px"}">${x.b}</p>
       ${identityLine?`<p class="sm" style="line-height:1.55;margin-bottom:16px">${identityLine}</p>`:""}
@@ -2683,7 +2683,7 @@ function openPaywall(key){
             <p class="xs t2" style="margin-top:3px">${fc.label}</p></div>
           <p class="xs t2" style="text-align:right;max-width:140px;line-height:1.4">${fc.sub}</p>
         </div>
-        <p class="xs t2" style="margin-top:10px;line-height:1.5">Die Engine kennt dein Ziel. ${TIER_LABEL[tier]} schaltet den vollständigen, mitlernenden Pfad dorthin frei — du verlierst sonst genau diese Präzision.</p>
+        <p class="xs t2" style="margin-top:10px;line-height:1.5">Die Engine kennt dein Ziel. ${TIER_LABEL[tier]} öffnet den vollständigen Pfad dorthin — Woche für Woche an deine echten Zahlen angepasst. Ohne ihn bleibt genau diese Präzision ungenutzt.</p>
       </div>`:""}
       <div class="pw-price">
         <div><p class="metric" style="font-size:22px">${tierPriceLabel(tier,b)}</p>
@@ -5043,7 +5043,7 @@ A.upgrade=(t)=>{
       <div><p class="metric" style="font-size:24px">${tierPriceLabel(t,b)}</p>
         <p class="xs volt-txt">${perDayLabel(t,b)}${b==="yearly"?` · ${freeMonths(t)} Monate geschenkt`:""}</p></div></div>
     ${b==="yearly"?`<p class="xs volt-txt">Du sparst ${fmtEUR(yearlySaving(t))} gegenüber monatlicher Zahlung.</p>`:""}
-    <p class="xs t2 mt8" style="line-height:1.6">Sichere Zahlung über Stripe (Anbindung folgt) · jederzeit kündbar · keine versteckten Kosten.</p>
+    <p class="xs t2 mt8" style="line-height:1.6">Sichere Zahlung über Stripe · jederzeit kündbar · keine versteckten Kosten.</p>
     <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Jetzt aktivieren</button>`);
 };
 /* D4: echter Kauf über Stripe Checkout — Preis-IDs & Keys nur serverseitig.
@@ -5238,7 +5238,7 @@ function renderAppbar(){
       <span class="badge ${S.tier==="free"?"mute":"volt"}">${TIER_LABEL[S.tier]}</span>
     </button>
     <div class="menu-divider"></div>
-    ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr Tiefe freischalten":"Abo & Tier ändern","A.menuGo('pricing')")}
+    ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr aus deinen Zahlen holen":"Abo & Stufe verwalten","A.menuGo('pricing')")}
     ${item("sparkle","Alle Funktionen entdecken","Was die App alles kann — auf einen Blick","A.menuGo('features')")}
     ${item("play","Tour wiederholen","Geführte Durchführung der Funktionen","A.replayTour()")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
@@ -5270,7 +5270,7 @@ const TOUR=[
 ];
 function startTour(i){
   i=i||0;
-  if(i>=TOUR.length){ S.tourDone=true; save(); overlay.innerHTML=""; document.body.classList.remove("overlay-open"); toast("Tour fertig — leg los."); return; }
+  if(i>=TOUR.length){ S.tourDone=true; save(); overlay.innerHTML=""; document.body.classList.remove("overlay-open"); toast("Tour abgeschlossen."); return; }
   const s=TOUR[i];
   S.tab=s.tab; save(); render();
   A.tourNext=()=>startTour(i+1);
@@ -5377,7 +5377,7 @@ function applyAccountGrants(){
     const em=currentEmail()||((typeof SB!=="undefined"&&SB.user&&SB.user.email)||"").toLowerCase().trim();
     if(em&&list.includes(em)&&S.tier!=="elite"){
       S.tier="elite"; save();
-      setTimeout(()=>toast("✦ ELITE freigeschaltet — willkommen im Inner Circle"),400);
+      setTimeout(()=>toast("✦ ELITE ist aktiv — willkommen."),400);
     }
   }catch(e){}
 }
@@ -5444,9 +5444,9 @@ function renderFeatureOverview(){
     root.innerHTML=`
       <div class="center fade" style="min-height:62vh;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center">
         <div style="width:84px;height:84px;border-radius:50%;background:rgba(127,169,143,.16);color:#7FA98F;display:flex;align-items:center;justify-content:center;margin-bottom:18px">${icon("check",46)}</div>
-        <h2 style="font-size:24px">Du kennst jetzt dein ganzes Arsenal 💪</h2>
-        <p class="sm t2" style="max-width:300px;margin:8px auto 0;line-height:1.6">Alle ${N} Bereiche freigeschaltet. Tipp dich jederzeit über das Menü wieder rein — jetzt: loslegen.</p>
-        <button class="btn volt mt16" style="max-width:320px" onclick="A.featDone()">Los geht's</button>
+        <h2 style="font-size:24px">Du kennst jetzt den vollen Funktionsumfang</h2>
+        <p class="sm t2" style="max-width:300px;margin:8px auto 0;line-height:1.6">Alle ${N} Bereiche im Überblick. Du erreichst sie jederzeit wieder über das Menü.</p>
+        <button class="btn volt mt16" style="max-width:320px" onclick="A.featDone()">Fertig</button>
         <button class="btn ghost mt8" style="max-width:320px" onclick="catStep=0;renderFeatureOverview()">Nochmal ansehen</button>
       </div>`;
     return;
@@ -5463,7 +5463,7 @@ function renderFeatureOverview(){
 
       <div style="text-align:center;margin-bottom:6px">
         <div class="tour-ic" style="margin:0 auto 10px">${icon(gic,24)}</div>
-        <p class="xs" style="color:#7FA98F;letter-spacing:.12em;text-transform:uppercase">${icon("check",10)} Bereich ${catStep+1} freigeschaltet</p>
+        <p class="xs" style="color:#7FA98F;letter-spacing:.12em;text-transform:uppercase">${icon("check",10)} Bereich ${catStep+1} von ${N}</p>
         <h2 style="font-size:23px;margin-top:4px">${gt}</h2>
       </div>
 
@@ -7065,7 +7065,7 @@ function renderHome(){
   A.tryMagicData=()=>{ const seed=buildDevSeed();
     S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
     S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog; S.sampleData=true;
-    save(); render(); toast("Beispiel-Historie geladen — erlebe deine Magie live"); };
+    save(); render(); toast("Beispiel-Historie geladen — so sehen deine Auswertungen mit echten Daten aus"); };
   A.clearMagicData=()=>{ const p=S.profile;
     S.liftLog={}; S.readinessHistory=[]; S.trainingHistory=[]; S.nutritionLog={};
     S.weightLog=p?[{t:Date.now(),v:p.a.weight}]:[]; S.checkin=null; S.checkinDate=null; S.sampleData=false;
@@ -7095,7 +7095,7 @@ function renderHome(){
       </ul>
       ${S.tier!=="free"&&r.ins?`<p class="sm t2" style="line-height:1.6">${r.ins}</p>`:""}
       <button class="btn mt8" onclick="A.shareRecap()">${icon("camera",15)} Als Bild speichern</button>
-      ${S.tier==="free"?`<button class="btn mt8" onclick="overlay.innerHTML='';A.showTeaser('recap')">Vollständigen Recap freischalten</button>`:""}`);
+      ${S.tier==="free"?`<button class="btn mt8" onclick="overlay.innerHTML='';A.showTeaser('recap')">Vollständigen Rückblick ansehen</button>`:""}`);
     S.recapReady=null; save();
   };
   A.shareRecap=()=>{ if(recapData)shareRecapPNG(recapData); };
@@ -7486,7 +7486,7 @@ function openFeatureHub(){
     overlay.innerHTML=""; try{ coachOpen=true; renderFab(); if(q)setTimeout(()=>A.coachAsk(q),80); }catch(e){} };
   A.fhRun=(i)=>{
     const f=FEATURE_INDEX[i]; if(!f)return;
-    if(f.need&&!S.profile){ toast("Erst das kurze Setup abschließen — dann ist das freigeschaltet"); return; }
+    if(f.need&&!S.profile){ toast("Erst das kurze Setup abschließen — danach steht dir das offen."); return; }
     overlay.innerHTML="";
     if(f.tab){ S.tab=f.tab; save(); render(); }
     if(f.modal){ setTimeout(()=>modal(f.modal),80); return; }
@@ -9461,7 +9461,7 @@ function renderTrain(){
     save(); A.closeModal(); render();
     toast(applied?`✓ ${applied} Übungen übernommen — du kannst alles weiter anpassen`:"Übernommen — Plan bleibt anpassbar");
   };
-  A.keepMetricgym=()=>{ A.closeModal(); toast("Stark — du bleibst beim wissenschaftlich optimierten Plan"); };
+  A.keepMetricgym=()=>{ A.closeModal(); toast("Du bleibst beim wissenschaftlich optimierten Plan"); };
   A.trainParse=()=>{
     const el=document.getElementById("quicklog-in");
     if(!el||!el.value.trim())return;
@@ -10815,7 +10815,7 @@ function renderAnalytics(){
   html+=visIns.length?`<div class="card"><p class="ct" style="margin-bottom:12px">${icon("sparkle",14)} Was deine Daten dir sagen</p>
     ${visIns.map(i=>insightBlockHTML(i)).join("")}
     ${hiddenIns.length?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${hiddenIns.length} weitere ${hiddenIns.length===1?"Insight":"Insights"} verfügbar — ${hiddenCats.slice(0,3).join(", ")}.</p>
-      <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">${TIER_LABEL[S.tier==="free"?"pro":"elite"]} freischalten</button></div>`:""}</div>`
+      <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('insights')">Mehr mit ${TIER_LABEL[S.tier==="free"?"pro":"elite"]}</button></div>`:""}</div>`
   :`<div class="card"><p class="ct">${icon("sparkle",14)} Was deine Daten dir sagen</p><p class="sm t2">Sobald ein klares Muster da ist, erklärt dir die Engine deinen Fortschritt — in Klartext.</p></div>`;
 
   // WICHTIGKEITS-REIHENFOLGE (nur Anzeige; Berechnungs-Reihenfolge oben bleibt):
@@ -11476,7 +11476,7 @@ function renderPricing(){
   track("paywall_view"); // D3
   const feats={
     free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Voice-/Foto-Logging unlimitiert","Status-Check + Streak","1 Engine-Insight pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
-    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Bekommt dein Körper, was er braucht?","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
+    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Vitamin- & Mineralstoff-Schätzung aus deinem Essen","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
     elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Insights inkl. Kombi-Analysen","Early Access auf neue Engine-Module"],
   };
   const b=S.billing||"yearly"; // Jahres-Anker als Default (Anchoring)
@@ -11807,7 +11807,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
     if(!code){toast("Code eingeben");return;}
     if(code===S.refCode){toast("Das ist dein eigener Code");return;}
     S.invitedBy=code; S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs;
-    save(); render(); toast("✓ 14 Tage PERFORMANCE freigeschaltet");
+    save(); render(); toast("✓ 14 Tage PERFORMANCE aktiviert");
   };
   // Verfügbares Guthaben auf das eigene Abo anrechnen (1 € = 1 € Rabatt).
   A.redeemWallet=()=>{
@@ -11960,7 +11960,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
     S.a={height:S.a&&S.a.height||181,weight:S.a&&S.a.weight||82,sleep:7,goals:[],injuries:[]};
     S.step=0; S.screen="onboarding"; A.closeModal&&A.closeModal(); save(); render();
     try{ if(typeof SB!=="undefined" && SB.user && SB.push) SB.push(); }catch{}
-    toast("Frisch zurückgesetzt — los geht's!");
+    toast("Zurückgesetzt — dein Konto ist wieder wie am ersten Tag.");
   };
   A.wipeConfirm=async()=>{
     const go=document.getElementById("wipe-go"); if(go){go.disabled=true;go.textContent="Lösche …";}
@@ -12172,7 +12172,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
     ${acc("settings","Daten & Konto","",`
       ${(()=>{ const c=S.consent&&S.consent.health;
         if(S.basisMode) return `<div class="warncard mb8"><p class="xs" style="line-height:1.6">Nur-Basis-Modus aktiv — Cloud-Sync &amp; KI-Coach sind aus, bis du den aktualisierten Bedingungen zustimmst.</p>
-          <button class="btn mt8" onclick="A.regrantHealth()">Jetzt zustimmen &amp; alles freischalten</button></div>`;
+          <button class="btn mt8" onclick="A.regrantHealth()">Jetzt zustimmen &amp; fortfahren</button></div>`;
         if(c&&c.revoked) return `<div class="warncard mb8"><p class="xs" style="line-height:1.6">Einwilligung Gesundheitsdaten <b>widerrufen am ${new Date(c.revoked).toLocaleDateString("de-DE")}</b> — Cloud-Sync &amp; KI-Coach sind gestoppt, deine Daten liegen nur noch lokal.</p>
           <button class="btn mt8" onclick="A.regrantHealth()">Einwilligung erneut erteilen</button></div>`;
         if(c&&c.at) return `<button class="btn mb8" style="border-color:rgba(208,139,110,.4);color:var(--warn)" onclick="A.revokeHealth()">${icon("lock",14)} Einwilligung Gesundheitsdaten widerrufen</button>

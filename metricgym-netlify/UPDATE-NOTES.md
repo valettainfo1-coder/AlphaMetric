@@ -427,6 +427,30 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
   anzulegenden Stripe-Prices müssen **exakt** diesen Beträgen entsprechen.
   [BETREIBER: 4 Stripe-Prices in Höhe 9,99/79,99/19,99/159,99 anlegen]
 
+### 29. Wording-Politur: weg vom Baukasten-Ton, hin zu Premium
+Strukturierter Durchgang über die conversion-nahen Oberflächen. Leitlinie:
+**ruhig, präzise, selbstsicher — der Ton beweist den Preis.** Konkret raus:
+das gamey „freischalten"/„freigeschaltet" (überall in sichtbarer Copy
+ersetzt), Ausrufezeichen, Sprüche wie „willkommen im Inner Circle" und
+„los geht's".
+- **Paywall:** Headline „Mehr Tiefe freischalten" → **„Das vollständige
+  Bild"**; Eyebrow „PERFORMANCE-Funktion" → **„In PERFORMANCE enthalten"**;
+  Prognose-Satz von „schaltet … frei — du verlierst" → **„öffnet den
+  vollständigen Pfad … Ohne ihn bleibt genau diese Präzision ungenutzt"**.
+- **Upgrade-Dialog:** unprofessionelles „(Anbindung folgt)" entfernt.
+- **System-Toasts:** „ELITE freigeschaltet — willkommen im Inner Circle" →
+  „ELITE ist aktiv — willkommen."; „Tour fertig — leg los." →
+  „Tour abgeschlossen."; „erlebe deine Magie live" → sachliche Fassung;
+  Reset-Toast entschärft; „Stark —"-Interjektion raus.
+- **Feature-Tour:** „dein ganzes Arsenal 💪" → „den vollen Funktionsumfang";
+  „Bereich X freigeschaltet" → „Bereich X von N"; Button „Los geht's" →
+  „Fertig".
+- **Preisseite/Menü:** Frage-Bullet vereinheitlicht („Vitamin- &
+  Mineralstoff-Schätzung aus deinem Essen"); Menü-Untertitel
+  „Mehr Tiefe freischalten" → „Mehr aus deinen Zahlen holen".
+Übungsnamen (Hammer-Curls), „Cool-down", Social-Share-Captions (💪) und
+Code-Kommentare wurden bewusst NICHT angefasst — dort ist es korrekt.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
 Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch
