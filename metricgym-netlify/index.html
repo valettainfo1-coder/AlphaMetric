@@ -258,6 +258,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .grid5{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px;}
   .grid4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;}
   .grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;}
+  .field-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--hairline);}
+  .field-row:last-child{border-bottom:none;}
+  .field-row input{width:120px; text-align:right; background:var(--s1); border:1px solid var(--hairline); border-radius:10px; padding:9px 11px; color:var(--t1); font-family:var(--font-mono); font-size:14px;}
   .cell{
     padding:13px 2px; text-align:center; background:var(--surface); border:1px solid transparent;
     border-radius:14px; color:var(--t1); font-size:17px; font-weight:600; cursor:pointer;
@@ -1387,6 +1391,7 @@ const ICONS={
   sparkle:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
   scale:'<path d="M12 3v3M7 21h10M12 6c-4 0-7 2-7 5h14c0-3-3-5-7-5Z"/><path d="M9 21v-5M15 21v-5"/>',
   undo:'<path d="M8 7 4 11l4 4"/><path d="M4 11h11a5 5 0 0 1 0 10h-3"/>',
+  bike:'<circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>',
 };
 function icon(name,size){
   size=size||18;
@@ -1907,6 +1912,375 @@ function downscaleImage(file,max,cb){
     img.onerror=()=>cb(null); img.src=fr.result;};
   fr.onerror=()=>cb(null); fr.readAsDataURL(file);
 }
+
+/* ==================================================================================
+   AUSDAUER-MODUL (Cycling & Running) — Phase 1: Import + Analyse (intervals.icu-Klasse)
+   ----------------------------------------------------------------------------------
+   Architektur-Entscheidungen (bewusst):
+   • LOKAL-FIRST wie der Rest der App: Roh-Zeitreihen (groß) liegen in IndexedDB
+     (mg-endurance), NUR kleine Aktivitäts-Summaries in S.endur → State bleibt klein &
+     syncbar. Cloud-Tabellen (activities/Storage) sind der dokumentierte Phase-0-Cloud-
+     Schritt (Betreiber-Deploy), die App funktioniert schon HEUTE ohne ihn.
+   • SPORT-AGNOSTISCH ab Zeile 1: activity.sport ∈ {cycling,running,…}. Run/Swim/Tri
+     erben dieselbe Engine (nur andere Primär-Metrik: Power vs. Pace).
+   • REINE, GETESTETE ENGINE (16 Referenz-Tests grün): NP/IF/TSS/VI/EF/Decoupling,
+     MMP/Power-Curve, CP&W′, FTP-Schätzung, PMC (CTL/ATL/TSB), Zonen.
+   • Handler an window.ENDUR (A existiert an dieser Codestelle noch nicht).
+   ================================================================================== */
+const EDB = { db: null,
+  open() { return new Promise((res) => { try { const r = indexedDB.open("mg-endurance", 1);
+    r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains("streams")) d.createObjectStore("streams"); };
+    r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }); },
+  async put(id, v) { const db = await EDB.open(); if (!db) return; return new Promise(r => { const tx = db.transaction("streams", "readwrite"); tx.objectStore("streams").put(v, id); tx.oncomplete = () => r(true); tx.onerror = () => r(false); }); },
+  async get(id) { const db = await EDB.open(); if (!db) return null; return new Promise(r => { const tx = db.transaction("streams", "readonly"); const g = tx.objectStore("streams").get(id); g.onsuccess = () => r(g.result || null); g.onerror = () => r(null); }); },
+  async del(id) { const db = await EDB.open(); if (!db) return; return new Promise(r => { const tx = db.transaction("streams", "readwrite"); tx.objectStore("streams").delete(id); tx.oncomplete = () => r(true); tx.onerror = () => r(false); }); }
+};
+
+const SPORTS = {
+  cycling: { key: "cycling", label: "Radfahren", icon: "bike", primary: "power", unit: "W" },
+  running: { key: "running", label: "Laufen", icon: "activity", primary: "pace", unit: "/km" }
+};
+
+window.ENDUR = (() => {
+  // ------------------------------------------------------------------ ENGINE
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  function rollingAvg(arr, win) { const out = new Array(arr.length); let sum = 0; const q = []; for (let i = 0; i < arr.length; i++) { q.push(arr[i]); sum += arr[i]; if (q.length > win) sum -= q.shift(); out[i] = sum / q.length; } return out; }
+  function normalizedPower(power) { if (!power || power.length < 30) return power && power.length ? avg(power) : 0; const r = rollingAvg(power, 30); let s = 0; for (let i = 0; i < r.length; i++) s += Math.pow(Math.max(0, r[i]), 4); return Math.pow(s / r.length, 0.25); }
+  const intensityFactor = (np, ftp) => ftp > 0 ? np / ftp : 0;
+  const tss = (sec, np, ifac, ftp) => ftp > 0 ? (sec * np * ifac) / (ftp * 3600) * 100 : 0;
+  const variabilityIndex = (np, avgP) => avgP > 0 ? np / avgP : 0;
+  const efficiencyFactor = (np, avgHr) => avgHr > 0 ? np / avgHr : 0;
+  function decoupling(power, hr) { const n = Math.min(power.length, hr.length); if (n < 120) return null; const h = n >> 1; const a1 = avg(power.slice(0, h)), a2 = avg(power.slice(h, n)), b1 = avg(hr.slice(0, h)), b2 = avg(hr.slice(h, n)); if (!b1 || !b2) return null; const r1 = a1 / b1, r2 = a2 / b2; return r1 > 0 ? ((r1 - r2) / r1) * 100 : null; }
+  function mmp(power, durations) { const pref = [0]; for (let i = 0; i < power.length; i++) pref.push(pref[i] + power[i]); const res = {}; for (const d of durations) { if (d > power.length) { res[d] = null; continue; } let best = 0; for (let i = d; i < pref.length; i++) { const p = (pref[i] - pref[i - d]) / d; if (p > best) best = p; } res[d] = Math.round(best); } return res; }
+  function criticalPower(points) { const pts = points.filter(x => x && x.t >= 120 && x.t <= 1200 && x.p > 0); if (pts.length < 2) return null; const xs = pts.map(x => 1 / x.t), ys = pts.map(x => x.p); const n = xs.length, sx = xs.reduce((a, b) => a + b, 0), sy = ys.reduce((a, b) => a + b, 0); const sxy = xs.reduce((a, _, i) => a + xs[i] * ys[i], 0), sxx = xs.reduce((a, b) => a + b * b, 0); const den = n * sxx - sx * sx; if (!den) return null; const wPrime = (n * sxy - sx * sy) / den, cp = (sy - wPrime * sx) / n; if (cp <= 0 || wPrime <= 0) return null; return { cp: Math.round(cp), wPrime: Math.round(wPrime) }; }
+  function estimateFtp(mmpMap, cpModel) { const c = []; if (mmpMap[1200]) c.push({ v: mmpMap[1200] * 0.95, m: "95 % v. 20 min", conf: 0.9 }); if (mmpMap[480]) c.push({ v: mmpMap[480] * 0.88, m: "88 % v. 8 min", conf: 0.75 }); if (cpModel && cpModel.cp) c.push({ v: cpModel.cp * 0.97, m: "CP-Modell", conf: 0.8 }); if (!c.length) return null; c.sort((a, b) => b.conf - a.conf); return { ftp: Math.round(c[0].v), method: c[0].m, confidence: c[0].conf, all: c }; }
+  function pmc(dailyTss, ctlDays = 42, atlDays = 7) { const kC = 1 - Math.exp(-1 / ctlDays), kA = 1 - Math.exp(-1 / atlDays); let ctl = 0, atl = 0; const out = []; for (const d of dailyTss) { const tsb = ctl - atl; ctl += (d.tss - ctl) * kC; atl += (d.tss - atl) * kA; out.push({ date: d.date, ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb: +tsb.toFixed(1) }); } return out; }
+  function powerZones(ftp) { const b = [0, .56, .76, .91, 1.06, 1.21, 1.51]; const names = ["Aktive Erholung", "Ausdauer", "Tempo", "Schwelle", "VO₂max", "Anaerob", "Neuromuskulär"]; return b.map((lo, i) => ({ z: i + 1, name: names[i], lo: Math.round(lo * ftp), hi: i < 6 ? Math.round(b[i + 1] * ftp) - 1 : null })); }
+  function hrZones(lthr) { const b = [0, .81, .90, .94, 1.00]; const names = ["Erholung", "Aerob", "Tempo", "Schwelle", "VO₂max"]; return b.map((lo, i) => ({ z: i + 1, name: names[i], lo: Math.round(lo * lthr), hi: i < 4 ? Math.round(b[i + 1] * lthr) - 1 : null })); }
+  // Laufen: Pace-Zonen aus Schwellen-Pace (sek/km). Kleinere sek/km = schneller → hi/lo invertiert.
+  function paceZones(thrPace) { const f = [1.29, 1.14, 1.06, 1.00, 0.97]; const names = ["Erholung", "Aerob", "Tempo", "Schwelle", "Intervall"]; return f.map((k, i) => ({ z: i + 1, name: names[i], slow: Math.round(thrPace * k), fast: i < 4 ? Math.round(thrPace * f[i + 1]) + 1 : null })); }
+  // Laufen: rTSS aus NGP (hier vereinfachte GAP≈Pace ohne DEM), IF = thrPace/NGP.
+  function runTss(sec, ngpSpeed, thrSpeed) { if (!thrSpeed) return 0; const ifac = ngpSpeed / thrSpeed; return (sec * ifac * ifac) / 3600 * 100; }
+  const timeInZones = (series, zones, key) => { const t = zones.map(() => 0); for (const v of series) { if (v == null) continue; let zi = 0; for (let i = 0; i < zones.length; i++) { const lo = zones[i].lo != null ? zones[i].lo : zones[i].fast; if (lo != null && v >= lo) zi = i; } t[zi]++; } return t; };
+
+  const eng = { rollingAvg, normalizedPower, intensityFactor, tss, variabilityIndex, efficiencyFactor, decoupling, mmp, criticalPower, estimateFtp, pmc, powerZones, hrZones, paceZones, runTss, timeInZones, avg };
+
+  // ------------------------------------------------------------------ PARSER (GPX)
+  const CURVE_DUR = [1, 5, 15, 30, 60, 120, 300, 480, 600, 1200, 1800, 3600];
+  function num(x) { const n = parseFloat(x); return isFinite(n) ? n : null; }
+  function haversine(a, b) { const R = 6371000, toR = Math.PI / 180; const dLat = (b.lat - a.lat) * toR, dLon = (b.lng - a.lng) * toR; const la1 = a.lat * toR, la2 = b.lat * toR; const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.min(1, Math.sqrt(h))); }
+  function resample1Hz(pts) {
+    // pts: [{t(sec), power,hr,cad,lat,lng,ele,speed,dist}] → dichte 1-Hz-Streams (lineare Füllung kleiner Lücken).
+    if (!pts.length) return null;
+    const t0 = pts[0].t, T = Math.max(1, Math.round(pts[pts.length - 1].t - t0));
+    const S = { power: [], hr: [], cad: [], speed: [], alt: [], lat: [], lng: [], dist: [] };
+    let j = 0;
+    for (let s = 0; s <= T; s++) {
+      const tt = t0 + s; while (j < pts.length - 1 && pts[j + 1].t <= tt) j++;
+      const p = pts[j];
+      S.power.push(p.power != null ? p.power : 0); S.hr.push(p.hr != null ? p.hr : null);
+      S.cad.push(p.cad != null ? p.cad : null); S.speed.push(p.speed != null ? p.speed : null);
+      S.alt.push(p.ele != null ? p.ele : null); S.lat.push(p.lat != null ? p.lat : null);
+      S.lng.push(p.lng != null ? p.lng : null); S.dist.push(p.dist != null ? p.dist : null);
+    }
+    return S;
+  }
+  function parseGPX(text) {
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    if (doc.querySelector("parsererror")) throw new Error("GPX ungültig");
+    const trkpts = [...doc.getElementsByTagName("trkpt")];
+    if (!trkpts.length) throw new Error("Keine Trackpunkte in der GPX-Datei");
+    const raw = []; let t0 = null, cumDist = 0, prev = null;
+    for (const pt of trkpts) {
+      const lat = num(pt.getAttribute("lat")), lng = num(pt.getAttribute("lon"));
+      const timeEl = pt.getElementsByTagName("time")[0]; const eleEl = pt.getElementsByTagName("ele")[0];
+      const ts = timeEl ? Date.parse(timeEl.textContent) / 1000 : (raw.length ? raw[raw.length - 1].t + 1 : 0);
+      if (t0 == null) t0 = ts;
+      const ext = pt.getElementsByTagName("extensions")[0];
+      const grab = (tag) => { if (!ext) return null; const e = ext.getElementsByTagName(tag)[0] || ext.getElementsByTagNameNS("*", tag)[0]; return e ? num(e.textContent) : null; };
+      const power = grab("power"), hr = grab("hr") ?? grab("heartrate") ?? grab("HeartRate"), cad = grab("cad") ?? grab("cadence");
+      const cur = { lat, lng, ele: eleEl ? num(eleEl.textContent) : null };
+      if (prev && lat != null && lng != null && prev.lat != null) cumDist += haversine(prev, cur);
+      raw.push({ t: ts - t0, power, hr, cad, lat, lng, ele: cur.ele, dist: cumDist });
+      if (lat != null) prev = cur;
+    }
+    const sport = /run|lauf/i.test(text) && !/cycl|bike|rad/i.test(text) ? "running"
+      : (raw.some(p => p.power != null) ? "cycling" : "cycling");
+    return { sport, start: t0 * 1000, streams: resample1Hz(raw) };
+  }
+
+  // ------------------------------------------------------------------ SUMMARIZE
+  function summarize(parsed, athlete) {
+    const st = parsed.streams, sec = st.power.length; const sport = parsed.sport;
+    const hrArr = st.hr.filter(x => x != null); const cadArr = st.cad.filter(x => x != null);
+    const dist = st.dist.length ? (st.dist[st.dist.length - 1] || 0) : 0;
+    let elev = 0; for (let i = 1; i < st.alt.length; i++) { const d = (st.alt[i] || 0) - (st.alt[i - 1] || 0); if (d > 0.5) elev += d; }
+    const avgHr = hrArr.length ? Math.round(eng.avg(hrArr)) : null;
+    const avgCad = cadArr.length ? Math.round(eng.avg(cadArr)) : null;
+    const speedAvg = sec > 0 ? dist / sec : 0; // m/s
+    const S = { id: "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), sport, start: parsed.start, dur: sec, dist: Math.round(dist), elev: Math.round(elev), avgHr, avgCad, avgSpeed: speedAvg, hasPower: st.power.some(p => p > 0), name: null };
+    if (sport === "cycling" && S.hasPower) {
+      const ftp = (athlete.cycling && athlete.cycling.ftp) || 250;
+      const np = eng.normalizedPower(st.power), avgP = eng.avg(st.power);
+      const ifac = eng.intensityFactor(np, ftp);
+      S.np = Math.round(np); S.avgP = Math.round(avgP); S.if = +ifac.toFixed(2);
+      S.tss = Math.round(eng.tss(sec, np, ifac, ftp)); S.vi = +eng.variabilityIndex(np, avgP).toFixed(2);
+      S.ef = avgHr ? +eng.efficiencyFactor(np, avgHr).toFixed(2) : null;
+      S.decoup = avgHr ? (eng.decoupling(st.power, st.hr.map(x => x || 0)) != null ? +eng.decoupling(st.power, st.hr.map(x => x || 0)).toFixed(1) : null) : null;
+      S.kj = Math.round(avgP * sec / 1000); S.kcal = Math.round(S.kj / 0.24 / 1000 * 240); // ~ kJ ≈ kcal (Wirkungsgrad ~24%)
+      S.mmp = eng.mmp(st.power, CURVE_DUR);
+    } else {
+      const thrSpeed = (athlete.running && athlete.running.thrPace) ? 1000 / athlete.running.thrPace : null;
+      S.avgP = null; S.np = null; S.if = thrSpeed ? +(speedAvg / thrSpeed).toFixed(2) : null;
+      S.tss = thrSpeed ? Math.round(eng.runTss(sec, speedAvg, thrSpeed)) : Math.round(sec / 3600 * 50);
+      S.kcal = Math.round((athlete.weight || 75) * (dist / 1000) * 1.036);
+    }
+    return S;
+  }
+
+  // ------------------------------------------------------------------ STATE / STORAGE
+  const st = () => (S.endur || (S.endur = defaults()));
+  function defaults() { return { view: "dashboard", sel: null, athlete: { weight: 75, cycling: { ftp: 250, lthr: 165, maxHr: 190, restHr: 50, vo2: null, wPrime: null, cp: null }, running: { thrPace: 300, lthr: 168, maxHr: 192, restHr: 50, vo2: null } }, activities: [], ftpHistory: [], sport: "cycling" }; }
+  function athlete() { return st().athlete; }
+  function activities() { return (st().activities || []).slice().sort((a, b) => b.start - a.start); }
+  function dayKey(ms) { const d = new Date(ms); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function pmcSeries() {
+    const acts = (st().activities || []).slice().sort((a, b) => a.start - b.start);
+    if (!acts.length) return [];
+    const byDay = {}; for (const a of acts) { const k = dayKey(a.start); byDay[k] = (byDay[k] || 0) + (a.tss || 0); }
+    const first = new Date(acts[0].start); first.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = []; for (let d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) { const k = dayKey(d.getTime()); days.push({ date: k, tss: byDay[k] || 0 }); }
+    return eng.pmc(days);
+  }
+  async function importText(text, filename) {
+    const parsed = parseGPX(text);
+    if (!parsed.streams || !parsed.streams.power.length) throw new Error("Datei enthält keine auswertbaren Daten");
+    const sum = summarize(parsed, athlete());
+    sum.name = filename ? filename.replace(/\.(gpx|tcx|fit)$/i, "") : (SPORTS[sum.sport].label + " " + new Date(sum.start).toLocaleDateString("de-DE"));
+    await EDB.put(sum.id, parsed.streams);
+    st().activities = st().activities || []; st().activities.push(sum);
+    // FTP-Fortschritt aus 20-min-Bestwert protokollieren (nur Radfahren).
+    if (sum.sport === "cycling" && sum.mmp && sum.mmp[1200]) {
+      const est = eng.estimateFtp(sum.mmp, null);
+      if (est) st().ftpHistory.push({ date: sum.start, ftp: est.ftp, method: est.method });
+    }
+    save(); return sum;
+  }
+
+  return { eng, EDB, parseGPX, summarize, importText, st, athlete, activities, pmcSeries, defaults, SPORTS, CURVE_DUR,
+    // ---- Handler (aus onclick) ----
+    nav(v, id) { st().view = v; if (id !== undefined) st().sel = id; save(); render(); if (window.scrollTo) window.scrollTo(0, 0); },
+    pick() { let inp = document.getElementById("endur-file"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = ".gpx"; inp.id = "endur-file"; inp.style.display = "none"; inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const fr = new FileReader(); fr.onload = async () => { try { toast("Analysiere " + f.name + " …"); const s = await window.ENDUR.importText(String(fr.result), f.name); toast("✓ " + (s.name || "Aktivität") + " analysiert"); window.ENDUR.nav("detail", s.id); } catch (e) { toast("Import fehlgeschlagen: " + (e && e.message || "unbekannt")); } inp.value = ""; }; fr.onerror = () => toast("Datei nicht lesbar"); fr.readAsText(f); }; document.body.appendChild(inp); } inp.click(); },
+    async del(id) { await EDB.del(id); st().activities = (st().activities || []).filter(a => a.id !== id); st().sel = null; st().view = "dashboard"; save(); render(); toast("Aktivität gelöscht"); },
+    saveAthlete() {
+      const g = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) || null : null; };
+      const a = athlete(); a.weight = g("ath-weight") || a.weight;
+      a.cycling.ftp = g("ath-ftp") || a.cycling.ftp; a.cycling.lthr = g("ath-clthr") || a.cycling.lthr;
+      a.cycling.maxHr = g("ath-cmax") || a.cycling.maxHr; a.cycling.restHr = g("ath-crest") || a.cycling.restHr; a.cycling.vo2 = g("ath-cvo2");
+      const pm = document.getElementById("ath-rpace"); if (pm && pm.value) { const mm = pm.value.split(":"); if (mm.length === 2) a.running.thrPace = (+mm[0]) * 60 + (+mm[1]); }
+      a.running.maxHr = g("ath-rmax") || a.running.maxHr; a.running.lthr = g("ath-rlthr") || a.running.lthr;
+      save(); toast("✓ Athlet-Profil gespeichert"); this.nav("dashboard");
+    }
+  };
+})();
+
+// Hinweis: S.endur wird NICHT hier initialisiert (S wird erst später via `let S`
+// deklariert → TDZ). Lazy-Init erfolgt in ENDUR.st() beim ersten Zugriff, additiv
+// und ohne bestehende Daten zu berühren.
+
+/* ---------- Formatierungs-Helfer (lokal, keine Fremd-Abhängigkeit) ---------- */
+function eFmtDur(sec) { sec = Math.round(sec || 0); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h ? h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") : m + ":" + String(s).padStart(2, "0"); }
+function eFmtDist(m) { return m >= 1000 ? (m / 1000).toFixed(m >= 10000 ? 0 : 1) + " km" : Math.round(m) + " m"; }
+function eFmtPace(mps) { if (!mps || mps <= 0) return "–"; const s = 1000 / mps; return Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0") + " /km"; }
+function eFmtSpeed(mps) { return (mps * 3.6).toFixed(1) + " km/h"; }
+function eFmtPaceSec(sec) { return Math.floor(sec / 60) + ":" + String(Math.round(sec % 60)).padStart(2, "0"); }
+
+/* ---------- Canvas: Verlaufskurve (Power/HR/Pace) ---------- */
+function eDrawSpark(canvas, series, color, fill) {
+  if (!canvas) return; const dpr = window.devicePixelRatio || 1; const w = canvas.clientWidth || 320, h = canvas.clientHeight || 90;
+  canvas.width = w * dpr; canvas.height = h * dpr; const g = canvas.getContext("2d"); g.scale(dpr, dpr);
+  const pts = series.filter(x => x != null); if (pts.length < 2) return;
+  const step = Math.max(1, Math.floor(series.length / w));
+  const vals = []; for (let i = 0; i < series.length; i += step) { const v = series[i]; if (v != null) vals.push(v); }
+  const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
+  g.beginPath(); vals.forEach((v, i) => { const x = i / (vals.length - 1) * w, y = h - ((v - min) / rng) * (h - 8) - 4; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.strokeStyle = color; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke();
+  if (fill) { g.lineTo(w, h); g.lineTo(0, h); g.closePath(); const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, color + "44"); grd.addColorStop(1, color + "00"); g.fillStyle = grd; g.fill(); }
+}
+/* ---------- Canvas: Route-Polyline aus lat/lng (offline, keine Karten-Tiles) ---------- */
+function eDrawRoute(canvas, lat, lng) {
+  if (!canvas) return; const pts = []; for (let i = 0; i < lat.length; i++) if (lat[i] != null && lng[i] != null) pts.push([lat[i], lng[i]]);
+  if (pts.length < 2) { canvas.style.display = "none"; return; }
+  const dpr = window.devicePixelRatio || 1; const w = canvas.clientWidth || 320, h = canvas.clientHeight || 180;
+  canvas.width = w * dpr; canvas.height = h * dpr; const g = canvas.getContext("2d"); g.scale(dpr, dpr);
+  const la = pts.map(p => p[0]), lo = pts.map(p => p[1]);
+  const laMin = Math.min(...la), laMax = Math.max(...la), loMin = Math.min(...lo), loMax = Math.max(...lo);
+  const midLat = (laMin + laMax) / 2, kx = Math.cos(midLat * Math.PI / 180);
+  const spanX = (loMax - loMin) * kx || 1e-6, spanY = (laMax - laMin) || 1e-6;
+  const pad = 14, scale = Math.min((w - 2 * pad) / spanX, (h - 2 * pad) / spanY);
+  const ox = (w - spanX * scale) / 2, oy = (h - spanY * scale) / 2;
+  const X = (lng) => ox + (lng - loMin) * kx * scale, Y = (lat) => h - (oy + (lat - laMin) * scale);
+  g.beginPath(); pts.forEach((p, i) => { const x = X(p[1]), y = Y(p[0]); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.strokeStyle = "#8FB8DC"; g.lineWidth = 2.4; g.lineJoin = "round"; g.lineCap = "round"; g.stroke();
+  g.fillStyle = "#7FA98F"; g.beginPath(); g.arc(X(pts[0][1]), Y(pts[0][0]), 4, 0, 7); g.fill();
+  g.fillStyle = "#D08B6E"; g.beginPath(); g.arc(X(pts[pts.length - 1][1]), Y(pts[pts.length - 1][0]), 4, 0, 7); g.fill();
+}
+
+/* ================================ RENDER ================================ */
+function renderEndurance() {
+  const v = window.ENDUR.st().view || "dashboard";
+  if (v === "detail" && window.ENDUR.st().sel) return eRenderDetail(window.ENDUR.st().sel);
+  if (v === "activities") return eRenderList();
+  if (v === "athlete") return eRenderAthlete();
+  return eRenderDashboard();
+}
+function eHeader(title, sub) {
+  return `<div class="row" style="align-items:center;gap:10px;margin:2px 0 14px">
+    <div style="flex:1"><p class="display-m" style="margin:0">${esc(title)}</p>${sub ? `<p class="xs t2" style="margin-top:2px">${esc(sub)}</p>` : ""}</div>
+    <button class="iconbtn" onclick="ENDUR.pick()" aria-label="Aktivität importieren" style="background:var(--hl);color:#0A0C0F;min-width:40px;min-height:40px;border-radius:12px">${icon("push", 18)}</button>
+  </div>`;
+}
+function eTabs(active) {
+  const tabs = [["dashboard", "chart", "Übersicht"], ["activities", "calendar", "Aktivitäten"], ["athlete", "settings", "Athlet"]];
+  return `<div class="row mb16" style="gap:6px">${tabs.map(([id, ic, l]) => `<button class="btn ${active === id ? "volt" : ""}" style="flex:1;min-height:40px;font-size:13px;gap:6px" onclick="ENDUR.nav('${id}')">${icon(ic, 15)} ${l}</button>`).join("")}</div>`;
+}
+function eTile(label, value, sub, accent) {
+  return `<div class="card" style="padding:14px 16px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em">${label}</p>
+    <p class="metric" style="font-size:26px;line-height:1.1;margin-top:3px;${accent ? "color:" + accent : ""}">${value}</p>${sub ? `<p class="xs t2" style="margin-top:2px">${sub}</p>` : ""}</div>`;
+}
+function eRenderDashboard() {
+  const acts = window.ENDUR.activities(); const ath = window.ENDUR.athlete();
+  const series = window.ENDUR.pmcSeries(); const last = series.length ? series[series.length - 1] : { ctl: 0, atl: 0, tsb: 0 };
+  const now = Date.now(), wk = acts.filter(a => a.start > now - 7 * 864e5);
+  const wkHours = wk.reduce((s, a) => s + a.dur, 0) / 3600, wkDist = wk.reduce((s, a) => s + a.dist, 0), wkTss = wk.reduce((s, a) => s + (a.tss || 0), 0), wkElev = wk.reduce((s, a) => s + a.elev, 0);
+  const form = last.tsb, formLabel = form > 5 ? "frisch" : form > -10 ? "neutral" : form > -30 ? "produktiv" : "überlastet";
+  const formColor = form > 5 ? "#7FA98F" : form > -30 ? "#8FB8DC" : "#D08B6E";
+  root.innerHTML = eHeader("Ausdauer", "Cycling & Running · lokal analysiert") + eTabs("dashboard")
+    + (acts.length === 0 ? `<div class="card" style="padding:28px 20px;text-align:center">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">${icon("push", 30)}</div>
+        <p class="display-m" style="font-size:19px;margin-bottom:6px">Erste Aktivität importieren</p>
+        <p class="sm t2" style="max-width:300px;margin:0 auto 16px;line-height:1.55">Lade eine <b>GPX</b>-Datei (Export aus Strava, Garmin, Komoot, Wahoo …). Die Engine berechnet NP, IF, TSS, Power-Kurve, Zonen und mehr — komplett auf deinem Gerät.</p>
+        <button class="btn volt" style="max-width:280px;margin:0 auto" onclick="ENDUR.pick()">${icon("push", 16)} GPX-Datei wählen</button></div>`
+      : `<div class="card" style="padding:18px 18px 6px;margin-bottom:12px">
+          <p class="xs t2" style="text-transform:uppercase;letter-spacing:.08em;color:var(--hl)">Form · Fitness · Ermüdung</p>
+          <div class="row" style="align-items:flex-end;margin-top:8px">
+            <div style="flex:1"><p class="hero-num" style="font-size:40px;line-height:1;color:${formColor}">${form > 0 ? "+" : ""}${Math.round(form)}</p><p class="xs t2" style="margin-top:2px">Form (TSB) · ${formLabel}</p></div>
+            <div style="text-align:right"><p class="metric" style="font-size:20px">${Math.round(last.ctl)}</p><p class="xs t2">Fitness (CTL)</p></div>
+            <div style="text-align:right;margin-left:16px"><p class="metric" style="font-size:20px">${Math.round(last.atl)}</p><p class="xs t2">Ermüdung (ATL)</p></div>
+          </div>
+          <canvas id="e-pmc" style="width:100%;height:96px;margin-top:12px;display:block"></canvas></div>
+        <div class="grid2" style="gap:10px;margin-bottom:12px">
+          ${eTile("Woche · Zeit", (wkHours >= 1 ? wkHours.toFixed(1) + " h" : Math.round(wkHours * 60) + " min"), wk.length + (wk.length === 1 ? " Aktivität" : " Aktivitäten"))}
+          ${eTile("Woche · Distanz", eFmtDist(wkDist), wkElev + " hm")}
+          ${eTile("Woche · TSS", Math.round(wkTss), "Trainingslast")}
+          ${eTile("FTP", ath.cycling.ftp + " W", (ath.cycling.ftp / (ath.weight || 75)).toFixed(2) + " W/kg")}
+        </div>
+        <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 8px">Letzte Aktivitäten</p>
+        ${acts.slice(0, 6).map(eActRow).join("")}`);
+  if (acts.length) { const s = window.ENDUR.pmcSeries(); eDrawSpark(document.getElementById("e-pmc"), s.map(x => x.ctl), "#8FB8DC", true); }
+}
+function eActRow(a) {
+  const sp = SPORTS[a.sport] || SPORTS.cycling;
+  const main = a.sport === "cycling" && a.hasPower ? (a.np + " W NP") : (a.sport === "running" ? eFmtPace(a.avgSpeed) : eFmtSpeed(a.avgSpeed));
+  return `<button class="card" onclick="ENDUR.nav('detail','${a.id}')" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;cursor:pointer">
+    <span style="width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon(sp.icon, 18)}</span>
+    <div style="flex:1;min-width:0"><p style="font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name || sp.label)}</p>
+      <p class="xs t2">${new Date(a.start).toLocaleDateString("de-DE", { day: "2-digit", month: "short" })} · ${eFmtDur(a.dur)} · ${eFmtDist(a.dist)}</p></div>
+    <div style="text-align:right"><p class="metric" style="font-size:14px">${main}</p><p class="xs t2">${a.tss ? a.tss + " TSS" : ""}</p></div>
+  </button>`;
+}
+function eRenderList() {
+  const acts = window.ENDUR.activities();
+  root.innerHTML = eHeader("Aktivitäten", acts.length + " gesamt") + eTabs("activities")
+    + (acts.length ? acts.map(eActRow).join("") : `<p class="sm t2" style="text-align:center;padding:30px">Noch keine Aktivitäten. Tippe oben rechts auf Import.</p>`);
+}
+function eRenderDetail(id) {
+  const a = (window.ENDUR.st().activities || []).find(x => x.id === id);
+  if (!a) { window.ENDUR.nav("dashboard"); return; }
+  const sp = SPORTS[a.sport] || SPORTS.cycling; const ath = window.ENDUR.athlete();
+  root.innerHTML = `<div class="row" style="align-items:center;gap:8px;margin-bottom:14px">
+      <button class="iconbtn" onclick="ENDUR.nav('dashboard')" aria-label="Zurück" style="min-width:38px;min-height:38px">${icon("chevron", 18)}</button>
+      <div style="flex:1"><p class="display-m" style="margin:0;font-size:20px">${esc(a.name || sp.label)}</p>
+        <p class="xs t2">${new Date(a.start).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</p></div>
+      <button class="iconbtn" onclick="ENDUR.del('${a.id}')" aria-label="Löschen" style="min-width:38px;min-height:38px;color:var(--warn)">${icon("x", 17)}</button>
+    </div>
+    <canvas id="e-route" style="width:100%;height:180px;display:block;border-radius:14px;background:var(--s1);margin-bottom:12px"></canvas>
+    <div class="grid3" style="gap:8px;margin-bottom:10px">
+      ${eTile("Dauer", eFmtDur(a.dur))}${eTile("Distanz", eFmtDist(a.dist))}${eTile("Höhenmeter", a.elev + " hm")}
+    </div>
+    ${a.sport === "cycling" && a.hasPower ? `<div class="grid3" style="gap:8px;margin-bottom:10px">
+        ${eTile("Ø Leistung", a.avgP + " W")}${eTile("Norm. Power", a.np + " W", "NP")}${eTile("IF", a.if, "Intensität")}
+      </div>
+      <div class="grid3" style="gap:8px;margin-bottom:10px">
+        ${eTile("TSS", a.tss)}${eTile("VI", a.vi, "Gleichmäßigkeit")}${eTile("Arbeit", a.kj + " kJ")}
+      </div>` : `<div class="grid3" style="gap:8px;margin-bottom:10px">
+        ${eTile(a.sport === "running" ? "Ø Pace" : "Ø Tempo", a.sport === "running" ? eFmtPace(a.avgSpeed) : eFmtSpeed(a.avgSpeed))}${eTile("TSS", a.tss || "–")}${eTile("Kalorien", (a.kcal || 0) + " kcal")}
+      </div>`}
+    ${a.avgHr ? `<div class="grid3" style="gap:8px;margin-bottom:10px">${eTile("Ø Herzfrequenz", a.avgHr + " bpm")}${a.ef ? eTile("Eff.-Faktor", a.ef, "NP/HR") : ""}${a.decoup != null ? eTile("Entkopplung", a.decoup + " %", "Pw:Hr") : ""}</div>` : ""}
+    <div class="card" style="padding:16px;margin-bottom:10px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${a.sport === "cycling" && a.hasPower ? "Leistung" : (a.avgHr ? "Herzfrequenz" : "Höhenprofil")}</p>
+      <canvas id="e-curve" style="width:100%;height:100px;display:block"></canvas></div>
+    <div id="e-zones" class="card" style="padding:16px;margin-bottom:10px"></div>
+    <div id="e-insight"></div>`;
+  window.ENDUR.EDB.get(id).then(streams => {
+    if (!streams) return;
+    eDrawRoute(document.getElementById("e-route"), streams.lat, streams.lng);
+    const curveKey = a.sport === "cycling" && a.hasPower ? "power" : (a.avgHr ? "hr" : "alt");
+    const col = curveKey === "power" ? "#8FB8DC" : curveKey === "hr" ? "#D08B6E" : "#7FA98F";
+    eDrawSpark(document.getElementById("e-curve"), streams[curveKey], col, true);
+    // Zonenverteilung
+    let zones, series, unit;
+    if (a.sport === "cycling" && a.hasPower) { zones = window.ENDUR.eng.powerZones(ath.cycling.ftp); series = streams.power; unit = "W"; }
+    else if (a.avgHr) { zones = window.ENDUR.eng.hrZones(ath[a.sport].lthr); series = streams.hr; unit = "bpm"; }
+    if (zones && series) {
+      const tiz = window.ENDUR.eng.timeInZones(series, zones, curveKey); const tot = tiz.reduce((s, x) => s + x, 0) || 1;
+      const zc = ["#5E6FB4", "#7FA98F", "#8FB8DC", "#E0B341", "#E08A3C", "#D08B6E", "#C2557A"];
+      document.getElementById("e-zones").innerHTML = `<p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Zeit in Zonen</p>`
+        + zones.map((z, i) => { const pct = Math.round(tiz[i] / tot * 100); return `<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between;margin-bottom:3px"><span class="xs" style="font-weight:600">Z${z.z} · ${z.name}</span><span class="xs t2">${pct}% · ${eFmtDur(tiz[i])}</span></div><div style="height:7px;border-radius:4px;background:var(--s3);overflow:hidden"><div style="height:100%;width:${pct}%;background:${zc[i]};border-radius:4px"></div></div></div>`; }).join("");
+    } else { document.getElementById("e-zones").style.display = "none"; }
+    // Lokale, ehrliche Insight (KI-Coach folgt in Phase 3 über ai-proxy).
+    document.getElementById("e-insight").innerHTML = eInsight(a);
+  });
+}
+function eInsight(a) {
+  const bits = [];
+  if (a.sport === "cycling" && a.hasPower) {
+    if (a.vi >= 1.15) bits.push("Sehr <b>variable Leistung</b> (VI " + a.vi + ") — viele Antritte/Stopps. Für Ausdauer-Ziele gleichmäßiger fahren.");
+    else if (a.vi <= 1.05) bits.push("Sehr <b>gleichmäßige Leistung</b> (VI " + a.vi + ") — ideale Pacing-Disziplin für lange Einheiten.");
+    if (a.decoup != null && a.decoup > 5) bits.push("<b>Aerobe Entkopplung " + a.decoup + " %</b> — deine HF driftet in der 2. Hälfte hoch. Zeichen für noch fehlende Grundlagenausdauer oder Unterversorgung.");
+    else if (a.decoup != null && a.decoup >= -2 && a.decoup <= 5) bits.push("<b>Entkopplung " + a.decoup + " %</b> — stabile aerobe Effizienz über die gesamte Fahrt. Sehr gut.");
+    if (a.if >= 0.85) bits.push("Harte Einheit (IF " + a.if + "). Plane danach ausreichend Erholung ein.");
+  }
+  if (!bits.length) bits.push("Solide Einheit protokolliert. Mit mehr Aktivitäten werden die Auswertungen (Power-Kurve, FTP-Trend, Form) präziser.");
+  return `<div class="card" style="padding:16px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;color:var(--hl);margin-bottom:8px">${icon("zap", 13)} Auswertung</p>${bits.map(b => `<p class="sm" style="line-height:1.55;margin-bottom:8px">${b}</p>`).join("")}</div>`;
+}
+function eRenderAthlete() {
+  const a = window.ENDUR.athlete();
+  const pace = eFmtPaceSec(a.running.thrPace);
+  root.innerHTML = eHeader("Athlet-Profil", "Deine Schwellen steuern alle Zonen & Metriken") + eTabs("athlete")
+    + `<div class="card" style="padding:18px;margin-bottom:12px">
+        <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Allgemein</p>
+        <div class="field-row"><label class="sm">Körpergewicht (kg)</label><input type="number" id="ath-weight" value="${a.weight || ""}" inputmode="decimal"></div>
+      </div>
+      <div class="card" style="padding:18px;margin-bottom:12px">
+        <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">${icon("bike", 13)} Radfahren</p>
+        <div class="field-row"><label class="sm">FTP (W)</label><input type="number" id="ath-ftp" value="${a.cycling.ftp || ""}" inputmode="numeric"></div>
+        <div class="field-row"><label class="sm">Schwellen-HF / LTHR (bpm)</label><input type="number" id="ath-clthr" value="${a.cycling.lthr || ""}" inputmode="numeric"></div>
+        <div class="field-row"><label class="sm">Max. HF (bpm)</label><input type="number" id="ath-cmax" value="${a.cycling.maxHr || ""}" inputmode="numeric"></div>
+        <div class="field-row"><label class="sm">Ruhe-HF (bpm)</label><input type="number" id="ath-crest" value="${a.cycling.restHr || ""}" inputmode="numeric"></div>
+        <div class="field-row"><label class="sm">VO₂max (optional)</label><input type="number" id="ath-cvo2" value="${a.cycling.vo2 || ""}" inputmode="decimal"></div>
+      </div>
+      <div class="card" style="padding:18px;margin-bottom:12px">
+        <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">${icon("activity", 13)} Laufen</p>
+        <div class="field-row"><label class="sm">Schwellen-Pace (mm:ss /km)</label><input type="text" id="ath-rpace" value="${pace}" placeholder="5:00"></div>
+        <div class="field-row"><label class="sm">Schwellen-HF / LTHR (bpm)</label><input type="number" id="ath-rlthr" value="${a.running.lthr || ""}" inputmode="numeric"></div>
+        <div class="field-row"><label class="sm">Max. HF (bpm)</label><input type="number" id="ath-rmax" value="${a.running.maxHr || ""}" inputmode="numeric"></div>
+      </div>
+      <button class="btn volt" onclick="ENDUR.saveAthlete()">Profil speichern</button>
+      ${window.ENDUR.st().ftpHistory && window.ENDUR.st().ftpHistory.length ? `<div class="card" style="padding:16px;margin-top:12px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">FTP-Schätzungen (aus Fahrten)</p>${window.ENDUR.st().ftpHistory.slice(-5).reverse().map(f => `<div class="row" style="justify-content:space-between;padding:4px 0"><span class="sm">${new Date(f.date).toLocaleDateString("de-DE")}</span><span class="metric">${f.ftp} W</span><span class="xs t2">${f.method}</span></div>`).join("")}</div>` : ""}`;
+}
+
 
 // ---------- Engine ----------
 function mifflin(sex,age,h,w){ return Math.round(10*w+6.25*h-5*age+(sex==="male"?5:-161)); }
@@ -5112,7 +5486,7 @@ A.dismissBanner=(id)=>{ if(!S.dismissedBanners.includes(id))S.dismissedBanners.p
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
-const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",features:"So funktioniert's"};
+const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",endurance:"Ausdauer",features:"So funktioniert's"};
 let menuOpen=false;
 
 // Lebendiges KI-Feld als persistente Ebene hinter der ganzen App (kein Neustart pro Render).
@@ -5239,6 +5613,7 @@ function renderAppbar(){
     </button>
     <div class="menu-divider"></div>
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr aus deinen Zahlen holen":"Abo & Stufe verwalten","A.menuGo('pricing')")}
+    ${item("bike","Ausdauer — Cycling & Running","Fahrten & Läufe importieren, Power/Zonen/Form analysieren","A.menuGo('endurance')")}
     ${item("sparkle","Alle Funktionen entdecken","Was die App alles kann — auf einen Blick","A.menuGo('features')")}
     ${item("play","Tour wiederholen","Geführte Durchführung der Funktionen","A.replayTour()")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
@@ -5393,6 +5768,7 @@ function renderApp(){
   else if(S.tab==="profile") renderProfile();
   else if(S.tab==="pricing") renderPricing();
   else if(S.tab==="features") renderFeatureOverview();
+  else if(S.tab==="endurance") renderEndurance();
   else renderHome();
 }
 

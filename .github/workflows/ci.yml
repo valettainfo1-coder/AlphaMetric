@@ -35,3 +35,6 @@ jobs:
 
       - name: DSGVO-Regression (Consent · Widerruf · Export · Löschung)
         run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/dsgvo-tests.mjs
+
+      - name: Ausdauer-Modul (Engine-Referenzwerte · GPX-Import)
+        run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/endurance-tests.mjs

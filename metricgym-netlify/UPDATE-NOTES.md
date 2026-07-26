@@ -451,6 +451,25 @@ ersetzt), Ausrufezeichen, Sprüche wie „willkommen im Inner Circle" und
 Übungsnamen (Hammer-Curls), „Cool-down", Social-Share-Captions (💪) und
 Code-Kommentare wurden bewusst NICHT angefasst — dort ist es korrekt.
 
+### 30. NEU: Ausdauer-Modul (Cycling & Running) — Phase 1
+Der Start eines Ausdauer-Ökosystems auf intervals.icu-Niveau — **sport-agnostisch**
+(Rad + Laufen ab Tag 1), **lokal-first** (IndexedDB), **additiv** (kein Gym-Flow
+berührt). Erreichbar über das Menü → „Ausdauer — Cycling & Running".
+- **Wissenschaftliche Engine (18 CI-Tests):** NP, IF, TSS, VI, EF, aerobe
+  Entkopplung, Power-Curve/MMP, Critical Power & W′, FTP-Schätzung, PMC
+  (CTL/ATL/TSB = Fitness/Ermüdung/Form), Coggan-Power-Zonen, Friel-HF-Zonen.
+- **GPX-Import** (Export aus Strava/Garmin/Wahoo/Komoot) → volle Analyse, komplett
+  auf dem Gerät. TCX/FIT folgen.
+- **UI:** Dashboard (Form/Fitness/Ermüdung, Wochen-Volumen, FTP W/kg),
+  Aktivitäts-Detail (Offline-Route-Karte, NP/IF/TSS/VI/EF, Zeit-in-Zonen,
+  Verlaufskurve, ehrliche Auswertung), Athlet-Profil je Sport.
+- Architektur, Entscheidungen und der volle Phasenplan (TCX/FIT, Workout-Builder,
+  adaptive Pläne, Cycling-Nutrition, KI-Coach, Native/Live-Sensoren, Social):
+  siehe `ENDURANCE-ROADMAP.md`.
+- **Wichtiger Fix nebenbei:** ein Boot-Reihenfolge-Fehler (Zugriff auf `S` in der
+  Temporal Dead Zone) wurde vermieden — die App bootet sauber, Lazy-Init in
+  `ENDUR.st()`.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
 Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch
