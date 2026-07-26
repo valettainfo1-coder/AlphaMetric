@@ -2170,7 +2170,7 @@ function eRenderDashboard() {
             <div style="text-align:right"><p class="metric" style="font-size:20px">${Math.round(last.ctl)}</p><p class="xs t2">Fitness (CTL)</p></div>
             <div style="text-align:right;margin-left:16px"><p class="metric" style="font-size:20px">${Math.round(last.atl)}</p><p class="xs t2">Ermüdung (ATL)</p></div>
           </div>
-          <canvas id="e-pmc" style="width:100%;height:96px;margin-top:12px;display:block"></canvas></div>
+          ${series.length >= 2 ? `<canvas id="e-pmc" style="width:100%;height:96px;margin-top:12px;display:block"></canvas>` : `<p class="xs t2" style="margin-top:10px">Fitness-Kurve erscheint ab der zweiten Trainingswoche.</p>`}</div>
         <div class="grid2" style="gap:10px;margin-bottom:12px">
           ${eTile("Woche · Zeit", (wkHours >= 1 ? wkHours.toFixed(1) + " h" : Math.round(wkHours * 60) + " min"), wk.length + (wk.length === 1 ? " Aktivität" : " Aktivitäten"))}
           ${eTile("Woche · Distanz", eFmtDist(wkDist), wkElev + " hm")}
@@ -2179,7 +2179,7 @@ function eRenderDashboard() {
         </div>
         <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 8px">Letzte Aktivitäten</p>
         ${acts.slice(0, 6).map(eActRow).join("")}`);
-  if (acts.length) { const s = window.ENDUR.pmcSeries(); eDrawSpark(document.getElementById("e-pmc"), s.map(x => x.ctl), "#8FB8DC", true); }
+  if (series.length >= 2) { eDrawSpark(document.getElementById("e-pmc"), series.map(x => x.ctl), "#8FB8DC", true); }
 }
 function eActRow(a) {
   const sp = SPORTS[a.sport] || SPORTS.cycling;
