@@ -407,6 +407,26 @@ Stand: Juli 2026 · Basis: metricgymUNIVERSUM_3
 - Service-Worker-Cache auf **v16** (zxing aus der SHELL-Precache-Liste
   entfernt).
 
+### 28. Preis-Entscheidung: Premium-Anker (Pro 9,99 · Elite 19,99)
+- Der Code widersprach sich: Die Preis-*Logik* (Header-Doku + Kommentare)
+  war auf **9,99 € Premium-Anker** ausgelegt, die *Konstante* war aber auf
+  eine 4,99-„Penetration" heruntergezogen. Aufgelöst zugunsten Premium.
+- **Neue Preise** (eine Quelle: `TIER_PRICE`, alle Labels/Tagespreise/
+  Jahres-Rabatte/Referral-Auszahlungen leiten sich automatisch ab):
+  **Pro 9,99 €/Monat · 79,99 €/Jahr**, **Elite 19,99 €/Monat · 159,99 €/Jahr**
+  (Jahr ≈ −33 %, kommuniziert als „Spare 40 € / 80 €", „4 Monate geschenkt").
+- **Warum tiefenpsychologisch:** Der Preis *beweist* die Positionierung
+  „Beweis statt Bauchgefühl" — ein 4,99-Tag sortiert METRICGYM als „noch ein
+  Tracker" (Hevy/Strong-Segment) ein, obwohl es die *denkende* App ist
+  (Kategorie-WTP 10–13 €: Fitbod, Dr. Muscle, Whoop/Oura). Der Tages-Reframe
+  (≈ 0,33 €/Tag) macht 9,99 trivial; Elite = 2× als Goldilocks-Anker, der Pro
+  „vernünftig" wirken lässt. Rabatte kann man später geben — Preise erhöhen
+  kaum. Höhere Marge finanziert außerdem die (echten) KI-Kosten pro Nutzer +
+  Werbe-Budget (CAC).
+- SUPABASE_SETUP §10 auf die neuen Stripe-Preispunkte angeglichen — die
+  anzulegenden Stripe-Prices müssen **exakt** diesen Beträgen entsprechen.
+  [BETREIBER: 4 Stripe-Prices in Höhe 9,99/79,99/19,99/159,99 anlegen]
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
 Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch

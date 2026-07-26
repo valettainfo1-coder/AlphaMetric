@@ -2502,8 +2502,13 @@ function ensureCompTier(){
    Anker: Pro = 9,99 — Premium-Fitness-Apps (Whoop/Oura-Segment) stützen den
    Preis, die Adaptation Engine differenziert. Vor Launch per A/B-Test
    (Van Westendorp) feinjustieren; Demo: kein echtes Payment. */
-// D4: Launch-Preise — PRO als Anker bei 4,99/Monat bzw. 39,99/Jahr (≈ −33 %).
-const TIER_PRICE={free:{monthly:0,yearly:0},pro:{monthly:4.99,yearly:39.99},elite:{monthly:9.99,yearly:79.99}};
+// Launch-Preise (tiefenpsychologische Entscheidung): Premium-Anker statt
+// Penetration. Der Preis BEWEIST die Positionierung „Beweis statt Bauchgefühl" —
+// ein 4,99-Tag würde METRICGYM als „noch ein Tracker" einsortieren, obwohl es
+// die denkende App ist (Kategorie-WTP 10–13 €: Fitbod/Dr. Muscle/Whoop-Oura).
+// Pro 9,99 ≈ 0,33 €/Tag (Tages-Reframe macht den Preis trivial), Elite = 2× als
+// Goldilocks-Anker. Rabatte lassen sich später geben, Preise nur schwer erhöhen.
+const TIER_PRICE={free:{monthly:0,yearly:0},pro:{monthly:9.99,yearly:79.99},elite:{monthly:19.99,yearly:159.99}};
 const eurFmt=new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtEUR=(v)=>v===0?"€0":"€"+eurFmt.format(v);
 const tierPriceLabel=(t,billing)=>{

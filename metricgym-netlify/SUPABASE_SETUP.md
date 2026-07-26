@@ -265,7 +265,7 @@ vorbereitet, braucht aber einen Test gegen das echte Projekt:
 ## 10. Stripe anschließen (D4) [BETREIBER]
 
 1. **Produkte/Preise** im Stripe-Dashboard anlegen:
-   PRO 4,99 €/Monat + 39,99 €/Jahr, ELITE 9,99 €/Monat + 79,99 €/Jahr
+   PRO 9,99 €/Monat + 79,99 €/Jahr, ELITE 19,99 €/Monat + 159,99 €/Jahr
    (wiederkehrend, Steuer nach Bedarf). Die vier `price_...`-IDs notieren.
 2. **Functions deployen & Secrets setzen**:
    ```bash
