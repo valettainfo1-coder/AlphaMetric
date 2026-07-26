@@ -155,6 +155,31 @@ check('Zahnrad: Ausdauer-Last ist ebenfalls im selben Tag', hub.endurToday > 0, 
 check('Unified-PMC: Fitness reflektiert Gym+Ausdauer (CTL>0)', hub.ctlLast > 0, hub.ctlLast);
 check('Zahnrad: eine Gewichtsquelle (letzter weightLog = 72.5)', hub.bw === 72.5, hub.bw);
 
+// ---------- Energie-Naht: Ausdauer-kcal fürs Kalorienziel ----------
+const energy = await page.evaluate(() => {
+  const tk = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  const dk = (ms) => { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const acts = window.ENDUR.st().activities || [];
+  const expected = acts.filter(a => dk(a.start) === tk).reduce((s, a) => s + (a.kcal || 0), 0);
+  return { burn: window.ENDUR.burnForDay(tk), expected };
+});
+check('Energie-Naht: burnForDay = Summe heutiger Ausdauer-kcal (>0)', energy.burn === energy.expected && energy.burn > 0, energy);
+
+// ---------- Readiness-Naht: Gesamt-Last (Kraft+Ausdauer) senkt die Bereitschaft ----------
+const rdy = await page.evaluate(() => {
+  const tk = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  S.checkin = { score: 80 }; S.checkinDate = tk;
+  S.trainingHistory = []; window.ENDUR.st().activities = [];
+  const r0 = readinessToday();
+  const dk = (o) => { const d = new Date(Date.now() - o * 864e5); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  S.trainingHistory = [0, 1, 2, 3, 4].map(o => ({ date: dk(o), type: 'push', sets: 26, volume: 9000, avgRpe: 9 }));
+  const r1 = readinessToday();
+  return { base: r0 ? r0.score : null, loaded: r1 ? r1.score : null, parts: r1 ? r1.parts : [] };
+});
+check('Readiness-Naht: Basis-Score aus Status-Check', rdy.base >= 70, rdy.base);
+check('Readiness-Naht: hohe Gesamt-Last senkt die Bereitschaft', rdy.loaded != null && rdy.loaded < rdy.base, { base: rdy.base, loaded: rdy.loaded });
+check('Readiness-Naht: Trainingslast als Grund ausgewiesen', rdy.parts.some(x => /Trainingslast/.test(x)), rdy.parts);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();

@@ -484,6 +484,19 @@ Damit Kraft und Ausdauer *ein* System sind statt zwei nebeneinander:
   und wird im Dashboard angezeigt (tiefe Einrechnung ins Makro-Ziel folgt).
 - 6 zusätzliche CI-Tests (jetzt 28 Ausdauer-Tests grün).
 
+### 32. Zahnräder perfekt ineinandergreifend (bidirektional)
+Die zwei letzten Nähte zwischen Gym und Ausdauer geschlossen:
+- **Energie:** Rad-/Lauf-Kalorien heben **echt** dein Kalorien-Tagesziel
+  (Eat-back über den vorhandenen Wearable-Pfad; das Wearable hat Vorrang, also
+  nie doppelt gezählt). Auf der Ernährungsseite sichtbar erklärt
+  („An deine Ausdauer angepasst: X kcal aus Rad/Lauf heute").
+- **Readiness:** Deine Bereitschaft berücksichtigt jetzt die **Gesamt-Trainings-
+  last** (Kraft + Ausdauer über die Unified-PMC) — ein harter Ride senkt die
+  Kraft-Bereitschaft und umgekehrt, mit ausgewiesenem Grund. Im Ausdauer-
+  Dashboard sichtbar.
+- +3 CI-Tests (31 Ausdauer-Tests grün); Gym-Kalorien- und Readiness-Engine
+  angefasst, App- & DSGVO-Suite bleiben grün.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
 Version aktuell **v16** — Nutzer bekommen Updates beim nächsten Besuch

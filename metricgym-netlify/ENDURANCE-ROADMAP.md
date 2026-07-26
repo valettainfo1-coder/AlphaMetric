@@ -48,9 +48,15 @@ Damit es *ein* Produkt ist statt zweier Systeme:
   zeigt „gesamt" + die Wochen-Aufteilung Ausdauer/Kraft.
 - **Eine Gewichtsquelle:** die Ausdauer liest den Gym-`weightLog` (letzter
   gemessener Wert) → FTP-W/kg kann nie auseinanderlaufen.
-- **Energie:** Ausdauer-kcal je Tag stehen für die Kalorienbilanz bereit
-  (`burnForDay`/`todayBurn`), im Dashboard sichtbar; die tiefe Einrechnung in
-  das Makro-Ziel folgt als vorsichtiger nächster Schritt.
+- **Energie (bidirektional):** Rad-/Lauf-kcal fließen **echt** ins Kalorien-
+  Tagesziel (Eat-back über den vorhandenen Wearable-Pfad — Wearable hat Vorrang,
+  kein Doppelzählen). Auf der Ernährungsseite sichtbar („An deine Ausdauer
+  angepasst: X kcal"), auf der Ausdauerseite als „Heute X kcal".
+- **Readiness (bidirektional):** Die Bereitschaft (`readinessToday`) kennt jetzt
+  die **Gesamt-Trainingslast** (Unified-PMC-TSB): ein harter Ride senkt die
+  Kraft-Bereitschaft, ein harter Gym-Tag die Rad-Bereitschaft — mit
+  ausgewiesenem Grund. Ein Readiness-Wert, auf beiden Seiten sichtbar.
+  → Die Zahnräder greifen vollständig ineinander.
 
 ### ▢ Phase 2 — Planung
 - ✅ TCX + FIT Import (in Phase 1 vorgezogen — komplett).

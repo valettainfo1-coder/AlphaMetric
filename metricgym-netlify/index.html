@@ -2286,6 +2286,8 @@ function eRenderDashboard() {
   const _uld = window.ENDUR.unifiedDailyLoad(); const _from7 = Date.now() - 7 * 864e5;
   let wkEndur = 0, wkStr = 0; for (const k in _uld.br) { const ms = new Date(k + "T00:00:00").getTime(); if (!isNaN(ms) && ms >= _from7) { wkEndur += _uld.br[k].endur; wkStr += _uld.br[k].str; } }
   const _todayBurn = window.ENDUR.todayBurn();
+  const _r = (typeof readinessToday === "function") ? readinessToday() : null;
+  const _rc = _r ? (_r.tier === "Stark" ? "#7FA98F" : _r.tier === "Erholung" ? "#D08B6E" : _r.tier === "Mäßig" ? "#E0A341" : "#8FB8DC") : "";
   const now = Date.now(), wk = acts.filter(a => a.start > now - 7 * 864e5);
   const wkHours = wk.reduce((s, a) => s + a.dur, 0) / 3600, wkDist = wk.reduce((s, a) => s + a.dist, 0), wkTss = wk.reduce((s, a) => s + (a.tss || 0), 0), wkElev = wk.reduce((s, a) => s + a.elev, 0);
   const form = last.tsb, formLabel = form > 5 ? "frisch" : form > -10 ? "neutral" : form > -30 ? "produktiv" : "überlastet";
@@ -2306,7 +2308,7 @@ function eRenderDashboard() {
           ${series.length >= 2 ? `<canvas id="e-pmc" style="width:100%;height:96px;margin-top:12px;display:block"></canvas>` : `<p class="xs t2" style="margin-top:10px">Fitness-Kurve erscheint ab der zweiten Trainingswoche.</p>`}
           <div class="row" style="justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline)">
             <span class="xs t2">Woche · Last: <b style="color:var(--hl)">${Math.round(wkEndur)}</b> Ausdauer · <b style="color:var(--t1)">${Math.round(wkStr)}</b> Kraft</span>
-            ${_todayBurn > 0 ? `<span class="xs t2" style="white-space:nowrap">Heute ${_todayBurn} kcal</span>` : ""}
+            ${_r ? `<span class="xs" style="font-weight:700;color:${_rc};white-space:nowrap" title="Bereitschaft aus HRV/Ruhepuls + Gesamt-Trainingslast">Bereitschaft ${_r.score}</span>` : (_todayBurn > 0 ? `<span class="xs t2" style="white-space:nowrap">Heute ${_todayBurn} kcal</span>` : "")}
           </div></div>
         <div class="grid2" style="gap:10px;margin-bottom:12px">
           ${eTile("Woche · Zeit", (wkHours >= 1 ? wkHours.toFixed(1) + " h" : Math.round(wkHours * 60) + " min"), wk.length + (wk.length === 1 ? " Aktivität" : " Aktivitäten"))}
@@ -2684,6 +2686,10 @@ function readinessToday(){
   if(hb&&hv!=null){ const d=(hv-hb)/hb; obj+=Math.max(-25,Math.min(15,d*100)); objHas=true; if(d<=-0.10)parts.push("HRV unter deinem Normal"); }
   if(rb&&rv!=null){ const d=(rv-rb)/rb; obj-=Math.max(-15,Math.min(25,d*100)); objHas=true; if(d>=0.07)parts.push("Ruhepuls erhöht"); }
   if(score==null && !objHas) return null;
+  // Trainingslast (Gym + Ausdauer) über die Unified-PMC moduliert die Bereitschaft:
+  // negative Form (TSB) = hohe akute Last → senkt den Score; frisch → leichter Bonus.
+  // So zieht ein harter Ride die Kraft-Bereitschaft und ein harter Gym-Tag die Rad-Bereitschaft.
+  try{ if(window.ENDUR){ const _pmc=window.ENDUR.unifiedPMC(); if(_pmc&&_pmc.length){ const _tsb=_pmc[_pmc.length-1].tsb; obj+=Math.max(-18,Math.min(6,_tsb*0.6)); if(_tsb<=-20)parts.push("hohe Trainingslast (Kraft + Ausdauer)"); } } }catch(e){}
   if(score==null) score=65; // nur objektive Daten → neutraler Ausgangswert
   const s=Math.max(0,Math.min(100,Math.round(score + obj*0.5)));
   const tier=s>=78?"Stark":s>=58?"Gut":s>=40?"Mäßig":"Erholung";
@@ -11527,7 +11533,13 @@ function renderNutrition(){
   // Wearable: liegt für heute ein echter Aktiv-Verbrauch vor, ersetzt er die Schätzung
   // -> Tagesziel = Ruhetag-Basis + tatsächlich verbrannte Aktiv-Kalorien (echtes TDEE).
   const wearKcal=S.wearActive[todayKey()];
-  if(wearKcal!=null){ const adj=Math.round(p.tg.rest.kcal+wearKcal); tg=Object.assign({},p.tg.rest,{kcal:adj,c:Math.max(0,Math.round((adj-p.tg.rest.p*4-p.tg.rest.f*9)/4))}); }
+  // Aktiv-Verbrauch fürs Tagesziel (Eat-back): das Wearable enthält bereits ALLES und hat
+  // Vorrang; ohne Wearable speisen die heutigen Ausdauer-Aktivitäten (Rad/Lauf) den Verbrauch —
+  // so wird nie doppelt gezählt und ein Ride hebt automatisch dein Kalorienziel.
+  const _enduBurn=(window.ENDUR&&window.ENDUR.burnForDay)?window.ENDUR.burnForDay(todayKey()):0;
+  const _activeKcal = wearKcal!=null ? wearKcal : (_enduBurn>0 ? _enduBurn : null);
+  if(_activeKcal!=null){ const adj=Math.round(p.tg.rest.kcal+_activeKcal); tg=Object.assign({},p.tg.rest,{kcal:adj,c:Math.max(0,Math.round((adj-p.tg.rest.p*4-p.tg.rest.f*9)/4))}); tg._eatback=Math.round(_activeKcal); tg._eatSrc=wearKcal!=null?"wear":"endur"; try{window.__eatback={kcal:tg._eatback,src:tg._eatSrc,day:todayKey()};}catch(e){} }
+  else { try{window.__eatback=null;}catch(e){} }
   const log=nlogToday();
   const sum=log.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p,c:s.c+m.c,f:s.f+m.f}),{k:0,p:0,c:0,f:0});
   A.dt=(t)=>{dayType=t;renderNutrition();};
@@ -11850,6 +11862,8 @@ function renderNutrition(){
       ${energyBudget(sum,tg)}
       <p class="xs t2" style="text-align:center;line-height:1.5;margin-top:4px">${wearKcal!=null
         ? `${icon("activity",12)} <b style="color:var(--hl)">An dein Wearable angepasst:</b> ${nfi.format(wearKcal)} kcal aktiv heute → Tagesziel = Ruhebedarf + echter Verbrauch.`
+        : _enduBurn>0
+        ? `${icon("bike",12)} <b style="color:var(--hl)">An deine Ausdauer angepasst:</b> ${nfi.format(_enduBurn)} kcal aus Rad/Lauf heute → Tagesziel = Ruhebedarf + Trainingsverbrauch.`
         : dayType==="train"
         ? `Trainingstag-Ziel — enthält die Kalorien, die du in der Einheit verbrennst (≈ ${nfi.format(Math.max(0,p.tg.train.kcal-p.tg.rest.kcal))} kcal mehr als am Ruhetag). <b style="color:var(--t1)">Trainierst du nicht oder lässt das Cardio aus, nimm das Ruhetag-Ziel.</b>`
         : `Ruhetag-Ziel — die Basis ohne Trainingsverbrauch. An Trainingstagen darfst du entsprechend mehr essen.`}</p>
