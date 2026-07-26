@@ -11851,10 +11851,8 @@ function renderNutrition(){
     if(f&&!favChips.some(x=>x.row[0]===n))favChips.push({key:"f:"+n,row:f}); });
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
-    ${(()=>{ const tg=S.profile?(S.profile.tg[dayType]||S.profile.tg.train):null;
-      const lg=S.nutritionLog[todayKey()]; const sm=((lg&&lg.meals)||[]).reduce((x,m)=>({k:x.k+(m.k||0),p:x.p+(m.p||0)}),{k:0,p:0});
-      return tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Sag, was du gegessen hast — die Engine macht Zahlen daraus.",
-        [[nfi.format(sm.k),"kcal heute"],[tg?nfi.format(tg.kcal):"—","Tagesziel"],[nfi.format(sm.p)+"<em> g</em>","Protein"]]); })()}
+    ${tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Sag, was du gegessen hast — die Engine macht Zahlen daraus.",
+        [[nfi.format(sum.k),"kcal heute"],[tg?nfi.format(tg.kcal):"—","Tagesziel"],[nfi.format(sum.p)+"<em> g</em>","Protein"]])}
     <div class="card">
       <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
         <button class="btn ${dayType==="train"?"volt":"ghost"}" style="min-height:40px" onclick="A.dt('train')">Trainingstag</button>
