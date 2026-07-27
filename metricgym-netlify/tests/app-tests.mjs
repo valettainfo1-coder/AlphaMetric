@@ -143,6 +143,42 @@ check('Wunsch anwenden: Ziele + Defizit + Protein rechnen neu (Zahnräder)',
   JSON.stringify(wishApply));
 check('Wunsch anwenden: Ausdauer-Wunsch setzt ENDUR-Sport', wishApply.sport === 'cycling', wishApply.sport);
 
+// ---------- 8) KI-Coach: Experten-Analyse validiert STRIKT + ist XSS-sicher ----------
+const aiWish = await page.evaluate(async () => {
+  // gültige KI-Antwort → wird gemergt
+  window.aiJSON = async () => ({ goals: ['fat_loss', 'muscle_gain'], mode: 'loss', loss_rate: 'easy', focus: ['Bizeps', 'Core'], days: 4, split: 'ul', title: 'Recomp', rationale: 'Moderat + Protein schützt Muskeln.', coachNote: 'Geduld schlägt Hunger.' });
+  const g = await wishAnalyzeAI('abnehmen aber muskeln halten');
+  // böse KI-Antwort → strikt saniert
+  window.aiJSON = async () => ({ goals: ['hack', 'fat_loss', 'muscle_gain', 'strength', 'endurance'], mode: 'evil', loss_rate: 'instant', focus: ['DROP TABLE', 'Bizeps'], days: 99, split: 'x', rationale: 'y'.repeat(999) });
+  const e = await wishAnalyzeAI('stärker werden');
+  // KI wirft → lokaler Fallback in A.wishAnalyze (kein Crash)
+  window.aiActive = () => true; window.aiJSON = async () => { throw new Error('429'); };
+  S.tab = 'train'; render(); A.wishOpen();
+  const el = document.getElementById('wish-in'); el.value = 'muskeln aufbauen'; A.wishType(el);
+  let threw = false; try { await A.wishAnalyze(); } catch (x) { threw = true; }
+  // CSS macht "Verstanden" zu Großbuchstaben → case-insensitiv prüfen; kein .ai = lokaler Fallback
+  const fellBack = !!(document.getElementById('wish-out') && /verstanden|muskelaufbau/i.test(document.body.innerText) && _wishIntent && !_wishIntent.ai);
+  // XSS: bösartiger KI-Text darf nicht als HTML ausgeführt werden
+  window.aiJSON = async () => ({ goals: ['muscle_gain'], mode: 'gym', title: '<b id=xss1>x</b>', rationale: "<img src=x onerror='window.__pwn=1'>", coachNote: 'ok' });
+  el.value = 'muskeln aufbauen'; A.wishType(el); await A.wishAnalyze();
+  return {
+    goodOk: JSON.stringify(g.goals) === '["fat_loss","muscle_gain"]' && g.loss_rate === 'easy' && g.split === 'ul' && g.ai === true && !!g.aiRationale,
+    evilGoalsClean: g && e.goals.every(x => ['muscle_gain', 'fat_loss', 'strength', 'endurance', 'general', 'mobility'].includes(x)) && e.goals.length <= 3,
+    evilModeRejected: e.mode !== 'evil',
+    evilRateRejected: !e.loss_rate || ['easy', 'mod', 'fast'].includes(e.loss_rate),
+    evilFocusClean: JSON.stringify(e.focus) === '["Bizeps"]',
+    evilDaysClamped: e.days <= 6,
+    evilRatCapped: (e.aiRationale || '').length <= 420,
+    fellBack, threw,
+    xssSafe: !window.__pwn && !document.getElementById('xss1'),
+  };
+});
+check('KI-Coach: gültige Experten-Antwort wird gemergt (goals/split/rationale)', aiWish.goodOk, JSON.stringify(aiWish));
+check('KI-Coach: ungültige Werte werden STRIKT saniert (goals/mode/rate/focus/days)',
+  aiWish.evilGoalsClean && aiWish.evilModeRejected && aiWish.evilRateRejected && aiWish.evilFocusClean && aiWish.evilDaysClamped && aiWish.evilRatCapped, JSON.stringify(aiWish));
+check('KI-Coach: Ausfall fällt sauber auf lokale Analyse zurück (kein Crash)', aiWish.fellBack && !aiWish.threw);
+check('KI-Coach: bösartiger KI-Text wird escaped (kein HTML-Inject)', aiWish.xssSafe);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

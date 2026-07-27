@@ -565,9 +565,32 @@ Readiness greifen zusammen neu ineinander.
   erlaubten Werte validiert**, nie roh übernommen. Ohne KI funktioniert alles genauso.
 - Erreichbar über **Menü** („Sag, was du willst") und **Profil**. +6 CI-Tests.
 
+### 36. Wunsch-Fenster wird KI-gesteuert (Weltklasse-Sportwissenschaftler)
+Das Wunsch-Fenster ist jetzt **KI-first**: ist der KI-Coach aktiv, analysiert er den Freitext
+wie ein **evidenzbasierter Spitzen-Sportwissenschaftler** und konfiguriert die App.
+
+- **Experten-System-Prompt** bündelt reales Wissen (Israetel · Helms · Schoenfeld · Seiler ·
+  Coggan · Garthe · Concurrent-Training-Interferenz) und **rechnet mit deinem Profil**
+  (Körperfett, Gewicht, Erfahrung, Tage) → z. B. Cut-first vs. Lean-Gain je nach KF.
+- **Die KI klassifiziert & begründet, die geprüfte Engine rechnet die Zahlen.** Bewusst so:
+  das LLM erfindet **keine** Kalorien/Makros (die kämen sonst halluziniert) — es liefert nur
+  die Stellhebel + eine Experten-Begründung, die deterministische Engine macht die Mathematik.
+  Das ist vertrauenswürdiger *und* intelligenter zugleich.
+- **Reichere Steuerung:** die KI darf zusätzlich Trainingstage (2–6) und Split setzen, plus
+  liefert **Titel, Experten-Analyse und einen Coach-Satz**, die im „Verstanden"-Panel erscheinen.
+- **Strikt validiert & sicher:** jede KI-Ausgabe wird gegen erlaubte Werte gefiltert
+  (Müll/erfundene Ziele/Modi werden verworfen, Tage geclampt), und **jeglicher KI-Text wird
+  escaped** (kein HTML-/Script-Inject). Fällt die KI aus, greift **nahtlos die lokale
+  Sofort-Analyse** (offline) — kein Absturz, keine Sackgasse.
+- **Ehrliche UI:** Coach an → großer Button „Vom KI-Coach analysieren lassen" + Badge; Coach
+  aus → Hinweis, dass die Sofort-Analyse läuft und wie man den Coach aktiviert.
+- **Voraussetzung Betreiber:** die Edge Function `ai-proxy` ist bereits `useAiProxy:true`
+  konfiguriert; Nutzer aktivieren den KI-Coach im Menü (und sind für den Proxy angemeldet).
+- +4 CI-Tests (Merge gültiger Antwort · strikte Sanitisierung · Fallback · XSS-Schutz).
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v18** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v19** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

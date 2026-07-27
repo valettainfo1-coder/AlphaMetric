@@ -7153,7 +7153,60 @@ const WISH_FOCUS=["Brust","Latissimus","Rücken","Seitl. Schulter","Hintere Schu
 const WISH_GOALS=["muscle_gain","fat_loss","strength","endurance","general","mobility"];
 const WISH_MODES=["gym","loss","cycling","running","hybrid"];
 const WISH_EXAMPLES=["Abnehmen, aber Muskeln halten","Maximale Ausdauer auf dem Rad","Muskeln aufbauen & definiert aussehen","Schneller werden im Marathon","Einfach stärker werden"];
-let _wishIntent=null;
+const WISH_SPLITS=["auto","full","ul","ppl","arnold","bro"];
+let _wishIntent=null, _wishBusy=false;
+// Der „Weltklasse-Sportwissenschaftler" als System-Prompt: evidenzbasiertes Experten-Wissen,
+// aber die AUSGABE ist strikt strukturiert (die geprüfte Engine rechnet die Zahlen — die KI
+// erfindet keine Kalorien/Makros). So gibt es Experten-Logik ohne Halluzination.
+const WISH_AI_SYSTEM=`Du bist der weltbeste Sportwissenschaftler und Coach — evidenzbasiert auf PhD-Niveau, mit dem gebündelten Wissen aus Israetel (Volumen-Landmarks MEV/MRV), Helms (Protein & natürlicher Aufbau/Cut), Schoenfeld (mechanische Spannung, Frequenz 2×/Woche, lengthened partials), Seiler (polarisiert 80/20), Coggan/Allen (Power, TSS, Form), Garthe (Abnehm-Tempo), sowie Concurrent-Training-Interferenz (Wilson).
+Aufgabe: Lies den Ziel-Wunsch eines Nutzers (Deutsch) und übersetze ihn präzise in die strukturierten Stellhebel der App METRICGYM. Denke wie ein Spitzen-Coach: berücksichtige Zielkonflikte (Fett vs. Muskel gleichzeitig), realistisches Abnehm-Tempo zum Muskelschutz (~0,5–0,7 %/Woche), Spezifität, Frequenz, und den Ausdauer-Interferenz-Effekt. Wenn ein Körperfett-Wert im Profil steht, leite daraus ab, ob Cut-first oder Lean-Gain sinnvoller ist.
+Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, keine Prosa, keine Code-Fences. Erlaubte Felder & Werte:
+- goals: Array (1–3, erstes = wichtigstes) aus: muscle_gain, fat_loss, strength, endurance, general, mobility
+- mode: einer aus: gym, loss, cycling, running, hybrid
+- loss_rate: easy | mod | fast  (nur bei Fettabbau; easy schützt Muskeln maximal)
+- focus: Array aus: Brust, Latissimus, Rücken, Seitl. Schulter, Hintere Schulter, Bizeps, Trizeps, Quadrizeps, Beinbeuger, Gesäß, Waden, Core
+- days: ganze Zahl 2–6 (nur wenn der Nutzer eine Trainingshäufigkeit nennt oder impliziert)
+- split: auto | full | ul | ppl | arnold | bro  (im Zweifel auto)
+- endur_disc: cycling | running  (nur bei mode hybrid)
+- title: sehr kurzer Titel des verstandenen Ziels (Deutsch)
+- rationale: 1–2 Sätze WARUM diese Konfiguration, mit dem sportwissenschaftlichen Prinzip dahinter (Deutsch)
+- coachNote: EIN motivierender, konkreter Experten-Satz (Deutsch)
+Erfinde niemals Werte außerhalb dieser Listen und keine Kalorien-/Makrozahlen — die Engine rechnet die Zahlen. Für „aussehen wie [athletische Person/Rolle]" wähle Muskelaufbau + Fettabbau (lean, definiert) mit Fokus auf Schultern, Brust, Rückenbreite, Arme und Core.`;
+// goals/mode → Readout-Stil-Tag (für die KI-Ausgabe, die parseWish umgeht)
+function deriveWishTags(i){
+  const g=i.goals||[], m=i.mode;
+  if(m==="cycling"||m==="running") return ["endurance"];
+  if(g.includes("fat_loss")&&g.includes("muscle_gain")) return ["recomp_fat"];
+  if(g[0]==="fat_loss") return ["cut"];
+  if(g.includes("muscle_gain")&&i.focus&&i.focus.length>=3) return ["aesthetic"];
+  if(g[0]==="strength") return ["strength"];
+  if(g.includes("muscle_gain")) return ["gain"];
+  if(g.includes("endurance")) return ["endurance_generic"];
+  return [];
+}
+// KI-Analyse: Experten-Klassifikation über den Proxy, STRIKT gegen erlaubte Werte validiert,
+// über die lokale Sofort-Analyse gemergt. Wirft bei Fehler (Aufrufer fällt lokal zurück).
+async function wishAnalyzeAI(txt){
+  const base=parseWish(txt);
+  const a=(S.profile&&S.profile.a)||{};
+  const ctx=a.sex?`[Profil: ${a.sex==="female"?"weiblich":"männlich"}, ${a.age||"?"} J, ${a.weight||"?"} kg, ${a.height||"?"} cm${a.bodyFat!=null?", ~"+a.bodyFat+" % Körperfett":""}, Erfahrung ${a.exp||"?"}, aktuell ${a.days||"?"} Trainingstage/Woche]`:"";
+  const j=await aiJSON(WISH_AI_SYSTEM, (ctx?ctx+"\n":"")+"Wunsch: "+txt);
+  if(!j||(!Array.isArray(j.goals)&&!j.mode)) throw new Error("Keine verwertbare KI-Antwort");
+  const out=Object.assign({}, base, {ai:true, raw:txt});
+  if(Array.isArray(j.goals)){ const g=j.goals.filter(x=>WISH_GOALS.includes(x)); if(g.length)out.goals=g.slice(0,3); }
+  if(WISH_MODES.includes(j.mode)) out.mode=j.mode;
+  if(["easy","mod","fast"].includes(j.loss_rate)) out.loss_rate=j.loss_rate;
+  if(Array.isArray(j.focus)){ const f=[...new Set(j.focus.filter(x=>WISH_FOCUS.includes(x)))]; if(f.length)out.focus=f; }
+  if(Number.isFinite(j.days)) out.days=Math.max(2,Math.min(6,Math.round(j.days)));
+  if(WISH_SPLITS.includes(j.split)) out.split=j.split;
+  if(["cycling","running"].includes(j.endur_disc)) out.endur_disc=j.endur_disc;
+  if(typeof j.title==="string"&&j.title.trim()) out.aiTitle=j.title.trim().slice(0,90);
+  if(typeof j.rationale==="string"&&j.rationale.trim()) out.aiRationale=j.rationale.trim().slice(0,420);
+  if(typeof j.coachNote==="string"&&j.coachNote.trim()) out.aiCoachNote=j.coachNote.trim().slice(0,300);
+  out.matched=out.goals.length>0||out.mode!=null;
+  out.tags=deriveWishTags(out);
+  return out;
+}
 function parseWish(raw){
   const t=" "+String(raw||"").toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")+" ";
   // Wort-ANFANG-Treffer (\b) statt naiver Teilstring — sonst matcht z. B. „lauf" in
@@ -7248,38 +7301,79 @@ function wishReadout(intent){
 function wishReadoutHTML(intent){
   if(!intent||!intent.matched) return `<p class="xs t2" style="text-align:center;padding:12px;line-height:1.5">Tippe dein Ziel ein — Metric zeigt dir sofort, wie es Plan, Kalorien & Ausdauer anpasst.</p>`;
   const r=wishReadout(intent);
+  const title=intent.aiTitle||r.title;            // KI-Titel hat Vorrang, falls vorhanden
+  const aiBadge=intent.ai?`<span class="badge volt" style="font-size:8.5px;margin-left:6px;vertical-align:middle">${icon("brain",9)} KI-Coach</span>`:"";
+  const setup=[]; // KI kann zusätzlich Tage/Split setzen — transparent anzeigen
+  if(intent.ai&&intent.days) setup.push(intent.days+" Tage/Woche");
+  if(intent.ai&&intent.split&&intent.split!=="auto") setup.push({full:"Ganzkörper",ul:"Ober/Unter",ppl:"Push/Pull/Beine",arnold:"Arnold",bro:"Bro-Split"}[intent.split]);
+  // KI-Ausgabe ist untrusted → immer esc()
+  const aiBlock=intent.ai&&(intent.aiRationale||intent.aiCoachNote)?`
+    <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--hairline)">
+      ${intent.aiRationale?`<p class="sm t2" style="line-height:1.55;margin:0"><b style="color:var(--hl)">${icon("brain",12)} Experten-Analyse: </b>${esc(intent.aiRationale)}</p>`:""}
+      ${intent.aiCoachNote?`<p class="sm" style="line-height:1.5;margin:7px 0 0;color:var(--t1);border-left:2px solid var(--hl);padding-left:9px">${esc(intent.aiCoachNote)}</p>`:""}
+    </div>`:"";
   return `<div class="card" style="margin:0;text-align:left;border-color:rgba(169,196,222,.4);background:linear-gradient(160deg,rgba(143,184,220,.10),transparent)">
-    <p class="xs" style="color:var(--hl);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px">${icon("check",12)} Verstanden</p>
-    <p class="sm" style="font-weight:700;margin-bottom:2px">${esc(r.title)}</p>
-    <p class="xs t2" style="line-height:1.5;margin-bottom:8px">${r.lead}</p>
+    <p class="xs" style="color:var(--hl);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px">${icon("check",12)} Verstanden${aiBadge}</p>
+    <p class="sm" style="font-weight:700;margin-bottom:2px">${esc(title)}</p>
+    <p class="xs t2" style="line-height:1.5;margin-bottom:8px">${r.lead}${setup.length?` · <span style="color:var(--hl)">${esc(setup.join(" · "))}</span>`:""}</p>
     ${r.bullets.map(x=>`<div style="padding:7px 0;border-top:1px solid var(--hairline)">
       <p class="sm" style="font-weight:600;margin:0">${esc(x.h)}</p>
       <p class="xs t2" style="line-height:1.5;margin:1px 0 0">${x.b}</p>
       ${x.src?`<p class="xs" style="color:var(--hl);margin-top:2px">${icon("info",10)} ${esc(x.src)}</p>`:""}</div>`).join("")}
+    ${aiBlock}
   </div>`;
 }
 function renderWishSheet(){
+  const aiOn=(typeof aiActive==="function"&&aiActive());
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.wishClose()">
     <div class="sheet fade">
       <p class="display-m mb4" style="display:flex;align-items:center;gap:8px">${icon("message",18)} Sag Metric, was du willst</p>
-      <p class="xs t2 mb12" style="line-height:1.55">Beschreib dein Ziel in eigenen Worten — die App stellt <b style="color:var(--t1)">Kalorien, Makros, Trainingsplan, Ausdauer-Profil und Readiness</b> sofort darauf ein. Alle Zahnräder greifen ineinander.</p>
+      <p class="xs t2 mb12" style="line-height:1.55">Beschreib dein Ziel in eigenen Worten — die App stellt <b style="color:var(--t1)">Kalorien, Makros, Trainingsplan, Ausdauer-Profil und Readiness</b> sofort darauf ein. ${aiOn?`<b style="color:var(--hl)">Der KI-Coach denkt wie ein Sportwissenschaftler — die geprüfte Engine rechnet die Zahlen.</b>`:`Alle Zahnräder greifen ineinander.`}</p>
       <textarea id="wish-in" rows="3" placeholder="z. B. Abnehmen, aber Muskeln halten · Maximale Ausdauer auf dem Rad · Muskeln aufbauen und definiert aussehen" oninput="A.wishType(this)" style="width:100%;padding:12px 14px;border-radius:13px;background:var(--s2);border:1px solid var(--border);color:var(--t1);font-family:inherit;font-size:14.5px;line-height:1.5;resize:vertical;box-sizing:border-box"></textarea>
       <div class="chips" style="margin:10px 0 4px;gap:6px">${WISH_EXAMPLES.map((e,i)=>`<button class="chip" style="font-size:12px" onclick="A.wishEx(${i})">${esc(e)}</button>`).join("")}</div>
-      <div id="wish-out" style="margin-top:8px">${wishReadoutHTML(_wishIntent)}</div>
-      <button id="wish-ai" class="btn ghost mt8" style="display:none;min-height:40px;font-size:12.5px" onclick="A.wishRefine()">${icon("brain",14)} Mit KI noch genauer verstehen</button>
-      <button id="wish-apply" class="btn volt mt12" ${_wishIntent&&_wishIntent.matched?"":"disabled"} onclick="A.wishGo()">${icon("zap",15)} Übernehmen — App anpassen</button>
+      ${aiOn
+        ? `<button id="wish-ai" class="btn volt mt10" style="min-height:46px" onclick="A.wishAnalyze()">${icon("brain",16)} Vom KI-Coach analysieren lassen</button>`
+        : `<div class="card" style="margin:10px 0 0;padding:11px 13px;border-color:rgba(169,196,222,.3)"><p class="xs t2" style="line-height:1.5">${icon("brain",12)} <b style="color:var(--t1)">KI-Coach aus</b> — es läuft die Sofort-Analyse (lokal, offline). Für die volle Experten-Analyse den <b style="color:var(--t1)">KI-Coach im Menü aktivieren</b>.</p></div>`}
+      <div id="wish-out" style="margin-top:10px">${wishReadoutHTML(_wishIntent)}</div>
+      <button id="wish-apply" class="btn ${aiOn?"":"volt"} mt12" ${_wishIntent&&_wishIntent.matched?"":"disabled"} onclick="A.wishGo()">${icon("zap",15)} Übernehmen — App anpassen</button>
       <button class="btn mt8" onclick="A.wishClose()">Abbrechen</button>
     </div></div>`;
   const el=document.getElementById("wish-in"); if(el){ if(_wishIntent&&_wishIntent.raw)el.value=_wishIntent.raw; setTimeout(()=>el.focus(),50); }
 }
 A.wishOpen=()=>{ menuOpen=false; _wishIntent=null; if(!S.profile||!S.profile.a){ S.tab="profile"; save(); render(); toast("Schließe zuerst das Onboarding ab — dann kannst du frei umsteuern."); return; } renderWishSheet(); };
 A.wishClose=()=>{ overlay.innerHTML=""; render(); };
+// Sofort-Analyse (lokal, offline) — läuft beim Tippen. Editieren setzt die KI-Analyse zurück.
 A.wishType=(el)=>{ _wishIntent=parseWish(el.value);
   const out=document.getElementById("wish-out"); if(out)out.innerHTML=wishReadoutHTML(_wishIntent);
-  const b=document.getElementById("wish-apply"); if(b)b.disabled=!_wishIntent.matched;
-  const ai=document.getElementById("wish-ai"); if(ai)ai.style.display=(el.value.trim().length>4&&typeof aiActive==="function"&&aiActive())?"block":"none"; };
+  const b=document.getElementById("wish-apply"); if(b)b.disabled=!_wishIntent.matched; };
 A.wishEx=(i)=>{ const el=document.getElementById("wish-in"); if(!el)return; el.value=WISH_EXAMPLES[i]||""; el.focus(); A.wishType(el); };
-A.wishGo=()=>{ if(_wishIntent&&_wishIntent.matched) A.wishApply(_wishIntent); };
+// KI-Coach analysiert wie ein Weltklasse-Sportwissenschaftler → validiert → hebt die lokale Analyse an.
+A.wishAnalyze=async()=>{
+  if(_wishBusy) return;
+  const el=document.getElementById("wish-in"); const txt=(el&&el.value||"").trim();
+  if(txt.length<3){ toast("Beschreib kurz dein Ziel"); return; }
+  if(typeof aiActive!=="function"||!aiActive()){ toast("KI-Coach nicht aktiv — im Menü aktivieren"); return; }
+  _wishBusy=true; const b=document.getElementById("wish-ai"); if(b){ b.disabled=true; b.innerHTML=`<span class="spin" style="width:15px;height:15px;border-width:2px;display:inline-block;vertical-align:-2px;margin-right:7px"></span>Der KI-Coach denkt …`; }
+  const out=document.getElementById("wish-out"); if(out)out.innerHTML=`<p class="xs t2" style="text-align:center;padding:16px;line-height:1.5"><span class="spin" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:-2px;margin-right:7px"></span>Weltklasse-Analyse läuft — dein Ziel wird sportwissenschaftlich eingeordnet …</p>`;
+  try{
+    _wishIntent=await wishAnalyzeAI(txt);
+    if(out)out.innerHTML=wishReadoutHTML(_wishIntent);
+    const ap=document.getElementById("wish-apply"); if(ap)ap.disabled=!_wishIntent.matched;
+    toast("✓ KI-Coach hat deinen Wunsch analysiert");
+  }catch(e){
+    _wishIntent=parseWish(txt); // ehrlicher Fallback auf die lokale Sofort-Analyse
+    if(out)out.innerHTML=wishReadoutHTML(_wishIntent);
+    const ap=document.getElementById("wish-apply"); if(ap)ap.disabled=!_wishIntent.matched;
+    toast("KI gerade nicht erreichbar — die Sofort-Analyse steht.");
+  }
+  finally{ _wishBusy=false; const bb=document.getElementById("wish-ai"); if(bb){ bb.disabled=false; bb.innerHTML=`${icon("brain",16)} Vom KI-Coach analysieren lassen`; } }
+};
+A.wishGo=async()=>{
+  if(_wishBusy||!_wishIntent||!_wishIntent.matched) return;
+  // KI-gesteuert: Coach an + noch nicht analysiert → erst die Experten-Analyse zeigen, dann bestätigt der 2. Tipp.
+  if(typeof aiActive==="function"&&aiActive()&&!_wishIntent.ai){ await A.wishAnalyze(); return; }
+  A.wishApply(_wishIntent);
+};
 // Übernehmen: Profil mutieren → ALLE Zahnräder neu rechnen (wie A.epSave + Ausdauer-Prefill).
 A.wishApply=(intent)=>{
   const p=S.profile; if(!p||!p.a){ toast("Erst Onboarding abschließen"); return; }
@@ -7290,6 +7384,9 @@ A.wishApply=(intent)=>{
   if(intent.focus&&intent.focus.length) a.focus=intent.focus.slice();
   if(intent.cyc_goal) a.cyc_goal=intent.cyc_goal;
   if(intent.run_goal) a.run_goal=intent.run_goal;
+  if(intent.days) a.days=Math.max(2,Math.min(6,intent.days));       // KI darf Häufigkeit setzen
+  if(intent.split&&WISH_SPLITS.includes(intent.split)) a.split=intent.split; // …und den Split
+  if(intent.endur_disc&&["cycling","running"].includes(intent.endur_disc)) a.endur_disc=intent.endur_disc;
   if(JSON.stringify(a.goals||[])!==goalsBefore){ S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; }
   p.bmr=bmrCalc(a);
   p.td=tdeeCalc(p.bmr,a.act||"light",effWeight(a),a.len||60,a.days||4);
@@ -7305,29 +7402,6 @@ A.wishApply=(intent)=>{
   _wishIntent=null; overlay.innerHTML="";
   S.tab=(a.mode==="cycling"||a.mode==="running")?"endurance":"train"; save(); render();
   toast("✓ Dein Wunsch ist aktiv — Kalorien, Makros, Plan & Readiness neu vermascht");
-};
-// Optional: KI verfeinert den Wunsch — strikt gegen erlaubte Werte validiert, nie roh übernommen.
-A.wishRefine=async()=>{
-  const el=document.getElementById("wish-in"); const txt=(el&&el.value||"").trim(); if(txt.length<4)return;
-  if(typeof aiActive!=="function"||!aiActive()){ toast("KI nicht aktiv"); return; }
-  const b=document.getElementById("wish-ai"); if(b){ b.disabled=true; b.innerHTML="Metric denkt …"; }
-  try{
-    const sys="Du bist ein Fitness-Zielklassifikator für die App METRICGYM. Ordne den Nutzerwunsch STRIKT den erlaubten Werten zu und antworte NUR mit JSON, keine Prosa. Felder: goals (Array aus muscle_gain, fat_loss, strength, endurance, general, mobility; erstes = wichtigstes), mode (gym, loss, cycling, running, hybrid), loss_rate (easy, mod, fast; nur bei Fettabbau), focus (Array aus Brust, Latissimus, Rücken, Seitl. Schulter, Hintere Schulter, Bizeps, Trizeps, Quadrizeps, Beinbeuger, Gesäß, Waden, Core). Nur diese Werte, nichts erfinden.";
-    const j=await aiJSON(sys,txt);
-    if(j&&(Array.isArray(j.goals)||j.mode)){
-      const merged=parseWish(txt);
-      if(Array.isArray(j.goals)){ const gg=j.goals.filter(x=>WISH_GOALS.includes(x)); if(gg.length)merged.goals=gg; }
-      if(WISH_MODES.includes(j.mode)) merged.mode=j.mode;
-      if(["easy","mod","fast"].includes(j.loss_rate)) merged.loss_rate=j.loss_rate;
-      if(Array.isArray(j.focus)){ const ff=j.focus.filter(x=>WISH_FOCUS.includes(x)); if(ff.length)merged.focus=ff; }
-      merged.matched=true; merged.raw=txt; if(!merged.tags||!merged.tags.length)merged.tags=(parseWish(txt).tags||[]);
-      _wishIntent=merged;
-      const out=document.getElementById("wish-out"); if(out)out.innerHTML=wishReadoutHTML(merged);
-      const ap=document.getElementById("wish-apply"); if(ap)ap.disabled=false;
-      toast("✓ KI hat deinen Wunsch präzisiert");
-    } else toast("Konnte den Wunsch nicht schärfer fassen — die lokale Analyse steht.");
-  }catch(e){ toast(String((e&&e.message)||e).slice(0,90)); }
-  finally{ const bb=document.getElementById("wish-ai"); if(bb){ bb.disabled=false; bb.innerHTML=`${icon("brain",14)} Mit KI noch genauer verstehen`; } }
 };
 function renderReveal(){
   const p=S.profile, tg=p.tg;
