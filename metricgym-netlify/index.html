@@ -6287,7 +6287,7 @@ function renderLanding(){
     <section class="lp-story" id="lp-story" data-step="0">
       <div class="lp-story-pin">
         <p class="lp-eyebrow">${icon("sparkle",12)} So entsteht dein Plan</p>
-        <h2 class="lp-h2" id="lp-story-h" style="min-height:2.4em">Fünf Antworten.<br>Mehr fragt sie nicht.</h2>
+        <h2 class="lp-h2" id="lp-story-h" style="min-height:2.4em">Fünf Antworten.<br>Den Rest rechnet sie.</h2>
         <div class="lp-phone">
           <div class="lp-scene sc1">
             <div class="chips" style="justify-content:center">${["Muskelaufbau","5 Tage","Gym · voll","75 Min","2–4 Jahre"].map((c,i)=>`<span class="chip" style="animation-delay:${i*120}ms">${c}</span>`).join("")}</div>
@@ -6457,7 +6457,7 @@ function lpFX(){
   if(fin){ const o=new IntersectionObserver((es)=>{ es.forEach(e=>document.body.classList.toggle("lp-at-end",e.isIntersecting)); },{threshold:.2}); o.observe(fin); _lpObs.push(o); }
   // 3) Plan-Bühne
   const story=document.getElementById("lp-story"), sh=document.getElementById("lp-story-h");
-  const H=["Fünf Antworten.<br>Mehr fragt sie nicht.","Die Intelligenz baut.<br>Du siehst zu.","Dein Plan. Belegt bis<br>in den letzten Satz."];
+  const H=["Fünf Antworten.<br>Den Rest rechnet sie.","Die Intelligenz baut.<br>Du siehst zu.","Dein Plan. Belegt bis<br>in den letzten Satz."];
   let step=0, stageVis=false;
   const setStep=(s)=>{ step=(s+3)%3; if(!story)return; story.dataset.step=step;
     if(sh){ sh.style.opacity=0; setTimeout(()=>{ sh.innerHTML=H[step]; sh.style.opacity=1; },200); } };

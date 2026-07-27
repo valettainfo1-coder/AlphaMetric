@@ -629,10 +629,10 @@ konsistent („z. B." 37×, alle mit Leerzeichen), **keine** englischen Schlussz
 Text nutzt durchgängig deutsche „…"-Anführungszeichen (0 gerade Quotes im UI), Tier-Namen
 konsistent (START/PERFORMANCE/ELITE).
 
-Offen zur Entscheidung (Marken-/Produkt-Claim, nicht eigenmächtig geändert): die Landing sagt
-„Fünf Antworten. Mehr fragt sie nicht." — das Onboarding stellt real deutlich mehr Fragen.
-Entweder Claim ehrlicher fassen oder Onboarding straffen. Ebenso Stil-Wahl „Session" vs
-„Einheit" (beide im Einsatz) — auf Wunsch vereinheitlichbar.
+- **Ehrlicherer Landing-Claim:** „Fünf Antworten. **Mehr fragt sie nicht.**" → „Fünf Antworten.
+  **Den Rest rechnet sie.**" — die fünf gezeigten Kern-Antworten stimmen, aber das Onboarding
+  erfragt mehr; die neue Zeile stimmt (du gibst die Kern-Antworten, die Engine leitet den Rest ab).
+  Bewusst so gelassen (Stil-Entscheidung): „Session" neben „Einheit" — verständliches Fitness-Deutsch.
 
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
