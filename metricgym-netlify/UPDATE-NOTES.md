@@ -612,9 +612,31 @@ Render-Zweigen (Bulk- vs. Einzelsatz, Register vs. Passwort-Reset) → kein Lauf
 Preisseite zeigt vor Stripe-Live echte Preise, ist aber **beim Klick ehrlich** („Bezahlfunktion
 wird gerade angeschlossen") — löst sich beim Aktivieren von Stripe von selbst. +3 CI-Tests.
 
+### 38. Copy-Edit-Durchgang — Formatierung & Wording (dt. Typografie)
+Systematischer Sprach-/Typografie-Audit (Quelltext + gerenderter Text auf allen Screens).
+
+- **Deutsches Dezimalkomma durchgehend:** Mehrere sichtbare Stellen zeigten einen
+  **Dezimalpunkt** statt Komma — direkt neben korrekt formatierten Werten (z. B. Fortschritt:
+  „82,7" neben „+0.3 kg", Reveal „+2.1 kg", Ausdauer „3.16 W/kg"). Alle auf **Komma**
+  vereinheitlicht: Muskel-/Fett-Projektion, Reveal-Meilensteine, W/kg, km/h, Wochenstunden,
+  Ausdauer-Metriken (IF/VI/EF/Entkopplung), Coach-Abgleichsnachricht. Neuer `nf2`-Formatter
+  (de-DE, 2 Nachkommastellen). SVG-Koordinaten & CSS-Werte bewusst **unverändert** (dort ist
+  der Punkt korrekt). Ergebnis: **0 sichtbare Punkt-Dezimalzahlen** mehr (mit Testdaten geprüft).
+- **Grammatik:** „Jederzeit **in einem Tippen** kündbar" → „**mit einem Tipp** kündbar".
+
+Geprüft & sauber: keine Rechtschreibfehler (seperat/Standart/vorraus/… = 0), Abkürzungen
+konsistent („z. B." 37×, alle mit Leerzeichen), **keine** englischen Schlusszeichen, sichtbarer
+Text nutzt durchgängig deutsche „…"-Anführungszeichen (0 gerade Quotes im UI), Tier-Namen
+konsistent (START/PERFORMANCE/ELITE).
+
+Offen zur Entscheidung (Marken-/Produkt-Claim, nicht eigenmächtig geändert): die Landing sagt
+„Fünf Antworten. Mehr fragt sie nicht." — das Onboarding stellt real deutlich mehr Fragen.
+Entweder Claim ehrlicher fassen oder Onboarding straffen. Ebenso Stil-Wahl „Session" vs
+„Einheit" (beide im Einsatz) — auf Wunsch vereinheitlichbar.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v20** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v21** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

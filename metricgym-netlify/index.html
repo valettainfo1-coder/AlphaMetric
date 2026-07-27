@@ -1660,6 +1660,7 @@ function particleBall(canvas,opts){
 // ---------- Format ----------
 const nf  = new Intl.NumberFormat("de-DE",{maximumFractionDigits:1});
 const nfi = new Intl.NumberFormat("de-DE",{maximumFractionDigits:0});
+const nf2 = new Intl.NumberFormat("de-DE",{maximumFractionDigits:2}); // dt. Komma, 2 Nachkommastellen (IF/VI/EF/W-kg)
 const df  = new Intl.DateTimeFormat("de-DE",{day:"2-digit",month:"2-digit"});
 const dfLong = new Intl.DateTimeFormat("de-DE",{weekday:"long", day:"numeric", month:"long"});
 const fmtKg=(v)=>nf.format(v)+" kg", fmtKcal=(v)=>nfi.format(v)+" kcal", fmtD=(d)=>df.format(d);
@@ -2222,9 +2223,9 @@ window.ENDUR = (() => {
 
 /* ---------- Formatierungs-Helfer (lokal, keine Fremd-Abhängigkeit) ---------- */
 function eFmtDur(sec) { sec = Math.round(sec || 0); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h ? h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") : m + ":" + String(s).padStart(2, "0"); }
-function eFmtDist(m) { return m >= 1000 ? (m / 1000).toFixed(m >= 10000 ? 0 : 1) + " km" : Math.round(m) + " m"; }
+function eFmtDist(m) { return m >= 1000 ? (m / 1000).toFixed(m >= 10000 ? 0 : 1).replace(".", ",") + " km" : Math.round(m) + " m"; }
 function eFmtPace(mps) { if (!mps || mps <= 0) return "–"; const s = 1000 / mps; return Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0") + " /km"; }
-function eFmtSpeed(mps) { return (mps * 3.6).toFixed(1) + " km/h"; }
+function eFmtSpeed(mps) { return (mps * 3.6).toFixed(1).replace(".", ",") + " km/h"; }
 function eFmtPaceSec(sec) { return Math.floor(sec / 60) + ":" + String(Math.round(sec % 60)).padStart(2, "0"); }
 
 /* ---------- Canvas: Verlaufskurve (Power/HR/Pace) ---------- */
@@ -2311,10 +2312,10 @@ function eRenderDashboard() {
             ${_r ? `<span class="xs" style="font-weight:700;color:${_rc};white-space:nowrap" title="Bereitschaft aus HRV/Ruhepuls + Gesamt-Trainingslast">Bereitschaft ${_r.score}</span>` : (_todayBurn > 0 ? `<span class="xs t2" style="white-space:nowrap">Heute ${_todayBurn} kcal</span>` : "")}
           </div></div>
         <div class="grid2" style="gap:10px;margin-bottom:12px">
-          ${eTile("Woche · Zeit", (wkHours >= 1 ? wkHours.toFixed(1) + " h" : Math.round(wkHours * 60) + " min"), wk.length + (wk.length === 1 ? " Aktivität" : " Aktivitäten"))}
+          ${eTile("Woche · Zeit", (wkHours >= 1 ? wkHours.toFixed(1).replace(".", ",") + " h" : Math.round(wkHours * 60) + " min"), wk.length + (wk.length === 1 ? " Aktivität" : " Aktivitäten"))}
           ${eTile("Woche · Distanz", eFmtDist(wkDist), wkElev + " hm")}
           ${eTile("Woche · TSS", Math.round(wkTss), "nur Ausdauer")}
-          ${eTile("FTP", ath.cycling.ftp + " W", (ath.cycling.ftp / window.ENDUR.bodyWeight()).toFixed(2) + " W/kg")}
+          ${eTile("FTP", ath.cycling.ftp + " W", (ath.cycling.ftp / window.ENDUR.bodyWeight()).toFixed(2).replace(".", ",") + " W/kg")}
         </div>
         <p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 8px">Letzte Aktivitäten</p>
         ${acts.slice(0, 6).map(eActRow).join("")}`)
@@ -2351,14 +2352,14 @@ function eRenderDetail(id) {
       ${eTile("Dauer", eFmtDur(a.dur))}${eTile("Distanz", eFmtDist(a.dist))}${eTile("Höhenmeter", a.elev + " hm")}
     </div>
     ${a.sport === "cycling" && a.hasPower ? `<div class="grid3" style="gap:8px;margin-bottom:10px">
-        ${eTile("Ø Leistung", a.avgP + " W")}${eTile("Norm. Power", a.np + " W", "NP")}${eTile("IF", a.if, "Intensität")}
+        ${eTile("Ø Leistung", a.avgP + " W")}${eTile("Norm. Power", a.np + " W", "NP")}${eTile("IF", nf2.format(a.if), "Intensität")}
       </div>
       <div class="grid3" style="gap:8px;margin-bottom:10px">
-        ${eTile("TSS", a.tss)}${eTile("VI", a.vi, "Gleichmäßigkeit")}${eTile("Arbeit", a.kj + " kJ")}
+        ${eTile("TSS", a.tss)}${eTile("VI", nf2.format(a.vi), "Gleichmäßigkeit")}${eTile("Arbeit", a.kj + " kJ")}
       </div>` : `<div class="grid3" style="gap:8px;margin-bottom:10px">
         ${eTile(a.sport === "running" ? "Ø Pace" : "Ø Tempo", a.sport === "running" ? eFmtPace(a.avgSpeed) : eFmtSpeed(a.avgSpeed))}${eTile("TSS", a.tss || "–")}${eTile("Kalorien", (a.kcal || 0) + " kcal")}
       </div>`}
-    ${a.avgHr ? `<div class="grid3" style="gap:8px;margin-bottom:10px">${eTile("Ø Herzfrequenz", a.avgHr + " bpm")}${a.ef ? eTile("Eff.-Faktor", a.ef, "NP/HR") : ""}${a.decoup != null ? eTile("Entkopplung", a.decoup + " %", "Pw:Hr") : ""}</div>` : ""}
+    ${a.avgHr ? `<div class="grid3" style="gap:8px;margin-bottom:10px">${eTile("Ø Herzfrequenz", a.avgHr + " bpm")}${a.ef ? eTile("Eff.-Faktor", nf2.format(a.ef), "NP/HR") : ""}${a.decoup != null ? eTile("Entkopplung", nf.format(a.decoup) + " %", "Pw:Hr") : ""}</div>` : ""}
     <div class="card" style="padding:16px;margin-bottom:10px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${a.sport === "cycling" && a.hasPower ? "Leistung" : (a.avgHr ? "Herzfrequenz" : "Höhenprofil")}</p>
       <canvas id="e-curve" style="width:100%;height:100px;display:block"></canvas></div>
     <div id="e-zones" class="card" style="padding:16px;margin-bottom:10px"></div>
@@ -2386,11 +2387,11 @@ function eRenderDetail(id) {
 function eInsight(a) {
   const bits = [];
   if (a.sport === "cycling" && a.hasPower) {
-    if (a.vi >= 1.15) bits.push("Sehr <b>variable Leistung</b> (VI " + a.vi + ") — viele Antritte/Stopps. Für Ausdauer-Ziele gleichmäßiger fahren.");
-    else if (a.vi <= 1.05) bits.push("Sehr <b>gleichmäßige Leistung</b> (VI " + a.vi + ") — ideale Pacing-Disziplin für lange Einheiten.");
-    if (a.decoup != null && a.decoup > 5) bits.push("<b>Aerobe Entkopplung " + a.decoup + " %</b> — deine HF driftet in der 2. Hälfte hoch. Zeichen für noch fehlende Grundlagenausdauer oder Unterversorgung.");
-    else if (a.decoup != null && a.decoup >= -2 && a.decoup <= 5) bits.push("<b>Entkopplung " + a.decoup + " %</b> — stabile aerobe Effizienz über die gesamte Fahrt. Sehr gut.");
-    if (a.if >= 0.85) bits.push("Harte Einheit (IF " + a.if + "). Plane danach ausreichend Erholung ein.");
+    if (a.vi >= 1.15) bits.push("Sehr <b>variable Leistung</b> (VI " + nf2.format(a.vi) + ") — viele Antritte/Stopps. Für Ausdauer-Ziele gleichmäßiger fahren.");
+    else if (a.vi <= 1.05) bits.push("Sehr <b>gleichmäßige Leistung</b> (VI " + nf2.format(a.vi) + ") — ideale Pacing-Disziplin für lange Einheiten.");
+    if (a.decoup != null && a.decoup > 5) bits.push("<b>Aerobe Entkopplung " + nf.format(a.decoup) + " %</b> — deine HF driftet in der 2. Hälfte hoch. Zeichen für noch fehlende Grundlagenausdauer oder Unterversorgung.");
+    else if (a.decoup != null && a.decoup >= -2 && a.decoup <= 5) bits.push("<b>Entkopplung " + nf.format(a.decoup) + " %</b> — stabile aerobe Effizienz über die gesamte Fahrt. Sehr gut.");
+    if (a.if >= 0.85) bits.push("Harte Einheit (IF " + nf2.format(a.if) + "). Plane danach ausreichend Erholung ein.");
   }
   if (!bits.length) bits.push("Solide Einheit protokolliert. Mit mehr Aktivitäten werden die Auswertungen (Power-Kurve, FTP-Trend, Form) präziser.");
   return `<div class="card" style="padding:16px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em;color:var(--hl);margin-bottom:8px">${icon("zap", 13)} Auswertung</p>${bits.map(b => `<p class="sm" style="line-height:1.55;margin-bottom:8px">${b}</p>`).join("")}</div>`;
@@ -2598,7 +2599,7 @@ function adaptiveCalorieCheck(){
     if(after!==before){
       S.calAdjust=after;
       const verb=after<before?"gesenkt":"erhöht";
-      S.calAdjustMsg=`Dein Gewicht ändert sich aktuell ${observedKgWk>=0?"+":""}${observedKgWk.toFixed(2)} kg/Woche (Ziel ${targetKgWk>=0?"+":""}${targetKgWk.toFixed(2)}). Ich habe dein Kalorienziel um ${Math.abs(step)} kcal ${verb} — abgestimmt auf deinen echten Stoffwechsel.`;
+      S.calAdjustMsg=`Dein Gewicht ändert sich aktuell ${observedKgWk>=0?"+":""}${observedKgWk.toFixed(2).replace(".",",")} kg/Woche (Ziel ${targetKgWk>=0?"+":""}${targetKgWk.toFixed(2).replace(".",",")}). Ich habe dein Kalorienziel um ${Math.abs(step)} kcal ${verb} — abgestimmt auf deinen echten Stoffwechsel.`;
       S.profile.tg=multiTargets(S.profile.a,S.profile.bmr,S.profile.td);
     }
     save();
@@ -7484,7 +7485,7 @@ function renderReveal(){
       ${milestones.length?`<div class="reveal-traj">${milestones.map((m,i)=>`
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px">
           <div class="reveal-bar" style="height:${22+i*24}px;animation-delay:${i*0.12}s"></div>
-          <span class="metric xs">${primary.prefix||""}${m.v}${primary.unit?(" "+primary.unit):""}</span>
+          <span class="metric xs">${primary.prefix||""}${nf.format(m.v)}${primary.unit?(" "+primary.unit):""}</span>
           <span class="xs t2">Woche ${m.wk}</span></div>`).join("")}</div>
         <p class="xs t2" style="margin-top:8px;line-height:1.5">So baut sich dein Fortschritt Woche für Woche auf — sichtbar, messbar, belegt.</p>`:""}
     </div>
@@ -8125,7 +8126,7 @@ function renderHome(){
       const cfg={surplus:{a:"#D08B6E",b:"#F4D4A0",lbl:"Aufbau-Überschuss"},
                  deficit:{a:"#8FB8DC",b:"#A9C4DE",lbl:"Definitions-Defizit"},
                  recomp:{a:"#6F7EE6",b:"#AEC0F2",lbl:"Recomp · Erhaltung"}}[tw.state];
-      const sgn=v=>(v>0?"+":v<0?"−":"±")+Math.abs(v).toFixed(1);
+      const sgn=v=>(v>0?"+":v<0?"−":"±")+Math.abs(v).toFixed(1).replace(".",","); // dt. Komma
       const bal=(tw.balance>0?"+":tw.balance<0?"−":"±")+nfi.format(Math.abs(tw.balance));
       return `<div class="card oracle-reveal" style="background:linear-gradient(160deg,${cfg.a}1f,transparent 70%);border-color:${cfg.a}66">
         <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:2px">${icon("sparkle",13)} Stoffwechsel-Zwilling</p>
@@ -12447,7 +12448,7 @@ function renderPricing(){
     ${card("elite",false)}
     <div class="card" style="text-align:center">
       <p class="sm" style="font-weight:600;line-height:1.6">Risikofrei testen</p>
-      <p class="xs t2" style="line-height:1.7;margin-top:4px">${upTo?`${TRIAL_DAYS} Tage voller Zugriff, keine Zahlung im Voraus. `:""}Jederzeit in einem Tippen kündbar. Dein Datenexport (DSGVO) ist in jedem Plan inklusive — du bist nie eingesperrt.</p>
+      <p class="xs t2" style="line-height:1.7;margin-top:4px">${upTo?`${TRIAL_DAYS} Tage voller Zugriff, keine Zahlung im Voraus. `:""}Jederzeit mit einem Tipp kündbar. Dein Datenexport (DSGVO) ist in jedem Plan inklusive — du bist nie eingesperrt.</p>
       <button class="btn ghost mt8" style="min-height:42px;font-size:13px" onclick="A.manageSub()">Verträge hier kündigen · Abo verwalten</button>
     </div>
     <p class="xs t2" style="text-align:center;line-height:1.7">Sichere Zahlung über Stripe (Anbindung folgt vor Launch).</p>`;
