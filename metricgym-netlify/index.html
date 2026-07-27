@@ -5766,6 +5766,7 @@ function renderAppbar(){
       <span class="badge ${S.tier==="free"?"mute":"volt"}">${TIER_LABEL[S.tier]}</span>
     </button>
     <div class="menu-divider"></div>
+    ${item("message","Sag, was du willst","Ziel in eigenen Worten — die App passt Plan, Kalorien & Ausdauer sofort an","A.wishOpen()")}
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr aus deinen Zahlen holen":"Abo & Stufe verwalten","A.menuGo('pricing')")}
     ${item("bike","Ausdauer — Cycling & Running","Fahrten & Läufe importieren, Power/Zonen/Form analysieren","A.menuGo('endurance')")}
     ${item("sparkle","Alle Funktionen entdecken","Was die App alles kann — auf einen Blick","A.menuGo('features')")}
@@ -7142,6 +7143,192 @@ function macroPhases(a,tg){
   }
   return {absBf,male,phases,note:`Sichtbare Bauchmuskeln brauchen bei ${male?"Männern":"Frauen"} ~${absBf}% Körperfett${bf>absBf?` — du bist bei ~${bf} %.`:" — das hast du erreicht."}`};
 }
+// =====================================================================
+// WUNSCH-FENSTER: Freitext-Ziel → echte Stellhebel. Lokal, sofort, offline.
+// Übersetzt „was du willst" in goals/mode/Defizit/Fokus und vermascht ALLE
+// Zahnräder neu (Kalorien, Makros, Plan, Ausdauer-Profil, Readiness).
+// KI (falls aktiv) verfeinert nur — validiert gegen erlaubte Werte, nie roh.
+// =====================================================================
+const WISH_FOCUS=["Brust","Latissimus","Rücken","Seitl. Schulter","Hintere Schulter","Bizeps","Trizeps","Quadrizeps","Beinbeuger","Gesäß","Waden","Core"];
+const WISH_GOALS=["muscle_gain","fat_loss","strength","endurance","general","mobility"];
+const WISH_MODES=["gym","loss","cycling","running","hybrid"];
+const WISH_EXAMPLES=["Abnehmen, aber Muskeln halten","Maximale Ausdauer auf dem Rad","Muskeln aufbauen & definiert aussehen","Schneller werden im Marathon","Einfach stärker werden"];
+let _wishIntent=null;
+function parseWish(raw){
+  const t=" "+String(raw||"").toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")+" ";
+  // Wort-ANFANG-Treffer (\b) statt naiver Teilstring — sonst matcht z. B. „lauf" in
+  // „muske**lauf**bau" oder „rad" in „g**rad**". Deutsche Komposita greifen trotzdem
+  // („radfahren" → „rad"), weil nur der Wortanfang gebunden ist, nicht das Wortende.
+  const has=(...ws)=>ws.some(w=>new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).test(t));
+  const intent={goals:[],mode:null,focus:[],tags:[],raw:String(raw||"")};
+  const wantFat=has("abnehm","fett","definier","definit","schlank","lean","cut","diaet","gewicht verlier","bauch weg","kilos","speck","trocken","sixpack","six-pack");
+  const wantMuscle=has("muskel","aufbau","masse","wachs","bulk","groesser","muskuloes","kraeftiger","zunehm","breiter");
+  const wantStrength=has("kraft","staerker","maximalkraft","1rm","powerlift","stark werden","staerke");
+  const keepMuscle=has("muskel halt","muskeln halt","muskel erhalt","muskeln erhalt","muskelerhalt","ohne muskel","muskeln behalt","magermasse","lean gain");
+  const wantEndur=has("ausdauer","kondition","durchhalt","cardio","fitter","kondi");
+  const wantCycle=has("rad","fahrrad","cycling","bike","ftp","watt","gran fondo","radfahr","zeitfahr");
+  const wantRun=has("lauf","running","marathon","5k","10k","halbmarathon","pace","joggen");
+  const maxEndur=has("maximale ausdauer","max ausdauer","so viel ausdauer","beste ausdauer","viel ausdauer","maximal ausdauer");
+  const aesthetic=has("aussehen wie","aussehen","american psycho","christian bale","brad pitt","fight club","greek god","griechisch","aesthetisch","aesthetic","v-form","v-taper","proportion","strand","beach body","gut aussehen","schoen aussehen","athletisch aussehen");
+  // ---- Modus + Primärziel ----
+  if(wantCycle&&!wantRun) intent.mode="cycling";
+  else if(wantRun&&!wantCycle) intent.mode="running";
+  else if(wantCycle&&wantRun) intent.mode="hybrid";
+  if(intent.mode==="cycling"||intent.mode==="running"){
+    intent.goals=[wantFat?"fat_loss":"endurance"];
+    if(intent.mode==="cycling") intent.cyc_goal=wantFat?"weight":has("berg","kletter")?"climb":has("gran fondo","lange","distanz","100","200")?"gran_fondo":has("rennen","kriter","race")?"race":"ftp";
+    else intent.run_goal=wantFat?"weight":(has("marathon")&&!has("halbmarathon"))?"marathon":has("halbmarathon","21")?"half":has("10k","zehn")?"10k":has("5k","fuenf")?"5k":"endurance";
+    intent.maxEndur=maxEndur; intent.tags.push("endurance");
+  }
+  else if(wantFat&&(keepMuscle||wantMuscle)){ intent.goals=["fat_loss","muscle_gain"]; intent.mode="loss"; intent.loss_rate=keepMuscle?"easy":"mod"; intent.tags.push("recomp_fat"); }
+  else if(wantFat){ intent.goals=["fat_loss"]; intent.mode="loss"; intent.loss_rate=has("schnell","zuegig","asap","so schnell","zack")?"fast":has("langsam","gesund","nachhaltig")?"easy":"mod"; intent.tags.push("cut"); }
+  else if(aesthetic){ intent.goals=["muscle_gain","fat_loss"]; intent.mode="gym"; intent.focus=["Brust","Seitl. Schulter","Latissimus","Bizeps","Trizeps","Core"]; intent.tags.push("aesthetic"); }
+  else if(wantStrength&&!wantMuscle){ intent.goals=["strength"]; intent.mode="gym"; intent.tags.push("strength"); }
+  else if(wantMuscle){ intent.goals=["muscle_gain"]; if(wantStrength)intent.goals.push("strength"); intent.mode="gym"; intent.tags.push("gain"); }
+  else if(wantEndur){ intent.goals=["endurance"]; intent.mode=intent.mode||"gym"; intent.tags.push("endurance_generic"); }
+  // ---- Muskel-Fokus aus Freitext (exakte Fokus-Schlüssel) ----
+  const foc=new Set(intent.focus||[]);
+  if(has("schulter","delt")){ foc.add("Seitl. Schulter"); foc.add("Hintere Schulter"); }
+  if(has("bizeps")||has("arm")) foc.add("Bizeps");
+  if(has("trizeps")||has("arm")) foc.add("Trizeps");
+  if(has("brust","chest","pec")) foc.add("Brust");
+  if(has("ruecken","breit","v-form","v-taper","latissimus","lat ")) foc.add("Latissimus");
+  if(has("bauch","sixpack","six-pack","core","abs","waschbrett")) foc.add("Core");
+  if(has("bein","quad","oberschenkel")) foc.add("Quadrizeps");
+  if(has("po ","gesaess","glute","hintern","booty")) foc.add("Gesäß");
+  if(has("wade")) foc.add("Waden");
+  if(foc.size) intent.focus=[...foc].filter(x=>WISH_FOCUS.includes(x));
+  intent.matched=intent.goals.length>0||intent.mode!=null;
+  return intent;
+}
+// Ehrliche Interpretation + Belege — „Beweis statt Bauchgefühl".
+function wishReadout(intent){
+  const g=intent.goals||[], tag=(intent.tags||[])[0];
+  const B=(h,b,src)=>({h,b,src:src||""});
+  let title="", lead="", bullets=[];
+  if(tag==="recomp_fat"){
+    title="Fett verlieren, Muskeln halten";
+    lead="Recomp mit Fettabbau-Fokus — Fett fällt, die Muskeln bleiben.";
+    bullets=[B("Moderates Defizit statt Hungern",intent.loss_rate==="easy"?"Sanftes Tempo (~0,25–0,5 %/Woche) → maximaler Muskelschutz.":"Moderates Defizit (~0,5 %/Woche) → der Sweet Spot.","Garthe et al. 2011"),
+      B("Protein hoch","2,3–3,1 g/kg fettfreie Masse schützen die Muskulatur im Defizit — dein Makroziel steigt entsprechend.","Helms et al. 2014"),
+      B("Krafttraining bleibt der Kern","Nicht nur Cardio: harter Kraftreiz + Protein baut sogar auf, während Fett fällt.","Longland et al. 2016")];
+  } else if(tag==="cut"){
+    title="Fett verlieren"; lead=intent.loss_rate==="fast"?"Zügiges Defizit — schnell, aber Muskeln geschützt.":"Sauberer Fettabbau bei hohem Protein.";
+    bullets=[B("Defizit nach deinem Tempo","Das Kalorienziel sinkt kontrolliert, der Wochenschnitt zählt.","Garthe et al. 2011"),
+      B("Protein & Kraft schützen die Muskeln","Hohes Protein + Kraftreiz halten die Magermasse im Cut.","Helms et al. 2014")];
+  } else if(tag==="aesthetic"){
+    title="Definierter, ästhetischer Look";
+    lead="Aufbau der sichtbaren Muskeln, schlank gehalten — die klassische V-Form (breite Schultern, schmale Taille).";
+    bullets=[B("Fokus-Volumen auf die Optik-Muskeln","Schultern, Brust, Rückenbreite, Arme & Core bekommen gezielt mehr, früh platziertes Volumen.","Schoenfeld 2016 · Frequenz 2×/Woche"),
+      B("Schlank bleiben","Aufbau bei kontrolliertem Körperfett — sichtbare Bauchmuskeln brauchen ~10–12 % KF (m).","Helms et al. 2014"),
+      B("Die V-Silhouette","Breite über seitliche Schultern & Latissimus, Taille schmal — das erzeugt die Optik.","")];
+  } else if(intent.mode==="cycling"||intent.mode==="running"){
+    const sport=intent.mode==="cycling"?"auf dem Rad":"beim Laufen";
+    title=(intent.maxEndur?"Maximale Ausdauer ":"Mehr Ausdauer ")+sport;
+    lead="Ausdauer-Modus aktiv — "+(intent.mode==="cycling"?"Watt, FTP, Power-Zonen":"Pace, Zonen, Distanz")+", verzahnt mit dem Gym zu einer Trainingslast.";
+    bullets=[B("Polarisiert 80/20","Viel lockere Grundlage, wenig hart — die belegte Intensitätsverteilung für maximale Ausdauer.","Seiler 2010"),
+      B(intent.mode==="cycling"?"FTP, TSS & Form-Kurve":"Pace-Zonen & Form","Fahrten/Läufe fließen in eine gemeinsame Fitness-/Form-Kurve — ein Readiness-Wert über alles.","Allen & Coggan 2019"),
+      B("Ziel gesetzt","Ausdauer-Ziel aktiviert, Ernährung & Projektion angepasst.","")];
+  } else if(tag==="strength"){
+    title="Maximalkraft"; lead="Schwer, wenige Wiederholungen, lange Pausen — Kraft als Fähigkeit.";
+    bullets=[B("3–6 Wdh bei hoher Last","Maximale neuronale Rekrutierung (Spezifitätsprinzip).","ACSM 2009"),
+      B("Leichter Überschuss","Kalorien knapp über Erhalt — Kraft braucht Energie.","")];
+  } else if(g.includes("muscle_gain")){
+    title=g.includes("strength")?"Muskeln & Kraft":"Muskelaufbau"; lead="Maximaler Wachstumsreiz bei erholbarem Volumen.";
+    bullets=[B("Volumen im Korridor (MEV–MRV)","Jede Muskelgruppe bekommt genug Reiz, ohne die Erholung zu kippen.","Israetel 2017"),
+      B("Jeder Muskel ≥2×/Woche","Doppelt so viele Wachstumssignale wie im klassischen Bro-Split.","Schoenfeld 2016"),
+      B("Aufbau-Überschuss","Kalorien leicht über Erhalt — Baumaterial für neue Muskeln.","")];
+  } else if(g.includes("endurance")){
+    title="Mehr Ausdauer & Kondition"; lead="Ausdauer-Fokus im Plan.";
+    bullets=[B("Polarisiert 80/20","Die belegte Intensitätsverteilung für Ausdauer.","Seiler 2010")];
+  } else { title="Dein Ziel"; lead="Metric passt Plan & Ernährung an."; }
+  if(intent.focus&&intent.focus.length) bullets.push(B("Dein Fokus","Zusätzliches, früh platziertes Volumen auf: "+intent.focus.join(", ")+".",""));
+  return {title,lead,bullets};
+}
+function wishReadoutHTML(intent){
+  if(!intent||!intent.matched) return `<p class="xs t2" style="text-align:center;padding:12px;line-height:1.5">Tippe dein Ziel ein — Metric zeigt dir sofort, wie es Plan, Kalorien & Ausdauer anpasst.</p>`;
+  const r=wishReadout(intent);
+  return `<div class="card" style="margin:0;text-align:left;border-color:rgba(169,196,222,.4);background:linear-gradient(160deg,rgba(143,184,220,.10),transparent)">
+    <p class="xs" style="color:var(--hl);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px">${icon("check",12)} Verstanden</p>
+    <p class="sm" style="font-weight:700;margin-bottom:2px">${esc(r.title)}</p>
+    <p class="xs t2" style="line-height:1.5;margin-bottom:8px">${r.lead}</p>
+    ${r.bullets.map(x=>`<div style="padding:7px 0;border-top:1px solid var(--hairline)">
+      <p class="sm" style="font-weight:600;margin:0">${esc(x.h)}</p>
+      <p class="xs t2" style="line-height:1.5;margin:1px 0 0">${x.b}</p>
+      ${x.src?`<p class="xs" style="color:var(--hl);margin-top:2px">${icon("info",10)} ${esc(x.src)}</p>`:""}</div>`).join("")}
+  </div>`;
+}
+function renderWishSheet(){
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.wishClose()">
+    <div class="sheet fade">
+      <p class="display-m mb4" style="display:flex;align-items:center;gap:8px">${icon("message",18)} Sag Metric, was du willst</p>
+      <p class="xs t2 mb12" style="line-height:1.55">Beschreib dein Ziel in eigenen Worten — die App stellt <b style="color:var(--t1)">Kalorien, Makros, Trainingsplan, Ausdauer-Profil und Readiness</b> sofort darauf ein. Alle Zahnräder greifen ineinander.</p>
+      <textarea id="wish-in" rows="3" placeholder="z. B. Abnehmen, aber Muskeln halten · Maximale Ausdauer auf dem Rad · Muskeln aufbauen und definiert aussehen" oninput="A.wishType(this)" style="width:100%;padding:12px 14px;border-radius:13px;background:var(--s2);border:1px solid var(--border);color:var(--t1);font-family:inherit;font-size:14.5px;line-height:1.5;resize:vertical;box-sizing:border-box"></textarea>
+      <div class="chips" style="margin:10px 0 4px;gap:6px">${WISH_EXAMPLES.map((e,i)=>`<button class="chip" style="font-size:12px" onclick="A.wishEx(${i})">${esc(e)}</button>`).join("")}</div>
+      <div id="wish-out" style="margin-top:8px">${wishReadoutHTML(_wishIntent)}</div>
+      <button id="wish-ai" class="btn ghost mt8" style="display:none;min-height:40px;font-size:12.5px" onclick="A.wishRefine()">${icon("brain",14)} Mit KI noch genauer verstehen</button>
+      <button id="wish-apply" class="btn volt mt12" ${_wishIntent&&_wishIntent.matched?"":"disabled"} onclick="A.wishGo()">${icon("zap",15)} Übernehmen — App anpassen</button>
+      <button class="btn mt8" onclick="A.wishClose()">Abbrechen</button>
+    </div></div>`;
+  const el=document.getElementById("wish-in"); if(el){ if(_wishIntent&&_wishIntent.raw)el.value=_wishIntent.raw; setTimeout(()=>el.focus(),50); }
+}
+A.wishOpen=()=>{ menuOpen=false; _wishIntent=null; if(!S.profile||!S.profile.a){ S.tab="profile"; save(); render(); toast("Schließe zuerst das Onboarding ab — dann kannst du frei umsteuern."); return; } renderWishSheet(); };
+A.wishClose=()=>{ overlay.innerHTML=""; render(); };
+A.wishType=(el)=>{ _wishIntent=parseWish(el.value);
+  const out=document.getElementById("wish-out"); if(out)out.innerHTML=wishReadoutHTML(_wishIntent);
+  const b=document.getElementById("wish-apply"); if(b)b.disabled=!_wishIntent.matched;
+  const ai=document.getElementById("wish-ai"); if(ai)ai.style.display=(el.value.trim().length>4&&typeof aiActive==="function"&&aiActive())?"block":"none"; };
+A.wishEx=(i)=>{ const el=document.getElementById("wish-in"); if(!el)return; el.value=WISH_EXAMPLES[i]||""; el.focus(); A.wishType(el); };
+A.wishGo=()=>{ if(_wishIntent&&_wishIntent.matched) A.wishApply(_wishIntent); };
+// Übernehmen: Profil mutieren → ALLE Zahnräder neu rechnen (wie A.epSave + Ausdauer-Prefill).
+A.wishApply=(intent)=>{
+  const p=S.profile; if(!p||!p.a){ toast("Erst Onboarding abschließen"); return; }
+  const a=p.a; const goalsBefore=JSON.stringify(p.tg&&p.tg.goals||[]);
+  if(intent.goals&&intent.goals.length) a.goals=intent.goals.slice();
+  if(intent.mode) a.mode=intent.mode;
+  if(intent.loss_rate) a.loss_rate=intent.loss_rate;
+  if(intent.focus&&intent.focus.length) a.focus=intent.focus.slice();
+  if(intent.cyc_goal) a.cyc_goal=intent.cyc_goal;
+  if(intent.run_goal) a.run_goal=intent.run_goal;
+  if(JSON.stringify(a.goals||[])!==goalsBefore){ S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; }
+  p.bmr=bmrCalc(a);
+  p.td=tdeeCalc(p.bmr,a.act||"light",effWeight(a),a.len||60,a.days||4);
+  p.tg=multiTargets(a,p.bmr,p.td);
+  S.plan=generateTrainingPlan(p); S.planB=generateTrainingPlan(p,"B"); S.rotation=null;
+  const opt=generateOptimalSchedule(a); S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+  S.exOverrides={};
+  try{ if(window.ENDUR){ const en=window.ENDUR.st();
+    if(a.mode==="cycling") en.sport="cycling";
+    else if(a.mode==="running") en.sport="running";
+    else if(a.mode==="hybrid"&&a.endur_disc) en.sport=a.endur_disc;
+    if(a.weight)en.athlete.weight=a.weight; } }catch(e){}
+  _wishIntent=null; overlay.innerHTML="";
+  S.tab=(a.mode==="cycling"||a.mode==="running")?"endurance":"train"; save(); render();
+  toast("✓ Dein Wunsch ist aktiv — Kalorien, Makros, Plan & Readiness neu vermascht");
+};
+// Optional: KI verfeinert den Wunsch — strikt gegen erlaubte Werte validiert, nie roh übernommen.
+A.wishRefine=async()=>{
+  const el=document.getElementById("wish-in"); const txt=(el&&el.value||"").trim(); if(txt.length<4)return;
+  if(typeof aiActive!=="function"||!aiActive()){ toast("KI nicht aktiv"); return; }
+  const b=document.getElementById("wish-ai"); if(b){ b.disabled=true; b.innerHTML="Metric denkt …"; }
+  try{
+    const sys="Du bist ein Fitness-Zielklassifikator für die App METRICGYM. Ordne den Nutzerwunsch STRIKT den erlaubten Werten zu und antworte NUR mit JSON, keine Prosa. Felder: goals (Array aus muscle_gain, fat_loss, strength, endurance, general, mobility; erstes = wichtigstes), mode (gym, loss, cycling, running, hybrid), loss_rate (easy, mod, fast; nur bei Fettabbau), focus (Array aus Brust, Latissimus, Rücken, Seitl. Schulter, Hintere Schulter, Bizeps, Trizeps, Quadrizeps, Beinbeuger, Gesäß, Waden, Core). Nur diese Werte, nichts erfinden.";
+    const j=await aiJSON(sys,txt);
+    if(j&&(Array.isArray(j.goals)||j.mode)){
+      const merged=parseWish(txt);
+      if(Array.isArray(j.goals)){ const gg=j.goals.filter(x=>WISH_GOALS.includes(x)); if(gg.length)merged.goals=gg; }
+      if(WISH_MODES.includes(j.mode)) merged.mode=j.mode;
+      if(["easy","mod","fast"].includes(j.loss_rate)) merged.loss_rate=j.loss_rate;
+      if(Array.isArray(j.focus)){ const ff=j.focus.filter(x=>WISH_FOCUS.includes(x)); if(ff.length)merged.focus=ff; }
+      merged.matched=true; merged.raw=txt; if(!merged.tags||!merged.tags.length)merged.tags=(parseWish(txt).tags||[]);
+      _wishIntent=merged;
+      const out=document.getElementById("wish-out"); if(out)out.innerHTML=wishReadoutHTML(merged);
+      const ap=document.getElementById("wish-apply"); if(ap)ap.disabled=false;
+      toast("✓ KI hat deinen Wunsch präzisiert");
+    } else toast("Konnte den Wunsch nicht schärfer fassen — die lokale Analyse steht.");
+  }catch(e){ toast(String((e&&e.message)||e).slice(0,90)); }
+  finally{ const bb=document.getElementById("wish-ai"); if(bb){ bb.disabled=false; bb.innerHTML=`${icon("brain",14)} Mit KI noch genauer verstehen`; } }
+};
 function renderReveal(){
   const p=S.profile, tg=p.tg;
   // Nach dem Onboarding einmalig die Feature-Übersicht zeigen (v5/Phase 3).
@@ -12682,7 +12869,9 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
         <div><p class="xs t2">Kalorienziel (Training) ${infoBtn("kcalTarget")}</p><p class="metric sm">${fmtKcal(p.tg.train.kcal)}</p></div>
         <div><p class="xs t2">Proteinziel ${infoBtn("protein")}</p><p class="metric sm">${nfi.format(p.tg.train.p)} g</p></div>
       </div>
-      <button class="btn volt mt16" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button>
+      <button class="btn volt mt16" onclick="A.wishOpen()">${icon("message",15)} Sag, was du willst — Ziel frei ändern</button>
+      <p class="xs t2 mt4" style="line-height:1.5">Beschreib dein Ziel in eigenen Worten (z. B. „abnehmen, aber Muskeln halten") — die App vermascht Plan, Kalorien, Makros & Ausdauer sofort neu.</p>
+      <button class="btn mt12" onclick="A.editProfile()">${icon("settings",15)} Engine & Ziele anpassen</button>
       <button class="btn mt8" style="white-space:nowrap" onclick="A.confirmRedoQuiz()">${icon("sparkle",15)} Quiz neu starten</button>
       <p class="xs t2 mt8" style="line-height:1.5">Ganzen Fragebogen erneut durchlaufen (Ziele, Equipment, Tage …) — der Plan wird komplett neu berechnet, deine Verläufe bleiben.</p>`):""}
 

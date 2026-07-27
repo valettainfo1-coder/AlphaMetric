@@ -542,9 +542,32 @@ Sichtbar an drei Stellen: **Reveal** (persona-/ziel-abhängig), **Ausdauer-Dashb
 (dauerhaft) und **Ernährungsseite** bei Abnehm-Zielen (dauerhaft). Alles nur echte
 Quellen — nichts erfunden. +7 CI-Tests (Persona, Defizit-Kopplung, Studien-Attribution).
 
+### 35. Wunsch-Fenster: „Sag Metric, was du willst" (Freitext → alle Zahnräder)
+Ein Textfeld, das dein Ziel **in deinen eigenen Worten** entgegennimmt und die App
+**sofort** darauf einstellt — Kalorien, Makros, Trainingsplan, Ausdauer-Profil und
+Readiness greifen zusammen neu ineinander.
+
+- **Lokaler Intent-Parser (offline, sofort):** übersetzt Freitext in echte Stellhebel —
+  Ziele, Modus (Gym/Abnehmen/Rad/Laufen/Hybrid), Abnehm-Tempo und Muskel-Fokus. Beispiele:
+  - „Abnehmen, aber Muskeln halten" → **Recomp** (Fettabbau-Fokus, sanftes Tempo, Protein hoch).
+  - „Maximale Ausdauer auf dem Rad" → **Cycling-Modus**, Ziel Ausdauer, FTP/Zonen, 80/20.
+  - „Muskelaufbau, um auszusehen wie Christian Bale in American Psycho" → **ästhetischer
+    Lean-Look**: Aufbau + Fokus auf Schultern/Brust/Rückenbreite/Arme/Core, schlank gehalten (V-Form).
+- **Ehrliche Interpretation mit Belegen:** Metric zeigt vor dem Übernehmen, *was* es verstanden
+  hat und *warum* — mit realen Studien (Garthe, Helms, Longland, Seiler, Allen & Coggan,
+  Israetel, Schoenfeld). „Beweis statt Bauchgefühl", auch hier.
+- **Ein Tipp „Übernehmen" → alle Zahnräder neu:** `bmrCalc → tdeeCalc → multiTargets`
+  (Defizit/Protein), `generateTrainingPlan` + optimaler Wochenplan, Fokus-Volumen,
+  Ausdauer-Athletprofil (Sport/FTP) — dann öffnet sich der passende Ziel-Tab.
+- **Wort-Anfang-Erkennung** verhindert Fehlgriffe (z. B. „lauf" in „musku**lauf**bau" wird
+  **nicht** als Laufen missverstanden).
+- **KI optional:** ist der Coach aktiv, verfeinert er den Wunsch — aber **streng gegen die
+  erlaubten Werte validiert**, nie roh übernommen. Ohne KI funktioniert alles genauso.
+- Erreichbar über **Menü** („Sag, was du willst") und **Profil**. +6 CI-Tests.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v17** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v18** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

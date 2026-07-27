@@ -105,6 +105,44 @@ const p6 = await page.evaluate(() => {
 });
 check('Paywall: Upgrade ohne Zahlungsanbieter bleibt free (Cloud-Konto)', p6.after === 'free', JSON.stringify(p6));
 
+// ---------- 7) Wunsch-Fenster: Freitext → Intent → alle Zahnräder passen sich an ----------
+const wish = await page.evaluate(() => {
+  // Freitext-Klassifikation (die drei Nutzer-Beispiele + Kanten)
+  const P = (s) => parseWish(s);
+  const recomp = P('abnehmen bei muskelerhalt');
+  const cyc = P('maximale Ausdauer bei radfahren');
+  const bale = P('muskelaufbau um auszusehen wie Christian Bale in american psycho');
+  const strg = P('einfach stärker werden');
+  // "lauf" darf NICHT in "muskelaufbau" matchen
+  const noRun = bale.mode !== 'running' && bale.mode !== 'cycling';
+  return {
+    recompOk: JSON.stringify(recomp.goals) === '["fat_loss","muscle_gain"]' && recomp.mode === 'loss',
+    cycOk: cyc.mode === 'cycling' && recomp && Array.isArray(cyc.goals) && cyc.goals.includes('endurance'),
+    baleOk: (bale.tags || [])[0] === 'aesthetic' && bale.goals.includes('muscle_gain') && bale.goals.includes('fat_loss') && bale.focus.length > 0 && noRun,
+    strengthOk: strg.goals[0] === 'strength',
+    empty: parseWish('asdf qwer').matched === false,
+  };
+});
+check('Wunsch: „abnehmen bei Muskelerhalt" → Recomp/loss', wish.recompOk, JSON.stringify(wish));
+check('Wunsch: „maximale Ausdauer Rad" → cycling/endurance', wish.cycOk);
+check('Wunsch: „aussehen wie Bale" → ästhetisch (kein „lauf"-Fehlgriff)', wish.baleOk);
+check('Wunsch: unklarer Text matcht nicht (kein Blindschuss)', wish.empty);
+
+const wishApply = await page.evaluate(() => {
+  A.devModeMenu(); // frisches Gym-Profil
+  const before = { goals: JSON.stringify(S.profile.tg.goals), kcal: S.profile.tg.train.kcal, prot: S.profile.tg.train.p };
+  A.wishApply(parseWish('abnehmen bei muskelerhalt'));
+  const after = { goals: JSON.stringify(S.profile.tg.goals), kcal: S.profile.tg.train.kcal, prot: S.profile.tg.train.p, mode: S.profile.a.mode, deficit: S.profile.tg.dir < 0 };
+  // Ausdauer-Wunsch vermascht das ENDUR-Athletprofil
+  A.wishApply(parseWish('maximale ausdauer beim radfahren'));
+  const sport = window.ENDUR && window.ENDUR.st().sport;
+  return { before, after, sport, planExists: !!(S.plan && (S.plan.push || S.plan.upper || S.plan.full)) };
+});
+check('Wunsch anwenden: Ziele + Defizit + Protein rechnen neu (Zahnräder)',
+  wishApply.after.goals !== wishApply.before.goals && wishApply.after.deficit && wishApply.after.prot >= wishApply.before.prot && wishApply.planExists,
+  JSON.stringify(wishApply));
+check('Wunsch anwenden: Ausdauer-Wunsch setzt ENDUR-Sport', wishApply.sport === 'cycling', wishApply.sport);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
