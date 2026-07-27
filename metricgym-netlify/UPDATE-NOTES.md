@@ -588,9 +588,33 @@ wie ein **evidenzbasierter Spitzen-Sportwissenschaftler** und konfiguriert die A
   konfiguriert; Nutzer aktivieren den KI-Coach im Menü (und sind für den Proxy angemeldet).
 - +4 CI-Tests (Merge gültiger Antwort · strikte Sanitisierung · Fallback · XSS-Schutz).
 
+### 37. Vollständiger QA-Durchgang — Fehler, Logik & UX geprüft
+Systematischer Audit der ganzen App (Laufzeit-Sweep aller Screens/Personas + Logik- und
+UX-Prüfung). **Ergebnis: sehr stabil** — 0 Laufzeit-/Konsolenfehler über Boot, alle 5
+Personas, alle Tabs, Menü und Ausdauer-Import; 0 tote Buttons (alle 244 `A.*`-Handler
+definiert); Engine-Mathematik sauber (alle Ziel-Projektionen gültig, Makro-Summe deckt sich
+exakt mit dem Kalorienziel, keine NaN in Readiness/PMC/W-per-kg). Behoben wurde:
+
+- **Paywall-Leck geschlossen:** Das Wunsch-Fenster konnte Free-Nutzern **mehrere Ziele**
+  gleichzeitig setzen und so die „multi_goal = Pro"-Schranke umgehen (im Onboarding & Profil
+  längst gegated). Jetzt wird im Free-Tier **auf das Hauptziel gekappt** (ehrlicher Hinweis
+  „mehrere Ziele zugleich sind Pro"); Pro/Elite behalten mehrere Ziele.
+- **Wunsch-Parser deckt jetzt alle gängigen Ziele ab** (vorher Sackgassen ohne Interpretation):
+  **Beweglichkeit/Mobility**, **allgemeine Fitness** („fit werden"), **Hybrid**
+  („kraft und ausdauer" wurde fälschlich nur als Kraft erkannt → jetzt Hybrid mit Ausdauer),
+  **Kraft** („stark …") und **Figur/Ästhetik** („bikini figur", „straffer"). Ästhetik-Fokus
+  ist jetzt **geschlechtssensibel** (Frauen: Gesäß/Beine/Core statt V-Taper-Standard).
+- **Bessere Leerlauf-Hilfe:** Wird ein Text nicht erkannt, führt Metric jetzt mit Beispielen
+  („abnehmen", „Muskeln", „Ausdauer", „stärker", „beweglicher") statt einer nichtssagenden Zeile.
+
+Nicht-Bugs (bewusst so): 4 doppelte statische IDs liegen in **sich gegenseitig ausschließenden**
+Render-Zweigen (Bulk- vs. Einzelsatz, Register vs. Passwort-Reset) → kein Laufzeit-Effekt.
+Preisseite zeigt vor Stripe-Live echte Preise, ist aber **beim Klick ehrlich** („Bezahlfunktion
+wird gerade angeschlossen") — löst sich beim Aktivieren von Stripe von selbst. +3 CI-Tests.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v19** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v20** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

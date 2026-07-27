@@ -7176,12 +7176,15 @@ Erfinde niemals Werte außerhalb dieser Listen und keine Kalorien-/Makrozahlen �
 function deriveWishTags(i){
   const g=i.goals||[], m=i.mode;
   if(m==="cycling"||m==="running") return ["endurance"];
+  if(m==="hybrid"||(g.includes("endurance")&&(g.includes("muscle_gain")||g.includes("strength")))) return ["hybrid"];
   if(g.includes("fat_loss")&&g.includes("muscle_gain")) return ["recomp_fat"];
   if(g[0]==="fat_loss") return ["cut"];
   if(g.includes("muscle_gain")&&i.focus&&i.focus.length>=3) return ["aesthetic"];
   if(g[0]==="strength") return ["strength"];
   if(g.includes("muscle_gain")) return ["gain"];
+  if(g[0]==="mobility") return ["mobility"];
   if(g.includes("endurance")) return ["endurance_generic"];
+  if(g[0]==="general") return ["general"];
   return [];
 }
 // KI-Analyse: Experten-Klassifikation über den Proxy, STRIKT gegen erlaubte Werte validiert,
@@ -7216,13 +7219,17 @@ function parseWish(raw){
   const intent={goals:[],mode:null,focus:[],tags:[],raw:String(raw||"")};
   const wantFat=has("abnehm","fett","definier","definit","schlank","lean","cut","diaet","gewicht verlier","bauch weg","kilos","speck","trocken","sixpack","six-pack");
   const wantMuscle=has("muskel","aufbau","masse","wachs","bulk","groesser","muskuloes","kraeftiger","zunehm","breiter");
-  const wantStrength=has("kraft","staerker","maximalkraft","1rm","powerlift","stark werden","staerke");
+  const wantStrength=has("kraft","staerker","maximalkraft","1rm","powerlift","stark werden","staerke","stark","kraftvoll");
   const keepMuscle=has("muskel halt","muskeln halt","muskel erhalt","muskeln erhalt","muskelerhalt","ohne muskel","muskeln behalt","magermasse","lean gain");
   const wantEndur=has("ausdauer","kondition","durchhalt","cardio","fitter","kondi");
   const wantCycle=has("rad","fahrrad","cycling","bike","ftp","watt","gran fondo","radfahr","zeitfahr");
   const wantRun=has("lauf","running","marathon","5k","10k","halbmarathon","pace","joggen");
+  const wantMobility=has("beweglich","mobilit","dehnen","stretch","gelenkig","flexib","verspann","schmerzfrei","haltung verbessern","mobility","dehnbar");
+  const wantGeneral=has("fit werden","fit sein","fit bleiben","allgemein fit","gesund","gesuender","in form","rundum fit","wohlfuehl","alltagsfit","fitness verbessern","einfach fit","gut in schuss");
+  const wantHybrid=has("beides","hybrid","kraft und ausdauer","kraft & ausdauer","muskeln und ausdauer","alles zusammen","stark und ausdauernd","kraft plus ausdauer");
   const maxEndur=has("maximale ausdauer","max ausdauer","so viel ausdauer","beste ausdauer","viel ausdauer","maximal ausdauer");
-  const aesthetic=has("aussehen wie","aussehen","american psycho","christian bale","brad pitt","fight club","greek god","griechisch","aesthetisch","aesthetic","v-form","v-taper","proportion","strand","beach body","gut aussehen","schoen aussehen","athletisch aussehen");
+  const aesthetic=has("aussehen wie","aussehen","american psycho","christian bale","brad pitt","fight club","greek god","griechisch","aesthetisch","aesthetic","v-form","v-taper","proportion","strand","beach body","gut aussehen","schoen aussehen","athletisch aussehen","figur","bikini","sommerfigur","strandfigur","knackig","waschbrettbauch","beachbody","toned","tonisiert","straffer");
+  const female=(typeof S!=="undefined"&&S.profile&&S.profile.a&&S.profile.a.sex==="female");
   // ---- Modus + Primärziel ----
   if(wantCycle&&!wantRun) intent.mode="cycling";
   else if(wantRun&&!wantCycle) intent.mode="running";
@@ -7235,10 +7242,13 @@ function parseWish(raw){
   }
   else if(wantFat&&(keepMuscle||wantMuscle)){ intent.goals=["fat_loss","muscle_gain"]; intent.mode="loss"; intent.loss_rate=keepMuscle?"easy":"mod"; intent.tags.push("recomp_fat"); }
   else if(wantFat){ intent.goals=["fat_loss"]; intent.mode="loss"; intent.loss_rate=has("schnell","zuegig","asap","so schnell","zack")?"fast":has("langsam","gesund","nachhaltig")?"easy":"mod"; intent.tags.push("cut"); }
-  else if(aesthetic){ intent.goals=["muscle_gain","fat_loss"]; intent.mode="gym"; intent.focus=["Brust","Seitl. Schulter","Latissimus","Bizeps","Trizeps","Core"]; intent.tags.push("aesthetic"); }
+  else if(aesthetic){ intent.goals=["muscle_gain","fat_loss"]; intent.mode="gym"; intent.focus=female?["Gesäß","Quadrizeps","Beinbeuger","Core","Hintere Schulter"]:["Brust","Seitl. Schulter","Latissimus","Bizeps","Trizeps","Core"]; intent.tags.push("aesthetic"); }
+  else if(wantHybrid||((wantStrength||wantMuscle)&&wantEndur)){ intent.mode="hybrid"; intent.goals=[wantMuscle?"muscle_gain":"strength","endurance"]; intent.tags.push("hybrid"); }
   else if(wantStrength&&!wantMuscle){ intent.goals=["strength"]; intent.mode="gym"; intent.tags.push("strength"); }
   else if(wantMuscle){ intent.goals=["muscle_gain"]; if(wantStrength)intent.goals.push("strength"); intent.mode="gym"; intent.tags.push("gain"); }
+  else if(wantMobility){ intent.goals=["mobility"]; intent.mode="gym"; intent.tags.push("mobility"); }
   else if(wantEndur){ intent.goals=["endurance"]; intent.mode=intent.mode||"gym"; intent.tags.push("endurance_generic"); }
+  else if(wantGeneral){ intent.goals=["general"]; intent.mode="gym"; intent.tags.push("general"); }
   // ---- Muskel-Fokus aus Freitext (exakte Fokus-Schlüssel) ----
   const foc=new Set(intent.focus||[]);
   if(has("schulter","delt")){ foc.add("Seitl. Schulter"); foc.add("Hintere Schulter"); }
@@ -7282,6 +7292,10 @@ function wishReadout(intent){
     bullets=[B("Polarisiert 80/20","Viel lockere Grundlage, wenig hart — die belegte Intensitätsverteilung für maximale Ausdauer.","Seiler 2010"),
       B(intent.mode==="cycling"?"FTP, TSS & Form-Kurve":"Pace-Zonen & Form","Fahrten/Läufe fließen in eine gemeinsame Fitness-/Form-Kurve — ein Readiness-Wert über alles.","Allen & Coggan 2019"),
       B("Ziel gesetzt","Ausdauer-Ziel aktiviert, Ernährung & Projektion angepasst.","")];
+  } else if(tag==="hybrid"||intent.mode==="hybrid"){
+    title="Kraft & Ausdauer (Hybrid)"; lead="Beides verzahnt — eine Trainingslast, ein Plan, eine Bereitschaft.";
+    bullets=[B("Interferenz gemanagt","Harte Ausdauer getrennt von Bein-Tagen (anderer Tag oder ≥6 h Abstand) — so wächst der Muskel und die Ausdauer steigt trotzdem.","Wilson et al. 2012; Schumann 2022"),
+      B("Eine gemeinsame Trainingslast","Kraft- und Ausdauer-Reize laufen in eine Form-Kurve, ein Readiness-Wert über alles.","Allen & Coggan 2019")];
   } else if(tag==="strength"){
     title="Maximalkraft"; lead="Schwer, wenige Wiederholungen, lange Pausen — Kraft als Fähigkeit.";
     bullets=[B("3–6 Wdh bei hoher Last","Maximale neuronale Rekrutierung (Spezifitätsprinzip).","ACSM 2009"),
@@ -7291,15 +7305,21 @@ function wishReadout(intent){
     bullets=[B("Volumen im Korridor (MEV–MRV)","Jede Muskelgruppe bekommt genug Reiz, ohne die Erholung zu kippen.","Israetel 2017"),
       B("Jeder Muskel ≥2×/Woche","Doppelt so viele Wachstumssignale wie im klassischen Bro-Split.","Schoenfeld 2016"),
       B("Aufbau-Überschuss","Kalorien leicht über Erhalt — Baumaterial für neue Muskeln.","")];
+  } else if(tag==="mobility"||g[0]==="mobility"){
+    title="Beweglicher & schmerzfreier"; lead="Mobility-Fokus — mehr Bewegungsfreiheit, weniger Verspannung.";
+    bullets=[B("Volle Bewegungsamplitude","Kontrollierte Bewegungen durch den ganzen Bewegungsradius — Beweglichkeit ist trainierbar wie Kraft.","")];
   } else if(g.includes("endurance")){
     title="Mehr Ausdauer & Kondition"; lead="Ausdauer-Fokus im Plan.";
     bullets=[B("Polarisiert 80/20","Die belegte Intensitätsverteilung für Ausdauer.","Seiler 2010")];
+  } else if(tag==="general"||g[0]==="general"){
+    title="Allgemeine Fitness"; lead="Rundum fit — Kraft, Ausdauer und Gesundheit ausgewogen.";
+    bullets=[B("Ausgewogener Reiz","Eine Mischung aus Kraft und Kondition für Alltag, Energie und Gesundheit.","ACSM")];
   } else { title="Dein Ziel"; lead="Metric passt Plan & Ernährung an."; }
   if(intent.focus&&intent.focus.length) bullets.push(B("Dein Fokus","Zusätzliches, früh platziertes Volumen auf: "+intent.focus.join(", ")+".",""));
   return {title,lead,bullets};
 }
 function wishReadoutHTML(intent){
-  if(!intent||!intent.matched) return `<p class="xs t2" style="text-align:center;padding:12px;line-height:1.5">Tippe dein Ziel ein — Metric zeigt dir sofort, wie es Plan, Kalorien & Ausdauer anpasst.</p>`;
+  if(!intent||!intent.matched) return `<p class="xs t2" style="text-align:center;padding:12px;line-height:1.5">Beschreib dein Ziel — z. B. „abnehmen", „Muskeln aufbauen", „Ausdauer", „stärker werden" oder „beweglicher". Metric erkennt es sofort und passt alles an.</p>`;
   const r=wishReadout(intent);
   const title=intent.aiTitle||r.title;            // KI-Titel hat Vorrang, falls vorhanden
   const aiBadge=intent.ai?`<span class="badge volt" style="font-size:8.5px;margin-left:6px;vertical-align:middle">${icon("brain",9)} KI-Coach</span>`:"";
@@ -7378,7 +7398,10 @@ A.wishGo=async()=>{
 A.wishApply=(intent)=>{
   const p=S.profile; if(!p||!p.a){ toast("Erst Onboarding abschließen"); return; }
   const a=p.a; const goalsBefore=JSON.stringify(p.tg&&p.tg.goals||[]);
-  if(intent.goals&&intent.goals.length) a.goals=intent.goals.slice();
+  // Free-Tier: mehrere Ziele gleichzeitig sind Pro (wie im Onboarding & Profil) → auf das
+  // Hauptziel kappen, damit das Wunsch-Fenster die Paywall nicht umgeht.
+  let _wishCapped=false;
+  if(intent.goals&&intent.goals.length){ let g=intent.goals.slice(); if(S.tier==="free"&&g.length>1){ g=[g[0]]; _wishCapped=true; } a.goals=g; }
   if(intent.mode) a.mode=intent.mode;
   if(intent.loss_rate) a.loss_rate=intent.loss_rate;
   if(intent.focus&&intent.focus.length) a.focus=intent.focus.slice();
@@ -7401,7 +7424,7 @@ A.wishApply=(intent)=>{
     if(a.weight)en.athlete.weight=a.weight; } }catch(e){}
   _wishIntent=null; overlay.innerHTML="";
   S.tab=(a.mode==="cycling"||a.mode==="running")?"endurance":"train"; save(); render();
-  toast("✓ Dein Wunsch ist aktiv — Kalorien, Makros, Plan & Readiness neu vermascht");
+  toast(_wishCapped?"✓ Wunsch aktiv — mehrere Ziele zugleich sind Pro; Metric nutzt dein Hauptziel.":"✓ Dein Wunsch ist aktiv — Kalorien, Makros, Plan & Readiness neu vermascht");
 };
 function renderReveal(){
   const p=S.profile, tg=p.tg;

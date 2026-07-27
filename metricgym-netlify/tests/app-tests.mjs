@@ -179,6 +179,32 @@ check('KI-Coach: ungültige Werte werden STRIKT saniert (goals/mode/rate/focus/d
 check('KI-Coach: Ausfall fällt sauber auf lokale Analyse zurück (kein Crash)', aiWish.fellBack && !aiWish.threw);
 check('KI-Coach: bösartiger KI-Text wird escaped (kein HTML-Inject)', aiWish.xssSafe);
 
+// ---------- 9) Audit-Fixes: Parser-Abdeckung + Paywall-Kappung ----------
+const audit = await page.evaluate(() => {
+  const P = (s) => parseWish(s);
+  const cov = {
+    mobility: P('beweglicher werden').goals[0] === 'mobility',
+    general: P('einfach fit werden').goals[0] === 'general',
+    hybrid: P('kraft und ausdauer zusammen').mode === 'hybrid' && P('kraft und ausdauer zusammen').goals.includes('endurance'),
+    figur: P('bikini figur für den sommer').matched && P('bikini figur für den sommer').goals.includes('fat_loss'),
+    stark: P('stark wie ein löwe werden').goals[0] === 'strength',
+    gibberish: P('asdkfjalskdjf').matched === false,
+  };
+  // Paywall: Free-Tier bekommt nur 1 Ziel über das Wunsch-Fenster
+  A.devModeMenu(); S.tier = 'free'; save();
+  A.wishApply(parseWish('abnehmen aber muskeln halten'));
+  const freeGoals = S.profile.tg.goals.length;
+  // Pro-Tier darf mehrere Ziele
+  A.devModeMenu(); S.tier = 'pro'; save();
+  A.wishApply(parseWish('abnehmen aber muskeln halten'));
+  const proGoals = S.profile.tg.goals.length;
+  return { cov, freeGoals, proGoals };
+});
+check('Parser deckt Mobility/General/Hybrid/Figur/Stark ab (keine Sackgasse)',
+  audit.cov.mobility && audit.cov.general && audit.cov.hybrid && audit.cov.figur && audit.cov.stark && audit.cov.gibberish, JSON.stringify(audit.cov));
+check('Paywall: Free-Tier bekommt nur 1 Ziel über den Wunsch (multi_goal bleibt Pro)', audit.freeGoals === 1, 'free=' + audit.freeGoals);
+check('Pro-Tier darf mehrere Ziele über den Wunsch', audit.proGoals >= 2, 'pro=' + audit.proGoals);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
