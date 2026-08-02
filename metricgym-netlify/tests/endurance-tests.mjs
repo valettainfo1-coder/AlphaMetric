@@ -242,6 +242,38 @@ check('Studien: Abnehmen-Referenzen real & attribuiert', sci.nW >= 5 && sci.loss
 check('Studien: ~7700-kcal-Regel ehrlich eingeordnet (Metric-Prinzip)', sci.honestCaveat === true, sci.honestCaveat);
 check('Studien: Panels rendern (details.acc-i)', sci.panelRenders === true, sci.panelRenders);
 
+// ---------- Masterplan P1: Ausdauer-Athlet bekommt endurance-dominanten Plan (Audit K-1) ----------
+const p1 = await page.evaluate(() => {
+  const build = (mode) => {
+    const a = { mode, sex: 'male', age: 40, height: 182, weight: 80, exp: 'intermediate', days: 4, sessionTime: 60, equipment: 'gym_full', act: 'moderate', goals: ['endurance'] };
+    const o = generateOptimalSchedule(a);
+    const cardio = o.schedule.filter(t => t === 'cardio').length;
+    const strength = o.schedule.filter(t => t !== 'cardio' && t !== 'rest').length;
+    return { cardio, strength, polar: /80\/20/.test(o.rationale) };
+  };
+  // Polarisierte Verteilung des Protokolls: 80 % locker
+  let z2 = 0, hard = 0; for (let i = 0; i < 15; i++) { const p = cardioProtocol({ mode: 'cycling', goals: ['endurance'] }, i); if (p.key === 'zone2') z2++; else hard++; }
+  // Gym-Pfad unverändert
+  const gym = generateOptimalSchedule({ sex: 'male', age: 26, height: 180, weight: 78, goals: ['muscle_gain'], exp: 'novice', days: 4, sessionTime: 60, equipment: 'gym_full', act: 'light' });
+  const gymCardio = gym.schedule.filter(t => t === 'cardio').length, gymStrength = gym.schedule.filter(t => t !== 'cardio' && t !== 'rest').length;
+  return { cyc: build('cycling'), run: build('running'), z2, hard, gymStrength, gymCardio };
+});
+check('P1: Radfahrer endurance-dominant (≥4 Cardio, ≤2 Kraft, 80/20)', p1.cyc.cardio >= 4 && p1.cyc.strength <= 2 && p1.cyc.cardio > p1.cyc.strength && p1.cyc.polar, JSON.stringify(p1.cyc));
+check('P1: Läufer endurance-dominant', p1.run.cardio >= 4 && p1.run.strength <= 2 && p1.run.cardio > p1.run.strength, JSON.stringify(p1.run));
+check('P1: Protokoll polarisiert 80/20 (12 locker : 3 hart)', p1.z2 === 12 && p1.hard === 3, `z2=${p1.z2} hard=${p1.hard}`);
+check('P1: Gym-Pfad bleibt kraft-dominant (unverändert)', p1.gymStrength >= 3, `strength=${p1.gymStrength}`);
+
+// ---------- Masterplan P2: Ästhetik/Recomp folgt dem Körperfett (Audit M-1) ----------
+const p2 = await page.evaluate(() => {
+  const dir = (bf, sex) => calorieDirection({ sex, weight: 84, height: 182, bodyFat: bf, goals: ['muscle_gain', 'fat_loss'] }).dir;
+  return { bale: dir(18, 'male'), figur: dir(26, 'female'), lean: dir(10, 'male'), fat: dir(28, 'male'),
+    noBf: calorieDirection({ sex: 'male', weight: 84, height: 182, goals: ['muscle_gain', 'fat_loss'] }).dir };
+});
+check('P2: Lean-Wunsch bei mittlerem KF → kein Überschuss (Bale 18 %, Figur 26 %)', p2.bale <= 0 && p2.figur <= 0, JSON.stringify(p2));
+check('P2: Wirklich schlank (10 % KF) darf Lean-Gain (Überschuss)', p2.lean > 0, `lean=${p2.lean}`);
+check('P2: Hoher KF (28 %) → echtes Defizit', p2.fat <= -0.1, `fat=${p2.fat}`);
+check('P2: Ohne KF-Wert bleibt BMI-Pfad (byte-identisch)', p2.noBf === 0.04, `noBf=${p2.noBf}`);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();

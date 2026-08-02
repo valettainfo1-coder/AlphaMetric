@@ -2464,7 +2464,20 @@ function calorieDirection(a){
   const g0=goals[0], hasFat=goals.includes("fat_loss"), hasGain=goals.includes("muscle_gain");
   const bmi=a.weight/((a.height/100)**2);
   if(hasFat&&hasGain){
-    if(g0==="muscle_gain") return {dir:bmi>=30?-0.10:bmi>=27?0:0.04, label:bmi>=27?"Recomp · Aufbau-Fokus (Erhaltung)":"Recomp · Aufbau-Fokus (leichter Überschuss)", mode:"recomp_gain"};
+    if(g0==="muscle_gain"){
+      // Audit-Befund M-1: Ein „lean/definiert"-Wunsch bei mittlerem Körperfett führte in einen
+      // Überschuss (= Massezuwachs statt Definition). Ist das Körperfett bekannt, FÜHRT es: über
+      // dem ästhetischen Schwellwert (m ~18 % / w ~26 %) erst definieren/Erhaltung, erst darunter
+      // Lean-Gain. Ohne KF-Wert bleibt der bisherige BMI-Pfad (byte-identisch).
+      const bf=a.bodyFat, male=a.sex!=="female";
+      if(bf!=null){
+        const lean=male?18:26;
+        if(bf>=lean+6) return {dir:-0.12, label:"Recomp · erst definieren (moderates Defizit)", mode:"recomp_fat"};
+        if(bf>=lean)   return {dir:-0.05, label:"Recomp · leichtes Defizit bei hohem Protein", mode:"recomp_bal"};
+        return {dir:0.05, label:"Recomp · Lean-Gain (leichter Überschuss)", mode:"recomp_gain"};
+      }
+      return {dir:bmi>=30?-0.10:bmi>=27?0:0.04, label:bmi>=27?"Recomp · Aufbau-Fokus (Erhaltung)":"Recomp · Aufbau-Fokus (leichter Überschuss)", mode:"recomp_gain"};
+    }
     if(g0==="fat_loss")    return {dir:bmi>=30?-0.20:-0.15, label:"Recomp · Fettabbau-Fokus (moderates Defizit)", mode:"recomp_fat"};
     return {dir:-0.08, label:"Recomp · ausgewogen (leichtes Defizit)", mode:"recomp_bal"};
   }
@@ -3498,12 +3511,15 @@ const CARDIO_PROTOCOLS={
     why:"Kurze 30/30-Intervalle sammeln viel Zeit nahe der VO₂max bei weniger Ermüdung pro Einheit — der ideale zweite harte Reiz der Woche.",
     src:"Billat 2001 · Rønnestad 2015"},
 };
-// Polarisierte Verteilung: Ausdauer-Ziel rotiert Zone2/VO2/Schwelle (≈3:1:1, viel locker,
-// wenig hart). Andere Ziele: reines Zone 2 (Gesundheit, Fettabbau, Erholung).
+// Polarisierte Verteilung (Seiler 2010): ~80 % locker (Zone 2), ~20 % hart. Der 15er-Zyklus
+// enthält 12 Grundlagen- und 3 harte Einheiten (Schwelle → VO₂ → HIIT im Wechsel) = exakt 80/20 —
+// bei 4–5 Einheiten/Woche also ~1 harte Einheit pro Woche, wie für polarisiertes Training belegt.
+// Andere Ziele: reines Zone 2 (Gesundheit, Fettabbau, Erholung).
 function cardioProtocol(a,idx){
-  const goals=(a&&a.goals)||[];
-  if(!goals.includes("endurance")) return CARDIO_PROTOCOLS.zone2;
-  const cycle=["zone2","vo2","zone2","threshold","zone2","hiit"];
+  const goals=(a&&a.goals)||[], mode=a&&a.mode;
+  const enduranceFocus = goals.includes("endurance") || mode==="cycling" || mode==="running";
+  if(!enduranceFocus) return CARDIO_PROTOCOLS.zone2;
+  const cycle=["zone2","zone2","zone2","zone2","threshold","zone2","zone2","zone2","zone2","vo2","zone2","zone2","zone2","zone2","hiit"];
   return CARDIO_PROTOCOLS[cycle[((idx||0)%cycle.length)]];
 }
 const WARMUP_DEFAULT=[
@@ -4162,6 +4178,28 @@ function generateOptimalSchedule(a){
     weekday_strong:{2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4],6:[0,1,2,3,4,5]},
     weekend_strong:{2:[5,6],3:[2,5,6],4:[1,3,5,6],5:[1,3,4,5,6],6:[0,1,3,4,5,6]},
   };
+  // ===== AUSDAUER-PRIMÄR (Rad/Lauf) — endurance-dominanter Wochenplan (Audit-Befund K-1) =====
+  // Vorher bekamen Ausdauer-Athleten einen Kraft-Split + 2 lockere Cardio-Tage. Jetzt umgekehrt:
+  // die Woche ist ausdauer-dominant und polarisiert (80/20), Kraft bleibt als 1–2 kurze Ganzkörper-
+  // Erhaltungseinheiten — verbessert die Ökonomie, ohne die Ausdauer zu verdrängen (Seiler 2010;
+  // Beattie 2014). Die Cardio-Tage lösen über cardioProtocol() strukturierte Einheiten mit Zonen auf.
+  const _eg=a.goals||[];
+  const enduPrimary = a.mode==="cycling" || a.mode==="running" || _eg[0]==="endurance";
+  if(enduPrimary){
+    const sDays = days>=5 ? 2 : 1;                              // Kraft-Erhalt
+    let eDays = Math.max(3, Math.min(5, days+1-sDays));         // Ausdauer dominant
+    while(sDays+eDays>6) eDays--;                               // ≥1 echter Ruhetag
+    const eTotal = sDays+eDays;
+    const eOrder = Array(eDays).fill("cardio");                 // Kraft gleichmäßig einstreuen
+    for(let s=0;s<sDays;s++){ const at=Math.round((s+1)*(eOrder.length+1)/(sDays+1)); eOrder.splice(Math.min(at,eOrder.length),0,"full"); }
+    let _fi=0; const eOrderV=eOrder.map(t=> t==="full" ? (_fi++, "full"+(_fi%2===1?"A":"B")) : t);
+    const ePos=(POS[pref]||POS.consistent)[eTotal] || POS.consistent[eTotal] || [0,1,2,3,4,5].slice(0,eTotal);
+    const eSch=["rest","rest","rest","rest","rest","rest","rest"];
+    eOrderV.forEach((t,i)=>{ if(ePos[i]!=null) eSch[ePos[i]]=t; });
+    const eSport = a.mode==="cycling"?"Radfahren":a.mode==="running"?"Laufen":"Ausdauer";
+    const eRat = `${eDays} Ausdauer-Einheiten (${eSport}) polarisiert nach 80/20 — überwiegend lockere Grundlage (Zone 2), dazu gezielt harte Reize (Schwelle · VO₂). ${sDays===2?"Zwei kurze Ganzkörper-Krafteinheiten halten":"Eine kurze Ganzkörper-Krafteinheit hält"} Kraft & Ökonomie, ohne die Ausdauer zu verdrängen (Seiler 2010; Beattie 2014). Der Rest ist echte Erholung.`;
+    return {schedule:eSch, rationale:eRat};
+  }
   // Frequenz-Optimierung (AUTO): bei 2–3 Tagen schlägt Ganzkörper jeden 1×/Woche-Split —
   // jede Muskelgruppe wird 2–3×/Woche gereizt (Schoenfeld 2016: 2× > 1× für Hypertrophie).
   // Ab 4 Tagen liefern die Ober-/Unterkörper-/PPL-Splits ohnehin schon ~2× Frequenz.

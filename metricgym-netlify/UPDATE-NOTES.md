@@ -634,9 +634,33 @@ konsistent (START/PERFORMANCE/ELITE).
   erfragt mehr; die neue Zeile stimmt (du gibst die Kern-Antworten, die Engine leitet den Rest ab).
   Bewusst so gelassen (Stil-Entscheidung): „Session" neben „Einheit" — verständliches Fitness-Deutsch.
 
+### 39. Masterplan Phase 1 & 2 — Ausdauer echt + Kalorienrichtung folgt dem Körperfett
+Umsetzung der zwei wichtigsten Befunde aus dem 15-Persona-Engine-Audit.
+
+**Phase 1 — Ausdauer wird echt trainiert (Befund K-1, kritisch).** Rad-/Lauf-Athleten bekamen
+bisher einen Kraft-Split + 2 lockere Cardio-Tage. Jetzt ist die Woche **ausdauer-dominant**:
+`generateOptimalSchedule` erkennt Ausdauer-Primär (Modus Rad/Lauf bzw. Ausdauer als Erstziel)
+und baut **3–5 Ausdauer-Einheiten polarisiert nach 80/20** (überwiegend Zone 2, gezielt
+Schwelle/VO₂) + **1–2 kurze Ganzkörper-Krafteinheiten** (Erhalt der Ökonomie, ohne die Ausdauer
+zu verdrängen). Die Cardio-Tage lösen über das vorhandene `cardioProtocol` strukturierte
+Einheiten **mit HF-/Leistungszonen** auf; die Polarisierung ist jetzt exakt 80/20
+(12 locker : 3 hart im Zyklus). Beleg: Seiler 2010 · Beattie 2014. **Der Gym-Pfad bleibt
+unverändert.** Ergebnis: Radfahrer #08 / Läuferin #09 erhalten 4 Ausdauer- + 1 Krafteinheit
+statt 4 Gym + 2 Cardio.
+
+**Phase 2 — Kalorienrichtung folgt dem Körperfett (Befund M-1).** Ein „lean/definiert"-Wunsch
+bei mittlerem Körperfett führte bisher in einen **Überschuss** (Massezuwachs statt Definition).
+`calorieDirection` lässt jetzt bei Recomp das **Körperfett führen**: über dem ästhetischen
+Schwellwert (m ~18 % / w ~26 %) Erhaltung bis leichtes Defizit, erst darunter Lean-Gain, bei
+hohem KF echtes Defizit. Ohne KF-Wert bleibt der BMI-Pfad byte-identisch. „American Psycho"
+#15 (18 %) landet jetzt bei −0,14 %/Woche statt +0,11 %.
+
++8 CI-Tests (Ausdauer-Komposition, 80/20-Polarisierung, KF-gekoppelte Richtung, Gym unverändert).
+Phase 3 (Volumen nach Trainingsalter) & 4 (Makro-Feinschliff) folgen.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v21** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v22** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
