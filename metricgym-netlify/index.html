@@ -2532,9 +2532,13 @@ function multiTargets(a,bmr,td){
   let prot; const cut = dir<0;
   // Cut/Recomp: 2,6 g/kg fettfreie Masse (≈ 2,0–2,3 g/kg Körpergewicht je nach KF-Anteil) —
   // oberes Ende für maximalen Muskelschutz im Defizit. Erhaltung/Aufbau: 2,2 g/kg FFM.
-  if(a.bodyFat!=null) prot=Math.round((cut?2.6:2.2)*a.weight*(1-a.bodyFat/100));
-  else prot=Math.round((cut?2.1:1.8)*Math.min(a.weight,25*(a.height/100)**2));
-  const fat=Math.round(.9*a.weight);
+  // Alters-Bonus (Audit M-3): ab ~50 anabole Resistenz → +0,2 g/kg mehr Protein (Moore 2015; Wall 2015).
+  const older=(a.age||30)>=50, ageB=older?0.2:0;
+  if(a.bodyFat!=null) prot=Math.round(((cut?2.6:2.2)+ageB)*a.weight*(1-a.bodyFat/100));
+  else prot=Math.round(((cut?2.1:1.8)+ageB)*Math.min(a.weight,25*(a.height/100)**2));
+  // Fett (Audit N-2): im echten Defizit knapper (0,8 g/kg) → mehr Trainings-Kohlenhydrate;
+  // sonst 0,9 g/kg. Nie unter der hormonellen Untergrenze ~0,5 g/kg.
+  const fat=Math.round(Math.max(0.5, dir<=-0.15?0.8:0.9)*a.weight);
   const mac=(k)=>({kcal:k,p:prot,f:fat,c:Math.max(0,Math.round((k-prot*4-fat*9)/4))});
   return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,recs,goals,dir,dirLabel,bmi:Math.round(bmi*10)/10};
 }
@@ -2689,9 +2693,21 @@ function primaryGoal(a){
 // desto weniger ist erholbar (Helms 2014, Israetel). So sinkt das Volumen bei "Fettabbau-Fokus"
 // stärker als bei "Aufbau-Fokus" — die Priorität wirkt sich direkt auf das Trainingsvolumen aus.
 function deficitFactor(a){ const d=calorieDirection(a).dir; return Math.max(0.78, Math.min(1, 1+d)); }
+// Volumen-Landmarks nach TRAININGSALTER (Audit-Befund M-2). VOL_BANDS gelten für Intermediate.
+// Untrainierte wachsen mit weniger Volumen (niedrigeres MEV/MRV), Fortgeschrittene vertragen mehr
+// (höheres MRV) — Israetel/RP-Landmarks sind erfahrungsabhängig. So stimmt der „im Korridor"-Claim
+// auch für Einsteiger-Ganzkörperpläne, ohne die tatsächliche Satzzahl aufzublähen.
+function expBandFactor(exp){ return {beginner:{mev:0.65,mrv:0.8}, novice:{mev:0.78,mrv:0.9}, intermediate:{mev:1,mrv:1}, advanced:{mev:1,mrv:1.12}}[exp] || {mev:1,mrv:1}; }
 function deficitScaledBands(a){
-  const f=deficitFactor(a); if(f>=1) return VOL_BANDS;
-  const out={}; for(const k of Object.keys(VOL_BANDS)){ const [mev,mrv]=VOL_BANDS[k]; out[k]=[mev,Math.max(mev+2,Math.round(mrv*f))]; }
+  const f=Math.min(1,deficitFactor(a));                 // Defizit verkleinert nur das MRV
+  const ef=expBandFactor((a&&a.exp)||"intermediate");
+  const out={};
+  for(const k of Object.keys(VOL_BANDS)){
+    const [mev0,mrv0]=VOL_BANDS[k];
+    const mev=Math.max(4,Math.round(mev0*ef.mev));
+    const mrv=Math.max(mev+2,Math.round(mrv0*ef.mrv*f));
+    out[k]=[mev,mrv];
+  }
   return out;
 }
 /* AUTOREGULATION (Tagesform): Kombiniert den subjektiven Status-Check mit OBJEKTIVEN
@@ -4208,8 +4224,9 @@ function generateOptimalSchedule(a){
   // DUP-VARIATION: Wiederholt sich derselbe Tag in der Woche (z. B. PPL5 = Push,Pull,Legs,Push,Pull),
   // bekommt die 2./4. Wiederholung die Variante B → ANDERE Übungen + Volumen-Reps (Push A schwer,
   // Push B Volumen). Verschiedene Reize bauen mehr Muskel als zweimal exakt dasselbe (Zourdos 2016).
-  const _seen={}; const typesV=types.map(t=>{ if(t==="rest"||t==="cardio")return t;
-    const n=(_seen[t]=(_seen[t]||0)+1); return (n%2===0)?t+"B":t; });
+  // A/B-Variation macht schAB weiter unten sauber (A/B/A). Früher fügte hier ein zweiter Schritt
+  // schon ein „B" an → Kollision mit schAB → A/B/B (Audit-Befund N-1). Jetzt roh platzieren.
+  const typesV=types;
   const sch=["rest","rest","rest","rest","rest","rest","rest"];
   typesV.forEach((t,i)=>{sch[pos[i]]=t;});
   // Cardio-Tage nach Bedarf: hoher BMI -> 2 (Gesundheit/Fettabbau), Fettabbau/Ausdauer -> 1,
@@ -4217,8 +4234,10 @@ function generateOptimalSchedule(a){
   const goalsArr=a.goals||[], bmiV=(a.weight&&a.height)?a.weight/((a.height/100)**2):24;
   // Ausdauer-Ziel = polarisiert: möglichst viele Cardio-Einheiten (Zone 2 + Intervalle/Schwelle),
   // damit VO₂max & Laktatschwelle wirklich steigen — nicht nur 1 lockere Einheit.
+  // Cardio nur additiv, wenn Ziel/Gesundheit es verlangt (Audit-Befund N-1): reine Kraft-/Muskel-
+  // Ziele mit normalem BMI bekommen GENAU die angefragten Tage, kein aufgedrängter Extra-Cardio-Tag.
   let cardioNeed = goalsArr.includes("endurance") ? Math.min(3, Math.max(1, 7-days-1))
-    : bmiV>=30?2 : goalsArr.includes("fat_loss")?1 : (days<=4?1:0);
+    : bmiV>=30?2 : goalsArr.includes("fat_loss")?1 : (bmiV>=27?1:0);
   for(let c=0;c<cardioNeed;c++){
     const restIdx=sch.map((t,i)=>t==="rest"?i:null).filter(x=>x!=null);
     if(restIdx.length<=1)break; // letzten Ruhetag bewahren

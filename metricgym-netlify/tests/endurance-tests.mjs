@@ -274,6 +274,37 @@ check('P2: Wirklich schlank (10 % KF) darf Lean-Gain (Überschuss)', p2.lean > 0
 check('P2: Hoher KF (28 %) → echtes Defizit', p2.fat <= -0.1, `fat=${p2.fat}`);
 check('P2: Ohne KF-Wert bleibt BMI-Pfad (byte-identisch)', p2.noBf === 0.04, `noBf=${p2.noBf}`);
 
+// ---------- Masterplan P3: Volumen nach Trainingsalter + A/B/A + exakte Tage (M-2, N-1) ----------
+const p3 = await page.evaluate(() => {
+  const beg = deficitScaledBands({ exp: 'beginner', weight: 68, height: 178, goals: ['muscle_gain'] });
+  const int = deficitScaledBands({ exp: 'intermediate', weight: 80, height: 180, goals: ['muscle_gain'] });
+  const adv = deficitScaledBands({ exp: 'advanced', weight: 88, height: 183, goals: ['muscle_gain'] });
+  // A/B/A + exakte Tage: Einsteiger 3T Ganzkörper
+  const o = generateOptimalSchedule({ sex: 'male', age: 22, height: 178, weight: 68, goals: ['muscle_gain'], exp: 'beginner', days: 3, sessionTime: 60, equipment: 'home_min', act: 'light' });
+  const train = o.schedule.filter(t => t !== 'rest');
+  const cardio = o.schedule.filter(t => t === 'cardio').length;
+  return {
+    begMevLower: beg.Brust[0] < int.Brust[0],           // Einsteiger-MEV niedriger
+    advMrvHigher: adv.Brust[1] > int.Brust[1],          // Advanced-MRV höher
+    schedule: o.schedule.join('/'), trainDays: train.length, cardio,
+    aba: train.join(',') === 'fullA,fullB,fullA',       // A/B/A statt A/B/B
+  };
+});
+check('P3: Einsteiger-MEV < Intermediate, Advanced-MRV > Intermediate', p3.begMevLower && p3.advMrvHigher, JSON.stringify({ begLower: p3.begMevLower, advHigher: p3.advMrvHigher }));
+check('P3: Einsteiger-Ganzkörper ist A/B/A (nicht A/B/B)', p3.aba, p3.schedule);
+check('P3: Reine Kraft/Muskel bei normalem BMI → exakte Tage, kein Extra-Cardio', p3.trainDays === 3 && p3.cardio === 0, `train=${p3.trainDays} cardio=${p3.cardio}`);
+
+// ---------- Masterplan P4: Protein-Alters-Bonus + Fett im Cut (M-3, N-2) ----------
+const p4 = await page.evaluate(() => {
+  const mk = (age, dir) => { const a = { sex: 'male', age, weight: 80, height: 180, bodyFat: 20, goals: dir < 0 ? ['fat_loss'] : ['muscle_gain'], loss_rate: 'mod' }; const bmr = bmrCalc(a), td = tdeeCalc(bmr, 'light', effWeight(a), 60, 4); return multiTargets(a, bmr, td); };
+  const young = mk(30, 0), old = mk(58, 0);              // Erhaltung, jung vs alt
+  const cut = mk(30, -1);                                // echtes Defizit
+  const maint = mk(30, 0);
+  return { youngP: young.train.p, oldP: old.train.p, cutFatPerKg: +(cut.train.f / 80).toFixed(2), maintFatPerKg: +(maint.train.f / 80).toFixed(2) };
+});
+check('P4: Ü50 bekommt mehr Protein (anabole Resistenz)', p4.oldP > p4.youngP, `alt=${p4.oldP} jung=${p4.youngP}`);
+check('P4: Fett im echten Cut knapper (0,8 g/kg) als bei Erhaltung (0,9)', p4.cutFatPerKg <= 0.8 && p4.maintFatPerKg >= 0.89, JSON.stringify(p4));
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();

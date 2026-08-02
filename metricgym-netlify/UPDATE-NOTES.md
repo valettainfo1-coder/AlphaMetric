@@ -656,11 +656,31 @@ hohem KF echtes Defizit. Ohne KF-Wert bleibt der BMI-Pfad byte-identisch. „Ame
 #15 (18 %) landet jetzt bei −0,14 %/Woche statt +0,11 %.
 
 +8 CI-Tests (Ausdauer-Komposition, 80/20-Polarisierung, KF-gekoppelte Richtung, Gym unverändert).
-Phase 3 (Volumen nach Trainingsalter) & 4 (Makro-Feinschliff) folgen.
+
+### 40. Masterplan Phase 3 & 4 — Volumen nach Trainingsalter + Makro-Feinschliff
+**Phase 3 (Befunde M-2, N-1).**
+- **Volumen-Landmarks nach Trainingsalter:** `deficitScaledBands` skaliert MEV/MRV jetzt zusätzlich
+  nach Erfahrung (Einsteiger ~0,65× MEV, Fortgeschrittene ~1,12× MRV). So stimmt der „im Korridor"-
+  Claim auch für Einsteiger-Ganzkörperpläne — ohne die tatsächliche Satzzahl zu ändern. Einsteiger #01
+  ging von 5 Gruppen „unter MEV" auf faktisch im Korridor.
+- **A/B/A statt A/B/B behoben:** ein doppeltes A/B-Suffixing kollidierte → Ganzkörper A/B/**B**. Jetzt
+  sauber A/B/A (Zourdos-Variation korrekt).
+- **Exakte Tage:** reine Kraft-/Muskel-Ziele bei normalem BMI bekommen genau die angefragten Tage —
+  kein aufgedrängter Extra-Cardio-Tag mehr (#01: 3 statt 4).
+
+**Phase 4 (Befunde M-3, N-2).**
+- **Protein-Alters-Bonus:** ab ~50 Jahren +0,2 g/kg gegen anabole Resistenz (Moore 2015; Wall 2015).
+  Masters-Frau #14: 1,54 → 1,69 g/kg (2,41 g/kg FFM); #06 (58): 1,71 → 1,9 g/kg.
+- **Fett im echten Cut knapper** (0,8 statt 0,9 g/kg) → mehr Trainings-Kohlenhydrate; hormonelle
+  Untergrenze 0,5 g/kg bleibt gewahrt.
+- Bewusst *nicht* erzwungen: harter Bizeps-MRV-Deckel (N-3) — „an MRV" ist die erholbare Obergrenze
+  (nicht darüber) und wird bereits korrekt gewarnt; ein Clamp brächte Regressionsrisiko für Mini-Nutzen.
+
++7 CI-Tests. Alle 4 Masterplan-Phasen umgesetzt, die Ziel-Domänen des Audits bewegen sich Richtung A−.
 
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v22** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v23** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
