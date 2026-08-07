@@ -2481,6 +2481,14 @@ function calorieDirection(a){
     if(g0==="fat_loss")    return {dir:bmi>=30?-0.20:-0.15, label:"Recomp · Fettabbau-Fokus (moderates Defizit)", mode:"recomp_fat"};
     return {dir:-0.08, label:"Recomp · ausgewogen (leichtes Defizit)", mode:"recomp_bal"};
   }
+  /* HYPERPRINZIP 3 — Deklarierte Priorität ist bindend (Audit-Befund G-3).
+     Die Priorisierung galt bisher nur für die Paarung Fett + Muskelaufbau; steht KRAFT an
+     erster Stelle und Fettabbau dahinter, fiel der Fall in den vollen Cut — identisch zum
+     reinen Abnehmziel. Maximalkraft ist im tiefen Defizit aber schlechter zu entwickeln
+     (neuronale Anpassung + Regeneration brauchen Energie). Kraft zuerst → knappes Defizit. */
+  if(hasFat&&goals.includes("strength")&&g0==="strength"){
+    return {dir:bmi>=30?-0.12:-0.08, label:"Kraft-Fokus · knappes Defizit (Kraft zuerst)", mode:"strength_cut"};
+  }
   if(hasFat){
     // Tempo aus der Abnehmen-Persona koppelt das Defizit. Ohne loss_rate bleibt der
     // Standard byte-identisch (App-Test-Pfad unverändert). Grundlage: ~0,5–0,7 %/Woche
@@ -2536,10 +2544,31 @@ function multiTargets(a,bmr,td){
   const older=(a.age||30)>=50, ageB=older?0.2:0;
   if(a.bodyFat!=null) prot=Math.round(((cut?2.6:2.2)+ageB)*a.weight*(1-a.bodyFat/100));
   else prot=Math.round(((cut?2.1:1.8)+ageB)*Math.min(a.weight,25*(a.height/100)**2));
-  // Fett (Audit N-2): im echten Defizit knapper (0,8 g/kg) → mehr Trainings-Kohlenhydrate;
-  // sonst 0,9 g/kg. Nie unter der hormonellen Untergrenze ~0,5 g/kg.
-  const fat=Math.round(Math.max(0.5, dir<=-0.15?0.8:0.9)*a.weight);
-  const mac=(k)=>({kcal:k,p:prot,f:fat,c:Math.max(0,Math.round((k-prot*4-fat*9)/4))});
+  /* HYPERPRINZIP 4+5 — Messung schlägt Surrogat, physiologische Böden sind absolut (G-4).
+     Fett wurde bisher pauschal aus dem KÖRPERGEWICHT abgeleitet. Bei starkem Übergewicht ist
+     dieses Gewicht überwiegend Fettmasse — der Betroffene bekam also ausgerechnet deshalb ein
+     hohes Fettziel, weil er viel Fett trägt, und die Kohlenhydrate wurden aus dem ohnehin
+     kleinen Budget gedrängt (bis ~47 % Fett bei BMI 41). Fett bemisst sich jetzt an der
+     FETTFREIEN MASSE, wo diese bekannt ist — der stoffwechselaktiven Masse, die den Bedarf
+     tatsächlich bestimmt. Zwei absolute Böden bleiben: Fett ≥ 0,5 g/kg Körpergewicht
+     (Hormonhaushalt) und ein Kohlenhydrat-Boden für die Trainingsqualität. */
+  const _ffm = a.bodyFat!=null ? a.weight*(1-a.bodyFat/100) : null;
+  const fatFloor = Math.round(0.5*a.weight);
+  const fatBase = _ffm!=null
+    ? Math.round((dir<=-0.15?1.0:1.1) * _ffm)          // an fettfreier Masse
+    : Math.round((dir<=-0.15?0.8:0.9) * a.weight);      // ohne KF-Wert: bisheriger Pfad
+  const fat = Math.max(fatFloor, fatBase);
+  const carbFloor = _ffm!=null ? Math.round(2*_ffm) : Math.round(1.5*a.weight);
+  const mac=(k)=>{
+    let f=fat, c=Math.round((k-prot*4-f*9)/4);
+    // Reicht die Energie nicht für die Trainings-Kohlenhydrate, gibt Fett bis zu seinem
+    // Boden nach — Kohlenhydrate tragen die Trainingsleistung, Fett ist hier der Puffer.
+    if(c<carbFloor && f>fatFloor){
+      const give=Math.min(f-fatFloor, Math.floor(((carbFloor-c)*4)/9));
+      if(give>0){ f-=give; c=Math.round((k-prot*4-f*9)/4); }
+    }
+    return {kcal:k,p:prot,f,c:Math.max(0,c)};
+  };
   return {train:mac(trainK),rest:mac(restK),warn:[...new Set(warn)],conflicts,recs,goals,dir,dirLabel,bmi:Math.round(bmi*10)/10};
 }
 // 🧬 STOFFWECHSEL-ZWILLING (Magie A) — projiziert aus echtem Erhaltungsbedarf, gemittelter
@@ -3864,8 +3893,21 @@ function generateTrainingPlan(profile,variant){
       // gym_basic/home_full: bevorzugt ausgestattet, Calisthenics nur als Fallback, wenn der Slot nichts anderes hat.
       if(richGym){ const eqd=fitting.filter(x=>!isCalisthenic(x)); if(eqd.length||equipment==="gym_full")fitting=eqd; }
       if(PP.decon&&fitting.length>1) fitting=fitting.slice().sort((x,y)=>friendlyScore(y)-friendlyScore(x));
-      // Verletzung angegeben → sichere Kandidaten des Slots zuerst (stabile Sortierung erhält die Wissenschafts-Reihenfolge)
-      if(injuries.length&&fitting.length>1) fitting=fitting.slice().sort((x,y)=>(injRisky(x)?1:0)-(injRisky(y)?1:0));
+      /* HYPERPRINZIP 2 — Sicherheit dominiert Variation (Audit-Befund G-2).
+         Vorher wurden riskante Kandidaten nur ans Ende sortiert; die B-Variante griff aber
+         gezielt zum ZWEITEN Kandidaten und erbte damit genau die kontraindizierte Übung,
+         nachdem A die sichere belegt hatte. Jetzt gilt: Existiert im Slot mindestens eine
+         sichere Option, kommen NUR sichere Optionen infrage — für A wie für B. Lieber
+         dieselbe sichere Übung in beiden Varianten (die Reizvariation trägt weiterhin über
+         Wiederholungsbereich und Satzschema) als eine kontraindizierte zur Abwechslung. */
+      if(injuries.length&&fitting.length){
+        const safe=fitting.filter(x=>!injRisky(x));
+        if(safe.length) fitting=safe;
+        // Hat ein Slot ÜBERHAUPT keine sichere Option, ist eine Übung weniger die richtige
+        // Antwort — nicht eine kontraindizierte. Nur wenn die Einheit sonst zu dünn würde
+        // (< 3 Übungen), greift die markierte Notlösung mit ausgewiesener Alternative.
+        else if(chosen.length>=3) continue;
+      }
       const n=vB&&fitting.length>1?fitting[1]:fitting[0];
       if(n)chosen.push(n);
     }
@@ -4202,7 +4244,11 @@ function generateOptimalSchedule(a){
   const _eg=a.goals||[];
   const enduPrimary = a.mode==="cycling" || a.mode==="running" || _eg[0]==="endurance";
   if(enduPrimary){
-    const sDays = days>=5 ? 2 : 1;                              // Kraft-Erhalt
+    /* HYPERPRINZIP 3 — im Defizit ist Krafttraining der Muskelschutz (Audit-Befund G-6).
+       Ausdauer-Primär MIT Abnehmziel bekam nur eine einzige Krafteinheit; genau im Defizit
+       ist der Kraftreiz aber der entscheidende Hebel für den Erhalt der Magermasse
+       (Longland 2016; Helms 2014). Bei Fettabbau daher mindestens zwei Einheiten. */
+    const sDays = (days>=5 || _eg.includes("fat_loss")) ? 2 : 1;  // Kraft-Erhalt
     let eDays = Math.max(3, Math.min(5, days+1-sDays));         // Ausdauer dominant
     while(sDays+eDays>6) eDays--;                               // ≥1 echter Ruhetag
     const eTotal = sDays+eDays;
@@ -4234,10 +4280,21 @@ function generateOptimalSchedule(a){
   const goalsArr=a.goals||[], bmiV=(a.weight&&a.height)?a.weight/((a.height/100)**2):24;
   // Ausdauer-Ziel = polarisiert: möglichst viele Cardio-Einheiten (Zone 2 + Intervalle/Schwelle),
   // damit VO₂max & Laktatschwelle wirklich steigen — nicht nur 1 lockere Einheit.
-  // Cardio nur additiv, wenn Ziel/Gesundheit es verlangt (Audit-Befund N-1): reine Kraft-/Muskel-
-  // Ziele mit normalem BMI bekommen GENAU die angefragten Tage, kein aufgedrängter Extra-Cardio-Tag.
+  /* HYPERPRINZIP 4 — Messung schlägt Surrogat (Audit-Befund G-5).
+     Der Zusatz-Cardio-Tag hing allein am BMI. Bei einem 2,00-m-Kraftathleten mit 18 % Körper-
+     fett ist BMI 28 aber Muskelmasse, kein Übergewicht — er bekam einen Tag aufgedrängt, den
+     er nicht wollte. Liegt ein KÖRPERFETT-Wert vor, entscheidet dieser; der BMI dient nur noch
+     als Ersatzmaß, wenn nichts Besseres bekannt ist. Schwellen: ♂ 25 % / ♀ 35 % (erhöht),
+     ♂ 30 % / ♀ 40 % (deutlich erhöht). */
+  const _bfV=a.bodyFat, _male=a.sex!=="female";
+  // Körperfett-Referenzwerte steigen mit dem Alter — ab 65 gelten ~5 Prozentpunkte mehr als
+  // altersnormal, sonst würde ein 75-Jähriger mit altersgerechter Körperzusammensetzung
+  // fälschlich als erhöht eingestuft.
+  const _ageAdj=(a.age||30)>=65?5:0;
+  const _highFat = _bfV!=null ? (_bfV >= (_male?30:40)+_ageAdj) : (bmiV>=30);
+  const _modFat  = _bfV!=null ? (_bfV >= (_male?25:35)+_ageAdj) : (bmiV>=27);
   let cardioNeed = goalsArr.includes("endurance") ? Math.min(3, Math.max(1, 7-days-1))
-    : bmiV>=30?2 : goalsArr.includes("fat_loss")?1 : (bmiV>=27?1:0);
+    : _highFat?2 : goalsArr.includes("fat_loss")?1 : (_modFat?1:0);
   for(let c=0;c<cardioNeed;c++){
     const restIdx=sch.map((t,i)=>t==="rest"?i:null).filter(x=>x!=null);
     if(restIdx.length<=1)break; // letzten Ruhetag bewahren
@@ -7160,15 +7217,42 @@ function renderOnboarding(){
 
 // Ziel-PRIORISIERTE Projektion: für jedes Ziel eine ehrliche 12-Wochen-Schätzung,
 // sortiert nach der vom Nutzer gewählten Priorität (goals[0] = wichtigstes).
-function goalProjections(a,tg,pLo,pHi){
+function goalProjections(a,tg,pLo,pHi,td){
   const w=a.weight||80, exp=a.exp||"novice";
-  const fatLo=Math.max(2,Math.round(w*0.04)), fatHi=Math.max(fatLo+1,Math.round(w*0.07));
+  /* HYPERPRINZIP 1 — Keine Zusage ohne Deckung (Audit-Befund G-1).
+     Die Fett-Prognose folgt dem TATSÄCHLICH ausgegebenen Plan, nicht einer Faustformel aus
+     dem Körpergewicht. Maßgeblich ist der Wochenschnitt der (ggf. auf die Sicherheits-
+     untergrenze angehobenen) Tagesziele gegen den Gesamtumsatz. Greift der Kalorienboden,
+     sinkt die Prognose ehrlich mit — statt einen Verlust zu versprechen, den der eigene
+     Plan rechnerisch ausschließt. Energieäquivalent 7 700 kcal/kg (Wishnofsky, Näherung). */
+  let fatLo=null, fatHi=null, fatNote=null;
+  const dys=Math.min(7,Math.max(1,a.days||4));
+  let tdeeAvg=null;
+  try{
+    if(td&&td.avg) tdeeAvg=td.avg;
+    else { const _b=bmrCalc(a); tdeeAvg=tdeeCalc(_b,a.act||"light",effWeight(a),a.len||60,dys).avg; }
+  }catch(e){}
+  if(tdeeAvg>0 && tg && tg.train && tg.rest){
+    const planAvg=(tg.train.kcal*dys + tg.rest.kcal*(7-dys))/7;
+    const defDay=tdeeAvg-planAvg;                       // > 0 = echtes Defizit
+    const kg12=defDay*84/7700;                          // 12 Wochen
+    if(kg12>=0.8){ fatLo=Math.round(kg12*0.75*10)/10; fatHi=Math.round(kg12*1.1*10)/10; }
+    else if(kg12>0.15){ fatLo=Math.round(kg12*0.7*10)/10; fatHi=Math.round(kg12*1.15*10)/10;
+      fatNote="Dein Bedarf liegt nah an der Sicherheitsgrenze — weiter runter wäre nicht gesund. Der Hebel ist ab hier <b>Bewegung</b>, nicht weniger Essen."; }
+    else { fatLo=0; fatHi=0;
+      fatNote="Dein Tagesziel steht bereits auf der Sicherheitsuntergrenze — ein Defizit über die Ernährung ist hier nicht mehr verantwortbar. Fettabbau läuft jetzt über <b>zusätzliche Bewegung</b>, dein Gewicht bleibt sonst stabil."; }
+  }
+  if(fatLo==null){ fatLo=Math.max(2,Math.round(w*0.04)); fatHi=Math.max(fatLo+1,Math.round(w*0.07)); }
   const musc={beginner:[2,4],novice:[2,3],intermediate:[1,2],advanced:[1,2]}[exp]||[2,3];
   const D={
-    fat_loss:{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"leichter",sub:"Körperfett weg in 12 Wochen",icon:"activity"},
+    fat_loss:(fatHi>0
+      ?{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"leichter",sub:"Körperfett weg in 12 Wochen",icon:"activity",note:fatNote}
+      :{lo:null,hi:null,word:"stabil",headline:"gehalten",sub:"Gewicht bleibt — der Hebel ist Bewegung",icon:"activity",note:fatNote}),
     muscle_gain:{lo:musc[0],hi:musc[1],prefix:"+",unit:"kg",headline:"muskulöser",sub:"realistischer Aufbau in 12 Wochen",icon:"dumbbell"},
     strength:{lo:pLo,hi:pHi,prefix:"+",unit:"%",headline:"stärker",sub:"mehr Maximalkraft in 12 Wochen",icon:"flame"},
-    recomp:{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"schlanker & stärker",sub:"Fett runter, Kraft rauf",icon:"activity"},
+    recomp:(fatHi>0
+      ?{lo:fatLo,hi:fatHi,prefix:"−",unit:"kg",headline:"schlanker & stärker",sub:"Fett runter, Kraft rauf",icon:"activity",note:fatNote}
+      :{lo:null,hi:null,word:"straffer",headline:"schlanker & stärker",sub:"Körperzusammensetzung verbessert sich",icon:"activity",note:fatNote}),
     general:{lo:pLo,hi:pHi,prefix:"+",unit:"%",headline:"fitter",sub:"mehr Leistung & Energie",icon:"zap"},
     endurance:{lo:pLo,hi:Math.round(pHi*1.2),prefix:"+",unit:"%",headline:"ausdauernder",sub:"mehr Kondition in 12 Wochen",icon:"activity"},
     mobility:{lo:null,word:"spürbar",headline:"beweglicher",sub:"mehr Bewegungsfreiheit & weniger Schmerz",icon:"activity"},
@@ -7292,7 +7376,17 @@ function parseWish(raw){
   if(wantCycle&&!wantRun) intent.mode="cycling";
   else if(wantRun&&!wantCycle) intent.mode="running";
   else if(wantCycle&&wantRun) intent.mode="hybrid";
-  if(intent.mode==="cycling"||intent.mode==="running"){
+  /* HYPERPRINZIP 3 — der Nutzerwille geht nicht verloren (Audit-Befund G-7).
+     Sobald eine Sportart fiel („Marathon", „Rad"), setzte die Sportart-Weiche das Ziel hart
+     auf Ausdauer und verwarf einen im selben Satz geäußerten Kraftwunsch — der Nutzer bekam
+     exakt das, was er ausdrücklich NICHT wollte. Nennt jemand Sportart UND Kraft/Muskeln,
+     ist das ein Hybrid-Ziel mit dieser Disziplin, kein reines Ausdauerziel. */
+  if((intent.mode==="cycling"||intent.mode==="running") && (wantStrength||wantMuscle) && !wantFat){
+    intent.endur_disc=intent.mode; intent.mode="hybrid";
+    intent.goals=[wantMuscle?"muscle_gain":"strength","endurance"];
+    intent.tags.push("hybrid");
+  }
+  else if(intent.mode==="cycling"||intent.mode==="running"){
     intent.goals=[wantFat?"fat_loss":"endurance"];
     if(intent.mode==="cycling") intent.cyc_goal=wantFat?"weight":has("berg","kletter")?"climb":has("gran fondo","lange","distanz","100","200")?"gran_fondo":has("rennen","kriter","race")?"race":"ftp";
     else intent.run_goal=wantFat?"weight":(has("marathon")&&!has("halbmarathon"))?"marathon":has("halbmarathon","21")?"half":has("10k","zehn")?"10k":has("5k","fuenf")?"5k":"endurance";
@@ -7510,7 +7604,7 @@ function renderReveal(){
   const base={beginner:[20,35],novice:[12,22],intermediate:[6,12],advanced:[3,7]}[a.exp]||[12,22];
   const dFac=Math.min(1,0.55+(a.days||4)*0.11), pLo=Math.round(base[0]*dFac), pHi=Math.round(base[1]*dFac);
   // Ziel-PRIORISIERTE Projektion: das wichtigste Ziel (goals[0]) führt die Visualisierung an.
-  const proj=goalProjections(a,tg,pLo,pHi);
+  const proj=goalProjections(a,tg,pLo,pHi,p.td);   // p.td → Prognose aus dem echten Plan (G-1)
   const primary=proj[0], secondary=proj.slice(1,3);
   const winLine={fat_loss:`~${Math.max(2,Math.round((a.weight||80)*0.04))} kg Fett weg in 12 Wochen`,
     muscle_gain:`Sichtbar mehr Muskeln`,
@@ -7539,6 +7633,7 @@ function renderReveal(){
       ${bigNum}
       <p class="sm" style="font-weight:600;margin-top:6px">Du wirst <b style="color:var(--t1)">${primary.headline}</b></p>
       <p class="xs t2" style="margin-top:2px">${primary.sub}</p>
+      ${primary.note?`<p class="xs" style="margin:10px auto 0;max-width:320px;line-height:1.55;color:var(--t2);background:var(--s2);border-radius:11px;padding:10px 12px;text-align:left">${icon("info",12)} ${primary.note}</p>`:""}
       ${milestones.length?`<div class="reveal-traj">${milestones.map((m,i)=>`
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px">
           <div class="reveal-bar" style="height:${22+i*24}px;animation-delay:${i*0.12}s"></div>

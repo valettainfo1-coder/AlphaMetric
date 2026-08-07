@@ -303,7 +303,79 @@ const p4 = await page.evaluate(() => {
   return { youngP: young.train.p, oldP: old.train.p, cutFatPerKg: +(cut.train.f / 80).toFixed(2), maintFatPerKg: +(maint.train.f / 80).toFixed(2) };
 });
 check('P4: Ü50 bekommt mehr Protein (anabole Resistenz)', p4.oldP > p4.youngP, `alt=${p4.oldP} jung=${p4.youngP}`);
-check('P4: Fett im echten Cut knapper (0,8 g/kg) als bei Erhaltung (0,9)', p4.cutFatPerKg <= 0.8 && p4.maintFatPerKg >= 0.89, JSON.stringify(p4));
+check('P4: Fett im echten Cut knapper als bei Erhaltung', p4.cutFatPerKg < p4.maintFatPerKg, JSON.stringify(p4));
+
+// ---------- HYPERPRINZIP: Grenzfall-Befunde G-1 bis G-7 (Kohorte-B-Audit) ----------
+const hp = await page.evaluate(() => {
+  // G-1: Prognose folgt dem ausgegebenen Plan (Kalorienboden greift)
+  const tiny = { sex:'female', age:29, height:152, weight:45, bodyFat:22, goals:['fat_loss'], loss_rate:'mod',
+    exp:'novice', days:4, act:'sedentary', len:45, focus:[], split:'auto' };
+  const tb = bmrCalc(tiny), tt = tdeeCalc(tb, tiny.act, effWeight(tiny), 45, 4), ttg = multiTargets(tiny, tb, tt);
+  const tproj = goalProjections(tiny, ttg, 5, 10, tt)[0];
+  const realKg = ((tt.avg - (ttg.train.kcal*4 + ttg.rest.kcal*3)/7) * 84) / 7700;
+  // Gegenprobe: normales Profil mit echtem Defizit -> Prognose muss substanziell bleiben
+  const norm = { sex:'male', age:32, height:180, weight:95, bodyFat:28, goals:['fat_loss'], loss_rate:'mod',
+    exp:'novice', days:4, act:'light', len:60, focus:[], split:'auto' };
+  const nb = bmrCalc(norm), nt = tdeeCalc(nb, norm.act, effWeight(norm), 60, 4), ntg = multiTargets(norm, nb, nt);
+  const nproj = goalProjections(norm, ntg, 5, 10, nt)[0];
+
+  // G-2: Verletzung -> keine kontraindizierte Übung, auch nicht in Variante B
+  const inj = { sex:'female', age:36, height:169, weight:74, bodyFat:31, goals:['fat_loss'], exp:'novice',
+    days:4, act:'light', equipment:'gym_full', injuries:['knee','back'], focus:[], split:'auto',
+    schedule_pref:'consistent', recovery_profile:'average' };
+  S.profile = { a: inj }; S.plan = generateTrainingPlan({a:inj}); S.planB = generateTrainingPlan({a:inj}, 'B');
+  S.schedule = generateOptimalSchedule(inj).schedule.slice(); S.exOverrides = {};
+  let flagged = 0, total = 0;
+  for (const t of S.schedule) { if (t==='rest'||t==='cardio') continue;
+    for (const e of (sessionDef(t).main||[])) { total++; if (injuryWarn(e.n)) flagged++; } }
+
+  // G-3: Kraft zuerst -> knappes Defizit statt vollem Cut
+  const base = { sex:'male', weight:95, height:183, bodyFat:24 };
+  const sFirst = calorieDirection({...base, goals:['strength','fat_loss']}).dir;
+  const fFirst = calorieDirection({...base, goals:['fat_loss','strength']}).dir;
+
+  // G-4: Fett folgt der fettfreien Masse, Kohlenhydrat-Boden greift
+  const ob = { sex:'female', age:47, height:163, weight:109, bodyFat:47, goals:['fat_loss'], loss_rate:'fast',
+    exp:'beginner', days:3, act:'sedentary', len:45 };
+  const obb = bmrCalc(ob), obt = tdeeCalc(obb, ob.act, effWeight(ob), 45, 3), otg = multiTargets(ob, obb, obt);
+  const fatPct = otg.train.f*9 / otg.train.kcal;
+  // gleiches Gewicht, anderes Körperfett -> anderes Fettziel (FFM-basiert)
+  const lean = {...ob, bodyFat:20}; const lb = bmrCalc(lean), lt = tdeeCalc(lb, lean.act, effWeight(lean), 45, 3);
+  const ltg = multiTargets(lean, lb, lt);
+
+  // G-5: Körperfett schlägt BMI (muskulöser Athlet bekommt kein Zwangs-Cardio)
+  const ath = { sex:'male', age:31, height:200, weight:112, bodyFat:18, goals:['strength'], exp:'advanced',
+    days:4, act:'moderate', equipment:'gym_full', focus:[], split:'auto', schedule_pref:'consistent', recovery_profile:'average' };
+  const athSch = generateOptimalSchedule(ath).schedule;
+  // G-6: Ausdauer + Abnehmen -> mindestens 2 Krafteinheiten
+  const cyc = { sex:'male', age:44, height:178, weight:94, bodyFat:29, mode:'cycling', goals:['fat_loss'],
+    exp:'intermediate', days:4, act:'light', focus:[], split:'auto', schedule_pref:'consistent', recovery_profile:'average' };
+  const cycSch = generateOptimalSchedule(cyc).schedule;
+  const cycStr = cycSch.filter(t=>t!=='rest'&&t!=='cardio').length;
+  // G-7: Sportart + Kraftwunsch -> Hybrid, Kraft bleibt erhalten
+  const w = parseWish('marathon laufen und gleichzeitig stark bleiben');
+
+  return {
+    g1: { promiseHi: tproj.hi, realKg: +realKg.toFixed(2), hasNote: !!tproj.note, normHi: nproj.hi },
+    g2: { flagged, total },
+    g3: { sFirst, fFirst },
+    g4: { fatPct: +fatPct.toFixed(2), obFat: otg.train.f, leanFat: ltg.train.f, carbs: otg.train.c },
+    g5: { athCardio: athSch.filter(t=>t==='cardio').length, athStrength: athSch.filter(t=>t!=='rest'&&t!=='cardio').length },
+    g6: { cycStrength: cycStr, cycCardio: cycSch.filter(t=>t==='cardio').length },
+    g7: { mode: w.mode, goals: w.goals },
+  };
+});
+check('G-1: Prognose folgt dem gedeckelten Plan (kein Über-Versprechen)',
+  hp.g1.promiseHi === null || hp.g1.promiseHi <= Math.max(0.5, hp.g1.realKg * 1.3), JSON.stringify(hp.g1));
+check('G-1: Sicherheitsgrenze wird ehrlich erklärt (Hinweistext)', hp.g1.hasNote === true, JSON.stringify(hp.g1));
+check('G-1: echtes Defizit liefert weiterhin substanzielle Prognose', hp.g1.normHi >= 2, `normHi=${hp.g1.normHi}`);
+check('G-2: Verletzung → 0 kontraindizierte Übungen (auch Variante B)', hp.g2.flagged === 0 && hp.g2.total > 10, JSON.stringify(hp.g2));
+check('G-3: Kraft zuerst → knapperes Defizit als Fett zuerst', hp.g3.sFirst > hp.g3.fFirst, JSON.stringify(hp.g3));
+check('G-4: Fett bleibt unter 40 % der Energie, Carbs nicht kollabiert', hp.g4.fatPct < 0.40 && hp.g4.carbs > 100, JSON.stringify(hp.g4));
+check('G-4: Fettziel folgt der fettfreien Masse (gleiches Gewicht, anderes KF)', hp.g4.obFat !== hp.g4.leanFat, JSON.stringify(hp.g4));
+check('G-5: muskulöser Athlet bekommt kein BMI-Zwangs-Cardio', hp.g5.athCardio === 0 && hp.g5.athStrength === 4, JSON.stringify(hp.g5));
+check('G-6: Ausdauer + Abnehmen → ≥2 Krafteinheiten (Muskelschutz)', hp.g6.cycStrength >= 2 && hp.g6.cycCardio >= 3, JSON.stringify(hp.g6));
+check('G-7: Sportart + Kraftwunsch → Hybrid, Kraft erhalten', hp.g7.mode === 'hybrid' && hp.g7.goals.includes('endurance') && (hp.g7.goals.includes('strength')||hp.g7.goals.includes('muscle_gain')), JSON.stringify(hp.g7));
 
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 

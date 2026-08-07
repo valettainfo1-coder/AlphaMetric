@@ -678,9 +678,47 @@ hohem KF echtes Defizit. Ohne KF-Wert bleibt der BMI-Pfad byte-identisch. „Ame
 
 +7 CI-Tests. Alle 4 Masterplan-Phasen umgesetzt, die Ziel-Domänen des Audits bewegen sich Richtung A−.
 
+### 41. Hyperprinzip-Härtung — alle sieben Grenzfall-Befunde behoben (Kohorte-B-Audit)
+Ein zweites Audit mit 15 **Grenzfall**-Personas (Alter 16 und 75, Verletzungen, BMI 41,
+1,52 m/45 kg, 2,00 m/112 kg, erzwungene Splits, Zielkonflikte) deckte sieben reproduzierbare
+Defekte an den Rändern auf. Alle sind behoben — jeder Eingriff folgt einem der fünf Prinzipien:
+
+**① Keine Zusage ohne Deckung · ② Sicherheit dominiert Variation · ③ Deklarierte Priorität ist
+bindend · ④ Messung schlägt Surrogat · ⑤ Physiologische Böden sind absolut**
+
+- **G-1 (kritisch) — Prognose folgt jetzt dem ausgegebenen Plan.** Griff der Kalorienboden,
+  versprach die App weiter einen Fettverlust, den ihr eigener Plan ausschloss (bei 45 kg:
+  −2 bis −3 kg zugesagt, real 0,2 kg — Faktor 10). `goalProjections` rechnet nun aus dem
+  gedeckelten Tagesziel gegen den Gesamtumsatz und erklärt den Sonderfall offen
+  („der Hebel ist ab hier Bewegung, nicht weniger Essen"). Gegenprobe: ein echtes Defizit
+  prognostiziert unverändert 6,2 kg — es wurde nichts kleingerechnet.
+- **G-2 (kritisch) — Sicherheit vor Variation.** Die B-Variante erbte kontraindizierte Übungen,
+  weil A die sicheren belegt hatte (Knie-Patientin: 3 kontraindizierte Übungen). Jetzt kommen
+  bei angegebener Einschränkung **nur** sichere Kandidaten infrage; hat ein Slot gar keine, wird
+  er ausgelassen statt kontraindiziert programmiert. Ergebnis: **0 statt 3** riskante Übungen —
+  bei unverändertem Umfang (20 Übungen).
+- **G-3 (kritisch) — Priorität bindet auch für Kraft.** „Kraft zuerst + Fettabbau" landete im
+  vollen Cut (−20 %), identisch zum reinen Abnehmziel. Jetzt knappes Defizit (−8 %/−12 %).
+- **G-4 — Fett folgt der fettfreien Masse.** Bei BMI 41 gingen 47 % der Energie in Fett und die
+  Kohlenhydrate kollabierten auf 68 g. Fett bemisst sich nun an der stoffwechselaktiven Masse
+  (Böden: Fett ≥ 0,5 g/kg, zusätzlich Kohlenhydrat-Boden). Ergebnis: 32 % Fett, 134 g Carbs.
+- **G-5 — Körperfett schlägt BMI.** Der Zusatz-Cardio-Tag hing am BMI; ein 2,00-m-Athlet mit
+  18 % KF bekam ihn aufgedrängt. Jetzt entscheidet der KF-Wert (altersadjustiert ab 65).
+- **G-6 — Muskelschutz bei Ausdauer + Abnehmen.** Nur 1 Krafteinheit im Defizit → jetzt
+  mindestens 2 (Longland 2016; Helms 2014).
+- **G-7 — Sportart verwirft den Kraftwunsch nicht mehr.** „Marathon laufen und stark bleiben"
+  ergab reine Ausdauer; jetzt Hybrid mit erhaltenem Kraftziel.
+
+**Ehrliche Korrektur zum Audit:** Der dort genannte Punkt „7 von 15 bekommen mehr Tage als
+angefragt" war ein **Messartefakt** — die Prüfmetrik zählte additive Cardio-Tage als Trainingstage.
+Nachgemessen: Die angefragten **Kraft-Tage werden in 15 von 15 Fällen exakt eingehalten**; Cardio
+liegt ausschließlich auf Ruhetagen. Kein Defekt.
+
++10 CI-Tests (G-1 bis G-7 inkl. Gegenproben). Alle drei Suiten grün, Kohorte A ohne Regression.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v23** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v24** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
