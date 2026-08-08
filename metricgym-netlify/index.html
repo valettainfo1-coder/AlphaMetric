@@ -214,6 +214,25 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .frec-note{margin:8px 0 0; font-size:11.5px; line-height:1.5; color:var(--t3); border-top:1px solid rgba(169,196,222,.16); padding-top:8px;}
   .frec-go{margin-top:10px; min-height:42px; font-size:13px;}
   .frec-go[disabled]{opacity:.55;}
+  /* Start-Übersicht: To-do plus sichtbare Wirkungskette. */
+  .st-row{border-top:1px solid var(--hairline); align-items:flex-start; padding-top:11px; padding-bottom:11px;}
+  .st-mark{width:25px; height:25px; min-width:25px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    margin-top:1px; border:1px solid var(--hairline); background:var(--surface); color:var(--t2);}
+  .st-mark.on{background:var(--accent); border-color:transparent; color:#fff;}
+  .st-un{display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;}
+  .st-pill{font-size:9.5px; font-weight:600; letter-spacing:.01em; padding:2.5px 7px; border-radius:999px;
+    background:var(--accent-soft); color:var(--hl); white-space:nowrap;}
+  .sysflow{margin-top:14px; padding-top:12px; border-top:1px solid var(--hairline);}
+  .sf-head{display:flex; justify-content:space-between; gap:10px; margin-bottom:7px;}
+  .sf-head .label{margin:0;}
+  .sf-row{display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid rgba(169,196,222,.13);}
+  .sf-in{display:flex; align-items:center; gap:6px; min-width:104px; flex-shrink:0; font-size:11.5px; font-weight:620; color:var(--t1);}
+  .sf-in svg{color:var(--hl); flex-shrink:0;}
+  .sf-arrow{color:var(--t3); font-size:13px; flex-shrink:0;}
+  .sf-out{flex:1; min-width:0; font-size:11px; line-height:1.4; color:var(--t2);}
+  .sf-foot{margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--t3);}
+  .sf-foot b{color:var(--t2);} .sf-foot svg{vertical-align:-1px; color:var(--hl);}
+  @media (max-width:359px){ .sf-row{flex-wrap:wrap} .sf-out{flex-basis:100%; padding-left:20px} }
 
   /* ===== Liquid Glass (HELL): Basis für alle erhöhten Elemente ===== */
   /* FIX (v5/6A): .menu-sheet aus der 60%-Glass-Gruppe entfernt — eigene,
@@ -6098,7 +6117,8 @@ function renderActSheet(){
       <button class="btn mt8" onclick="A.closeModal()">Schließen</button>
     </div></div>`;
 }
-A.actSheet=()=>{ menuOpen=false; if(!S.profile){toast("Erst Onboarding abschließen");return;} renderActSheet(); };
+A.actSheet=()=>{ menuOpen=false; if(!S.profile){toast("Erst Onboarding abschließen");return;}
+  S.seenActs=true; save(); renderActSheet(); };   // Startschritt „Aktivitäten kennen" abgehakt
 A.actGo=(id)=>{ if(id===S.actId){ overlay.innerHTML=""; render(); return; }
   actApply(id); overlay.innerHTML=""; render();
   const c=actCurrent(); toast(`✓ ${c.name} aktiv — Plan, Kalorien & Ansicht angepasst`); };
@@ -8491,6 +8511,78 @@ function checklistCard(){
   </div>`;
 }
 /* =====================================================================
+   START-ÜBERSICHT — was zu tun ist UND was es bewirkt.
+   METRICGYM besteht aus Teilen, die voneinander leben: der Tages-Check steuert die
+   Trainingsempfehlung, geloggte Sätze steuern Progression und Prognosen, Essen und
+   Gewicht steuern das Kalorienziel. Wer das nicht sieht, hält die App für fünf
+   getrennte Tabs. Diese Karte macht die Kette sichtbar — als To-do mit Fortschritt
+   und als Fluss-Bild darunter: links, was du einträgst; rechts, was daraus entsteht.
+   ===================================================================== */
+function starterSteps(){
+  const nut=Object.values(S.nutritionLog||{}).some(l=>(l.meals||[]).length>=2);
+  const th=(S.trainingHistory||[]).length, wl=(S.weightLog||[]).length;
+  let acts=1; try{ acts=actList().length; }catch(e){}
+  return [
+    {ic:"moon",t:"Tagesform messen",d:"Vier Fragen, zehn Sekunden — jeden Morgen.",
+     un:["Bereitschafts-Ring","Tagesempfehlung","Übertrainings-Signal"],done:!!S.checkin,act:"A.openStatus()"},
+    {ic:"dumbbell",t:"Erste Einheit loggen",d:"Player starten und deine Sätze eintragen.",
+     un:["Kraft-Prognose","Rekorde","Volumen-Ampel"],done:th>0,act:"A.q('train')"},
+    {ic:"utensils",t:"Einen Tag Ernährung tracken",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
+     un:["Makro-Check","Protein-Deckung","Ernährungs-Treue"],done:nut,act:"A.q('nutrition')"},
+    {ic:"scale",t:"Zweimal wiegen",d:"Zwei Messungen im Abstand einiger Tage genügen.",
+     un:["Kalorien-Abgleich","Stoffwechsel-Zwilling"],done:wl>=2,act:"A.q('profile')"},
+    {ic:"grid",t:"Deine Aktivitäten kennen",d:"Kraft, Abnehmen, Rad, Laufen — jede mit eigenen Zielen und eigener Ansicht.",
+     un:["Profil-Umschalter","Eigene Tabs"],done:!!S.seenActs||acts>=2,act:"A.actSheet()"},
+    {ic:"chart",t:"Drei Einheiten geloggt",d:"Ab hier rechnet die Engine mit deinen echten Zahlen statt mit Startwerten.",
+     un:["Plan-Präzision","Analytics-Insights","Adaptive Gewichte"],done:th>=3,act:"A.q('analytics')"},
+  ];
+}
+// Das Fluss-Bild: EINE Zeile pro Eingabe, rechts die Funktionen, die daraus leben.
+const SYS_FLOW=[
+  ["moon","Tages-Check","Bereitschaft · Tagesempfehlung · Erholungswoche"],
+  ["dumbbell","Geloggte Sätze","Progression · Kraft-Orakel · Volumen-Ampel · Rekorde"],
+  ["utensils","Mahlzeiten","Makros · Protein-Deckung · Ernährungs-Treue"],
+  ["scale","Gewichtskurve","Adaptiver Kalorien-Abgleich · Stoffwechsel-Zwilling"],
+];
+function systemFlowHTML(){
+  return `<div class="sysflow">
+    <div class="sf-head"><span class="label">Was du einträgst</span><span class="label">Was daraus entsteht</span></div>
+    ${SYS_FLOW.map(([ic,inp,out])=>`<div class="sf-row">
+      <span class="sf-in">${icon(ic,14)}<span>${inp}</span></span>
+      <span class="sf-arrow" aria-hidden="true">→</span>
+      <span class="sf-out">${out}</span></div>`).join("")}
+    <p class="sf-foot">${icon("chart",12)} Alles zusammen läuft in <b>Analytics</b> und den <b>Wochenrückblick</b> — je mehr Zeilen du fütterst, desto genauer wird jede Empfehlung.</p>
+  </div>`;
+}
+function starterCard(){
+  const st=starterSteps(), done=st.filter(x=>x.done).length, all=done===st.length;
+  const body=`
+    <div class="row mb8"><p class="sm" style="font-weight:600">${all?"Dein System läuft":"Dein Start"}</p>
+      <span class="metric xs ${all?"volt-txt":"t2"}">${done} / ${st.length}</span></div>
+    <div class="progress mb12" style="height:6px"><div style="width:${done/st.length*100}%"></div></div>
+    ${st.map(i=>`<button class="exrow st-row" onclick="${i.act}" aria-label="${i.t}">
+      <span style="display:flex;align-items:flex-start;gap:11px;min-width:0">
+        <span class="st-mark ${i.done?"on":""}">${i.done?icon("check",13):icon(i.ic,13)}</span>
+        <span style="min-width:0">
+          <span style="display:block;font-weight:600;font-size:13.5px;${i.done?"color:var(--t3);text-decoration:line-through":""}">${i.t}</span>
+          <span class="xs t2" style="display:block;white-space:normal;line-height:1.4;margin-top:1px">${i.d}</span>
+          <span class="st-un">${i.un.map(u=>`<span class="st-pill">${u}</span>`).join("")}</span>
+        </span>
+      </span>
+      <span style="color:var(--t3);display:inline-flex;flex-shrink:0;align-self:center">${icon("chevronR",15)}</span>
+    </button>`).join("")}
+    ${systemFlowHTML()}`;
+  if(all) return `<details class="card acc-i" style="padding:0">
+    <summary><span class="acc-ic">${icon("grid",16)}</span>
+      <span style="flex:1"><span class="sm" style="font-weight:600">So hängt alles zusammen</span>
+      <span class="xs t2" style="display:block">Alle ${st.length} Startschritte erledigt — Übersicht öffnen</span></span>
+      <span class="acc-ch t2">${icon("chevron",15)}</span></summary>
+    <div style="padding:0 12px 12px">${body}</div></details>`;
+  return `<div class="card" style="border-color:rgba(169,196,222,.4);background:linear-gradient(165deg,rgba(110,147,184,.10),transparent 62%)">
+    <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px">${icon("grid",13)} Überblick · so arbeitet METRICGYM für dich</p>
+    ${body}</div>`;
+}
+/* =====================================================================
    ENGAGEMENT-ENGINE (Bindung) — Streak (Verlustangst), Level/XP
    (Fortschritts-Gefühl), Meilensteine + variable Belohnung (Konfetti),
    sichtbares „Investment" (Sunk-Cost). Alles aus echten Daten abgeleitet.
@@ -8831,6 +8923,7 @@ function renderHome(){
         <span class="iconbtn" style="min-width:36px;min-height:36px" role="button" aria-label="Session verwerfen" onclick="event.stopPropagation();A.discardSess()">✕</span></button>`;})():""}
     ${installCardHTML()}
     ${briefingCard}
+    ${starterCard()}
     ${!S.seenCatalog?`<button class="card row" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);border-color:rgba(169,196,222,.45);background:linear-gradient(160deg,rgba(110,147,184,.14),transparent)" onclick="A.menuGo('features')">
       <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
       <span class="sm" style="flex:1;line-height:1.5"><b>Entdecke, was METRICGYM alles kann.</b><br><span class="t2">KI-Coach, Reiz-Beweis, Autoregulation, Analytics & mehr — in 60 Sekunden.</span></span>

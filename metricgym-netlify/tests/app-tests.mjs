@@ -351,6 +351,39 @@ check('Fokus: jede Empfehlung trägt Begründung UND Quelle mit Jahreszahl', fre
 check('Fokus: „Übernehmen" setzt exakt die empfohlenen Gruppen',
   frec.applied === frec.gain.join(','), frec.applied);
 
+// ---------- 13) Start-Übersicht auf Heute: To-do + sichtbare Wirkungskette ----------
+const start = await page.evaluate(() => {
+  A.devModeMenu();
+  S.tab = 'home'; S.seenActs = false; S.seenCatalog = true; S.checkin = null;
+  S.trainingHistory = []; S.nutritionLog = {}; S.weightLog = []; S.acts = null; S.actId = null;
+  save(); render();
+  const fresh = { steps: starterSteps().length, done: starterSteps().filter(x => x.done).length,
+    card: /so arbeitet METRICGYM/i.test(document.body.innerText),
+    flow: document.querySelectorAll('.sf-row').length,
+    pills: document.querySelectorAll('.st-pill').length,
+    everyStepUnlocks: starterSteps().every(x => x.un && x.un.length >= 2 && x.d && x.act) };
+  // Sheet öffnen hakt den Aktivitäts-Schritt ab
+  A.actSheet(); A.closeModal(); render();
+  const afterSheet = starterSteps().find(x => /Aktivitäten kennen/.test(x.t)).done;
+  // Alles erledigt → Karte klappt zu, bleibt aber erreichbar
+  S.checkin = { sleep: 3, energy: 3, stress: 3, sore: 3, score: 70 };
+  S.trainingHistory = [1, 2, 3].map(i => ({ date: '2026-08-0' + i, sets: 20, vol: 5000 }));
+  S.nutritionLog = { '2026-08-01': { meals: [{ k: 500, p: 30 }, { k: 600, p: 40 }] } };
+  S.weightLog = [{ t: Date.now() - 5 * 864e5, v: 84 }, { t: Date.now(), v: 83.4 }];
+  save(); render();
+  const d = [...document.querySelectorAll('details.acc-i')].find(x => /So hängt alles zusammen/.test(x.innerText));
+  return { fresh, afterSheet, allDone: starterSteps().filter(x => x.done).length, collapsed: !!d };
+});
+check('Start-Übersicht: erscheint für neue Nutzer mit allen Schritten',
+  start.fresh.card && start.fresh.steps === 6 && start.fresh.done === 0, JSON.stringify(start.fresh));
+check('Start-Übersicht: jeder Schritt nennt, was er freischaltet (Zusammenhänge)',
+  start.fresh.everyStepUnlocks && start.fresh.pills >= 12, 'pills=' + start.fresh.pills);
+check('Start-Übersicht: Fluss-Bild zeigt Eingabe → Funktion für alle vier Datenquellen',
+  start.fresh.flow === 4, 'rows=' + start.fresh.flow);
+check('Start-Übersicht: Aktivitäts-Umschalter öffnen hakt den Schritt ab', start.afterSheet, '');
+check('Start-Übersicht: komplett erledigt → eingeklappt, aber weiter erreichbar',
+  start.allDone === 6 && start.collapsed, JSON.stringify({ done: start.allDone, collapsed: start.collapsed }));
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
