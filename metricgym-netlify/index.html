@@ -319,6 +319,22 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   }
   .appbar-inner{max-width:430px; margin:0 auto; display:flex; align-items:center; gap:8px; padding:8px 14px; min-height:54px;}
   .logo-btn{display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:8px 4px; color:var(--t1); min-height:44px;}
+  /* Aktivitäts-Umschalter: zeigt das aktive Profil, ein Tipp öffnet die Auswahl. */
+  .act-chip{display:flex; align-items:center; gap:6px; min-height:34px; padding:5px 10px; border-radius:999px;
+    background:var(--accent-soft); border:1px solid rgba(169,196,222,.35); color:var(--hl);
+    font-family:inherit; font-size:12.5px; font-weight:650; cursor:pointer; max-width:44vw;
+    transition:transform .16s var(--ease-out,ease), border-color .2s;}
+  .act-chip:active{transform:scale(.96);}
+  .act-chip .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .act-chip .ic{display:inline-flex; flex-shrink:0;}
+  .act-card{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:13px 14px;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:14px; cursor:pointer;
+    color:var(--t1); font-family:inherit; margin-bottom:8px; transition:transform .16s var(--ease-out,ease), border-color .2s;}
+  .act-card:active{transform:scale(.985);}
+  .act-card.on{border-color:var(--accent); background:var(--accent-soft);}
+  .act-card .ai{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:var(--surface); color:var(--hl);}
+  .act-card.on .ai{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
   .logo-text{font-family:var(--font-display); font-size:14.5px; font-weight:600; letter-spacing:.16em; color:var(--t1); text-transform:uppercase;}
   .logo-text .gy{color:var(--hl); font-weight:600;}
   .icon-btn{width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center;
@@ -5866,6 +5882,9 @@ function renderAppbar(){
       ${S.devMode?'<span class="badge mute" style="margin-left:4px">Demo</span>':""}
     </button>
     <div style="flex:1"></div>
+    ${S.profile?(()=>{ const _c=actCurrent(), _m=actMeta(_c&&_c.type);
+      return `<button class="act-chip" onclick="A.actSheet()" aria-label="Aktivität wechseln — aktuell ${esc(_c?_c.name:_m.label)}" style="margin-right:8px">
+        <span class="ic">${icon(_m.icon,14)}</span><span class="nm">${esc(_c?_c.name:_m.label)}</span>${icon("chevron",12)}</button>`; })():""}
     <button class="icon-btn" onclick="A.featureHub()" aria-label="Alle Funktionen — suchen & entdecken" style="margin-right:8px;position:relative">${icon("sparkle",17)}${S.seenHub?"":'<span class="fh-dot"></span>'}</button>
     <button class="icon-btn" onclick="A.notif()" aria-label="Benachrichtigungen" style="margin-right:8px">${icon("bell",17)}</button>
     <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">${icon("menu",17)}</button>
@@ -5895,12 +5914,172 @@ function renderAppbar(){
 }
 
 // 5 Tabs — Fortschritt (Analytics) zentriert und visuell erhöht (USP).
+/* =====================================================================
+   AKTIVITÄTS-PROFILE — ein Mensch, mehrere Trainings-Absichten.
+   Körperdaten (Geschlecht, Alter, Größe, Gewicht, Körperfett) bleiben BEWUSST
+   geteilt: Es ist derselbe Körper, also derselbe Grundumsatz. Ein Profil besitzt
+   nur die Trainings-Absicht — Ziel, Tage, Split, Equipment, Fokus — und bestimmt,
+   welche Oberfläche du siehst (Kraft-Ansicht oder Ausdauer-Ansicht).
+   Beim Wechsel rechnet dieselbe geprüfte Pipeline alles neu (Kalorien, Makros,
+   Plan, Wochenplan, Ausdauer-Athletprofil) — kein zweites Regelwerk.
+   ===================================================================== */
+const ACT_TYPES={
+  gym:    {label:"Krafttraining", icon:"dumbbell", ui:"gym",   sub:"Muskeln, Kraft, Physique"},
+  loss:   {label:"Abnehmen",      icon:"scale",    ui:"gym",   sub:"Fett runter, Muskeln halten"},
+  cycling:{label:"Radfahren",     icon:"bike",     ui:"endur", sub:"FTP, Watt, Power-Zonen"},
+  running:{label:"Laufen",        icon:"activity", ui:"endur", sub:"Pace, Zonen, Distanzen"},
+  hybrid: {label:"Hybrid",        icon:"zap",      ui:"gym",   sub:"Kraft + Ausdauer verzahnt"},
+};
+// Genau die Felder, die ein Profil besitzt. Alles andere ist Körper — und damit geteilt.
+const ACT_KEYS=["mode","goals","days","split","equipment","focus","sessionTime","loss_rate",
+  "endur_disc","cyc_goal","run_goal","schedule_pref","recovery_profile","act"];
+function actPick(a){ const o={}; for(const k of ACT_KEYS) if(a&&a[k]!==undefined) o[k]=a[k]; return o; }
+function actList(){
+  if(!Array.isArray(S.acts)||!S.acts.length){
+    // Migration: Das bestehende Setup wird das erste Profil — niemand verliert etwas.
+    const a=(S.profile&&S.profile.a)||{}; const m=ACT_TYPES[a.mode]?a.mode:"gym";
+    S.acts=[{id:"a"+Date.now().toString(36),name:ACT_TYPES[m].label,type:m,cfg:actPick(a)}];
+    S.actId=S.acts[0].id;
+  }
+  if(!S.actId||!S.acts.some(x=>x.id===S.actId)) S.actId=S.acts[0].id;
+  return S.acts;
+}
+function actCurrent(){ const l=actList(); return l.find(x=>x.id===S.actId)||l[0]; }
+function actMeta(t){ return ACT_TYPES[t]||ACT_TYPES.gym; }
+function actUi(){ return actMeta((actCurrent()||{}).type).ui; }
+// Laufende Änderungen (z. B. über „Engine & Ziele anpassen") ins aktive Profil zurückschreiben.
+function actSyncBack(){ try{ const c=actCurrent(); if(c&&S.profile&&S.profile.a) c.cfg=actPick(S.profile.a); }catch(e){} }
+function actDefaultGoals(t){ return t==="loss"?["fat_loss"]:(t==="cycling"||t==="running")?["endurance"]:t==="hybrid"?["muscle_gain","endurance"]:["muscle_gain"]; }
+/* Profil aktivieren: Absicht übernehmen → komplette Neuberechnung → passende Oberfläche. */
+function actApply(id){
+  const l=actList(), t=l.find(x=>x.id===id); if(!t) return;
+  const p=S.profile; if(!p||!p.a){ toast("Erst Onboarding abschließen"); return; }
+  if(S.actId!==id) actSyncBack();                 // aktuelles Profil vorher sichern
+  S.actId=id;
+  const a=p.a, before=JSON.stringify(p.tg&&p.tg.goals||[]);
+  for(const k of ACT_KEYS) if(t.cfg[k]!==undefined) a[k]=t.cfg[k];
+  a.mode=t.type;
+  if(!a.goals||!a.goals.length) a.goals=actDefaultGoals(t.type);
+  a.equipment=a.equipment||"gym_full"; a.focus=a.focus||[]; a.split=a.split||"auto";
+  a.schedule_pref=a.schedule_pref||"consistent"; a.recovery_profile=a.recovery_profile||"average";
+  // Ziel gewechselt → adaptive Kalorien-Lernkorrektur zurücksetzen (sonst rechnet sie am alten Ziel weiter)
+  if(JSON.stringify(a.goals||[])!==before){ S.calAdjust=0; S.calAdjustAt=0; S.calAdjustMsg=null; }
+  p.bmr=bmrCalc(a);
+  p.td=tdeeCalc(p.bmr,a.act||"light",effWeight(a),a.len||60,a.days||4);
+  p.tg=multiTargets(a,p.bmr,p.td);
+  S.plan=generateTrainingPlan(p); S.planB=generateTrainingPlan(p,"B"); S.rotation=null;
+  const opt=generateOptimalSchedule(a);
+  S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+  S.exOverrides={};
+  try{ if(window.ENDUR){ const en=window.ENDUR.st();
+    if(t.type==="cycling") en.sport="cycling";
+    else if(t.type==="running") en.sport="running";
+    else if(t.type==="hybrid"&&a.endur_disc) en.sport=a.endur_disc;
+    if(a.weight) en.athlete.weight=a.weight; } }catch(e){}
+  S.tab = actMeta(t.type).ui==="endur" ? "endurance" : "train";
+  save();
+}
+/* ---- Umschalt-Sheet: aktive Aktivität wählen, neue anlegen, bestehende pflegen ---- */
+function renderActSheet(){
+  const l=actList(), cur=actCurrent();
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
+    <div class="sheet fade">
+      <p class="display-m mb4">Aktivität wechseln</p>
+      <p class="xs t2 mb16" style="line-height:1.55">Jede Aktivität hat <b style="color:var(--t1)">eigene Ziele, Tage und Oberfläche</b>. Deine Körperdaten und Verläufe bleiben überall dieselben — du wechselst die Absicht, nicht den Menschen.</p>
+      ${l.map(x=>{ const m=actMeta(x.type), on=x.id===S.actId;
+        const g=(x.cfg.goals||actDefaultGoals(x.type)).map(k=>GOAL_LABEL[k]||k).slice(0,2).join(" · ");
+        return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
+          <button class="act-card ${on?"on":""}" style="margin:0;flex:1" onclick="A.actGo('${x.id}')">
+            <span class="ai">${icon(m.icon,19)}</span>
+            <span style="flex:1;min-width:0">
+              <span style="display:block;font-weight:660;font-size:14.5px">${esc(x.name)}${on?' <span class="badge volt" style="font-size:8.5px;vertical-align:middle">aktiv</span>':""}</span>
+              <span class="xs t2" style="display:block;line-height:1.4">${m.label} · ${esc(g||"—")} · ${x.cfg.days||4} Tage</span>
+            </span>
+            ${on?"":`<span class="mi-chev">${icon("chevronR",15)}</span>`}
+          </button>
+          <button class="iconbtn" style="min-width:42px" onclick="A.actEdit('${x.id}')" aria-label="${esc(x.name)} bearbeiten">${icon("settings",16)}</button>
+        </div>`; }).join("")}
+      <button class="btn volt mt8" onclick="A.actNew()">${icon("plus",15)} Neue Aktivität anlegen</button>
+      <button class="btn mt8" onclick="A.closeModal()">Schließen</button>
+    </div></div>`;
+}
+A.actSheet=()=>{ menuOpen=false; if(!S.profile){toast("Erst Onboarding abschließen");return;} renderActSheet(); };
+A.actGo=(id)=>{ if(id===S.actId){ overlay.innerHTML=""; render(); return; }
+  actApply(id); overlay.innerHTML=""; render();
+  const c=actCurrent(); toast(`✓ ${c.name} aktiv — Plan, Kalorien & Ansicht angepasst`); };
+// Anlegen / Bearbeiten in einem Formular — Typ bestimmt die Oberfläche.
+let _actDraft=null;
+function renderActEdit(){
+  const d=_actDraft, isNew=!d.id, m=actMeta(d.type);
+  const gymUi=actMeta(d.type).ui==="gym";
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.actSheet()">
+    <div class="sheet fade">
+      <p class="display-m mb4">${isNew?"Neue Aktivität":"Aktivität bearbeiten"}</p>
+      <p class="xs t2 mb12" style="line-height:1.5">Der Typ bestimmt, welche Oberfläche du siehst: Kraft-Ansicht oder Ausdauer-Ansicht mit Zonen und Leistungswerten.</p>
+      <div class="field mb12"><label for="act-name" class="xs t2">Name</label>
+        <input type="text" id="act-name" value="${esc(d.name||"")}" placeholder="z. B. Rennrad-Saison" autocomplete="off" oninput="A.actField('name',this.value)"></div>
+      <p class="label" style="margin:4px 0 8px">Art der Aktivität</p>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        ${Object.entries(ACT_TYPES).map(([k,v])=>`<button class="act-card ${d.type===k?"on":""}" style="margin:0" onclick="A.actField('type','${k}')">
+          <span class="ai">${icon(v.icon,18)}</span>
+          <span style="flex:1;min-width:0"><span style="display:block;font-weight:640;font-size:14px">${v.label}</span>
+          <span class="xs t2" style="display:block">${v.sub} · ${v.ui==="endur"?"Ausdauer-Ansicht":"Kraft-Ansicht"}</span></span></button>`).join("")}
+      </div>
+      <p class="label" style="margin:4px 0 8px">Ziele ${gymUi?"(bis zu 3, das erste zählt am stärksten)":"(Ausdauer-Fokus)"}</p>
+      <div class="chips mb12">${Object.entries(GOAL_LABEL).map(([g,lb])=>{
+        const sel=(d.goals||[]).includes(g); const i=(d.goals||[]).indexOf(g);
+        return `<button class="chip ${sel?"sel":""}" onclick="A.actGoal('${g}')">${sel?(i+1)+". ":""}${lb}</button>`;}).join("")}</div>
+      <p class="label" style="margin:4px 0 8px">Trainingstage pro Woche</p>
+      <div class="chips mb12">${[2,3,4,5,6].map(n=>`<button class="chip ${(d.days||4)===n?"sel":""}" onclick="A.actField('days',${n})">${n}</button>`).join("")}</div>
+      ${gymUi?`<p class="label" style="margin:4px 0 8px">Wo trainierst du?</p>
+      <div class="chips mb12">${Object.entries(EQ_LABEL).map(([k,lb])=>`<button class="chip ${(d.equipment||"gym_full")===k?"sel":""}" onclick="A.actField('equipment','${k}')">${lb}</button>`).join("")}</div>`:""}
+      <button class="btn volt mt8" onclick="A.actSave()">${icon("check",15)} ${isNew?"Anlegen & aktivieren":"Speichern & aktivieren"}</button>
+      ${!isNew&&actList().length>1?`<button class="btn ghost mt8" style="color:var(--warn)" onclick="A.actDelete()">Diese Aktivität löschen</button>`:""}
+      <button class="btn mt8" onclick="A.actSheet()">Abbrechen</button>
+    </div></div>`;
+  const el=document.getElementById("act-name"); if(el&&isNew)setTimeout(()=>el.focus(),60);
+}
+A.actNew=()=>{ _actDraft={type:"cycling",name:"",goals:actDefaultGoals("cycling"),days:4,equipment:"gym_full"}; renderActEdit(); };
+A.actEdit=(id)=>{ const x=actList().find(y=>y.id===id); if(!x)return;
+  _actDraft={id:x.id,type:x.type,name:x.name,goals:(x.cfg.goals||actDefaultGoals(x.type)).slice(),
+    days:x.cfg.days||4,equipment:x.cfg.equipment||"gym_full"}; renderActEdit(); };
+A.actField=(k,v)=>{ if(!_actDraft)return;
+  if(k==="name"){ _actDraft.name=v; return; }              // kein Re-Render beim Tippen
+  _actDraft[k]=v;
+  if(k==="type"){ _actDraft.goals=actDefaultGoals(v); if(!_actDraft.name||!_actDraft.name.trim()) _actDraft.name=""; }
+  renderActEdit(); };
+A.actGoal=(g)=>{ if(!_actDraft)return; const cur=_actDraft.goals||[];
+  if(S.tier==="free"&&cur.length>=1&&!cur.includes(g)){ toast("Mehrere Ziele zugleich sind Pro — Metric nutzt dein Hauptziel."); return; }
+  _actDraft.goals=cur.includes(g)?cur.filter(x=>x!==g):(cur.length<3?[...cur,g]:cur); renderActEdit(); };
+A.actSave=()=>{
+  const d=_actDraft; if(!d)return;
+  const nm=(document.getElementById("act-name")||{}).value;
+  d.name=(nm!=null?nm:d.name||"").trim()||actMeta(d.type).label;
+  if(!d.goals||!d.goals.length) d.goals=actDefaultGoals(d.type);
+  const l=actList();
+  if(d.id){ const x=l.find(y=>y.id===d.id); if(x){ x.name=d.name; x.type=d.type;
+      x.cfg=Object.assign({},x.cfg,{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment}); } }
+  else { const id="a"+Date.now().toString(36);
+    l.push({id,name:d.name,type:d.type,cfg:{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment,
+      split:"auto",focus:[],schedule_pref:"consistent",recovery_profile:"average",act:(S.profile&&S.profile.a.act)||"light"}});
+    d.id=id; }
+  _actDraft=null; save(); actApply(d.id); overlay.innerHTML=""; render();
+  toast(`✓ ${actCurrent().name} aktiv — Plan & Ziele neu berechnet`); };
+A.actDelete=()=>{ const d=_actDraft; if(!d||!d.id)return; const l=actList();
+  if(l.length<=1){ toast("Die letzte Aktivität lässt sich nicht löschen"); return; }
+  const nm=(l.find(x=>x.id===d.id)||{}).name||"";
+  S.acts=l.filter(x=>x.id!==d.id); _actDraft=null;
+  if(S.actId===d.id){ S.actId=S.acts[0].id; actApply(S.acts[0].id); }
+  save(); overlay.innerHTML=""; render(); toast(`„${nm}" gelöscht`); };
 const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
+const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
+function tabsFor(){ return actUi()==="endur"?TABS_ENDUR:TABS; }
 function renderTabbar(){
   A.tab=(t)=>{menuOpen=false;S.tab=t;save();render();};
-  const active=["player","summary"].includes(S.tab)?"train":(S.tab==="today"?"home":S.tab);
+  const TB=tabsFor();
+  let active=["player","summary"].includes(S.tab)?(actUi()==="endur"?"endurance":"train"):(S.tab==="today"?"home":S.tab);
   tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner">
-    ${TABS.map(([id,ic,l],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${l}">
+    ${TB.map(([id,ic,l],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${l}">
       <span class="ic" aria-hidden="true">${icon(ic,i===2?22:19)}</span>${l}</button>`).join("")}</div></nav>`;
 }
 /* ---------- Onboarding-Tour: geführte Durchführung der Hauptfunktionen ----------

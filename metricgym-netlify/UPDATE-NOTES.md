@@ -716,9 +716,33 @@ liegt ausschließlich auf Ruhetagen. Kein Defekt.
 
 +10 CI-Tests (G-1 bis G-7 inkl. Gegenproben). Alle drei Suiten grün, Kohorte A ohne Regression.
 
+### 42. Aktivitäts-Profile — zwischen Kraft- und Ausdauer-Oberfläche wechseln
+Ein Umschalter oben in der Kopfzeile zeigt die aktive Aktivität; ein Tipp öffnet die Auswahl.
+Jede Aktivität hat **eigene Ziele, Trainingstage, Equipment — und ihre eigene Oberfläche**.
+
+**Leitgedanke: ein Mensch, mehrere Trainings-Absichten.** Körperdaten (Geschlecht, Alter, Größe,
+Gewicht, Körperfett) bleiben bewusst **geteilt** — es ist derselbe Körper, also derselbe
+Grundumsatz; alles andere wäre physiologisch falsch und würde doppelte Pflege erzwingen.
+Ein Profil besitzt nur die *Absicht*: Ziel, Tage, Split, Equipment, Fokus.
+
+- **Fünf Aktivitätstypen:** Krafttraining · Abnehmen · Radfahren · Laufen · Hybrid. Der Typ
+  bestimmt die Oberfläche: Kraft-Ansicht oder **Ausdauer-Ansicht** (Zonen, FTP/Pace, Power-Analyse).
+- **Die Tab-Leiste wechselt mit:** In einer Ausdauer-Aktivität heißt der zweite Tab „Ausdauer"
+  (Rad-Symbol) statt „Training" — Heute, Analytics, Ernährung und Profil bleiben geteilt.
+- **Wechseln rechnet alles neu** über dieselbe geprüfte Pipeline wie das Wunsch-Fenster:
+  Kalorien, Makros, Trainingsplan, Wochenplan und das Ausdauer-Athletprofil (Sport, Gewicht).
+  Kein zweites Regelwerk, keine Duplikate.
+- **Profile sind isoliert:** „Rennrad-Saison" mit 6 Tagen und „Krafttraining" mit 4 Tagen
+  existieren nebeneinander; Änderungen am einen lassen das andere unberührt.
+- **Anlegen, umbenennen, löschen** direkt im Sheet; das letzte Profil ist geschützt.
+- **Migration ohne Datenverlust:** Das bestehende Setup wird automatisch zum ersten Profil.
+
++6 CI-Tests (Migration, Interface-Wechsel, Neuberechnung, Isolation, geteilte Körperdaten,
+Rückwechsel). Alle drei Suiten grün.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v24** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v25** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

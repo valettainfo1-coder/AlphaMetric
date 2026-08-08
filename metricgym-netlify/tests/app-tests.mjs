@@ -205,6 +205,38 @@ check('Parser deckt Mobility/General/Hybrid/Figur/Stark ab (keine Sackgasse)',
 check('Paywall: Free-Tier bekommt nur 1 Ziel über den Wunsch (multi_goal bleibt Pro)', audit.freeGoals === 1, 'free=' + audit.freeGoals);
 check('Pro-Tier darf mehrere Ziele über den Wunsch', audit.proGoals >= 2, 'pro=' + audit.proGoals);
 
+// ---------- 10) Aktivitäts-Profile: Interface-Switch + Isolation + geteilte Körperdaten ----------
+const act = await page.evaluate(() => {
+  // Deterministischer Start: frisches Gym-Profil, Aktivitäten-Liste zurücksetzen
+  // (frühere Blöcke der Suite hinterlassen mode='cycling' aus den Wunsch-Tests).
+  A.devModeMenu(); S.profile.a.mode = 'gym'; S.acts = null; S.actId = null; S.tab = 'train'; save(); render();
+  // Skalare SOFORT festhalten: actList() liefert die Live-Referenz auf S.acts,
+  // die sich beim Anlegen weiterer Profile mitverändern würde.
+  const l0 = actList(); const l0len = l0.length, l0type = l0[0].type;
+  const gymTabs = tabsFor().map(t => t[0]).join(',');
+  const before = { goals: JSON.stringify(S.profile.tg.goals), kcal: S.profile.tg.train.kcal, days: S.profile.a.days, w: S.profile.a.weight };
+  // Neue Rad-Aktivität anlegen und aktivieren
+  A.actNew(); A.actField('name', 'Rennrad'); A.actField('days', 6); A.actSave();
+  const cyc = { tab: S.tab, goals: JSON.stringify(S.profile.tg.goals), mode: S.profile.a.mode,
+    sport: window.ENDUR && window.ENDUR.st().sport, tabs: tabsFor().map(t => t[0]).join(','),
+    days: S.profile.a.days, w: S.profile.a.weight, n: actList().length };
+  // Zurück auf das Kraft-Profil
+  const gym = actList().find(x => x.type === 'gym'); A.actGo(gym.id);
+  const back = { tab: S.tab, goals: JSON.stringify(S.profile.tg.goals), kcal: S.profile.tg.train.kcal,
+    days: S.profile.a.days, tabs: tabsFor().map(t => t[0]).join(','), w: S.profile.a.weight };
+  // Aufräumen: Rad-Profil wieder entfernen
+  const c2 = actList().find(x => x.type === 'cycling'); if (c2) { A.actEdit(c2.id); A.actDelete(); }
+  return { migrated: l0len === 1 && l0type === 'gym', gymTabs, before, cyc, back, finalN: actList().length };
+});
+check('Aktivitäten: bestehendes Setup wird migriert (kein Datenverlust)', act.migrated, JSON.stringify({ n: act.finalN }));
+check('Aktivitäten: Rad-Profil schaltet auf Ausdauer-Interface um',
+  act.cyc.tab === 'endurance' && act.cyc.tabs.includes('endurance') && !act.cyc.tabs.includes('train') && act.cyc.sport === 'cycling', JSON.stringify(act.cyc));
+check('Aktivitäten: Wechsel rechnet Ziele & Plan neu', act.cyc.goals !== act.before.goals && act.cyc.mode === 'cycling', JSON.stringify({ b: act.before.goals, c: act.cyc.goals }));
+check('Aktivitäten: Profile sind isoliert (6 vs 4 Tage)', act.cyc.days === 6 && act.back.days === act.before.days, JSON.stringify({ cyc: act.cyc.days, gym: act.back.days }));
+check('Aktivitäten: Körperdaten bleiben geteilt (derselbe Mensch)', act.cyc.w === act.before.w && act.back.w === act.before.w, JSON.stringify({ w: act.before.w }));
+check('Aktivitäten: Zurückschalten stellt Kraft-Interface & Ziele wieder her',
+  act.back.tab === 'train' && act.back.tabs === act.gymTabs && act.back.goals === act.before.goals && act.back.days === act.before.days, JSON.stringify(act.back));
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
