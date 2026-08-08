@@ -426,6 +426,94 @@ check('Ausdauer-Profil: Plan-Ansicht zeigt Einheit, Woche, Aufbau und Zonen',
   /heute ·/i.test(runUi.plan) && /Deine Woche/.test(runUi.plan) && /Aufbau bis zum Ziel/.test(runUi.plan)
   && /Deine Zonen/.test(runUi.plan) && /\d:\d\d–\d:\d\d\/km/.test(runUi.plan), '');
 
+// ---------- 15) Kopfzeile läuft auf keiner Gerätebreite über ----------
+const bar = await page.evaluate(async () => {
+  A.devModeMenu(); actList();
+  const out = [];
+  for (const w of [320, 375, 390, 430]) {
+    for (const nm of ['Kraft', 'Krafttraining', 'Ausdauer Radfahren Sommer 2026']) {
+      S.acts[0].name = nm; S.tab = 'train'; save(); render();
+      const inner = document.querySelector('.appbar-inner');
+      // Breite simulieren: der Container ist auf 430 px gedeckelt, also direkt messen
+      inner.style.width = w + 'px';
+      const over = inner.scrollWidth - w;
+      const kids = [...inner.children].filter(c => c.getBoundingClientRect().width > 0);
+      out.push({ w, nm, over, n: kids.length });
+      inner.style.width = '';
+    }
+  }
+  return { out, max: Math.max(...out.map(x => x.over)), buttons: document.querySelectorAll('.appbar-inner .icon-btn').length };
+});
+check('Kopfzeile: kein Überlauf auf 320–430 px, auch mit langem Aktivitätsnamen',
+  bar.max <= 0, 'max=' + bar.max + 'px');
+check('Kopfzeile: nur zwei Aktionen neben dem Umschalter (Glocke liegt im Menü)',
+  bar.buttons === 2, 'buttons=' + bar.buttons);
+
+// ---------- 16) Palette: beim Öffnen scannbar, nicht als Wand ----------
+const pal = await page.evaluate(() => {
+  A.featureHub();
+  const list = document.getElementById('fh-list');
+  const visible = [...list.querySelectorAll('.fh-item, .fh-cat > summary')]
+    .filter(e => e.checkVisibility ? e.checkVisibility() : e.getClientRects().length).length;
+  const cats = list.querySelectorAll('.fh-cat').length;
+  const allClosed = [...list.querySelectorAll('.fh-cat')].every(d => !d.open);
+  // Aufklappen zeigt die Funktionen der Kategorie
+  const first = list.querySelector('.fh-cat'); first.open = true;
+  const rows = first.querySelectorAll('.fh-item').length;
+  // Suche liefert Treffer + Coach-Ausweg
+  A.fhFilter('kalor');
+  const hits = document.getElementById('fh-list').querySelectorAll('.fh-item').length;
+  const hasCoach = !!document.getElementById('fh-list').querySelector('.fh-coach');
+  // Jede indizierte Funktion bleibt über die Kategorien erreichbar
+  A.fhFilter('');
+  const reachable = [...document.querySelectorAll('#fh-list .fh-cat .fh-item')].length;
+  A.fhClose();
+  return { visible, cats, allClosed, rows, hits, hasCoach, reachable, total: FEATURE_INDEX.length };
+});
+check('Palette: beim Öffnen höchstens 10 Elemente sichtbar (vorher über 30)',
+  pal.visible <= 10 && pal.cats === 5 && pal.allClosed, JSON.stringify({ sichtbar: pal.visible, kategorien: pal.cats }));
+check('Palette: keine Funktion geht verloren — alle bleiben über Kategorien erreichbar',
+  pal.reachable === pal.total, pal.reachable + '/' + pal.total);
+check('Palette: Aufklappen zeigt die Funktionen, Suche liefert Treffer + Coach-Ausweg',
+  pal.rows >= 5 && pal.hits >= 1 && pal.hasCoach, JSON.stringify({ zeilen: pal.rows, treffer: pal.hits }));
+
+// ---------- 17) Player: im Training nur das Nötige, Rest hinter einem Tipp ----------
+const play = await page.evaluate(() => {
+  const t = Object.keys(TYPES).find(k => k !== 'rest' && TYPES[k].ex && TYPES[k].ex.length);
+  S.playerType = t; S.exIdx = 0; S.logged = []; S.tab = 'player'; save(); render();
+  const card = document.querySelector('.card');
+  const more = card.querySelector('.pl-more');
+  const before = Math.round(card.getBoundingClientRect().height);
+  const txt = card.innerText;
+  // Kernbedienung muss ohne Aufklappen erreichbar sein
+  const core = !!(document.getElementById('pw-in') && document.getElementById('pr-in')
+    && document.getElementById('primary-cta') && card.querySelector('.scale') && card.querySelector('#setdots'));
+  // Sekundäres liegt im Ausklapp
+  // innerText liefert bei zugeklappten <details> leeren Text (content-visibility) — textContent nicht.
+  const body = more ? more.querySelector('.pl-mbody').textContent : '';
+  const hidden = /Satz für Satz/.test(body) && /Tempo|Startwert|Körpergewicht|vorausgefüllt/.test(body);
+  // Loggen aktualisiert weiterhin in-place
+  A.log();
+  const after = { dots: document.querySelectorAll('#setdots .dot.full').length,
+    cta: (document.getElementById('primary-cta') || {}).innerText,
+    rows: document.querySelectorAll('#logged-list li').length };
+  // Schnell-Eintrag öffnet den Bereich automatisch
+  A.bulkToggle(true);
+  const bulkOpen = !!document.querySelector('.pl-more[open]') && !!document.querySelector('.bulkgrid');
+  A.bulkToggle(false);
+  return { before, core, hidden, closed: more && !more.open, after, bulkOpen,
+    noTempoUp: !/Tempo\s3-/.test(txt) };
+});
+check('Player: Kernbedienung (Gewicht, Reps, RPE, Sätze, Loggen) ohne Aufklappen da',
+  play.core, '');
+check('Player: Sekundäres liegt zugeklappt im Ausklapp-Bereich',
+  play.closed && play.hidden && play.noTempoUp, JSON.stringify({ zu: play.closed, drin: play.hidden }));
+check('Player: Karte passt in einen Bildschirm (unter 560 px)',
+  play.before < 560, play.before + 'px');
+check('Player: Loggen aktualisiert Punkte, Liste und Button weiterhin in-place',
+  play.after.dots === 1 && play.after.rows === 1 && /Satz 2 von/.test(play.after.cta), JSON.stringify(play.after));
+check('Player: Schnell-Eintrag klappt den Bereich automatisch auf', play.bulkOpen, '');
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

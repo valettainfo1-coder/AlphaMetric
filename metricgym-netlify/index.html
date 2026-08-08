@@ -233,6 +233,41 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .sf-foot{margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--t3);}
   .sf-foot b{color:var(--t2);} .sf-foot svg{vertical-align:-1px; color:var(--hl);}
   @media (max-width:359px){ .sf-row{flex-wrap:wrap} .sf-out{flex-basis:100%; padding-left:20px} }
+  /* ===== Player: im Training zählt Tempo, nicht Vollständigkeit ===== */
+  .pl-meta{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .pl-hint{font-family:var(--font-mono); font-size:12px; color:var(--hl); font-weight:600; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;}
+  .pl-more{margin-top:14px; border-top:1px solid var(--hairline);}
+  .pl-more>summary{cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; padding:11px 0 3px; min-height:40px;}
+  .pl-more>summary::-webkit-details-marker{display:none;}
+  .pl-mt{flex:1; font-size:11.5px; font-weight:600; letter-spacing:.02em; color:var(--t3);}
+  .pl-mch{display:inline-flex; color:var(--t3); transition:transform .22s var(--ease-out,ease);}
+  .pl-more[open]>summary .pl-mch{transform:rotate(180deg);}
+  .pl-more[open]>summary .pl-mt{color:var(--t2);}
+  .pl-mbody{padding-top:10px;}
+  /* ===== Funktions-Palette: eine Liste, keine Wand ===== */
+  .fh-item{display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 12px; margin-bottom:6px;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:13px; color:var(--t1); font-family:inherit;
+    cursor:pointer; min-height:52px; transition:transform .15s var(--ease-out,ease), border-color .2s;}
+  .fh-item:active{transform:scale(.985);}
+  .fh-item.sug{border-color:rgba(169,196,222,.34); background:linear-gradient(150deg,rgba(110,147,184,.13),var(--s2) 62%);}
+  .fh-item.fh-coach{border-color:rgba(169,196,222,.30);}
+  .fh-ic{width:32px; height:32px; min-width:32px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    background:var(--surface); color:var(--hl);}
+  .fh-ic.on{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
+  .fh-it{display:block; font-size:14px; font-weight:640; letter-spacing:-.01em; line-height:1.25;}
+  .fh-id{display:block; font-size:11.5px; color:var(--t2); line-height:1.35; margin-top:2px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .fh-cat{background:var(--s2); border:1px solid var(--hairline); border-radius:13px; margin-bottom:6px; overflow:hidden;}
+  .fh-cat>summary{cursor:pointer; list-style:none; display:flex; align-items:center; gap:11px; padding:11px 12px;
+    min-height:52px; font-size:14px; font-weight:640; color:var(--t1);}
+  .fh-cat>summary::-webkit-details-marker{display:none;}
+  .fh-ch{display:inline-flex; color:var(--t3); transition:transform .22s var(--ease-out,ease);}
+  .fh-cat[open]>summary .fh-ch{transform:rotate(180deg);}
+  .fh-cat[open]>summary{border-bottom:1px solid var(--hairline);}
+  .fh-cat[open]>summary .fh-ic{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
+  .fh-catbody{padding:8px 8px 2px;}
+  .fh-catbody .fh-item{background:var(--surface); border-color:transparent;}
   /* ===== Ausdauer-Plan ===== */
   .e-today{border-color:rgba(169,196,222,.4); background:linear-gradient(168deg,rgba(110,147,184,.12),transparent 60%);}
   .e-today.hard{border-color:rgba(224,163,65,.42); background:linear-gradient(168deg,rgba(224,163,65,.13),transparent 60%);}
@@ -414,12 +449,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     -webkit-backdrop-filter:blur(24px) saturate(180%); backdrop-filter:blur(24px) saturate(180%);
     border-bottom:1px solid var(--hairline);
   }
-  .appbar-inner{max-width:430px; margin:0 auto; display:flex; align-items:center; gap:8px; padding:8px 14px; min-height:54px;}
-  .logo-btn{display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:8px 4px; color:var(--t1); min-height:44px;}
+  /* Die Kopfzeile trägt Marke, Aktivitäts-Umschalter und zwei Aktionen. Damit sie auf
+     JEDEM Gerät passt, ist der Chip das schrumpfende Element (mit Ellipse), nicht die
+     Wortmarke — und nichts läuft aus dem Bild. */
+  .appbar-inner{max-width:430px; margin:0 auto; display:flex; align-items:center; gap:7px; padding:8px 12px; min-height:54px; overflow:hidden;}
+  .logo-btn{display:flex; align-items:center; gap:7px; background:none; border:none; cursor:pointer; padding:8px 2px; color:var(--t1); min-height:44px; flex-shrink:0;}
   /* Aktivitäts-Umschalter: zeigt das aktive Profil, ein Tipp öffnet die Auswahl. */
   .act-chip{display:flex; align-items:center; gap:6px; min-height:34px; padding:5px 10px; border-radius:999px;
     background:var(--accent-soft); border:1px solid rgba(169,196,222,.35); color:var(--hl);
-    font-family:inherit; font-size:12.5px; font-weight:650; cursor:pointer; max-width:44vw;
+    font-family:inherit; font-size:12.5px; font-weight:650; cursor:pointer;
+    flex:0 1 auto; min-width:0; overflow:hidden;
     transition:transform .16s var(--ease-out,ease), border-color .2s;}
   .act-chip:active{transform:scale(.96);}
   .act-chip .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -460,9 +499,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .pg-prow{display:flex; align-items:center; gap:9px; padding:5px 0;}
   .pg-prow .pi{width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
     background:var(--surface); color:var(--hl);}
-  .logo-text{font-family:var(--font-display); font-size:14.5px; font-weight:600; letter-spacing:.16em; color:var(--t1); text-transform:uppercase;}
+  .logo-text{font-family:var(--font-display); font-size:12.5px; font-weight:600; letter-spacing:.09em; color:var(--t1); text-transform:uppercase; white-space:nowrap;}
+  @media (max-width:359px){ .logo-text{display:none} }
   .logo-text .gy{color:var(--hl); font-weight:600;}
-  .icon-btn{width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center;
+  .icon-btn{width:38px; height:38px; min-width:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
     background:var(--surface); border:1px solid var(--hairline); border-radius:50%; cursor:pointer; color:var(--t1);
     box-shadow:0 1px 3px rgba(0,0,0,.05); transition:all .25s var(--spring);}
   .icon-btn:active{transform:scale(.94);}
@@ -6368,17 +6408,15 @@ function renderAppbar(){
   A.logoutMenu=()=>{menuOpen=false;if(typeof SB!=="undefined"&&SB.user)SB.signOut();S.currentUser=null;S.screen="landing";coachOpen=false;save();render();};
   appbarEl.innerHTML=`<header class="appbar"><div class="appbar-inner">
     <button class="logo-btn" onclick="A.goHome()" aria-label="Zur Startseite">
-      ${logoSVG(20)}
+      ${logoSVG(19)}
       <span class="logo-text">METRIC<span class="gy">GYM</span></span>
-      ${S.devMode?'<span class="badge mute" style="margin-left:4px">Demo</span>':""}
     </button>
-    <div style="flex:1"></div>
+    <div style="flex:1;min-width:2px"></div>
     ${S.profile?(()=>{ const _c=actCurrent(), _m=actMeta(_c&&_c.type);
-      return `<button class="act-chip" onclick="A.actSheet()" aria-label="Aktivität wechseln — aktuell ${esc(_c?_c.name:_m.label)}" style="margin-right:8px">
+      return `<button class="act-chip" onclick="A.actSheet()" aria-label="Aktivität wechseln — aktuell ${esc(_c?_c.name:_m.label)}">
         <span class="ic">${icon(_m.icon,14)}</span><span class="nm">${esc(_c?_c.name:_m.label)}</span>${icon("chevron",12)}</button>`; })():""}
-    <button class="icon-btn" onclick="A.featureHub()" aria-label="Alle Funktionen — suchen & entdecken" style="margin-right:8px;position:relative">${icon("sparkle",17)}${S.seenHub?"":'<span class="fh-dot"></span>'}</button>
-    <button class="icon-btn" onclick="A.notif()" aria-label="Benachrichtigungen" style="margin-right:8px">${icon("bell",17)}</button>
-    <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">${icon("menu",17)}</button>
+    <button class="icon-btn" onclick="A.featureHub()" aria-label="Alle Funktionen — suchen & entdecken" style="position:relative">${icon("sparkle",16)}${S.seenHub?"":'<span class="fh-dot"></span>'}</button>
+    <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">${icon("menu",16)}</button>
   </div>
   ${menuOpen?(()=>{const u=S.users[S.currentUser]||{username:"Athlet",email:""};
     const item=(ic,t,sub,act)=>`<button class="menu-item" onclick="${act}"><span class="mi-ic">${icon(ic,18)}</span><span style="flex:1">${t}<span class="mi-sub">${sub}</span></span><span class="mi-chev">${icon("chevronR",16)}</span></button>`;
@@ -6391,6 +6429,8 @@ function renderAppbar(){
       <span class="badge ${S.tier==="free"?"mute":"volt"}">${TIER_LABEL[S.tier]}</span>
     </button>
     <div class="menu-divider"></div>
+    ${(()=>{ let n=0; try{ n=buildInsights().length; }catch(e){}
+      return item("bell","Benachrichtigungen", n?`${n} ${n===1?"neuer Insight":"Insights"} aus deinen Daten`:"Noch keine Insights — sammle ein paar Tage Daten","A.notif()"); })()}
     ${item("message","Sag, was du willst","Ziel in eigenen Worten — die App passt Plan, Kalorien & Ausdauer sofort an","A.wishOpen()")}
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr aus deinen Zahlen holen":"Abo & Stufe verwalten","A.menuGo('pricing')")}
     ${item("bike","Ausdauer — Cycling & Running","Fahrten & Läufe importieren, Power/Zonen/Form analysieren","A.menuGo('endurance')")}
@@ -9588,41 +9628,48 @@ function fhGreet(){
     status="Block "+(S.blockNum||1)+" · Woche "+S.currentWeek+" · heute "+(t==="rest"?"Erholung":t==="cardio"?"Cardio":(((TYPE_META[parseTypeKey(t).base]||{}).label)||"Training")+(parseTypeKey(t).variant?" "+parseTypeKey(t).variant:"")); } }catch(e){}
   return {g:g+name,status};
 }
+/* Die Palette hat EINEN Job: eine Funktion finden. Deshalb zeigt sie beim Öffnen nur
+   die Suche, höchstens zwei Vorschläge und fünf zugeklappte Kategorien — statt einer
+   Wand aus dreißig Karten. Wer sucht, tippt; wer stöbert, klappt auf. */
 function fhBodyHTML(q){
   q=(q||"").toLowerCase().trim();
-  const card=(f,i,extraCls,delay)=>`<button class="fh-card ${extraCls||""}" onclick="A.fhRun(${i})" style="animation-delay:${delay||0}ms">
-    <span class="acc-ic">${icon(f.ic,16)}</span><span class="fh-tt">${f.t}</span><span class="fh-sub">${fhLive(f)}</span></button>`;
+  const row=(f,i)=>`<button class="fh-item" onclick="A.fhRun(${i})">
+    <span class="fh-ic">${icon(f.ic,15)}</span>
+    <span style="flex:1;min-width:0"><span class="fh-it">${f.t}</span><span class="fh-id">${fhLive(f)}</span></span>
+    <span class="mi-chev">${icon("chevronR",14)}</span></button>`;
+  const coach=(label)=>`<button class="fh-item fh-coach" onclick="A.fhCoach()">
+    <span class="fh-ic">${icon("message",15)}</span>
+    <span style="flex:1;min-width:0"><span class="fh-it">Coach Metric fragen <span class="badge volt" style="font-size:8px">KI</span></span>
+    <span class="fh-id">${label}</span></span>
+    <span class="mi-chev">${icon("chevronR",14)}</span></button>`;
   if(q){
     const hit=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>(f.t+" "+f.d+" "+f.k).toLowerCase().includes(q));
-    return (hit.length?`<p class="label" style="margin:2px 2px 8px">${hit.length} Treffer</p><div class="fh-grid">${hit.map(({f,i},j)=>card(f,i,"",j*35)).join("")}</div>`:"")
-      +`<button class="fh-sug" style="margin-top:${hit.length?10:0}px" onclick="A.fhCoach()">
-        <span class="fh-orb">${icon("message",16)}</span>
-        <span class="acc-t"><span class="acc-h">Coach Metric fragen <span class="badge volt" style="font-size:8px">KI</span></span>
-        <span class="acc-s">„${esc(q.slice(0,60))}" — er kennt deine Daten & antwortet direkt</span></span>
-        <span class="mi-chev">${icon("chevronR",15)}</span></button>`;
+    return (hit.length?`<p class="label" style="margin:2px 2px 8px">${hit.length} ${hit.length===1?"Treffer":"Treffer"}</p>${hit.map(({f,i})=>row(f,i)).join("")}`
+      :`<p class="sm t2" style="padding:14px 4px 10px;line-height:1.5">Nichts Passendes gefunden — frag den Coach, er kennt deine Daten.</p>`)
+      + coach(`„${esc(q.slice(0,52))}" — er antwortet direkt`);
   }
-  // Für dich jetzt (KI-Auswahl)
-  const sug=fhSuggestions();
-  const sugHTML=sug.length?`<p class="label" style="margin:2px 2px 8px">${icon("sparkle",11)} Für dich jetzt <span class="badge volt" style="font-size:8px;margin-left:4px">KI</span></p>`
-    +sug.map(({i,reason},j)=>{const f=FEATURE_INDEX[i];return `<button class="fh-sug" style="animation-delay:${j*70}ms" onclick="A.fhRun(${i})">
-      <span class="fh-orb">${icon(f.ic,16)}</span>
-      <span class="acc-t"><span class="acc-h">${f.t}</span><span class="acc-s">${reason}</span></span>
-      <span class="mi-chev">${icon("chevronR",15)}</span></button>`;}).join(""):"";
-  // Schnellzugriff: die 4 Alltags-Aktionen als runde Buttons
-  const QUICK=[["Heute trainieren","dumbbell","Training"],["Magic-Log — sprechen statt tippen","mic","Loggen"],["Analytics & Trends","chart","Analytics"],["__coach","message","Coach"]];
-  const quickHTML=`<div class="fh-quick">${QUICK.map(([t,ic,lbl],j)=>{
-    if(t==="__coach")return `<button class="fh-q" style="animation-delay:${210+j*50}ms" onclick="A.fhCoach()"><span class="fh-orb">${icon(ic,18)}</span><span class="xs">${lbl}</span></button>`;
-    const i=FEATURE_INDEX.findIndex(f=>f.t===t);
-    return `<button class="fh-q" style="animation-delay:${210+j*50}ms" onclick="A.fhRun(${i})"><span class="fh-orb">${icon(ic,18)}</span><span class="xs">${lbl}</span></button>`;}).join("")}</div>`;
-  // Kategorien als horizontale Snap-Reihen (Netflix-Prinzip): kompakt, wischbar, gruppiert
+  // Höchstens zwei Vorschläge: mehr wäre schon wieder eine Liste zum Lesen.
+  const sug=fhSuggestions().slice(0,2);
+  const sugHTML=sug.length?`<p class="label" style="margin:2px 2px 8px">${icon("sparkle",11)} Für dich jetzt</p>`
+    +sug.map(({i,reason})=>{const f=FEATURE_INDEX[i];return `<button class="fh-item sug" onclick="A.fhRun(${i})">
+      <span class="fh-ic on">${icon(f.ic,15)}</span>
+      <span style="flex:1;min-width:0"><span class="fh-it">${f.t}</span><span class="fh-id">${reason}</span></span>
+      <span class="mi-chev">${icon("chevronR",14)}</span></button>`;}).join(""):"";
+  // Kategorien zugeklappt — die Übersicht bleibt auf einen Blick erfassbar.
   const CATS=[["Training","dumbbell"],["Magie","sparkle"],["Ernährung","utensils"],["Analyse","chart"],["Konto","user"]];
-  const rows=CATS.map(([c,ic],r)=>{
+  const cats=CATS.map(([c,ic])=>{
     const list=FEATURE_INDEX.map((f,i)=>({f,i})).filter(({f})=>f.c===c);
     if(!list.length)return "";
-    return `<div class="row" style="margin:16px 2px 8px"><p class="label" style="margin:0">${icon(ic,11)} ${c}</p><span class="xs t3">${list.length}</span></div>
-      <div class="fh-row">${list.map(({f,i},j)=>card(f,i,"snap",280+r*60+j*30)).join("")}</div>`;
+    return `<details class="fh-cat"><summary>
+      <span class="fh-ic">${icon(ic,15)}</span>
+      <span style="flex:1">${c}</span>
+      <span class="xs t3" style="margin-right:6px">${list.length}</span>
+      <span class="fh-ch">${icon("chevron",14)}</span></summary>
+      <div class="fh-catbody">${list.map(({f,i})=>row(f,i)).join("")}</div></details>`;
   }).join("");
-  return sugHTML+quickHTML+rows;
+  return sugHTML
+    +`<p class="label" style="margin:16px 2px 8px">Alle Funktionen</p>${cats}`
+    +`<div style="margin-top:10px">${coach("Beschreib dein Anliegen — er kennt deine Zahlen")}</div>`;
 }
 function openFeatureHub(){
   if(!S.seenHub){S.seenHub=true;save();try{renderAppbar()}catch(e){}}
@@ -9643,19 +9690,13 @@ function openFeatureHub(){
     },f.tab?160:40); }
     else if(f.hint) setTimeout(()=>toast(f.hint),200);
   };
-  const gr=fhGreet();
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.fhClose()">
-    <div class="sheet fade fh-sheet" style="max-height:88vh;display:flex;flex-direction:column">
-      <div class="fh-head">
-        <div class="fh-halo" aria-hidden="true"></div>
-        <div class="row" style="position:relative;justify-content:space-between;align-items:flex-start;gap:10px">
-          <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">${rauchkreis(42)}<div style="min-width:0">
-            <p class="display-m" style="margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gr.g}</p>
-            <p class="xs" style="margin:0;color:var(--hl);display:flex;align-items:center;gap:5px;min-width:0"><span style="flex-shrink:0;display:flex">${icon("activity",11)}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gr.status}</span></p></div></div>
-          <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen" style="flex-shrink:0;margin-top:1px">✕</button></div>
-      </div>
+    <div class="sheet fade fh-sheet" style="max-height:86vh;display:flex;flex-direction:column">
+      <div class="row" style="justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+        <p class="display-m" style="margin:0">Was brauchst du?</p>
+        <button class="iconbtn" onclick="A.fhClose()" aria-label="Schließen" style="flex-shrink:0">✕</button></div>
       <div class="row" style="gap:8px;margin-bottom:4px">
-        <input class="fh-search" type="search" placeholder="Sag oder tipp, was du brauchst …" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen" style="margin-bottom:0;flex:1">
+        <input class="fh-search" type="search" placeholder="Funktion suchen …" oninput="A.fhFilter(this.value)" aria-label="Funktion suchen" style="margin-bottom:0;flex:1">
         <button id="fh-mic" class="iconbtn" style="min-width:46px;min-height:46px;border:1px solid var(--hairline);border-radius:13px;background:var(--s2)" onclick="A.fhVoice()" aria-label="Sprechen">${icon("mic",17)}</button>
       </div>
       <div id="fh-list" style="overflow-y:auto;flex:1;padding:8px 2px 12px">${fhBodyHTML("")}</div>
@@ -12039,7 +12080,9 @@ function plateHint(name,w){
   const d=EXDB[name]||{}; if(d.eq!=="barbell")return "";
   const b=plateBreak(w);
   if(b.empty||!b.plates.length)return "";
-  return `Stange ${b.bar} kg + je Seite: ${b.plates.map(x=>String(x).replace(".",",")).join(" · ")}${b.rest?" (Rest "+b.rest.toFixed(1).replace(".",",")+" kg)":""}`;
+  // Nur die Beladung pro Seite — das Stangengewicht steht im Scheiben-Rechner daneben.
+  // Der Hinweis muss in die schmale Zelle passen, sonst wird er abgeschnitten und nützt nichts.
+  return `je Seite: ${b.plates.map(x=>String(x).replace(".",",")).join(" · ")}${b.rest?" (+"+b.rest.toFixed(1).replace(".",",")+")":""}`;
 }
 /* ---------- SUPERSETS (B2) ----------
    Paare werden pro Einheit als Übungs-NAMEN gespeichert (S.supersets[typeKey]) —
@@ -12365,26 +12408,19 @@ function renderPlayer(){
     <p class="ring-lbl mb8">${day.label} · Übung ${S.exIdx+1}/${day.ex.length}${S.currentWeek===4?" · "+LABELS.deload:""}</p>
     <div class="pills">${day.ex.map((e,i)=>`<button class="pill ${i===S.exIdx?"active":""}" onclick="A.jump(${i})">${e[0].length>16?e[0].slice(0,15)+"…":e[0]}</button>`).join("")}</div>
     <div class="card">
-      <div class="row mb4"><h2 style="font-size:19px">${name}</h2>
+      <div class="row mb8"><h2 style="font-size:19px">${name}</h2>
         <div style="display:flex;gap:4px">${day.main&&day.main[S.exIdx]?`<button class="iconbtn" onclick="A.swapMenu('${type}',${S.exIdx})" aria-label="Übung tauschen">${icon("undo",15)}</button>`:""}<button class="iconbtn" onclick="A.exInfo('${name}')" aria-label="Info">ⓘ</button></div></div>
-      ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb8">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}</p>`:"";})()}
       ${(()=>{ const p=ssPartner(type,name); if(!p||!day.ex.some(e=>e[0]===p))return "";
         const myC=S.logged.filter(l=>l.n===name).length, pC=S.logged.filter(l=>l.n===p).length;
         return `<p class="mb8" style="display:flex;align-items:center;gap:6px;background:var(--hl-soft,rgba(143,184,220,.12));border:1px solid rgba(143,184,220,.35);border-radius:10px;padding:7px 10px">
           <span class="xs" style="color:var(--hl);font-weight:600">⚡ Superset mit ${esc(p)}</span>
           <span class="xs t2" style="margin-left:auto">Runde ${Math.min(myC,pC)+1} · Pause erst nach der Runde</span></p>`; })()}
-      ${rec?`<p class="sm volt-txt metric mb8">Letztes Mal: ${fmtKg(rec.w)} × ${rec.reps} — schon vorausgefüllt
-        <button class="iconbtn" style="min-width:28px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum?">ⓘ</button></p>`
-        :(startEst>0?`<p class="sm volt-txt metric mb8">Vorschlag: ${fmtKg(startEst)} × 8 <span class="xs t2" style="font-family:var(--font-ui)">— auf ${fmtKg((S.profile&&S.profile.a&&S.profile.a.weight)||80)} Körpergewicht geschätzt, einfach anpassen</span></p>`
-          :`<p class="sm volt-txt metric mb8">Körpergewicht <span class="xs t2" style="font-family:var(--font-ui)">— Zusatzlast bei Bedarf eintragen</span></p>`)}
-      ${histCard}
-      <div class="row mb12"><p class="ct" style="margin:0">Sätze</p>
-        <div class="setdots" id="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:Math.max(targetSets,logged.length)},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div></div>
-      ${logged.length===0&&pw>=40?`<button class="chip mb12" style="width:100%;justify-content:center;border-color:rgba(196,180,122,.45)" onclick="A.warmup()">${icon("flame",12)} Aufwärmen: 40 %×10 · 60 %×5 · 80 %×3</button>`:""}
-      ${logged.length<targetSets?`<div class="logmode mb12" role="tablist" aria-label="Eintrage-Modus">
-        <button role="tab" aria-selected="${!bulkMode}" class="${bulkMode?"":"on"}" onclick="A.bulkToggle(false)">Satz für Satz</button>
-        <button role="tab" aria-selected="${bulkMode}" class="${bulkMode?"on":""}" onclick="A.bulkToggle(true)">⚡ Alle auf einmal</button>
-      </div>`:""}
+      <!-- EINE Zeile statt vier: Satz-Punkte links, der Vorschlag als kurze Notiz rechts.
+           Beim Training zählt Tempo — Erklärungen stehen unten im Ausklapp-Bereich. -->
+      <div class="pl-meta mb12">
+        <div class="setdots" id="setdots" aria-label="${logged.length} von ${targetSets}">${Array.from({length:Math.max(targetSets,logged.length)},(_,i)=>`<span class="dot ${i<logged.length?"full":""}"></span>`).join("")}</div>
+        <span class="pl-hint">${rec?`Letztes Mal ${fmtKg(rec.w)} × ${rec.reps}`:(startEst>0?`Vorschlag ${fmtKg(startEst)} × 8`:"Körpergewicht")}</span>
+      </div>
       ${bulkMode&&logged.length<targetSets?(()=>{ // ===== SCHNELL-EINTRAG-GRID: jede Zeile = ein Satz mit eigenem Gewicht/Reps =====
         const remaining=Math.max(1,targetSets-logged.length);
         return `<p class="xs t2 mb8" style="line-height:1.5">Übung fertig? Trag alle Sätze in einem Rutsch ein — jede Zeile darf ihr eigenes Gewicht haben (z. B. aufsteigend).</p>
@@ -12415,14 +12451,31 @@ function renderPlayer(){
         </div>
       </div>
       <div class="lcell mb12">
-        <p class="lcell-l">${LABELS.rpe} · RPE</p>
+        <p class="lcell-l" style="display:flex;justify-content:space-between;gap:8px">${LABELS.rpe} · RPE<span id="rpe-desc" style="color:var(--t3);letter-spacing:0;text-transform:none;font-weight:500">${RPE_DESC[prpe]}</span></p>
         <div class="lcell-row" style="gap:0"><div class="scale">${[7,8,9,10].map(v=>`<button class="${prpe===v?"sel":""}" data-v="${v}" onclick="A.rpe(${v})" title="${RPE_DESC[v]}" aria-label="Anstrengung ${v}">${v}</button>`).join("")}</div></div>
-        <p id="rpe-desc" class="lcell-hint">${RPE_DESC[prpe]}</p>
       </div>
       <button id="primary-cta" class="btn volt cta-big" onclick="${cta.f}"><span>${cta.l}</span><span class="cta-sub">${cta.s}</span></button>
       ${logged.length&&logged.length<targetSets?`<button class="btn ghost mt8" style="min-height:40px;font-size:13px" onclick="A.repeatSet()">↻ Wie letzter Satz (${fmtKg(logged[logged.length-1].w)} × ${logged[logged.length-1].reps})</button>`:""}
       ${logged.length>=targetSets?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.log()">+ Noch ein Satz</button>`:""}`}
       <ul id="logged-list" class="list mt16" style="border-top:1px solid var(--border);padding-top:10px;display:${logged.length?"block":"none"}">${loggedRows()}</ul>
+      <!-- Alles Zweitrangige hinter EINEM Tipp: Aufwärmen, Schnell-Eintrag, Ausführung, Verlauf.
+           Nichts ist verschwunden — es steht nur nicht mehr zwischen dir und dem nächsten Satz. -->
+      <details class="pl-more"${bulkMode?" open":""}>
+        <summary><span class="pl-mt">Aufwärmen · Schnell-Eintrag · Verlauf</span><span class="pl-mch">${icon("chevron",14)}</span></summary>
+        <div class="pl-mbody">
+          ${logged.length<targetSets?`<div class="logmode mb12" role="tablist" aria-label="Eintrage-Modus">
+            <button role="tab" aria-selected="${!bulkMode}" class="${bulkMode?"":"on"}" onclick="A.bulkToggle(false)">Satz für Satz</button>
+            <button role="tab" aria-selected="${bulkMode}" class="${bulkMode?"on":""}" onclick="A.bulkToggle(true)">⚡ Alle auf einmal</button>
+          </div>`:""}
+          ${pw>=40?`<button class="chip mb12" style="width:100%;justify-content:center;border-color:rgba(196,180,122,.45)" onclick="A.warmup()">${icon("flame",12)} Aufwärmen: 40 %×10 · 60 %×5 · 80 %×3</button>`:""}
+          ${(()=>{const d=EXDB[name]||{};return (d.tempo||d.rir)?`<p class="mb12">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir?`<span class="statchip">${d.rir} in Reserve</span>`:""}</p>`:"";})()}
+          ${rec?`<p class="xs t2 mb12" style="line-height:1.5">Gewicht und Wiederholungen sind aus deinem letzten Satz vorausgefüllt.
+            <button class="iconbtn" style="min-width:26px;min-height:20px;font-size:11px" onclick="A.recWhy('${name}')" aria-label="Warum dieser Vorschlag?">ⓘ</button></p>`
+            :(startEst>0?`<p class="xs t2 mb12" style="line-height:1.5">Der Startwert ist auf ${fmtKg((S.profile&&S.profile.a&&S.profile.a.weight)||80)} Körpergewicht geschätzt — pass ihn einfach an, ab dem zweiten Mal rechnet die Engine mit deinen echten Zahlen.</p>`
+              :`<p class="xs t2 mb12" style="line-height:1.5">Körpergewichts-Übung — trag bei Bedarf die Zusatzlast ein.</p>`)}
+          ${histCard}
+        </div>
+      </details>
     </div>
     <div id="restslot"></div>
     ${(()=>{const acc=rationaleAccordionHTML(type); if(!acc)return "";

@@ -824,9 +824,30 @@ Rückmeldung war eindeutig — zu wenig immersiv, zu wenig Oura-Niveau. Umgesetz
   Start-Übersicht, Tagesroutine und die adaptive Karte folgen der aktiven Aktivität —
   ein Läufer liest nirgends mehr „Cardio", „Sätze" oder „Gewichte".
 
+## §48 — Weniger auf einmal: Kopfzeile, Palette, Player
+- **Kopfzeile lief über.** Auf einem 390-px-Gerät war sie 154 px zu breit — die drei
+  Icon-Buttons lagen komplett außerhalb des Bildschirms. Jetzt trägt sie Marke,
+  Aktivitäts-Umschalter und **zwei** Aktionen; die Glocke ist als Menü-Eintrag mit
+  Insight-Zähler umgezogen. Der Chip ist das schrumpfende Element (mit Ellipse), nicht
+  die Wortmarke. Geprüft von 320 bis 430 px, auch mit langen Aktivitätsnamen.
+- **Funktions-Palette: eine Liste statt einer Wand.** Vorher: Begrüßung, Status, Suche,
+  drei KI-Karten, vier Schnellkacheln und fünf horizontale Kartenreihen — über dreißig
+  Elemente auf einmal. Jetzt: Suche, **höchstens zwei** Vorschläge und **fünf zugeklappte
+  Kategorien** — acht Elemente beim Öffnen. Keine Funktion ist verschwunden: alle 23
+  bleiben über die Kategorien und die Suche erreichbar, der Coach steht als Ausweg unten.
+  Die vier Schnellkacheln waren exakte Doppelungen der Tab-Leiste und sind entfallen.
+- **Player: im Training zählt Tempo.** Sichtbar bleibt, was für den nächsten Satz zählt —
+  Übung, Satz-Punkte, Vorschlag in einer Zeile, Gewicht, Wiederholungen, RPE, Loggen.
+  Alles Zweitrangige (Aufwärm-Rechner, Schnell-Eintrag, Tempo/RIR, Herkunft des
+  Vorschlags, Verlauf der letzten Sessions) liegt hinter **einem** Tipp. Die Karte ist von
+  einer Bildschirmlänge auf **456 px** geschrumpft. Der Schnell-Eintrag klappt den Bereich
+  automatisch auf, und die RPE-Beschreibung sitzt jetzt in der Label-Zeile statt in einer
+  eigenen. Der Scheiben-Hinweis wurde in der schmalen Zelle abgeschnitten — er nennt nur
+  noch die Beladung pro Seite, das Stangengewicht steht im Scheiben-Rechner daneben.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v28** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v29** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
