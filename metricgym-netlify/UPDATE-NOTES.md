@@ -740,9 +740,34 @@ Ein Profil besitzt nur die *Absicht*: Ziel, Tage, Split, Equipment, Fokus.
 +6 CI-Tests (Migration, Interface-Wechsel, Neuberechnung, Isolation, geteilte Körperdaten,
 Rückwechsel). Alle drei Suiten grün.
 
+### 43. Design-Sprung: Typografie, immersive Buttons, benennbare Tabs
+Rückmeldung war eindeutig — zu wenig immersiv, zu wenig Oura-Niveau. Umgesetzt:
+
+- **Typografie neu skaliert.** Die eingebettete Inter-Variable wurde bisher nicht ausgereizt.
+  Jetzt gegenläufige optische Größen: je größer der Grad, desto **enger das Tracking und
+  leichter das Gewicht** (H2 auf 28–34 px, Gewicht 520, −0,035 em; Hero-Zahlen Gewicht 250,
+  −0,04 em). Genau dieser Gegenlauf trennt „Systemschrift" von redaktioneller Anmutung.
+  `font-optical-sizing`, `text-wrap:balance` und Ziffern-Feature-Settings durchgehend aktiv.
+- **Buttons sind immersiv statt flach.** Drei Tiefenebenen (Grundfläche, innere Lichtkante,
+  weicher Schlagschatten) + **spekularer Glanz, der beim Drücken über die Fläche läuft**.
+  Das Drücken ist ein echtes Eindrücken: Schatten kollabiert nach innen, Spring-Kurve statt
+  linearer Skalierung. Primär-Aktion mit warmem Verlauf und kühlem Marken-Halo.
+- **Frei benennbare Tabs.** Der Name der Aktivität steht unten in der Navigation — „Ausdauer
+  Radfahren" erscheint als „Radfahren" (intelligente Kürzung aufs Kernwort), der volle Name
+  im Kopfzeilen-Chip und als Vorlesetext. Im Editor gibt es eine **Live-Vorschau des Tabs**.
+- **Redaktioneller Ausdauer-Kopf.** Statt kleiner Zeile jetzt Eyebrow + großer Titel mit dem
+  Namen der Aktivität; Import als runde Primär-Aktion mit Halo.
+- **Toast repariert.** Lange Meldungen brachen auf drei Zeilen mitten in den Inhalt (im
+  Nutzer-Screenshot sichtbar). Jetzt einzeilige Glaskapsel über der Tab-Leiste, mit Safe-Area.
+- **Gestaffelte Einblendung** der Aktivitätskarten (52 ms Versatz, Spring) — Rhythmus statt
+  hartem Schlag. Alle Animationen respektieren `prefers-reduced-motion`.
+- **Seriöse Voreinstellungen.** Neue Aktivität ist vollständig vorbelegt (Typ = der noch
+  fehlende, Name, Ziel, Tage, Equipment) — ein Tipp auf „Anlegen" genügt. Entschieden werden
+  muss nur, was man wirklich ändern will.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v25** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v26** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

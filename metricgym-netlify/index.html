@@ -172,15 +172,23 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @keyframes mgAura{0%,100%{opacity:.30; transform:scale(.94)}50%{opacity:.62; transform:scale(1.05)}}
   @keyframes mgIgnite{from{opacity:0; transform:translateY(6px) scale(.97)}to{opacity:1; transform:none}}
   @media (prefers-reduced-motion:reduce){ .mg-svg,.mg-on,.mg-aura{animation:none} }
-  .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
-  .hero-num{font-family:var(--font-hero); font-weight:300; letter-spacing:-0.025em; font-variant-numeric:tabular-nums;}
+  .metric{font-family:var(--font-mono); font-variant-numeric:tabular-nums; letter-spacing:-0.01em; font-feature-settings:"ss01","cv05";}
+  /* Hero-Zahlen: sehr leicht, eng geführt, optisch groß — der Oura-Duktus lebt vom Kontrast
+     zwischen hauchdünnen Großzahlen und kompaktem, halbfettem Kleintext. */
+  .hero-num{font-family:var(--font-hero); font-weight:250; letter-spacing:-0.04em; font-variant-numeric:tabular-nums;
+    font-optical-sizing:auto; line-height:.95;}
   .wrap{max-width:430px; margin:0 auto; min-height:100dvh; padding:70px 24px 124px;}
   /* Auth/Onboarding ohne App-Leiste: Inhalt darf nicht unter Notch/Dynamic Island rutschen */
   .wrap.noshell{padding-top:calc(16px + env(safe-area-inset-top,0px));}
-  h1{font-size:17px; font-weight:600; letter-spacing:-0.01em;}
-  h2{font-size:27px; font-weight:600; letter-spacing:-0.02em; line-height:1.15; margin-bottom:4px;}
-  .display-m{font-size:19px; font-weight:600; letter-spacing:-0.01em; line-height:1.3;}
-  .label{font-size:10.5px; font-weight:650; letter-spacing:.15em; text-transform:uppercase; color:var(--t3); display:block; margin:0 0 var(--sp-3) var(--sp-1);}
+  /* TYPO-SKALA v2 — optische Größen ausgereizt: je größer der Grad, desto enger das Tracking
+     und desto leichter das Gewicht. Genau dieser Gegenlauf macht den Unterschied zwischen
+     „Systemschrift" und redaktioneller Anmutung. */
+  h1{font-size:17px; font-weight:600; letter-spacing:-0.015em; font-optical-sizing:auto;}
+  h2{font-size:clamp(28px,7.6vw,34px); font-weight:520; letter-spacing:-0.035em; line-height:1.08;
+    margin-bottom:6px; font-optical-sizing:auto; text-wrap:balance;}
+  h3{font-size:19px; font-weight:600; letter-spacing:-0.02em; line-height:1.2;}
+  .display-m{font-size:20.5px; font-weight:580; letter-spacing:-0.025em; line-height:1.22; font-optical-sizing:auto;}
+  .label{font-size:10px; font-weight:600; letter-spacing:.19em; text-transform:uppercase; color:var(--t3); display:block; margin:0 0 var(--sp-3) var(--sp-1);}
   .section{margin-bottom:var(--sp-7);}
   .hint{font-size:13px; color:var(--t2); margin-bottom:16px; line-height:1.55;}
   /* Onboarding: 2 Fragen pro Block */
@@ -221,20 +229,39 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .tour-dots span.on{width:22px; border-radius:4px; background:var(--volt);}
   @media(min-width:900px){ .tour-bg{align-items:center;} .tour-card{margin-bottom:0;} }
 
-  .ct{font-size:10.5px; font-weight:650; letter-spacing:.15em; text-transform:uppercase; color:var(--t3); margin-bottom:12px;}
+  .ct{font-size:10px; font-weight:600; letter-spacing:.19em; text-transform:uppercase; color:var(--t3); margin-bottom:12px;}
+  /* BUTTONS v2 — immersiv statt flach: Tiefe aus drei Ebenen (Grundfläche, innere Lichtkante
+     oben, weicher Schlagschatten unten) + ein Glanz, der beim Drücken über die Fläche läuft.
+     Das Drücken ist keine reine Skalierung, sondern ein echtes Eindrücken (Schatten kollabiert). */
   .btn{
+    position:relative; overflow:hidden; isolation:isolate;
     display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
-    min-height:52px; border-radius:999px; border:none;
-    background:linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.06));
-    color:var(--t1); font-size:15.5px; font-weight:600; letter-spacing:.01em;
-    cursor:pointer; font-family:inherit;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 1px 3px rgba(0,0,0,.35);
-    transition:all .25s var(--spring);
+    min-height:54px; border-radius:999px; border:none;
+    background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.055) 62%, rgba(255,255,255,.03));
+    color:var(--t1); font-size:15.5px; font-weight:600; letter-spacing:-.005em;
+    cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(0,0,0,.22),
+      0 6px 18px rgba(0,0,0,.34), 0 1px 2px rgba(0,0,0,.3);
+    transition:transform .32s var(--spring), box-shadow .32s var(--spring), filter .2s ease;
   }
-  .btn:active{transform:scale(.97); box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.05);}
-  .btn.volt{background:linear-gradient(180deg,#F6F0E7,#E7DCCB); color:#131519; border:none; font-weight:650;
-    /* weicher, kühler Schatten statt hartem Schwarz (vermeidet „schwarze Flecken" auf dunklem Grund) */
-    box-shadow:0 10px 26px rgba(8,12,24,.34), 0 2px 12px rgba(143,184,220,.14), inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 0 rgba(0,0,0,.07);}
+  /* Spekularer Glanz — liegt über der Fläche, wandert beim Drücken einmal durch. */
+  .btn::after{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:linear-gradient(105deg, transparent 34%, rgba(255,255,255,.16) 47%, transparent 60%);
+    transform:translateX(-120%); opacity:0;}
+  .btn:active::after{animation:btnSheen .62s cubic-bezier(.22,1,.36,1);}
+  @keyframes btnSheen{0%{transform:translateX(-120%);opacity:0} 22%{opacity:1} 100%{transform:translateX(120%);opacity:0}}
+  .btn:active{transform:scale(.968) translateY(1px); filter:brightness(1.06);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.1), inset 0 2px 8px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);}
+  @media (prefers-reduced-motion:reduce){ .btn:active::after{animation:none} }
+  /* Primär-Aktion: cremefarbener Körper mit warmem Verlauf, Lichtkante oben, kühlem Halo unten.
+     Der Halo trägt die Marke — er hebt den Button optisch von der dunklen Fläche ab. */
+  .btn.volt{background:linear-gradient(180deg,#FBF7F0 0%,#F2EADF 46%,#E4D8C6 100%); color:#131519; border:none;
+    font-weight:640; letter-spacing:-.01em;
+    box-shadow:0 12px 30px rgba(8,12,24,.4), 0 3px 14px rgba(143,184,220,.2),
+      inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1.5px 0 rgba(0,0,0,.09);}
+  .btn.volt::after{background:linear-gradient(105deg, transparent 34%, rgba(255,255,255,.75) 47%, transparent 60%);}
+  .btn.volt:active{filter:brightness(.99);
+    box-shadow:0 3px 10px rgba(8,12,24,.36), inset 0 2px 7px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.6);}
   @keyframes voltSheen{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
   .btn.volt:active{transform:scale(.97);}
   @media (prefers-reduced-motion:reduce){.btn.volt{animation:none}}
@@ -327,6 +354,12 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .act-chip:active{transform:scale(.96);}
   .act-chip .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .act-chip .ic{display:inline-flex; flex-shrink:0;}
+  /* Gestaffeltes Einblenden: Karten steigen nacheinander auf — das gibt dem Sheet Rhythmus
+     statt eines harten Schlags. Reihenfolge über --i, gesetzt beim Rendern. */
+  .stagger>*{opacity:0; transform:translateY(10px) scale(.985);
+    animation:stagIn .58s cubic-bezier(.22,1,.36,1) forwards; animation-delay:calc(var(--i,0)*52ms + 40ms);}
+  @keyframes stagIn{to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){ .stagger>*{animation:none; opacity:1; transform:none} }
   .act-card{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:13px 14px;
     background:var(--s2); border:1px solid var(--hairline); border-radius:14px; cursor:pointer;
     color:var(--t1); font-family:inherit; margin-bottom:8px; transition:transform .16s var(--ease-out,ease), border-color .2s;}
@@ -384,10 +417,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     opacity:.7;
   }
   .tab{
-    position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0 5px;
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px 5px;
     background:none; border:none; color:var(--t3); font-size:9.5px; font-weight:600; cursor:pointer; font-family:inherit; min-height:48px;
+    letter-spacing:.005em; min-width:0; flex:1;
     transition:color .25s var(--spring);
   }
+  /* Frei benennbare Tabs: der Name darf lang sein, das Tab bleibt schmal und bricht nie um. */
+  .tab .tl{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.15;}
   .tab .ic{
     display:flex; align-items:center; justify-content:center;
     width:46px; height:27px; border-radius:999px;
@@ -874,10 +910,24 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .qcard{flex-shrink:0; width:140px; border-radius:18px; padding:12px; cursor:pointer; font-family:inherit; color:var(--t1); text-align:left;}
   .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;}
   .modal{border-radius:24px; padding:22px; max-width:380px; width:100%; max-height:80dvh; overflow-y:auto;}
-  .toast{position:fixed; bottom:118px; left:50%; transform:translateX(-50%); z-index:70;
-    background:rgba(24,24,24,.92); color:#fff; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
-    padding:10px 18px; border-radius:999px; font-size:13px; font-weight:600; animation:popIn .35s var(--spring);
-    max-width:90%; text-align:center; box-shadow:0 8px 24px rgba(26,26,26,.25);}
+  /* Toast: als Glaskapsel ÜBER der Tab-Leiste, einzeilig statt als Textblock mitten im Inhalt.
+     Vorher brach langer Text auf drei Zeilen und legte sich über die Karten darunter. */
+  .toast{position:fixed; bottom:calc(96px + env(safe-area-inset-bottom,0px)); left:50%; z-index:70;
+    background:linear-gradient(180deg, rgba(38,43,52,.96), rgba(24,28,35,.96)); color:#fff;
+    -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%);
+    padding:11px 18px; border-radius:999px; font-size:13px; font-weight:600; letter-spacing:-.005em;
+    max-width:min(92vw,380px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center;
+    box-shadow:0 14px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.14);
+    transform:translateX(-50%); animation:toastIn .5s cubic-bezier(.22,1,.36,1);}
+  @keyframes toastIn{from{opacity:0; transform:translateX(-50%) translateY(14px) scale(.94)}
+    to{opacity:1; transform:translateX(-50%) translateY(0) scale(1)}}
+  @media (prefers-reduced-motion:reduce){ .toast{animation:none} }
+  /* Import-Aktion im Ausdauer-Kopf: als runde Primär-Aktion mit Halo statt flachem Kästchen. */
+  .eh-imp{min-width:46px; min-height:46px; border-radius:999px; flex-shrink:0;
+    background:linear-gradient(180deg,#FBF7F0,#E4D8C6); color:#14171C; border:none;
+    box-shadow:0 10px 24px rgba(8,12,24,.42), 0 2px 10px rgba(143,184,220,.2), inset 0 1px 0 rgba(255,255,255,.9);
+    transition:transform .3s var(--spring), box-shadow .3s var(--spring);}
+  .eh-imp:active{transform:scale(.93); box-shadow:0 3px 10px rgba(8,12,24,.4), inset 0 2px 6px rgba(0,0,0,.15);}
   details summary{list-style:none;}
   details summary::-webkit-details-marker{display:none;}
   .strength-meter{height:5px; border-radius:999px; background:var(--s3); overflow:hidden; margin-top:6px;}
@@ -2284,9 +2334,17 @@ function renderEndurance() {
   return eRenderDashboard();
 }
 function eHeader(title, sub) {
-  return `<div class="row" style="align-items:center;gap:10px;margin:2px 0 14px">
-    <div style="flex:1"><p class="display-m" style="margin:0">${esc(title)}</p>${sub ? `<p class="xs t2" style="margin-top:2px">${esc(sub)}</p>` : ""}</div>
-    <button class="iconbtn" onclick="ENDUR.pick()" aria-label="Aktivität importieren" style="background:var(--hl);color:#0A0C0F;min-width:40px;min-height:40px;border-radius:12px">${icon("push", 18)}</button>
+  // Redaktioneller Kopf: der Name der aktiven Aktivität als großer Titel, die Disziplin als
+  // Eyebrow darüber — dieselbe Typo-Hierarchie wie im Rest der App.
+  let nm = title;
+  try { const c = actCurrent(); if (c && c.name) nm = c.name; } catch (e) {}
+  return `<div class="row eh-in" style="align-items:flex-end;gap:12px;margin:2px 0 18px">
+    <div style="flex:1;min-width:0">
+      <p class="label" style="margin:0 0 3px 1px">${esc(title)}</p>
+      <h2 style="margin:0;font-size:clamp(30px,8.4vw,38px)">${esc(nm)}</h2>
+      ${sub ? `<p class="xs t2" style="margin-top:5px">${esc(sub)}</p>` : ""}
+    </div>
+    <button class="iconbtn eh-imp" onclick="ENDUR.pick()" aria-label="Aktivität importieren">${icon("push", 19)}</button>
   </div>`;
 }
 function eTabs(active) {
@@ -5986,9 +6044,10 @@ function renderActSheet(){
     <div class="sheet fade">
       <p class="display-m mb4">Aktivität wechseln</p>
       <p class="xs t2 mb16" style="line-height:1.55">Jede Aktivität hat <b style="color:var(--t1)">eigene Ziele, Tage und Oberfläche</b>. Deine Körperdaten und Verläufe bleiben überall dieselben — du wechselst die Absicht, nicht den Menschen.</p>
-      ${l.map(x=>{ const m=actMeta(x.type), on=x.id===S.actId;
+      <div class="stagger">
+      ${l.map((x,ix)=>{ const m=actMeta(x.type), on=x.id===S.actId;
         const g=(x.cfg.goals||actDefaultGoals(x.type)).map(k=>GOAL_LABEL[k]||k).slice(0,2).join(" · ");
-        return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
+        return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px;--i:${ix}">
           <button class="act-card ${on?"on":""}" style="margin:0;flex:1" onclick="A.actGo('${x.id}')">
             <span class="ai">${icon(m.icon,19)}</span>
             <span style="flex:1;min-width:0">
@@ -5999,6 +6058,7 @@ function renderActSheet(){
           </button>
           <button class="iconbtn" style="min-width:42px" onclick="A.actEdit('${x.id}')" aria-label="${esc(x.name)} bearbeiten">${icon("settings",16)}</button>
         </div>`; }).join("")}
+      </div>
       <button class="btn volt mt8" onclick="A.actNew()">${icon("plus",15)} Neue Aktivität anlegen</button>
       <button class="btn mt8" onclick="A.closeModal()">Schließen</button>
     </div></div>`;
@@ -6015,9 +6075,16 @@ function renderActEdit(){
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.actSheet()">
     <div class="sheet fade">
       <p class="display-m mb4">${isNew?"Neue Aktivität":"Aktivität bearbeiten"}</p>
-      <p class="xs t2 mb12" style="line-height:1.5">Der Typ bestimmt, welche Oberfläche du siehst: Kraft-Ansicht oder Ausdauer-Ansicht mit Zonen und Leistungswerten.</p>
-      <div class="field mb12"><label for="act-name" class="xs t2">Name</label>
-        <input type="text" id="act-name" value="${esc(d.name||"")}" placeholder="z. B. Rennrad-Saison" autocomplete="off" oninput="A.actField('name',this.value)"></div>
+      <p class="xs t2 mb12" style="line-height:1.5">Der Typ bestimmt, welche Oberfläche du siehst: Kraft-Ansicht oder Ausdauer-Ansicht mit Zonen und Leistungswerten. <b style="color:var(--t1)">Alles ist vorbelegt</b> — du kannst direkt anlegen.</p>
+      <div class="field mb4"><label for="act-name" class="xs t2">Name — erscheint unten als dein Tab</label>
+        <input type="text" id="act-name" value="${esc(d.name||"")}" placeholder="z. B. Ausdauer Radfahren" autocomplete="off" oninput="A.actField('name',this.value);A.actPreview(this.value)"></div>
+      <div style="display:flex;align-items:center;gap:9px;margin:0 0 14px;padding:9px 12px;border-radius:12px;background:var(--s2)">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--t1);min-width:54px">
+          <span style="display:flex;align-items:center;justify-content:center;width:46px;height:27px;border-radius:999px;background:rgba(239,231,220,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)">${icon(m.icon,17)}</span>
+          <span id="act-prev" style="font-size:9.5px;font-weight:600;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center">${esc(tabShort(d.name)||m.label)}</span>
+        </span>
+        <span class="xs t2" style="flex:1;line-height:1.45">So sieht dein Tab in der Navigationsleiste aus.</span>
+      </div>
       <p class="label" style="margin:4px 0 8px">Art der Aktivität</p>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
         ${Object.entries(ACT_TYPES).map(([k,v])=>`<button class="act-card ${d.type===k?"on":""}" style="margin:0" onclick="A.actField('type','${k}')">
@@ -6039,14 +6106,33 @@ function renderActEdit(){
     </div></div>`;
   const el=document.getElementById("act-name"); if(el&&isNew)setTimeout(()=>el.focus(),60);
 }
-A.actNew=()=>{ _actDraft={type:"cycling",name:"",goals:actDefaultGoals("cycling"),days:4,equipment:"gym_full"}; renderActEdit(); };
+/* Seriöse Voreinstellung: Ein Tipp auf „Anlegen" reicht — Name, Ziel, Tage und Equipment
+   sind bereits sinnvoll gesetzt (Standard-Typ ist der, den es noch nicht gibt). Entschieden
+   werden muss nur, was der Nutzer WIRKLICH ändern will. */
+function actSuggestType(){
+  const have=new Set(actList().map(x=>x.type));
+  return ["cycling","running","gym","loss","hybrid"].find(t=>!have.has(t))||"cycling";
+}
+function actDraftDefaults(type){
+  const a=(S.profile&&S.profile.a)||{};
+  const endur=actMeta(type).ui==="endur";
+  return { type, name:actMeta(type).label, goals:actDefaultGoals(type),
+    days:endur?4:(a.days||4), equipment:a.equipment||"gym_full" };
+}
+A.actNew=()=>{ _actDraft=actDraftDefaults(actSuggestType()); renderActEdit(); };
 A.actEdit=(id)=>{ const x=actList().find(y=>y.id===id); if(!x)return;
   _actDraft={id:x.id,type:x.type,name:x.name,goals:(x.cfg.goals||actDefaultGoals(x.type)).slice(),
     days:x.cfg.days||4,equipment:x.cfg.equipment||"gym_full"}; renderActEdit(); };
+// Live-Vorschau des Tab-Labels beim Tippen — ohne Re-Render, damit der Cursor stehen bleibt.
+A.actPreview=(v)=>{ const el=document.getElementById("act-prev"); if(!el)return;
+  const d=_actDraft||{}; el.textContent=tabShort(v)||actMeta(d.type).label; };
 A.actField=(k,v)=>{ if(!_actDraft)return;
   if(k==="name"){ _actDraft.name=v; return; }              // kein Re-Render beim Tippen
   _actDraft[k]=v;
-  if(k==="type"){ _actDraft.goals=actDefaultGoals(v); if(!_actDraft.name||!_actDraft.name.trim()) _actDraft.name=""; }
+  // Typwechsel zieht die passenden Vorgaben nach — außer der Nutzer hat den Namen selbst gesetzt.
+  if(k==="type"){ const d=actDraftDefaults(v);
+    const namedBySelf=_actDraft.name && !Object.values(ACT_TYPES).some(m=>m.label===_actDraft.name);
+    _actDraft.goals=d.goals; if(!namedBySelf) _actDraft.name=d.name; }
   renderActEdit(); };
 A.actGoal=(g)=>{ if(!_actDraft)return; const cur=_actDraft.goals||[];
   if(S.tier==="free"&&cur.length>=1&&!cur.includes(g)){ toast("Mehrere Ziele zugleich sind Pro — Metric nutzt dein Hauptziel."); return; }
@@ -6073,14 +6159,27 @@ A.actDelete=()=>{ const d=_actDraft; if(!d||!d.id)return; const l=actList();
   save(); overlay.innerHTML=""; render(); toast(`„${nm}" gelöscht`); };
 const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
 const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
-function tabsFor(){ return actUi()==="endur"?TABS_ENDUR:TABS; }
+/* Der Trainings-Tab trägt den NAMEN der aktiven Aktivität — nennt jemand sein Profil
+   „Ausdauer Radfahren", steht genau das unten. Lange Namen werden fürs Tab gekürzt
+   (das volle Wort steht im Kopfzeilen-Chip und als Vorlesetext). */
+function tabShort(s){ s=String(s||"").trim(); if(s.length<=13) return s;
+  const w=s.split(/[\s·—-]+/).filter(Boolean);
+  if(w.length>1){ const last=w[w.length-1]; if(last.length<=12) return last; }
+  return s.slice(0,12)+"…"; }
+function tabsFor(){
+  const cur=actCurrent(), endur=actUi()==="endur";
+  const base=endur?TABS_ENDUR:TABS;
+  if(!cur) return base;
+  const meta=actMeta(cur.type);
+  return base.map((t,i)=> i===1 ? [t[0], meta.icon, tabShort(cur.name)||t[2], cur.name] : t);
+}
 function renderTabbar(){
   A.tab=(t)=>{menuOpen=false;S.tab=t;save();render();};
   const TB=tabsFor();
   let active=["player","summary"].includes(S.tab)?(actUi()==="endur"?"endurance":"train"):(S.tab==="today"?"home":S.tab);
   tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner">
-    ${TB.map(([id,ic,l],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${l}">
-      <span class="ic" aria-hidden="true">${icon(ic,i===2?22:19)}</span>${l}</button>`).join("")}</div></nav>`;
+    ${TB.map(([id,ic,l,full],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${esc(full||l)}">
+      <span class="ic" aria-hidden="true">${icon(ic,i===2?22:19)}</span><span class="tl">${esc(l)}</span></button>`).join("")}</div></nav>`;
 }
 /* ---------- Onboarding-Tour: geführte Durchführung der Hauptfunktionen ----------
    Struktur statt Erschlag: 5 Stationen, jede zeigt die echte Ansicht + erklärt WAS möglich ist
