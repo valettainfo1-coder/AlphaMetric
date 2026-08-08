@@ -8856,10 +8856,19 @@ function dailyChecklist(){
   const meals=(nlog.meals||[]).length, water=nlog.water||0;
   const trainedToday=S.trainingHistory.some(t=>t.date===today);
   const weighed7d=S.weightLog.some(w=>Date.now()-w.t<7*dayMs);
-  const restDay=tType==="rest";
+  /* Ausdauer-Profile haben weder Player noch Sätze: ihre Zeile heißt „Einheit aus dem
+     Plan" und gilt als erledigt, wenn sie abgehakt oder als Datei importiert wurde. */
+  let _eu=false, _eRest=false, _eOk=false;
+  try{ _eu=actUi()==="endur";
+    if(_eu){ const c=endurCfg(), wkp=endurWeekPlan(c,endurWeekNo(c)), dd=(new Date().getDay()+6)%7;
+      _eRest=wkp[dd]==="rest";
+      _eOk=!!endurDone()[today] || window.ENDUR.activities().some(x=>dayKeyLocal(x.start)===today); } }catch(e){}
+  const restDay=_eu?_eRest:(tType==="rest");
   const items=[
     {icon:"moon",label:"Status-Check",sub:"10 Sek. — füttert Erholungs-Trend & Tagesempfehlung",done:!!S.checkin,act:"A.openStatus()"},
-    {icon:"dumbbell",label:restDay?"Ruhetag":"Training loggen",sub:restDay?"Heute nichts zu tun — Erholung zählt als Training":"Füttert Kraft-Prognose, Rekorde & Belastungs-Ampel",done:restDay||trainedToday,act:"A.q('train')"},
+    _eu
+      ?{icon:"activity",label:restDay?"Ruhetag":"Einheit aus dem Plan",sub:restDay?"Heute nichts zu tun — Erholung ist Teil des Aufbaus":"Abhaken reicht; eine geladene Datei bringt zusätzlich NP, TSS und Zonen",done:restDay||_eOk,act:"A.q('endurance')"}
+      :{icon:"dumbbell",label:restDay?"Ruhetag":"Training loggen",sub:restDay?"Heute nichts zu tun — Erholung zählt als Training":"Füttert Kraft-Prognose, Rekorde & Belastungs-Ampel",done:restDay||trainedToday,act:"A.q('train')"},
     {icon:"utensils",label:"Alle Mahlzeiten loggen",sub:"Füttert Ernährungs-Treue & Nährstoff-Check",done:meals>=2,act:"A.q('nutrition')"},
     {icon:"droplet",label:"Wasser tracken",sub:"Ziel 2,5 l — Teil deines Ernährungs-Bildes",done:water>=6,act:"A.q('nutrition')"},
     {icon:"scale",label:"Wiegen",sub:"1× pro Woche reicht — füttert Körper-Trend & Kalorienziel",done:weighed7d,act:"A.q('profile')"},
@@ -8898,32 +8907,51 @@ function starterSteps(){
   const nut=Object.values(S.nutritionLog||{}).some(l=>(l.meals||[]).length>=2);
   const th=(S.trainingHistory||[]).length, wl=(S.weightLog||[]).length;
   let acts=1; try{ acts=actList().length; }catch(e){}
-  return [
+  // Die Schritte folgen der aktiven Aktivität: einem Läufer „Sätze eintragen"
+  // vorzuschlagen wäre schlicht falsch — er hat weder Sätze noch einen Player.
+  let endur=false, eActs=0, eDone=0;
+  try{ endur=actUi()==="endur"; eActs=window.ENDUR.activities().length; eDone=Object.keys(endurDone()).length; }catch(e){}
+  const common=[
     {ic:"moon",t:"Tagesform messen",d:"Vier Fragen, zehn Sekunden — jeden Morgen.",
      un:["Bereitschafts-Ring","Tagesempfehlung","Übertrainings-Signal"],done:!!S.checkin,act:"A.openStatus()"},
-    {ic:"dumbbell",t:"Erste Einheit loggen",d:"Player starten und deine Sätze eintragen.",
-     un:["Kraft-Prognose","Rekorde","Volumen-Ampel"],done:th>0,act:"A.q('train')"},
-    {ic:"utensils",t:"Einen Tag Ernährung tracken",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
-     un:["Makro-Check","Protein-Deckung","Ernährungs-Treue"],done:nut,act:"A.q('nutrition')"},
+  ];
+  const mid=endur
+    ? [{ic:"activity",t:"Erste Einheit aus dem Plan",d:"Der Plan-Tab sagt dir genau, was heute ansteht — mit Zielbereich in Pace oder Watt.",
+        un:["Wochenfortschritt","Zonen-Steuerung"],done:eDone>0||eActs>0,act:"A.q('endurance')"},
+       {ic:"utensils",t:"Einen Tag Ernährung tracken",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
+        un:["Makro-Check","Protein-Deckung","Ernährungs-Treue"],done:nut,act:"A.q('nutrition')"}]
+    : [{ic:"dumbbell",t:"Erste Einheit loggen",d:"Player starten und deine Sätze eintragen.",
+        un:["Kraft-Prognose","Rekorde","Volumen-Ampel"],done:th>0,act:"A.q('train')"},
+       {ic:"utensils",t:"Einen Tag Ernährung tracken",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
+        un:["Makro-Check","Protein-Deckung","Ernährungs-Treue"],done:nut,act:"A.q('nutrition')"}];
+  const tail=[
     {ic:"scale",t:"Zweimal wiegen",d:"Zwei Messungen im Abstand einiger Tage genügen.",
      un:["Kalorien-Abgleich","Stoffwechsel-Zwilling"],done:wl>=2,act:"A.q('profile')"},
     {ic:"grid",t:"Deine Aktivitäten kennen",d:"Kraft, Abnehmen, Rad, Laufen — jede mit eigenen Zielen und eigener Ansicht.",
      un:["Profil-Umschalter","Eigene Tabs"],done:!!S.seenActs||acts>=2,act:"A.actSheet()"},
-    {ic:"chart",t:"Drei Einheiten geloggt",d:"Ab hier rechnet die Engine mit deinen echten Zahlen statt mit Startwerten.",
-     un:["Plan-Präzision","Analytics-Insights","Adaptive Gewichte"],done:th>=3,act:"A.q('analytics')"},
+    endur
+      ? {ic:"push",t:"Drei Aktivitäten importieren",d:"GPX, TCX oder FIT aus Strava, Garmin, Wahoo, Komoot oder Zwift.",
+         un:["Form-Kurve","TSS & Zonenverteilung","Entkopplung"],done:eActs>=3,act:"ENDUR.pick()"}
+      : {ic:"chart",t:"Drei Einheiten geloggt",d:"Ab hier rechnet die Engine mit deinen echten Zahlen statt mit Startwerten.",
+         un:["Plan-Präzision","Analytics-Insights","Adaptive Gewichte"],done:th>=3,act:"A.q('analytics')"},
   ];
+  return common.concat(mid,tail);
 }
 // Das Fluss-Bild: EINE Zeile pro Eingabe, rechts die Funktionen, die daraus leben.
-const SYS_FLOW=[
-  ["moon","Tages-Check","Bereitschaft · Tagesempfehlung · Erholungswoche"],
-  ["dumbbell","Geloggte Sätze","Progression · Kraft-Orakel · Volumen-Ampel · Rekorde"],
-  ["utensils","Mahlzeiten","Makros · Protein-Deckung · Ernährungs-Treue"],
-  ["scale","Gewichtskurve","Adaptiver Kalorien-Abgleich · Stoffwechsel-Zwilling"],
-];
+function systemFlow(){
+  let endur=false; try{ endur=actUi()==="endur"; }catch(e){}
+  return [
+    ["moon","Tages-Check","Bereitschaft · Tagesempfehlung · Erholungswoche"],
+    endur?["push","Importierte Dateien","NP · IF · TSS · Zonenverteilung · Form"]
+         :["dumbbell","Geloggte Sätze","Progression · Kraft-Orakel · Volumen-Ampel · Rekorde"],
+    ["utensils","Mahlzeiten","Makros · Protein-Deckung · Ernährungs-Treue"],
+    ["scale","Gewichtskurve","Adaptiver Kalorien-Abgleich · Stoffwechsel-Zwilling"],
+  ];
+}
 function systemFlowHTML(){
   return `<div class="sysflow">
     <div class="sf-head"><span class="label">Was du einträgst</span><span class="label">Was daraus entsteht</span></div>
-    ${SYS_FLOW.map(([ic,inp,out])=>`<div class="sf-row">
+    ${systemFlow().map(([ic,inp,out])=>`<div class="sf-row">
       <span class="sf-in">${icon(ic,14)}<span>${inp}</span></span>
       <span class="sf-arrow" aria-hidden="true">→</span>
       <span class="sf-out">${out}</span></div>`).join("")}
@@ -9241,6 +9269,14 @@ function renderHome(){
   const r=todayCheckin();
   const visIns=S.tier==="free"?ins.slice(0,1):ins.slice(0,S.tier==="elite"?8:5);
 
+  /* Ausdauer-Profile bekommen ihre ECHTE Einheit aus dem Ausdauer-Plan — ein Läufer
+     soll nicht „Cardio" lesen, wenn heute 11 km lockere Grundlage anstehen.
+     Einmal oben berechnet, damit Hero, Abschnitt „Heute" und Wochenband dasselbe zeigen. */
+  const _eu=(()=>{ try{ return actUi()==="endur"; }catch(e){ return false; } })();
+  const _es=_eu?(()=>{ try{ const c=endurCfg(), wn=endurWeekNo(c), b=endurBuild(c)[wn-1];
+    const wkp=endurWeekPlan(c,wn), dd=(new Date().getDay()+6)%7;
+    return {kind:wkp[dd], ses:endurSession(c,wkp[dd],b.vol)}; }catch(e){ return null; } })():null;
+
   setTimeout(checkCelebrations,400); // variable Belohnung: neue Meilensteine/Level feiern
   // Streak-Ring (Flamme) als Verlustangst-Anker
   const streakRing=(()=>{const sz=58,st=5,rr=(sz-st)/2,cc=2*Math.PI*rr,goal=Math.max(7,Math.ceil((streak+1)/7)*7),pct=Math.min(1,streak/goal);
@@ -9251,7 +9287,8 @@ function renderHome(){
   root.innerHTML=`
     <!-- IMMERSIVE TODAY-HERO (Oura/Apple-würdig): atmosphärische Szene, Score, Serif-Voice, USP-CTA -->
     ${(()=>{
-      const isRest=tType==="rest", tLabel=(TYPE_META[tType]||{}).label||"Training";
+      const isRest=_es?_es.kind==="rest":tType==="rest";
+      const tLabel=_es?_es.ses.headline:((TYPE_META[tType]||{}).label||"Training");
       const headline=r?(r.score>=80?"Du bist heute voll belastbar.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Deine Tagesform — in 10 Sek.";
       const sub=isRest?"Dein Plan gibt dir heute frei — Erholung ist Teil des Fortschritts."
         :r?(r.score>=80?`Dein Körper ist bereit — heute steht <b style="color:var(--t1)">${tLabel}</b> an. Geh an die obere Range deiner Sätze.`
@@ -9259,7 +9296,9 @@ function renderHome(){
               :r.score>=40?`Heute <b style="color:var(--t1)">${tLabel}</b>, aber gedrosselt — RPE 7 als Deckel.`
               :`Heute wäre <b style="color:var(--t1)">${tLabel}</b> — halte es leicht oder verschieb auf morgen.`)
         :`Mach den 10-Sekunden-Check — dein <b style="color:var(--t1)">${tLabel}</b>-Plan passt sich deiner Tagesform an.`;
-      const cta=isRest?`<button class="btn volt th-cta" onclick="A.q('train')">${icon("calendar",15)} Plan ansehen</button>`
+      const cta=_eu
+        ?`<button class="btn volt th-cta" onclick="A.q('endurance')">${icon("calendar",15)} ${isRest?"Plan ansehen":"Einheit ansehen"}</button>`
+        :isRest?`<button class="btn volt th-cta" onclick="A.q('train')">${icon("calendar",15)} Plan ansehen</button>`
         :r?`<button class="btn volt th-cta" onclick="A.start()">${icon("play",15)} Training beginnen</button>`
             :`<button class="btn volt th-cta" onclick="A.openStatus()">${icon("activity",15)} Tages-Check starten</button>`;
       const metric=(ic,v,l,oc)=>`<button class="th-metric" ${oc?`onclick="${oc}"`:""}><div class="m-ic">${icon(ic,17)}</div><p class="m-v">${v}</p><p class="m-l">${l}</p></button>`;
@@ -9267,7 +9306,7 @@ function renderHome(){
       return `<section class="today-hero fade ${heroTier}"><div class="th-scene"></div>
         <p class="sm" style="color:var(--t2);margin-bottom:10px">${greet()}, ${userName()}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
         <div class="th-metrics">
-          ${metric("dumbbell",isRest?"Frei":tLabel,"Heute","A.q('train')")}
+          ${metric(_eu?"activity":"dumbbell",isRest?"Frei":tLabel,"Heute",_eu?"A.q('endurance')":"A.q('train')")}
           ${metric("flame",streak,"Streak")}
           ${metric("zap",eng.level,"Level")}
         </div>
@@ -9370,6 +9409,26 @@ function renderHome(){
     :""}
 
     ${renderSection("Adaptives Training",(()=>{
+      /* Ausdauer-Profile passen sich anders an als Kraft-Profile: dort Gewichte und Sätze,
+         hier Wochenvolumen, Entlastung und Zonen. Die Karte erzählt die richtige Geschichte. */
+      if(_eu){ try{
+        const c=endurCfg(), wn=endurWeekNo(c), b=endurBuild(c), cw=b[wn-1];
+        const eActs=window.ENDUR.activities().length;
+        const zOk=!!endurZoneTable(c);
+        const prec=Math.min(10, Math.min(10,eActs*2)+(zOk?4:0)+(Object.keys(endurDone()).length?2:0));
+        const line=cw.deload
+          ? `Diese Woche ist <b style="color:var(--t1)">Entlastung</b> — der Plan nimmt bewusst Volumen raus, damit der Aufbau der letzten Wochen ankommt.`
+          : `Woche ${wn} von ${c.goal.weeks}: <b style="color:var(--t1)">${c.unit==="h"?cw.vol.toFixed(1).replace(".",","):Math.round(cw.vol)} ${c.unit==="h"?"h":"km"}</b> geplant. Jede vierte Woche entlastet, der Zuwachs bleibt unter 10 % — so hält der Aufbau bis zum Ziel.`;
+        return `<div class="card">
+          <p class="sm mb8" style="line-height:1.6">${line}</p>
+          <div class="row mb4"><span class="xs t2">Plan-Präzision</span><span class="metric xs">${prec} / 10</span></div>
+          <div class="progress mb8" style="height:6px"><div style="width:${prec*10}%"></div></div>
+          <p class="xs t2 mb8">${prec>=10?"Zonen und Belastung laufen auf deinen echten Daten."
+            :zOk?`Mit jeder importierten Datei werden Zonen, Form und Belastung genauer.`
+                :`Trag deine ${c.disc==="cycling"?"FTP":"Schwellen-Pace"} ein oder importier eine harte Einheit — dann steuert der Plan in echten Zahlen statt im Sprechtempo.`}</p>
+          <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.q('endurance')">${icon("calendar",14)} Zum Plan</button>
+        </div>`;
+      }catch(e){} }
       // USP-Karte (v5/Phase 3): echte Anpassung zeigen, wenn vorhanden — sonst erklären, was kommt.
       const adaptions=[];
       if(S.currentWeek===4)adaptions.push(`Diese Woche ist deine ${LABELS.deload} — der Plan hat Sätze und Gewichte automatisch reduziert.`);
@@ -9385,15 +9444,32 @@ function renderHome(){
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.howItWorks()">${icon("info",14)} So funktioniert's</button>
       </div>`;})())}
 
-    ${renderSection("Heute",
-      tType==="rest"
+    ${renderSection("Heute", _es
+      ? (_es.kind==="rest"
+        ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — der Reiz von gestern wird jetzt verbaut.</p>
+            <button class="btn ghost mt8" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.q('endurance')">${icon("calendar",14)} Nächste Einheit ansehen</button></div>`
+        :`<div class="card"><div class="row mb8">
+            <div style="flex:1;min-width:0"><p class="display-m">${icon(_es.ses.icon,18)} ${_es.ses.headline}</p>
+            <p class="sm t2 mt8">${_es.ses.vol}${_es.ses.hard?" · harte Einheit":""}</p>
+            <p class="xs t2 mt8" style="line-height:1.45">${_es.ses.steps[0][1].replace(/<\/?b>/g,"")}</p></div></div>
+            <button class="btn volt mt8" onclick="A.q('endurance')">${icon("calendar",15)} Ganze Einheit ansehen</button></div>`)
+      : tType==="rest"
       ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — dein Körper baut jetzt auf, was du trainiert hast.</p></div>`
       :`<div class="card"><div class="row mb8">
           <div><p class="display-m">${icon(tSession.icon,18)} ${tSession.label}</p>
           <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${tSession.est||p.a.len||60} Min</p></div></div>
           <button class="btn volt mt8" onclick="A.start()">${icon("play",15)} Training beginnen</button></div>`)}
 
-    ${renderSection("Diese Woche",
+    ${renderSection("Diese Woche", _eu?(()=>{ try{
+      const c=endurCfg(), wn=endurWeekNo(c), wkp=endurWeekPlan(c,wn), dd=(new Date().getDay()+6)%7;
+      const dn=endurDone();
+      return `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('endurance')" aria-label="Zum Ausdauer-Plan">
+        <div class="e-week">${wkp.map((k,i)=>{ const K=ENDUR_KINDS[k];
+          return `<div class="e-day ${i===dd?"now":""} ${K.hard?"hard":""} ${dn[eWeekDayKey(i)]?"done":""}">
+            <span class="e-wd">${WD[i]}</span><span class="e-dot">${k==="rest"?"·":icon(K.icon,13)}</span>
+            <span class="e-dl">${K.label==="Lange Einheit"?"Lang":K.label==="HIIT · 30/30"?"HIIT":K.label}</span></div>`;}).join("")}</div>
+        <p class="xs t2 mt8" style="text-align:left">Woche ${wn} von ${c.goal.weeks} · Ziel ${esc(c.goal.label)}</p></button>`;
+      }catch(e){ return ""; } })():
       `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('train')" aria-label="Zur Trainingswoche">
         <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
           ${sch.map((t,i)=>`<div>

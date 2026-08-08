@@ -384,6 +384,48 @@ check('Start-Übersicht: Aktivitäts-Umschalter öffnen hakt den Schritt ab', st
 check('Start-Übersicht: komplett erledigt → eingeklappt, aber weiter erreichbar',
   start.allDone === 6 && start.collapsed, JSON.stringify({ done: start.allDone, collapsed: start.collapsed }));
 
+// ---------- 14) Ausdauer-Profil: die ganze App spricht Ausdauer, nicht nur ein Tab ----------
+const runUi = await page.evaluate(() => {
+  A.devModeMenu();
+  S.acts = null; S.actId = null; S.profile.a.mode = 'gym'; save();
+  actList();
+  // Laufprofil über die echten Handler anlegen und aktivieren
+  A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave();
+  A.closeModal();
+  S.profile.a.run_goal = 'half'; S.profile.a.run_km = 30; S.profile.a.run_pace = 315;
+  window.ENDUR.st().athlete.running.thrSet = true; window.ENDUR.st().athlete.running.thrPace = 315;
+  S.endurStart = Date.now(); S.endurDone = {};
+  S.tab = 'home'; S.checkin = null; S.trainingHistory = []; save(); render();
+  const home = document.body.innerText;
+  const steps = starterSteps().map(x => x.t).join(' | ');
+  const flow = systemFlow().map(x => x[1]).join(' | ');
+  const daily = dailyChecklist().items.map(x => x.label).join(' | ');
+  // Kraft-Tab existiert für dieses Profil nicht → Umleitung statt Kraft-Oberfläche
+  S.tab = 'train'; save(); render();
+  const redirected = S.tab;
+  S.tab = 'endurance'; save(); render();
+  const plan = document.body.innerText;
+  return { home, steps, flow, daily, redirected, plan,
+    tabs: tabsFor().map(t => t[0]).join(','),
+    view: window.ENDUR.st().view };
+});
+check('Ausdauer-Profil: Start-Übersicht spricht Ausdauer statt Sätze/Player',
+  /Erste Einheit aus dem Plan/.test(runUi.steps) && /Drei Aktivitäten importieren/.test(runUi.steps)
+  && !/Sätze/.test(runUi.steps), runUi.steps);
+check('Ausdauer-Profil: Fluss-Bild nennt importierte Dateien statt geloggter Sätze',
+  /Importierte Dateien/.test(runUi.flow) && !/Geloggte Sätze/.test(runUi.flow), runUi.flow);
+check('Ausdauer-Profil: Tagesroutine bietet die Plan-Einheit statt „Training loggen"',
+  !/Training loggen/.test(runUi.daily), runUi.daily);
+check('Ausdauer-Profil: Heute-Tab zeigt die echte Einheit, nicht „Cardio"',
+  !/\bCardio\b/.test(runUi.home) && /Woche \d+ von \d+/.test(runUi.home), '');
+check('Ausdauer-Profil: adaptive Karte erklärt Volumen & Entlastung statt Gewichte',
+  /Zuwachs bleibt unter 10 %|Entlastung/.test(runUi.home) && !/passt Gewichte, Sätze/.test(runUi.home), '');
+check('Ausdauer-Profil: Kraft-Tab leitet auf die Ausdauer-Ansicht um',
+  runUi.redirected === 'endurance' && !runUi.tabs.includes('train'), JSON.stringify({ t: runUi.redirected, tabs: runUi.tabs }));
+check('Ausdauer-Profil: Plan-Ansicht zeigt Einheit, Woche, Aufbau und Zonen',
+  /heute ·/i.test(runUi.plan) && /Deine Woche/.test(runUi.plan) && /Aufbau bis zum Ziel/.test(runUi.plan)
+  && /Deine Zonen/.test(runUi.plan) && /\d:\d\d–\d:\d\d\/km/.test(runUi.plan), '');
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
