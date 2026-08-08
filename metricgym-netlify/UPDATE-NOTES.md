@@ -765,9 +765,68 @@ Rückmeldung war eindeutig — zu wenig immersiv, zu wenig Oura-Niveau. Umgesetz
   fehlende, Name, Ziel, Tage, Equipment) — ein Tipp auf „Anlegen" genügt. Entschieden werden
   muss nur, was man wirklich ändern will.
 
+## §44 — Mehrere Absichten gleichzeitig, statt Entweder-oder
+- **Die Persona-Weiche ist eine Mehrfachauswahl.** Wer Muskeln aufbauen UND abnehmen UND
+  Rad fahren will, wählt alles. Die Reihenfolge der Auswahl ist die Priorität: Nummer 1
+  führt den Fragebogen und steuert die Kalorienrichtung.
+- **Aus der Auswahl entstehen so viele Profile, wie fachlich sinnvoll sind.** Gleiche
+  Disziplin verschmilzt zu EINEM Profil mit kombinierten Zielen — Kraft + Abnehmen ist
+  keine zweite Sportart, sondern Rekomposition: eine Ernährung, ein Plan, zwei Ziele.
+  Eine andere Disziplin bleibt ein eigenes Profil mit eigener Oberfläche und eigenen Tagen.
+- **Die Folge ist sichtbar, bevor sie eintritt.** Eine Vorschau im Gate zeigt die Profile,
+  die entstehen — mit Zielen und Ansicht. Der Free-Tarif bekommt aus einer Kombination
+  ehrlich nur das erstgenannte Ziel, benannt statt stillschweigend gekappt.
+- **Alle Verknüpfungen greifen:** Kombi-Absichten belegen die Zielfrage vor, der Reveal legt
+  pro Absicht ein Profil an (Nummer 1 mit den Antworten, die übrigen seriös vorbelegt), das
+  Kombi-Tab zeigt die führende Absicht, und die Startansicht folgt der aktiven Aktivität.
+
+## §45 — Fokus-Frage: gerechnete Empfehlung statt Ratespiel
+- **Zwei Größen bestimmen den Hebel jeder Muskelgruppe.** Die *Deckung* — wie viel Volumen
+  sie aus den Verbundübungen des gewählten Splits ohnehin bekommt (regionale Hypertrophie
+  folgt der regionalen Aktivierung, Wakahara 2013). Und der *Ziel-Hebel* — wie stark sie auf
+  das gesetzte Ziel einzahlt. Hebel = Ziel-Gewicht × (1 − 0,55 · Deckung).
+- **Jede der drei Empfehlungen nennt Grund und Quelle** (Wakahara 2013, Schoenfeld/Ogborn/
+  Krieger 2017, Maeo 2021 ×2, Kubo 2019). Split, Trainingsalter, Zweitziel und Verletzungen
+  gehen mit ein; verletzte Regionen fallen raus.
+- **Für Fettabbau steht die Biochemie voran:** punktuelles Abnehmen gibt es nicht —
+  Bauchtraining baut kein Bauchfett ab (Vispute 2011), einseitiges Training kein Fett am
+  trainierten Bein (Ramírez-Campillo 2013). Deshalb garantiert die Empfehlung im Defizit
+  mindestens zwei große Muskelgruppen, und Core steht bewusst nicht drin.
+- **Ein Tipp übernimmt die Empfehlung** — die Auswahl bleibt frei änderbar.
+
+## §46 — Heute-Tab: Start-Übersicht mit sichtbarer Wirkungskette
+- **Sechs Startschritte mit Fortschritt**, jeder mit den Funktionen, die er freischaltet.
+  Kein Schritt steht ohne Wirkung da.
+- **Fluss-Bild darunter:** links, was man einträgt; rechts, was daraus lebt. Tages-Check →
+  Bereitschaft und Tagesempfehlung, geloggte Sätze → Progression und Kraft-Orakel,
+  Mahlzeiten → Makros und Treue, Gewichtskurve → adaptiver Kalorien-Abgleich.
+- Alles aus echten Daten abgeleitet. Ist alles erledigt, klappt die Karte zu „So hängt alles
+  zusammen" ein und bleibt als Nachschlagewerk erreichbar.
+
+## §47 — Ausdauer komplett neu strukturiert: Plan statt leerer Analyse
+- **Der Ausdauer-Tab startet im PLAN.** Vorher sah ein Läufer ohne importierte Datei genau
+  eine Sache: „Erste Aktivität importieren". Kein Tutorial, keine Anweisung, kein Plan.
+- **Heute:** die konkrete Einheit mit Aufwärmen, Hauptteil und Auslaufen. Jeder Schritt nennt
+  seinen **Zielbereich in echten Zahlen** — Pace pro Kilometer oder Watt, nicht „Zone 2".
+  Am Ruhetag steht die nächste Einheit schon bereit.
+- **Woche:** Mo–So mit Einheitentyp, harte Tage markiert, erledigte abgehakt. Polarisiert
+  nach Seiler 2010 (~80 % locker, ~20 % hart), plus Krafttag für die Bewegungsökonomie
+  (Rønnestad & Mujika 2014).
+- **Aufbau:** Rampe vom heutigen Volumen zum Ziel über die volle Zieldauer, 3 Aufbau- zu
+  1 Entlastungswoche. Der Zuwachs bleibt bei höchstens 10 % pro Woche — und zwar in der
+  Zahl, die der Mensch liest (Nielsen 2014 zum Verletzungsrisiko großer Sprünge).
+- **Zonen** in Pace bzw. Watt (Coggan / Friel-Daniels) und ein Vier-Schritt-Tutorial.
+- **Zwei Ehrlichkeits-Regeln:** Ein Startwert ist kein Messwert — ohne eigenen Schwellenwert
+  zeigt der Plan keine erfundenen Zonen, sondern steuert über das Sprechtempo. Und ein
+  Häkchen ist keine Messung — TSS, Fitness und Form kommen weiterhin ausschließlich aus
+  echten Dateien. Eine aus einer Datei geschätzte FTP wird als Schätzung gekennzeichnet.
+- **Die ganze App spricht Ausdauer:** Tages-Held, Abschnitt „Heute", Wochenband,
+  Start-Übersicht, Tagesroutine und die adaptive Karte folgen der aktiven Aktivität —
+  ein Läufer liest nirgends mehr „Cardio", „Sätze" oder „Gewichte".
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v26** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v28** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
