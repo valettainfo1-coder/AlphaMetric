@@ -309,6 +309,48 @@ check('Persona: zweites Profil schaltet auf Ausdauer, erstes bleibt Rekompositio
 check('Persona: Körperdaten bleiben über alle angelegten Profile identisch',
   multiRev.onCyc.w === multiRev.primary.w, 'kg=' + multiRev.primary.w);
 
+// ---------- 12) Fokus-Empfehlung: gerechnet, zielabhängig, biochemisch begründet ----------
+const frec = await page.evaluate(() => {
+  const f = (a) => focusRec(a).picks;
+  const head = (a) => focusRec(a).head.replace(/<[^>]+>/g, '');
+  const base = { days: 4, split: 'auto', exp: 'novice', injuries: [] };
+  const gain = f({ ...base, goals: ['muscle_gain'] });
+  const cut = f({ ...base, goals: ['fat_loss', 'muscle_gain'] });
+  const str = f({ ...base, split: 'ul', exp: 'intermediate', goals: ['strength'] });
+  const run = f({ ...base, goals: ['endurance'], mode: 'running' });
+  const cyc = f({ ...base, goals: ['endurance'], endur_disc: 'cycling' });
+  const ppl = f({ ...base, days: 6, split: 'ppl', exp: 'advanced', goals: ['muscle_gain'] });
+  const shoulder = f({ ...base, goals: ['muscle_gain'], injuries: ['shoulder'] });
+  const backInj = f({ ...base, split: 'ul', exp: 'intermediate', goals: ['strength'], injuries: ['back'] });
+  const beginner = f({ ...base, split: 'full', days: 3, exp: 'beginner', goals: ['muscle_gain'] });
+  const BIG = ['Quadrizeps', 'Gesäß', 'Rücken', 'Latissimus', 'Beinbeuger', 'Brust'];
+  // Alle Empfehlungen müssen eine Begründung UND eine Quelle tragen.
+  const lines = focusRec({ ...base, goals: ['muscle_gain'] }).lines;
+  const sourced = lines.every(([k, why, src]) => why && why.length > 40 && src && /\d{4}/.test(src));
+  // Übernehmen-Handler setzt exakt die Empfehlung
+  S.a = { ...base, goals: ['muscle_gain'], focus: [] }; A.focusRec();
+  const applied = (S.a.focus || []).join(',');
+  return { gain, cut, str, run, cyc, ppl, shoulder, backInj, beginner, sourced, applied,
+    cutBig: cut.filter(k => BIG.includes(k)).length, cutHead: head({ ...base, goals: ['fat_loss'] }) };
+});
+check('Fokus: Empfehlung unterscheidet sich je nach gesetztem Ziel',
+  frec.gain.join() !== frec.str.join() && frec.str.join() !== frec.run.join() && frec.gain.join() !== frec.cut.join(),
+  JSON.stringify({ gain: frec.gain, str: frec.str, run: frec.run }));
+check('Fokus: Laufen und Radfahren bekommen unterschiedliche Schwerpunkte',
+  frec.run.join() !== frec.cyc.join(), JSON.stringify({ run: frec.run, cyc: frec.cyc }));
+check('Fokus: Split mit viel direkter Armarbeit verschiebt die Empfehlung',
+  frec.ppl.join() !== frec.gain.join(), JSON.stringify({ auto: frec.gain, ppl: frec.ppl }));
+check('Fokus: Verletzungen schließen die betroffene Region aus',
+  !frec.shoulder.includes('Seitl. Schulter') && !frec.shoulder.includes('Brust')
+  && !frec.backInj.includes('Rücken') && !frec.backInj.includes('Beinbeuger'),
+  JSON.stringify({ schulter: frec.shoulder, ruecken: frec.backInj }));
+check('Fokus: Im Defizit stehen mindestens zwei große Muskelgruppen drin (Muskelschutz)',
+  frec.cutBig >= 2 && /punktuelles Abnehmen gibt es nicht/.test(frec.cutHead), JSON.stringify(frec.cut));
+check('Fokus: Einsteiger bekommen weniger Spezialisierung', frec.beginner.length === 2, JSON.stringify(frec.beginner));
+check('Fokus: jede Empfehlung trägt Begründung UND Quelle mit Jahreszahl', frec.sourced, 'lines geprüft');
+check('Fokus: „Übernehmen" setzt exakt die empfohlenen Gruppen',
+  frec.applied === frec.gain.join(','), frec.applied);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

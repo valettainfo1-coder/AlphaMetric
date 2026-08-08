@@ -201,6 +201,19 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:linear-gradient(135deg, rgba(110,147,184,.16), rgba(143,184,220,.05)); border:1px solid rgba(169,196,222,.35);
     font-size:12.5px; line-height:1.5; color:var(--t2); animation:fade .4s var(--spring) .05s backwards;}
   .quiz-rec svg{color:var(--hl); flex-shrink:0; margin-top:1px;} .quiz-rec b{color:var(--t1);}
+  /* Fokus-Empfehlung: gerechneter Vorschlag mit Begründung und Quelle je Gruppe. */
+  .frec{margin:0 0 16px; padding:13px 14px 12px; border-radius:15px;
+    background:linear-gradient(135deg, rgba(110,147,184,.16), rgba(143,184,220,.05)); border:1px solid rgba(169,196,222,.35);
+    animation:fade .4s var(--spring) .05s backwards;}
+  .frec-h{display:flex; gap:9px; align-items:flex-start; font-size:12.5px; line-height:1.55; color:var(--t2); padding-bottom:4px;}
+  .frec-h svg{color:var(--hl); flex-shrink:0; margin-top:2px;} .frec-h b{color:var(--t1); font-weight:640;}
+  .frec-row{display:flex; gap:10px; align-items:flex-start; padding:9px 0 8px; border-top:1px solid rgba(169,196,222,.16);}
+  .frec-n{width:19px; height:19px; border-radius:50%; flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff; font-size:10px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .frec-src{display:block; font-size:9.5px; letter-spacing:.02em; color:var(--t3); margin-top:4px;}
+  .frec-note{margin:8px 0 0; font-size:11.5px; line-height:1.5; color:var(--t3); border-top:1px solid rgba(169,196,222,.16); padding-top:8px;}
+  .frec-go{margin-top:10px; min-height:42px; font-size:13px;}
+  .frec-go[disabled]{opacity:.55;}
 
   /* ===== Liquid Glass (HELL): Basis für alle erhöhten Elemente ===== */
   /* FIX (v5/6A): .menu-sheet aus der 60%-Glass-Gruppe entfernt — eigene,
@@ -7455,7 +7468,9 @@ function onbBar(cur,total,label){ return `<div class="topbar">
   <span class="metric xs t2">${label||(cur+"/"+total)}</span></div>`; }
 // Eine Frage als kompaktes Widget (ohne eigene Topbar/Weiter — der Block trägt EINEN Weiter-Button).
 function qWidgetHTML(st){
-  const rec=quizRec(st); const recBox=rec?`<div class="quiz-rec">${icon("sparkle",13)}<span>${rec}</span></div>`:"";
+  // Die Fokus-Frage bekommt statt eines Einzeilers die gerechnete Empfehlung mit Begründung.
+  const rec=st.id==="focus"?"":quizRec(st);
+  const recBox=st.id==="focus"?focusRecHTML():(rec?`<div class="quiz-rec">${icon("sparkle",13)}<span>${rec}</span></div>`:"");
   const title=`<p class="onb-q">${st.q}</p>${st.hint?`<p class="hint" style="margin-bottom:8px">${st.hint}</p>`:""}${recBox}`;
   if(st.type==="single"){
     return `<div class="onb-block">${title}${st.opts.map(([v,l,sub])=>`<button class="opt ${S.a[st.key]===v?"sel":""}" onclick="A.pick('${st.key}',${typeof v==="string"?`'${v}'`:v})">${l}${sub?`<span class="sub">${sub}</span>`:""}</button>`).join("")}${st.skip?`<button class="opt opt-skip" onclick="A.pick('${st.key}',null)">Überspringen / keine Angabe</button>`:""}</div>`;
@@ -7480,6 +7495,129 @@ function qWidgetHTML(st){
   return "";
 }
 
+/* =====================================================================
+   FOKUS-EMPFEHLUNG — gerechnet, nicht geraten.
+   „Welche Muskelgruppen willst du pushen?" ist die einzige Frage im Funnel, die
+   ohne Fachwissen kaum zu beantworten ist. Deshalb rechnet die Engine die Antwort vor.
+   Zwei Größen bestimmen den Hebel einer Gruppe:
+
+   1) DECKUNG — wie viel Volumen sie aus den Verbundübungen des gewählten Splits
+      ohnehin bekommt. Muskeln wachsen dort, wo sie tatsächlich belastet wurden;
+      regionale Hypertrophie folgt der regionalen Aktivierung (Wakahara et al. 2013).
+      Was die Verbundübungen nicht treffen, wächst ohne direkte Arbeit auch nicht.
+   2) ZIEL-HEBEL — wie stark die Gruppe auf das GESETZTE Ziel einzahlt. Für Optik
+      zählt anderes als für Maximalkraft, im Defizit anderes als für Ausdauer.
+
+   Hebel = Ziel-Gewicht × (1 − 0,55 · Deckung). Die Deckung dämpft, sie entscheidet nicht:
+   sonst gewönne immer die am schlechtesten gedeckte Gruppe (Waden) — unabhängig vom Ziel.
+   Die drei stärksten Gruppen werden empfohlen, jede mit ihrem physiologischen Grund und
+   der Quelle. Verletzte Regionen fallen raus.
+   ===================================================================== */
+// Grunddeckung aus Verbundübungen (0 = praktisch keine, 1 = sehr hoch).
+const FOCUS_COVER={"Brust":.85,"Latissimus":.72,"Rücken":.80,"Seitl. Schulter":.25,"Hintere Schulter":.35,
+  "Bizeps":.55,"Trizeps":.62,"Quadrizeps":.85,"Beinbeuger":.35,"Gesäß":.70,"Waden":.10,"Core":.50};
+// Ziel-Hebel je Gruppe. Reihenfolge der Ziele bleibt gewahrt: goals[0] führt.
+const FOCUS_LEV={
+  muscle_gain:{"Seitl. Schulter":1,"Latissimus":.95,"Trizeps":.85,"Brust":.8,"Bizeps":.75,"Quadrizeps":.72,"Gesäß":.7,"Beinbeuger":.65,"Rücken":.62,"Hintere Schulter":.55,"Waden":.45,"Core":.4},
+  recomp:     {"Latissimus":.9,"Seitl. Schulter":.9,"Quadrizeps":.85,"Gesäß":.82,"Rücken":.75,"Trizeps":.7,"Beinbeuger":.68,"Brust":.65,"Bizeps":.6,"Hintere Schulter":.55,"Waden":.4,"Core":.4},
+  strength:   {"Rücken":1,"Gesäß":.95,"Beinbeuger":.9,"Trizeps":.85,"Core":.8,"Quadrizeps":.78,"Latissimus":.7,"Brust":.6,"Hintere Schulter":.5,"Seitl. Schulter":.4,"Bizeps":.35,"Waden":.3},
+  fat_loss:   {"Quadrizeps":1,"Gesäß":.95,"Rücken":.9,"Latissimus":.85,"Beinbeuger":.82,"Brust":.75,"Trizeps":.5,"Seitl. Schulter":.5,"Hintere Schulter":.4,"Bizeps":.35,"Waden":.25,"Core":.2},
+  endurance:  {"Beinbeuger":1,"Gesäß":.95,"Waden":.9,"Quadrizeps":.85,"Core":.8,"Rücken":.6,"Latissimus":.45,"Hintere Schulter":.35,"Brust":.3,"Trizeps":.3,"Seitl. Schulter":.25,"Bizeps":.2},
+  general:    {"Gesäß":.9,"Rücken":.88,"Core":.85,"Quadrizeps":.8,"Beinbeuger":.78,"Hintere Schulter":.7,"Latissimus":.65,"Seitl. Schulter":.55,"Brust":.5,"Trizeps":.45,"Bizeps":.4,"Waden":.4},
+  mobility:   {"Hintere Schulter":.95,"Gesäß":.9,"Core":.9,"Rücken":.85,"Beinbeuger":.8,"Latissimus":.6,"Quadrizeps":.55,"Waden":.5,"Seitl. Schulter":.4,"Brust":.35,"Trizeps":.3,"Bizeps":.25},
+};
+// Warum diese Gruppe — physiologischer Grund + reale Quelle.
+const FOCUS_WHY={
+  "Seitl. Schulter":["Drücken belastet fast nur den vorderen Deltakopf. Schulterbreite entsteht am seitlichen — und der wächst nur dort, wo er tatsächlich aktiviert wurde.","Wakahara et al. 2013 · Med Sci Sports Exerc"],
+  "Hintere Schulter":["In fast jedem Plan übersteigt das Drück- das Zugvolumen. Direkte Arbeit für die hintere Schulter gleicht diese Verteilung aus.","Wakahara et al. 2013 · Med Sci Sports Exerc"],
+  "Latissimus":["Rudern baut Rückendicke, Ziehen von oben die Breite. Für die V-Form braucht der Latissimus seine eigene Zugrichtung.","Schoenfeld, Ogborn & Krieger 2017 · J Sports Sci"],
+  "Rücken":["Der obere Rücken stabilisiert Kniebeuge, Kreuzheben und Bankdrücken. In der Praxis begrenzt er das Gewicht öfter als der Zielmuskel selbst.","Schoenfeld, Ogborn & Krieger 2017 · J Sports Sci"],
+  "Trizeps":["Der lange Trizepskopf zieht über das Schultergelenk und ist beim Drücken verkürzt. Überkopf gestreckt wächst er rund anderthalbmal so stark.","Maeo et al. 2021 · Eur J Sport Sci"],
+  "Bizeps":["Die Ellenbogenbeuger bekommen aus Zugübungen Reiz, aber selten in voller Dehnung — genau die schließt direkte Curl-Arbeit.","Schoenfeld, Ogborn & Krieger 2017 · J Sports Sci"],
+  "Brust":["Die Brust bekommt aus Drückübungen bereits viel Volumen. Zusätzlicher Fokus lohnt vor allem, wenn sie sichtbar hinterherhinkt.","Schoenfeld, Ogborn & Krieger 2017 · J Sports Sci"],
+  "Quadrizeps":["Der größte Einzelmuskel im Plan. Tiefe Kniebeugen bauen ihn messbar stärker auf als flache — der Reiz entsteht im gedehnten Bereich.","Kubo, Ikebukuro & Yata 2019 · Eur J Appl Physiol"],
+  "Beinbeuger":["Kniebeugen belasten die ischiocrurale Muskulatur nur gering. Sie wächst am stärksten, wenn sie in großer Muskellänge trainiert wird.","Maeo et al. 2021 · Med Sci Sports Exerc"],
+  "Gesäß":["Der stärkste Hüftstrecker des Körpers — er trägt Kniebeuge, Kreuzheben und jeden Antritt. Tiefe Beugung baut ihn messbar stärker auf.","Kubo, Ikebukuro & Yata 2019 · Eur J Appl Physiol"],
+  "Waden":["Bein-Verbundübungen führen die Plantarflexoren kaum durch einen belasteten Bewegungsumfang. Waden wachsen fast ausschließlich über direkte Arbeit.","Schoenfeld, Ogborn & Krieger 2017 · J Sports Sci"],
+  "Core":["Unter der Hantel arbeitet der Rumpf isometrisch mit. Zusätzliches direktes Volumen zahlt vor allem auf Stabilität und Kraftübertragung ein.","Schoenfeld, Ogborn & Krieger 2017 · J Sports Sci"],
+};
+// Verletzungen: was bei welcher Einschränkung nicht zusätzlich belastet werden sollte.
+const FOCUS_INJ={knee:["Quadrizeps"],back:["Rücken","Beinbeuger"],shoulder:["Brust","Seitl. Schulter"]};
+function focusRec(a){
+  a=a||{};
+  const goals=(a.goals&&a.goals.length)?a.goals:["muscle_gain"];
+  const g0=goals[0], exp=a.exp||"novice", split=a.split||"auto", days=a.days||4;
+  const inj=a.injuries||[];
+  // Deckung an den gewählten Split anpassen: viele Tage mit Bro-/PPL-Aufbau bedeuten
+  // schon von Haus aus direkte Arm- und Schulterarbeit; Ganzkörper an 2–3 Tagen nicht.
+  const cover=Object.assign({},FOCUS_COVER);
+  const armDirect=(split==="bro"||split==="ppl"||split==="arnold")&&days>=5;
+  if(armDirect){ ["Bizeps","Trizeps","Seitl. Schulter","Hintere Schulter","Waden"].forEach(k=>cover[k]=Math.min(.92,cover[k]+.28)); }
+  else if(split==="full"||days<=3){ ["Bizeps","Trizeps","Seitl. Schulter","Hintere Schulter","Waden","Core"].forEach(k=>cover[k]=Math.max(0,cover[k]-.12)); }
+  // Ausdauer-Fokus richtet sich nach der Disziplin: Treten deckt die Knieextensoren
+  // bereits massiv ab — beim Radfahren fehlen Hüfte, hintere Kette und Rumpf. Laufen
+  // dagegen ist exzentrisch waden- und beinbeugerlastig.
+  const lev=Object.assign({},FOCUS_LEV[g0]||FOCUS_LEV.muscle_gain);
+  if(g0==="endurance"&&(a.endur_disc||a.mode)==="cycling"){
+    cover["Quadrizeps"]=Math.min(.95,cover["Quadrizeps"]+.08);
+    lev["Gesäß"]=.95; lev["Core"]=.88; lev["Beinbeuger"]=.85; lev["Waden"]=.5;
+  }
+  // Zweitziel zählt anteilig mit — so bleibt die Priorität sichtbar, ohne sie zu ignorieren.
+  if(goals[1]&&FOCUS_LEV[goals[1]]) Object.keys(lev).forEach(k=>{ lev[k]=lev[k]*0.72+(FOCUS_LEV[goals[1]][k]||0)*0.28; });
+  const banned=new Set(); inj.forEach(i=>(FOCUS_INJ[i]||[]).forEach(k=>banned.add(k)));
+  const ranked=Object.keys(lev).filter(k=>!banned.has(k))
+    .map(k=>[k, lev[k]*(1-0.55*(cover[k]!=null?cover[k]:.5))])
+    .sort((x,y)=>y[1]-x[1]);
+  const n=exp==="beginner"?2:3;
+  let picks=ranked.slice(0,n).map(x=>x[0]);
+  /* Im Defizit muss die Empfehlung halten, was ihre Begründung verspricht: mindestens
+     zwei der Vorschläge sind große Muskelgruppen — sie tragen den Verbrauch und die
+     magere Masse, die das Defizit sonst mit abbaut. */
+  if(g0==="fat_loss"){
+    const BIG=["Quadrizeps","Gesäß","Rücken","Latissimus","Beinbeuger","Brust"];
+    const need=2-picks.filter(k=>BIG.includes(k)).length;
+    if(need>0){
+      const extra=ranked.filter(x=>BIG.includes(x[0])&&!picks.includes(x[0])).slice(0,need).map(x=>x[0]);
+      const small=picks.filter(k=>!BIG.includes(k));
+      const drop=new Set(small.slice(-extra.length));   // die schwächsten weichen
+      picks=picks.filter(k=>!drop.has(k)).concat(extra)
+        .sort((x,y)=>ranked.findIndex(r=>r[0]===x)-ranked.findIndex(r=>r[0]===y));
+    }
+  }
+  // Kopfzeile: nennt das gesetzte Ziel und den fachlichen Kern der Empfehlung.
+  const gl=GOAL_LABEL[g0]||"dein Ziel";
+  let head, note="";
+  if(g0==="fat_loss"){
+    const also=goals[1]?` Dein zweites Ziel <b>${GOAL_LABEL[goals[1]]||goals[1]}</b> ist dabei mitgerechnet.`:"";
+    head=`Für <b>${gl}</b> zählt zuerst eine unbequeme Tatsache: <b>punktuelles Abnehmen gibt es nicht</b>. Lipolyse wird hormonell im ganzen Körper gesteuert — Bauchtraining baut kein Bauchfett ab (Vispute et al. 2011), einseitiges Training kein Fett am trainierten Bein (Ramírez-Campillo et al. 2013). Der Hebel im Defizit ist deshalb, die <b>großen Muskeln zu schützen</b>: sie halten den Verbrauch oben und bestimmen, wie du am Ende aussiehst.${also}`;
+    note="Bauch/Core steht bewusst nicht in der Empfehlung — sichtbar wird er über das Defizit, nicht über Crunches.";
+  } else if(g0==="strength"){
+    head=`Für <b>${gl}</b> scheitert die Wiederholung selten am Zielmuskel, sondern an der <b>schwächsten Stelle der Kette</b>. Empfohlen sind die Gruppen, die deine Hauptübungen tragen und im Verbundtraining am wenigsten eigenständigen Reiz bekommen.`;
+  } else if(g0==="endurance"){
+    head=`Für <b>${gl}</b> ist Krafttraining kein Zusatz, sondern <b>Bewegungsökonomie</b>: bei gleicher Sauerstoffaufnahme mehr Tempo (Rønnestad & Mujika 2014 · Scand J Med Sci Sports). Der Fokus gehört auf die Muskeln, die deinen Vortrieb erzeugen und die Landung abfangen.`;
+  } else {
+    head=`Für <b>${gl}</b> bringt Zusatzvolumen genau dort am meisten, wo deine Verbundübungen <b>kaum hinkommen</b>. Muskeln wachsen in den Regionen, die tatsächlich belastet wurden — nicht dort, wo mehr Gewicht auf der Stange liegt.`;
+  }
+  if(exp==="beginner") note=(note?note+" ":"")+"Als Einsteiger wächst fast alles auf jeden ausreichenden Reiz — Spezialisierung ist hier ein Feinschliff, kein Muss. Überspringen ist eine völlig legitime Wahl.";
+  else if(armDirect) note=(note?note+" ":"")+"Dein Split bringt bereits viel direkte Arm- und Schulterarbeit mit — das ist in der Rangfolge oben schon eingerechnet.";
+  return {picks, head, note,
+    lines:picks.map(k=>[k,(FOCUS_WHY[k]||["",""])[0],(FOCUS_WHY[k]||["",""])[1]])};
+}
+function focusRecHTML(){
+  const r=focusRec(S.a||{}); if(!r.picks.length) return "";
+  const cur=(S.a&&S.a.focus)||[];
+  const done=r.picks.length===cur.length&&r.picks.every(k=>cur.includes(k));
+  return `<div class="frec">
+    <div class="frec-h">${icon("sparkle",14)}<span>${r.head}</span></div>
+    ${r.lines.map(([k,why,src],i)=>`<div class="frec-row">
+      <span class="frec-n">${i+1}</span>
+      <span style="flex:1;min-width:0"><span style="font-size:13px;font-weight:640;color:var(--t1)">${k}</span>
+      <span style="display:block;font-size:12px;color:var(--t2);line-height:1.45;margin-top:2px">${why}</span>
+      <span class="frec-src">${src}</span></span></div>`).join("")}
+    ${r.note?`<p class="frec-note">${r.note}</p>`:""}
+    <button class="btn ghost frec-go" onclick="A.focusRec()" ${done?"disabled":""}>${done?`${icon("check",14)} Empfehlung übernommen`:`Diese ${r.picks.length} übernehmen`}</button>
+  </div>`;
+}
 // Kontextuelle Quiz-Empfehlung: schlägt anhand der bisherigen Antworten (BMI, Ziel,
 // Erfahrung, Alter) die für diesen Menschen beste Wahl vor — wie ein Coach im Funnel.
 function quizRec(st){
@@ -7539,6 +7677,9 @@ function renderOnboarding(){
     else {S.currentUser=null;S.screen="landing";save();render();} };
   A.next=()=>{ S.step++; save(); render(); };
   A.pick=(k,v)=>{ S.a[k]=v; save(); render(); };    // 2 Fragen/Block → kein Auto-Advance
+  // Fokus-Empfehlung mit einem Tipp übernehmen — die Auswahl bleibt danach frei änderbar.
+  A.focusRec=()=>{ const r=focusRec(S.a||{}); S.a.focus=r.picks.slice(); save(); render();
+    toast(`✓ ${r.picks.join(" · ")} als Schwerpunkt gesetzt`); };
   A.dial=(k,v)=>{ S.a[k]=parseFloat(v); save(); const el=document.getElementById("dialv-"+k); if(el)el.textContent=nf.format(S.a[k]); };
   A.dialStep=(k,dir,step,min,max)=>{ let nv=Math.round(((S.a[k]??min)+dir*step)*10)/10; nv=Math.max(min,Math.min(max,nv)); S.a[k]=nv; save();
     const el=document.getElementById("dialv-"+k); if(el)el.textContent=nf.format(nv);
