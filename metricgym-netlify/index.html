@@ -233,6 +233,44 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .sf-foot{margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--t3);}
   .sf-foot b{color:var(--t2);} .sf-foot svg{vertical-align:-1px; color:var(--hl);}
   @media (max-width:359px){ .sf-row{flex-wrap:wrap} .sf-out{flex-basis:100%; padding-left:20px} }
+  /* ===== Ausdauer-Plan ===== */
+  .e-today{border-color:rgba(169,196,222,.4); background:linear-gradient(168deg,rgba(110,147,184,.12),transparent 60%);}
+  .e-today.hard{border-color:rgba(224,163,65,.42); background:linear-gradient(168deg,rgba(224,163,65,.13),transparent 60%);}
+  .e-ic{width:44px; height:44px; border-radius:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
+  .e-today.hard .e-ic{background:linear-gradient(135deg,#D08B6E,#E0A341);}
+  .e-step{display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--hairline);}
+  .e-step:first-child{border-top:none;}
+  .e-num{width:20px; height:20px; border-radius:50%; flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center;
+    background:var(--surface-2); color:var(--t2); font-size:10px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .e-why{margin:8px 0 0; font-size:11.5px; line-height:1.5; color:var(--t2);}
+  .e-why svg{vertical-align:-1px; color:var(--hl);}
+  .e-src{display:block; font-size:9.5px; color:var(--t3); margin-top:3px;}
+  .e-week{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px;}
+  .e-day{display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 1px 7px; border-radius:11px;
+    background:var(--s2); border:1px solid transparent;}
+  .e-day.hard{background:rgba(224,163,65,.11);}
+  .e-day.now{border-color:rgba(143,184,220,.55); background:var(--accent-soft);}
+  .e-day.done{opacity:.55;}
+  .e-wd{font-size:9.5px; font-weight:700; letter-spacing:.04em; color:var(--t3);}
+  .e-day.now .e-wd{color:var(--hl);}
+  .e-dot{display:flex; align-items:center; justify-content:center; height:17px; color:var(--t2); font-size:14px;}
+  .e-day.hard .e-dot{color:#E0A341;} .e-day.now .e-dot{color:var(--hl);}
+  .e-dl{font-size:8px; line-height:1.15; color:var(--t3); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;}
+  .e-ramp{display:flex; align-items:flex-end; gap:3px; height:76px; padding-top:4px;}
+  .e-ramp .e-bar{flex:1; height:100%; display:flex; align-items:flex-end;}
+  .e-ramp .e-bar i{display:block; width:100%; height:var(--h); border-radius:4px 4px 2px 2px;
+    background:linear-gradient(180deg,#8FB8DC,#6E93B8); animation:eBar .6s cubic-bezier(.22,1,.36,1) backwards;}
+  .e-ramp .e-bar.dl i{background:linear-gradient(180deg,#5A6C7E,#42505E);}
+  .e-ramp .e-bar.now i{background:linear-gradient(180deg,#F0D9B5,#E0A341); box-shadow:0 0 12px rgba(224,163,65,.4);}
+  @keyframes eBar{from{height:0}}
+  @media (prefers-reduced-motion:reduce){ .e-ramp .e-bar i{animation:none} }
+  .e-zone{display:flex; align-items:center; gap:9px; padding:8px 0; border-top:1px solid var(--hairline); font-size:12.5px; color:var(--t2);}
+  .e-zone:first-of-type{border-top:none;}
+  .e-zn{width:26px; height:22px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; color:#0d1015; background:#8FB8DC;}
+  .e-zone.z1 .e-zn{background:#7E8B98;} .e-zone.z2 .e-zn{background:#7FA98F;}
+  .e-zone.z3 .e-zn{background:#8FB8DC;} .e-zone.z4 .e-zn{background:#E0A341;} .e-zone.z5 .e-zn{background:#D08B6E;}
 
   /* ===== Liquid Glass (HELL): Basis für alle erhöhten Elemente ===== */
   /* FIX (v5/6A): .menu-sheet aus der 60%-Glass-Gruppe entfernt — eigene,
@@ -2249,7 +2287,11 @@ window.ENDUR = (() => {
 
   // ------------------------------------------------------------------ STATE / STORAGE
   const st = () => (S.endur || (S.endur = defaults()));
-  function defaults() { return { view: "dashboard", sel: null, athlete: { weight: 75, cycling: { ftp: 250, lthr: 165, maxHr: 190, restHr: 50, vo2: null, wPrime: null, cp: null }, running: { thrPace: 300, lthr: 168, maxHr: 192, restHr: 50, vo2: null } }, activities: [], ftpHistory: [], sport: "cycling" }; }
+  /* Startansicht ist der PLAN, nicht die Analyse: wer neu ist, hat noch keine Dateien —
+     und braucht zuerst eine Anweisung, nicht ein leeres Diagramm.
+     ftp/thrPace sind Rechen-Startwerte. `ftpSet`/`thrSet` markieren, ob der Wert
+     WIRKLICH vom Menschen kommt — nur dann zeigt der Plan Zonen als seine Zahlen an. */
+  function defaults() { return { view: "plan", sel: null, athlete: { weight: 75, cycling: { ftp: 250, ftpSet: false, lthr: 165, maxHr: 190, restHr: 50, vo2: null, wPrime: null, cp: null }, running: { thrPace: 300, thrSet: false, lthr: 168, maxHr: 192, restHr: 50, vo2: null } }, activities: [], ftpHistory: [], sport: "cycling" }; }
   function athlete() { return st().athlete; }
   function activities() { return (st().activities || []).slice().sort((a, b) => b.start - a.start); }
   function dayKey(ms) { const d = new Date(ms); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
@@ -2308,7 +2350,13 @@ window.ENDUR = (() => {
     // FTP-Fortschritt aus 20-min-Bestwert protokollieren (nur Radfahren).
     if (sum.sport === "cycling" && sum.mmp && sum.mmp[1200]) {
       const est = eng.estimateFtp(sum.mmp, null);
-      if (est) st().ftpHistory.push({ date: sum.start, ftp: est.ftp, method: est.method });
+      if (est) {
+        st().ftpHistory.push({ date: sum.start, ftp: est.ftp, method: est.method });
+        // Wer nie selbst eine FTP eingetragen hat, bekommt sie hier aus echten Daten —
+        // damit der Plan Zonen in Watt statt in Sprechtempo ausgeben kann.
+        const ac = st().athlete.cycling;
+        if (!ac.ftpSet) { ac.ftp = est.ftp; ac.ftpEst = true; }
+      }
     }
     save(); return sum;
   }
@@ -2323,14 +2371,22 @@ window.ENDUR = (() => {
     bodyWeight, strengthLoad, unifiedDailyLoad, unifiedPMC, burnForDay, todayBurn,
     // ---- Handler (aus onclick) ----
     nav(v, id) { st().view = v; if (id !== undefined) st().sel = id; save(); render(); if (window.scrollTo) window.scrollTo(0, 0); },
+    /* Einheit abhaken. Bewusst OHNE geschätzte Trainingslast: TSS, Fitness und Form
+       kommen ausschließlich aus echten Dateien — ein Häkchen ist keine Messung. */
+    markDone() {
+      const d = endurDone(), k = dayKeyLocal(Date.now());
+      if (d[k]) { delete d[k]; save(); render(); toast("Einheit wieder offen"); return; }
+      d[k] = true; save(); render(); toast("✓ Einheit abgehakt — Datei laden bringt zusätzlich die Analyse");
+    },
     pick() { let inp = document.getElementById("endur-file"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = ".gpx,.tcx,.fit"; inp.id = "endur-file"; inp.style.display = "none"; inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const isFit = /\.fit$/i.test(f.name); const fr = new FileReader(); fr.onload = async () => { try { toast("Analysiere " + f.name + " …"); const s = isFit ? await window.ENDUR.importFit(fr.result, f.name) : await window.ENDUR.importText(String(fr.result), f.name); toast("✓ " + (s.name || "Aktivität") + " analysiert"); window.ENDUR.nav("detail", s.id); } catch (e) { toast("Import fehlgeschlagen: " + (e && e.message || "unbekannt")); } inp.value = ""; }; fr.onerror = () => toast("Datei nicht lesbar"); if (isFit) fr.readAsArrayBuffer(f); else fr.readAsText(f); }; document.body.appendChild(inp); } inp.click(); },
     async del(id) { await EDB.del(id); st().activities = (st().activities || []).filter(a => a.id !== id); st().sel = null; st().view = "dashboard"; save(); render(); toast("Aktivität gelöscht"); },
     saveAthlete() {
       const g = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) || null : null; };
       const a = athlete(); a.weight = g("ath-weight") || a.weight;
-      a.cycling.ftp = g("ath-ftp") || a.cycling.ftp; a.cycling.lthr = g("ath-clthr") || a.cycling.lthr;
+      const _ftp = g("ath-ftp"); if (_ftp) { a.cycling.ftp = _ftp; a.cycling.ftpSet = true; a.cycling.ftpEst = false; }
+      a.cycling.lthr = g("ath-clthr") || a.cycling.lthr;
       a.cycling.maxHr = g("ath-cmax") || a.cycling.maxHr; a.cycling.restHr = g("ath-crest") || a.cycling.restHr; a.cycling.vo2 = g("ath-cvo2");
-      const pm = document.getElementById("ath-rpace"); if (pm && pm.value) { const mm = pm.value.split(":"); if (mm.length === 2) a.running.thrPace = (+mm[0]) * 60 + (+mm[1]); }
+      const pm = document.getElementById("ath-rpace"); if (pm && pm.value) { const mm = pm.value.split(":"); if (mm.length === 2) { a.running.thrPace = (+mm[0]) * 60 + (+mm[1]); a.running.thrSet = true; } }
       a.running.maxHr = g("ath-rmax") || a.running.maxHr; a.running.lthr = g("ath-rlthr") || a.running.lthr;
       save(); toast("✓ Athlet-Profil gespeichert"); this.nav("dashboard");
     }
@@ -2379,13 +2435,213 @@ function eDrawRoute(canvas, lat, lng) {
   g.fillStyle = "#D08B6E"; g.beginPath(); g.arc(X(pts[pts.length - 1][1]), Y(pts[pts.length - 1][0]), 4, 0, 7); g.fill();
 }
 
+/* =====================================================================
+   AUSDAUER-PLAN — der Teil, den ein Läufer oder Radfahrer VOR der ersten
+   importierten Datei braucht.
+
+   Die Analyse-Ansicht lebt von Dateien; wer gerade erst startet, hat keine.
+   Deshalb erzeugt die Engine aus den Funnel-Antworten (Disziplin, Ziel,
+   Wochenvolumen, Einheiten, Schwellenwert) einen vollständigen Plan:
+   Wochenaufbau bis zum Ziel, Einheit für heute mit Aufwärmen, Hauptteil,
+   Auslaufen und ZIELZONEN IN ECHTEN ZAHLEN — Pace pro Kilometer oder Watt,
+   nicht „Zone 2".
+
+   Aufbau-Prinzipien, alle belegt:
+   • Polarisiert ~80 % locker / ~20 % hart (Seiler 2010) — nicht alles Tempo.
+   • 3 Aufbauwochen : 1 Entlastungswoche — Superkompensation braucht Entlastung.
+   • Volumensprünge begrenzt: typisch ≤ 10 %/Woche, hart gedeckelt weit unter
+     der 30-%-Marke, ab der die Verletzungsrate messbar steigt (Nielsen 2014).
+   • Krafttraining bleibt Teil des Plans — es verbessert die Bewegungsökonomie
+     (Rønnestad & Mujika 2014), kostet aber kein Ausdauervolumen.
+   ===================================================================== */
+const ENDUR_GOALS={
+  running:{
+    "5k":       {label:"5 km",              weeks:10, peakKm:30, longKm:12, unit:"km"},
+    "10k":      {label:"10 km",             weeks:12, peakKm:40, longKm:16, unit:"km"},
+    "half":     {label:"Halbmarathon",      weeks:14, peakKm:50, longKm:20, unit:"km"},
+    "marathon": {label:"Marathon",          weeks:18, peakKm:70, longKm:32, unit:"km"},
+    "endurance":{label:"Grundlagen-Ausdauer",weeks:12, peakKm:40, longKm:15, unit:"km"},
+    "weight":   {label:"Abnehmen beim Laufen",weeks:12,peakKm:45, longKm:14, unit:"km"},
+  },
+  cycling:{
+    "ftp":       {label:"FTP steigern",       weeks:12, peakH:10, longH:2.5, unit:"h"},
+    "gran_fondo":{label:"Gran Fondo",         weeks:16, peakH:14, longH:5,   unit:"h"},
+    "climb":     {label:"Bergfahren",         weeks:12, peakH:11, longH:3.5, unit:"h"},
+    "race":      {label:"Rennen / Kriterien", weeks:12, peakH:12, longH:3,   unit:"h"},
+    "endurance": {label:"Grundlagen-Ausdauer",weeks:12, peakH:9,  longH:2.5, unit:"h"},
+    "weight":    {label:"Abnehmen auf dem Rad",weeks:12,peakH:10, longH:3,   unit:"h"},
+  },
+};
+// Einheitentypen im Plan. „min" ist eine Untergrenze; die echte Dauer kommt aus dem Wochenvolumen.
+const ENDUR_KINDS={
+  easy: {key:"easy", label:"Grundlage",     icon:"activity", zone:2, hard:false},
+  long: {key:"long", label:"Lange Einheit", icon:"activity", zone:2, hard:false},
+  thr:  {key:"thr",  label:"Schwelle",      icon:"zap",      zone:4, hard:true, proto:"threshold"},
+  vo2:  {key:"vo2",  label:"VO₂max",        icon:"flame",    zone:5, hard:true, proto:"vo2"},
+  hiit: {key:"hiit", label:"HIIT · 30/30",  icon:"zap",      zone:5, hard:true, proto:"hiit"},
+  str:  {key:"str",  label:"Kraft",         icon:"dumbbell", zone:0, hard:false},
+  rest: {key:"rest", label:"Ruhe",          icon:"rest",     zone:0, hard:false},
+};
+/* Konfiguration aus dem, was die App über diesen Menschen weiß. */
+function endurCfg(){
+  const a=(S.profile&&S.profile.a)||S.a||{};
+  let disc=a.endur_disc||a.mode; if(disc!=="cycling"&&disc!=="running") disc=(a.mode==="cycling")?"cycling":"running";
+  const goalKey=disc==="cycling"?(a.cyc_goal||"endurance"):(a.run_goal||"endurance");
+  const G=ENDUR_GOALS[disc], goal=G[goalKey]||G.endurance;
+  // Aktuelles Wochenvolumen: aus dem Funnel, sonst eine vorsichtige Annahme.
+  const curKm=a.run_km||20, curH=a.cyc_hours||5;
+  const cur=disc==="cycling"?curH:curKm;
+  const peak=disc==="cycling"?goal.peakH:goal.peakKm;
+  const sessions=Math.max(2,Math.min(6,a.days||4));
+  const exp=a.exp||"novice";
+  let ath={}; try{ ath=window.ENDUR.athlete()||{}; }catch(e){}
+  /* Ein Startwert ist kein Messwert: Zonen in echten Zahlen gibt es nur, wenn der
+     Schwellenwert wirklich vom Nutzer stammt (Funnel, Athlet-Profil oder aus einer
+     importierten Datei geschätzt). Sonst steuert der Plan ehrlich über das Sprechtempo. */
+  const thrOk=!!(a.run_pace||(ath.running&&ath.running.thrSet));
+  const ftpOk =!!(a.cyc_ftp ||(ath.cycling&&ath.cycling.ftpSet));
+  return {disc, goalKey, goal, cur, peak:Math.max(cur*1.08,peak), sessions, exp, a, unit:goal.unit,
+    thrPace: thrOk?((ath.running&&ath.running.thrPace)||a.run_pace):null,
+    ftp:     ftpOk?((ath.cycling&&ath.cycling.ftp)||a.cyc_ftp):null,
+    ftpEst:  !!(ath.cycling&&ath.cycling.ftpEst),
+    lthr:disc==="cycling"?((ath.cycling&&ath.cycling.lthr)||null):((ath.running&&ath.running.lthr)||null)};
+}
+/* Wochenaufbau bis zum Ziel: 3 Aufbau- : 1 Entlastungswoche, gedeckelter Zuwachs. */
+function endurBuild(cfg){
+  const wk=cfg.goal.weeks, out=[];
+  // Genau so viele Steigerungsschritte, wie es Aufbauwochen nach der ersten gibt.
+  let nDeload=0; for(let i=1;i<=wk;i++) if(i%4===0&&i<wk) nDeload++;
+  const steps=Math.max(1, wk-nDeload-1);
+  // Zuwachs so wählen, dass das Ziel erreicht wird — aber nie über 10 %/Woche.
+  const ramp=Math.min(1.10, Math.pow(Math.max(1.01,cfg.peak/Math.max(0.1,cfg.cur)), 1/steps));
+  let v=cfg.cur, lastBuild=cfg.cur, prevShown=null;
+  const r1=(x)=>Math.round(x*10)/10;                 // eine Nachkommastelle — auch bei km
+  for(let i=1;i<=wk;i++){
+    const deload=(i%4===0)&&i<wk;
+    if(deload){ v=lastBuild*0.7; }
+    else if(i>1){ lastBuild=lastBuild*ramp; v=lastBuild; }
+    let shown=r1(v);
+    /* Die 10-%-Grenze gilt für die Zahl, die der Mensch liest — nicht für einen
+       internen Zwischenwert. Rundung darf den Sprung nicht über die Grenze heben. */
+    if(!deload&&prevShown!=null) shown=Math.min(shown, Math.floor(prevShown*1.10*10)/10);
+    if(!deload) prevShown=shown;
+    out.push({n:i, deload, vol:shown,
+      note:deload?"Entlastung — der Aufbau wirkt in der Erholung"
+        :i===wk?"Zielwoche"
+        :i===1?"Startwoche — dein aktuelles Volumen":""});
+  }
+  return out;
+}
+// In welcher Aufbauwoche stecken wir? Beginnt mit dem ersten Ausdauer-Plan.
+function endurWeekNo(cfg){
+  if(!S.endurStart){ S.endurStart=Date.now(); try{save();}catch(e){} }
+  const w=Math.floor((Date.now()-S.endurStart)/(7*864e5))+1;
+  return Math.max(1,Math.min(cfg.goal.weeks,w));
+}
+/* Wochenplan Mo–So: eine lange Einheit, 1–2 harte, Rest locker — plus Krafttag(e). */
+function endurWeekPlan(cfg,weekNo){
+  const days=cfg.sessions;
+  const hard=(days>=5&&cfg.exp!=="beginner")?2:(days>=3?1:0);
+  const build=endurBuild(cfg)[Math.max(0,(weekNo||1)-1)]||{deload:false};
+  const wknd=cfg.a.schedule_pref==="weekend_strong";
+  const week=["rest","rest","rest","rest","rest","rest","rest"];
+  // Lange Einheit: Sonntag (oder Samstag, wenn das Wochenende die Hauptlast trägt).
+  const longDay=wknd?5:6;
+  week[longDay]="long";
+  // Harte Einheiten mit maximalem Abstand zur langen Einheit und zueinander.
+  const hardSlots=[2,4];                                   // Mi, Fr
+  for(let i=0;i<hard;i++){
+    // In der Entlastungswoche bleibt höchstens eine harte Einheit stehen.
+    if(build.deload&&i>0) break;
+    const kinds=["thr","vo2","hiit"];
+    week[hardSlots[i]]=build.deload?"thr":kinds[((weekNo||1)+i-1)%kinds.length];
+  }
+  // Restliche Ausdauer-Einheiten locker auffüllen.
+  const order=[0,3,1,4,2,5];
+  let placed=week.filter(x=>x!=="rest").length;
+  for(const d of order){ if(placed>=days) break; if(week[d]==="rest"){ week[d]="easy"; placed++; } }
+  // Krafttraining an freien Tagen — Ökonomie-Gewinn ohne Ausdauervolumen zu kosten.
+  const strDays=(cfg.goalKey==="weight"||cfg.a.goals&&cfg.a.goals.includes("fat_loss"))?2:1;
+  let s=0; for(const d of [1,4,0,3]){ if(s>=strDays) break; if(week[d]==="rest"&&week[(d+1)%7]!=="long"){ week[d]="str"; s++; } }
+  return week;
+}
+/* Zonen in ECHTEN Zahlen — Pace pro Kilometer oder Watt statt „Zone 2". */
+function endurZoneTable(cfg){
+  try{
+    if(cfg.disc==="cycling"&&cfg.ftp){
+      return window.ENDUR.eng.powerZones(cfg.ftp).slice(0,5)
+        .map(z=>({z:z.z,name:z.name,val:z.hi?`${z.lo}–${z.hi} W`:`${z.lo}+ W`}));
+    }
+    if(cfg.disc==="running"&&cfg.thrPace){
+      return window.ENDUR.eng.paceZones(cfg.thrPace)
+        // Bei Pace ist die kleinere Zahl die schnellere: die offene Spitzenzone geht nach OBEN im Tempo.
+        .map(z=>({z:z.z,name:z.name,val:z.fast?`${eFmtPaceSec(z.fast)}–${eFmtPaceSec(z.slow)}/km`:`${eFmtPaceSec(z.slow)}/km & schneller`}));
+    }
+  }catch(e){}
+  return null;
+}
+// Zielbereich einer Einheit als Text — fällt ohne Schwellenwert ehrlich auf Gefühl/Puls zurück.
+function endurTarget(cfg,zone){
+  const t=endurZoneTable(cfg);
+  if(t){ const z=t.find(x=>x.z===zone); if(z) return z.val; }
+  const talk={2:"Sprechtempo — ganze Sätze möglich",4:"Komfortabel hart — nur noch kurze Sätze",5:"Hart — nur einzelne Worte"};
+  return talk[zone]||"locker";
+}
+/* Eine konkrete Einheit: Aufwärmen, Hauptteil, Auslaufen — mit Zielzonen und Grund. */
+function endurSession(cfg,kind,weekVol){
+  const K=ENDUR_KINDS[kind]||ENDUR_KINDS.easy;
+  const isRun=cfg.disc==="running", u=isRun?"km":"h";
+  const easyN=Math.max(1,cfg.sessions-((cfg.sessions>=5&&cfg.exp!=="beginner")?2:1)-1);
+  const longShare=isRun?0.32:0.34;
+  const longVol=Math.min(isRun?cfg.goal.longKm:cfg.goal.longH, weekVol*longShare);
+  const restVol=Math.max(0,weekVol-longVol);
+  const easyVol=easyN>0?restVol/(easyN+1):restVol;
+  const fmt=(v)=>isRun?`${v.toFixed(v<10?1:0).replace(".",",")} km`:`${(v*60).toFixed(0)} min`;
+  const z2=endurTarget(cfg,2), z4=endurTarget(cfg,4), z5=endurTarget(cfg,5);
+  const base={kind, label:K.label, icon:K.icon, hard:K.hard};
+  if(kind==="rest") return {...base, headline:"Ruhetag", vol:"—",
+    steps:[["Nichts","Erholung ist der Teil, in dem die Anpassung passiert."]],
+    why:"Ohne Entlastung keine Superkompensation — der Reiz von gestern wird heute verbaut.", src:"Seiler 2010"};
+  if(kind==="str") return {...base, headline:"Krafteinheit", vol:"≈ 45 min",
+    steps:[["Ganzkörper, 3–4 Übungen","Schwer und wenige Wiederholungen (4–6), lange Pausen — es geht um Ansteuerung, nicht um Muskelkater."],
+           ["Schwerpunkt "+(isRun?"Waden, Beinbeuger, Gesäß":"Gesäß, Rumpf, Beinbeuger"),"Genau die Muskeln, die deinen Vortrieb tragen."]],
+    why:"Krafttraining verbessert bei Ausdauersportlern die Bewegungsökonomie: bei gleicher Sauerstoffaufnahme mehr Tempo — ohne dass Ausdauervolumen verloren geht.",
+    src:"Rønnestad & Mujika 2014 · Scand J Med Sci Sports"};
+  if(kind==="easy") return {...base, headline:"Lockere Grundlage", vol:fmt(easyVol),
+    steps:[["Durchgehend gleichmäßig",`Ziel: <b>${z2}</b>. Wenn du nicht mehr sprechen kannst, bist du zu schnell.`],
+           ["Kein Endspurt","Locker heißt locker — sonst frisst diese Einheit die Erholung für die harte."]],
+    why:"Die aerobe Basis: mehr Mitochondrien und Kapillaren, bessere Laktat-Clearance. Rund 80 % des Volumens gehören hierher.",
+    src:"Seiler 2010 · San-Millán & Brooks 2018"};
+  if(kind==="long") return {...base, headline:"Lange Einheit", vol:fmt(longVol),
+    steps:[["Durchgehend im Grundlagenbereich",`Ziel: <b>${z2}</b> — dieselbe Intensität wie locker, nur länger.`],
+           [isRun?"Verpflegung ab ~75 Min":"Verpflegung ab ~90 Min","Kohlenhydrate und Flüssigkeit früh, nicht erst wenn es leer ist."],
+           ["Danach Protein","20–40 g in der ersten Stunde stützen die Reparatur."]],
+    why:"Die Schlüsseleinheit für Distanzziele: Kapillarisierung, Fettstoffwechsel und Ermüdungsresistenz entstehen über die Dauer, nicht über das Tempo.",
+    src:"Seiler 2010 · Rønnestad & Mujika 2014"};
+  const P=CARDIO_PROTOCOLS[K.proto]||CARDIO_PROTOCOLS.threshold;
+  const main = kind==="thr" ? [["3 × 8 Min an der Schwelle · 2 Min locker dazwischen",`Ziel im Block: <b>${z4}</b>. „Komfortabel hart" — ganze Sätze fallen schwer.`]]
+    : kind==="vo2" ? [["4 × 4 Min hart · 3 Min locker dazwischen",`Ziel im Block: <b>${z5}</b>. Die letzte Wiederholung muss noch gehen.`]]
+    : [["2 × (8–10 × 30 s schnell / 30 s locker) · 3 Min Pause zwischen den Blöcken",`Ziel in den 30 s: <b>${z5}</b> oder etwas darüber.`]];
+  return {...base, headline:P.label, vol:`≈ ${P.min} min`,
+    steps:[["10 Min locker einlaufen",`Im Grundlagenbereich (<b>${z2}</b>) — kalt in ein Intervall zu gehen kostet Qualität und Sehnen.`],
+           ...main,
+           ["5–10 Min auslaufen","Locker ausrollen senkt den Puls kontrolliert und beschleunigt die Erholung."]],
+    why:P.why, src:P.src};
+}
+// Erledigte Einheiten (manuell abgehakt) — getrennt von importierten Dateien.
+function endurDone(){ S.endurDone=S.endurDone||{}; return S.endurDone; }
+function endurWeekKey(d){ const x=new Date(d||Date.now()); const dow=(x.getDay()+6)%7;
+  x.setDate(x.getDate()-dow); x.setHours(0,0,0,0); return dayKeyLocal(x); }
+function dayKeyLocal(d){ const x=new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); }
+
 /* ================================ RENDER ================================ */
 function renderEndurance() {
-  const v = window.ENDUR.st().view || "dashboard";
+  const v = window.ENDUR.st().view || "plan";
   if (v === "detail" && window.ENDUR.st().sel) return eRenderDetail(window.ENDUR.st().sel);
   if (v === "activities") return eRenderList();
   if (v === "athlete") return eRenderAthlete();
-  return eRenderDashboard();
+  if (v === "dashboard") return eRenderDashboard();
+  return eRenderPlan();
 }
 function eHeader(title, sub) {
   // Redaktioneller Kopf: der Name der aktiven Aktivität als großer Titel, die Disziplin als
@@ -2402,9 +2658,129 @@ function eHeader(title, sub) {
   </div>`;
 }
 function eTabs(active) {
-  const tabs = [["dashboard", "chart", "Übersicht"], ["activities", "calendar", "Aktivitäten"], ["athlete", "settings", "Athlet"]];
-  return `<div class="row mb16" style="gap:6px">${tabs.map(([id, ic, l]) => `<button class="btn ${active === id ? "volt" : ""}" style="flex:1;min-height:40px;font-size:13px;gap:6px" onclick="ENDUR.nav('${id}')">${icon(ic, 15)} ${l}</button>`).join("")}</div>`;
+  const tabs = [["plan", "calendar", "Plan"], ["dashboard", "chart", "Form"], ["activities", "rows", "Verlauf"], ["athlete", "settings", "Athlet"]];
+  return `<div class="row mb16" style="gap:5px">${tabs.map(([id, ic, l]) => `<button class="btn ${active === id ? "volt" : ""}" style="flex:1;min-height:40px;font-size:12px;gap:5px;padding:0 6px" onclick="ENDUR.nav('${id}')">${icon(ic, 14)} ${l}</button>`).join("")}</div>`;
 }
+/* ---------- PLAN: was heute ansteht, wie die Woche aussieht, wohin der Aufbau führt ---------- */
+function eRenderPlan(){
+  const cfg=endurCfg();
+  const wkNo=endurWeekNo(cfg), build=endurBuild(cfg), cw=build[wkNo-1]||build[0];
+  const week=endurWeekPlan(cfg,wkNo);
+  const dow=(new Date().getDay()+6)%7;
+  const today=endurSession(cfg,week[dow],cw.vol);
+  // An einem Ruhetag darf die Ansicht nicht leer wirken: die nächste Einheit steht schon da.
+  let nxt=null;
+  if(week[dow]==="rest"){
+    for(let i=1;i<=7;i++){ const d=(dow+i)%7; if(week[d]!=="rest"){
+      nxt={day:d, ses:endurSession(cfg,week[d],cw.vol), when:i===1?"Morgen":WD_LONG[d]}; break; } }
+  }
+  const zt=endurZoneTable(cfg);
+  const done=endurDone(), tk=dayKeyLocal(Date.now()), isDone=week[dow]!=="rest"&&!!done[tk];
+  const wkKey=endurWeekKey(), wkDone=Object.keys(done).filter(k=>endurWeekKey(k+"T12:00:00")===wkKey).length;
+  const planned=week.filter(x=>x!=="rest"&&x!=="str").length;
+  const acts=window.ENDUR.activities();
+  const isRun=cfg.disc==="running";
+  // Eine Nachkommastelle, aber kein „,0" — die Zahl bleibt exakt und trotzdem lesbar.
+  const volTxt=(v)=>v.toFixed(1).replace(/\.0$/,"").replace(".",",")+(isRun?" km":" h");
+  const peakWk=build.reduce((m,x)=>x.vol>m.vol?x:m,build[0]);
+
+  root.innerHTML = eHeader(cfg.goal.label, `Woche ${wkNo} von ${cfg.goal.weeks} · ${cw.deload?"Entlastung":"Aufbau"} · ${volTxt(cw.vol)} geplant`) + eTabs("plan")
+  // ---- HEUTE ----
+  + `<div class="card e-today ${today.hard?"hard":""}" style="padding:0;overflow:hidden">
+      <div style="padding:16px 16px 4px">
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <span class="e-ic">${icon(today.icon,20)}</span>
+          <div style="flex:1;min-width:0">
+            <p class="label" style="margin:0 0 2px">Heute · ${WD_LONG[dow]}</p>
+            <p class="display-m" style="margin:0">${today.headline}</p>
+            <p class="xs t2" style="margin-top:3px">${today.vol}${today.hard?" · harte Einheit":""}</p>
+          </div>
+          ${isDone?`<span class="badge volt" style="flex-shrink:0">erledigt</span>`:""}
+        </div>
+      </div>
+      <div style="padding:10px 16px 4px">
+        ${today.steps.map(([t,d],i)=>`<div class="e-step">
+          <span class="e-num">${i+1}</span>
+          <span style="flex:1;min-width:0"><span style="display:block;font-size:13.5px;font-weight:640">${t}</span>
+          <span class="xs t2" style="display:block;line-height:1.45;margin-top:2px">${d}</span></span></div>`).join("")}
+      </div>
+      <div style="padding:4px 16px 16px">
+        <p class="e-why">${icon("info",12)} ${today.why}<span class="e-src">${today.src}</span></p>
+        ${week[dow]==="rest"?"":`<div class="row" style="gap:8px;margin-top:12px">
+          <button class="btn ${isDone?"":"volt"}" style="flex:1" onclick="ENDUR.markDone()">${icon("check",15)} ${isDone?"Wieder öffnen":"Erledigt"}</button>
+          <button class="btn" style="flex:1" onclick="ENDUR.pick()">${icon("push",15)} Datei laden</button></div>`}
+      </div>
+    </div>`
+  // ---- NÄCHSTE EINHEIT (nur am Ruhetag) ----
+  + (nxt?`<div class="card ${nxt.ses.hard?"e-today hard":""}" style="padding:14px 16px">
+      <div class="row" style="align-items:flex-start;gap:11px">
+        <span class="e-ic" style="width:36px;height:36px;border-radius:11px">${icon(nxt.ses.icon,16)}</span>
+        <div style="flex:1;min-width:0">
+          <p class="label" style="margin:0 0 2px">Als Nächstes · ${nxt.when}</p>
+          <p class="sm" style="font-weight:640;margin:0">${nxt.ses.headline} · ${nxt.ses.vol}</p>
+          <p class="xs t2" style="margin-top:3px;line-height:1.45">${nxt.ses.steps[0][1].replace(/<[^>]+>/g,m=>m.startsWith("<b")?"<b>":m==="</b>"?"</b>":"")}</p>
+        </div></div></div>`:"")
+  // ---- WOCHE ----
+  + `<div class="card">
+      <div class="row mb8"><p class="sm" style="font-weight:600">Deine Woche</p>
+        <span class="metric xs ${wkDone>=planned?"volt-txt":"t2"}">${wkDone} / ${planned}</span></div>
+      <div class="e-week">
+        ${week.map((k,i)=>{ const K=ENDUR_KINDS[k]; const dk=eWeekDayKey(i);
+          const d=!!done[dk], now=i===dow;
+          return `<div class="e-day ${now?"now":""} ${K.hard?"hard":""} ${d?"done":""}">
+            <span class="e-wd">${WD[i]}</span>
+            <span class="e-dot">${k==="rest"?"·":icon(K.icon,13)}</span>
+            <span class="e-dl">${K.label==="Lange Einheit"?"Lang":K.label==="HIIT · 30/30"?"HIIT":K.label}</span>
+          </div>`;}).join("")}
+      </div>
+      <p class="xs t2 mt8" style="line-height:1.5">${week.filter(x=>ENDUR_KINDS[x].hard).length===0
+        ?"Diese Woche komplett locker — die Basis trägt alles Weitere."
+        :`<b style="color:var(--t1)">${week.filter(x=>!ENDUR_KINDS[x].hard&&x!=="rest"&&x!=="str").length} locker : ${week.filter(x=>ENDUR_KINDS[x].hard).length} hart</b> — die polarisierte Verteilung, mit der Ausdauersportler nachweislich am meisten gewinnen (Seiler 2010).`}</p>
+    </div>`
+  // ---- AUFBAU ----
+  + `<div class="card">
+      <p class="sm mb4" style="font-weight:600">Aufbau bis zum Ziel</p>
+      <p class="xs t2 mb12" style="line-height:1.5">Von <b style="color:var(--t1)">${volTxt(cfg.cur)}</b> auf <b style="color:var(--t1)">${volTxt(peakWk.vol)}</b> pro Woche in ${cfg.goal.weeks} Wochen. Jede vierte Woche entlastet — der Aufbau wirkt in der Erholung, nicht im Reiz.</p>
+      <div class="e-ramp">
+        ${build.map(w=>`<div class="e-bar ${w.deload?"dl":""} ${w.n===wkNo?"now":""}" style="--h:${Math.round(w.vol/peakWk.vol*100)}%" title="Woche ${w.n}: ${volTxt(w.vol)}"><i></i></div>`).join("")}
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:4px">
+        <span class="xs t3">Woche 1</span><span class="xs t3">Woche ${cfg.goal.weeks}</span></div>
+      <p class="xs t2 mt12" style="line-height:1.5">${icon("info",12)} Der Zuwachs bleibt bei höchstens 10 % pro Woche. Sprünge jenseits von rund 30 % gehen mit deutlich mehr Laufverletzungen einher — deshalb steigt der Plan lieber langsam und hält durch.<span class="e-src">Nielsen et al. 2014 · J Orthop Sports Phys Ther</span></p>
+    </div>`
+  // ---- ZONEN ----
+  + `<div class="card">
+      <p class="sm mb4" style="font-weight:600">Deine Zonen${zt?"":" — noch als Gefühl"}</p>
+      ${zt?`<p class="xs t2 mb12" style="line-height:1.5">Gerechnet aus ${cfg.disc==="cycling"?(cfg.ftpEst?"einer <b style=\"color:var(--t1)\">aus deinen Daten geschätzten FTP von "+cfg.ftp+" W</b>":"deiner FTP von <b style=\"color:var(--t1)\">"+cfg.ftp+" W</b>"):"deiner Schwellen-Pace von <b style=\"color:var(--t1)\">"+eFmtPaceSec(cfg.thrPace)+"/km</b>"}. ${cfg.disc==="cycling"?"Coggan-Modell":"Friel/Daniels-Modell"} — dieselben Grenzen, die auch deine importierten Dateien auswerten.</p>
+        ${zt.map(z=>`<div class="e-zone z${z.z}"><span class="e-zn">Z${z.z}</span><span style="flex:1">${z.name}</span><span class="metric" style="font-size:12.5px">${z.val}</span></div>`).join("")}
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px;margin-top:6px" onclick="ENDUR.nav('athlete')">${icon("settings",14)} Schwellenwert anpassen</button>`
+      :`<p class="xs t2 mb12" style="line-height:1.55">Du hast noch keinen Schwellenwert hinterlegt — deshalb steuert der Plan über das <b style="color:var(--t1)">Sprechtempo</b>: locker heißt, dass ganze Sätze möglich bleiben; hart heißt, dass nur noch einzelne Worte gehen. Das ist keine Notlösung, sondern ein etabliertes Steuerungsmaß.</p>
+        <button class="btn volt" onclick="ENDUR.nav('athlete')">${icon("settings",15)} ${cfg.disc==="cycling"?"FTP":"Schwellen-Pace"} eintragen — Zonen in echten Zahlen</button>
+        <p class="xs t3 mt8" style="line-height:1.45">Kennst du sie nicht? Importier eine harte Einheit — die Engine schätzt sie aus deinen Daten.</p>`}
+    </div>`
+  // ---- SO ARBEITEST DU MIT DEM PLAN ----
+  + `<details class="card acc-i" style="padding:0"${acts.length?"":" open"}>
+      <summary><span class="acc-ic">${icon("info",16)}</span>
+        <span style="flex:1"><span class="sm" style="font-weight:600">So arbeitest du mit dem Plan</span>
+        <span class="xs t2" style="display:block">Vier Schritte — danach läuft es von allein</span></span>
+        <span class="acc-ch t2">${icon("chevron",15)}</span></summary>
+      <div style="padding:0 14px 14px">
+        ${[["1","Einheit machen, wie sie oben steht","Aufwärmen, Hauptteil, Auslaufen — die Zielbereiche sind deine Bremse und dein Gaspedal."],
+           ["2","Abhaken oder Datei laden","Abhaken reicht für deine Wochenübersicht. Wer eine GPX-, TCX- oder FIT-Datei lädt, bekommt zusätzlich NP, IF, TSS, Zonenverteilung und Entkopplung."],
+           ["3","Form beobachten","Sobald Dateien da sind, zeigt der Form-Tab Fitness, Ermüdung und Frische aus Kraft- UND Ausdauertraining zusammen."],
+           ["4","Der Plan zieht nach","Jede Woche steigt das Volumen ein Stück, jede vierte entlastet. Ändert sich dein Ziel, ändert sich der ganze Plan mit."]]
+          .map(([n,t,d])=>`<div class="e-step"><span class="e-num">${n}</span>
+            <span style="flex:1"><span style="display:block;font-size:13.5px;font-weight:640">${t}</span>
+            <span class="xs t2" style="display:block;line-height:1.45;margin-top:2px">${d}</span></span></div>`).join("")}
+      </div></details>`
+  + (acts.length?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="ENDUR.nav('dashboard')">
+      <span class="sm" style="flex:1">${acts.length} ${acts.length===1?"Aktivität":"Aktivitäten"} analysiert — Form &amp; Fitness ansehen</span><span class="t2">→</span></button>`:"")
+  + scienceRefsPanelHTML("endurance", "Wissenschaftliche Grundlage · Ausdauer");
+}
+const WD_LONG=["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
+// Datumsschlüssel des Wochentags i (Mo=0) in der laufenden Woche.
+function eWeekDayKey(i){ const x=new Date(); const dow=(x.getDay()+6)%7;
+  x.setDate(x.getDate()-dow+i); return dayKeyLocal(x); }
 function eTile(label, value, sub, accent) {
   return `<div class="card" style="padding:14px 16px"><p class="xs t2" style="text-transform:uppercase;letter-spacing:.06em">${label}</p>
     <p class="metric" style="font-size:26px;line-height:1.1;margin-top:3px;${accent ? "color:" + accent : ""}">${value}</p>${sub ? `<p class="xs t2" style="margin-top:2px">${sub}</p>` : ""}</div>`;
@@ -7742,8 +8118,8 @@ function renderOnboarding(){
       S.profile={a,bmr,td,tg:multiTargets(a,bmr,td)};
       // Ausdauer-Athletprofil aus dem Funnel vorbefüllen (Cyclist/Runner/Hybrid) → Modul startklar.
       try{ if(window.ENDUR){ const en=window.ENDUR.st();
-        if(a.mode==="cycling"){ en.sport="cycling"; if(a.cyc_ftp)en.athlete.cycling.ftp=a.cyc_ftp; }
-        else if(a.mode==="running"){ en.sport="running"; if(a.run_pace)en.athlete.running.thrPace=a.run_pace; }
+        if(a.mode==="cycling"){ en.sport="cycling"; if(a.cyc_ftp){ en.athlete.cycling.ftp=a.cyc_ftp; en.athlete.cycling.ftpSet=true; } }
+        else if(a.mode==="running"){ en.sport="running"; if(a.run_pace){ en.athlete.running.thrPace=a.run_pace; en.athlete.running.thrSet=true; } }
         else if(a.mode==="hybrid"&&a.endur_disc){ en.sport=a.endur_disc; }
         if(a.weight)en.athlete.weight=a.weight; } }catch(e){}
       S.plan=plan; S.planB=generateTrainingPlan({a},"B"); S.rotation=null;

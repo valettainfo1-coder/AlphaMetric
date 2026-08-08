@@ -377,6 +377,93 @@ check('G-5: muskulöser Athlet bekommt kein BMI-Zwangs-Cardio', hp.g5.athCardio 
 check('G-6: Ausdauer + Abnehmen → ≥2 Krafteinheiten (Muskelschutz)', hp.g6.cycStrength >= 2 && hp.g6.cycCardio >= 3, JSON.stringify(hp.g6));
 check('G-7: Sportart + Kraftwunsch → Hybrid, Kraft erhalten', hp.g7.mode === 'hybrid' && hp.g7.goals.includes('endurance') && (hp.g7.goals.includes('strength')||hp.g7.goals.includes('muscle_gain')), JSON.stringify(hp.g7));
 
+// ===================== AUSDAUER-PLAN (Neustrukturierung) =====================
+// Ein Läufer ohne importierte Datei muss einen vollständigen Plan sehen:
+// Einheit für heute mit Zielzonen, Wochenaufbau, Rampe bis zum Ziel.
+const plan = await page.evaluate(() => {
+  const mk = (over) => {
+    S.profile = S.profile || { a: {} };
+    S.profile.a = Object.assign({ sex: 'male', age: 34, height: 178, weight: 74, exp: 'novice',
+      injuries: [], days: 4, act: 'light', schedule_pref: 'consistent', goals: ['endurance'] }, over);
+    return endurCfg();
+  };
+  const st = window.ENDUR.st();
+  // --- Läufer, Halbmarathon, Schwellen-Pace bekannt ---
+  st.athlete.running.thrSet = false; st.athlete.cycling.ftpSet = false; st.athlete.cycling.ftpEst = false;
+  const run = mk({ mode: 'running', run_goal: 'half', run_km: 30, run_pace: 315 });
+  const runWeek = endurWeekPlan(run, 1);
+  const runRamp = endurBuild(run);
+  const runZones = endurZoneTable(run);
+  const thr = endurSession(run, 'thr', 33);
+  const long = endurSession(run, 'long', 33);
+  // --- Läufer OHNE Schwellenwert → ehrlicher Sprechtempo-Fallback statt Startwert ---
+  const noThr = mk({ mode: 'running', run_goal: 'endurance', run_km: 20 });
+  const noThrZones = endurZoneTable(noThr), noThrTarget = endurTarget(noThr, 2);
+  // --- Radfahrer, Gran Fondo, 5 Einheiten, erfahren → 2 harte Einheiten ---
+  const cyc = mk({ mode: 'cycling', endur_disc: 'cycling', cyc_goal: 'gran_fondo', cyc_hours: 5, cyc_ftp: 240, days: 5, exp: 'intermediate' });
+  const cycWeek = endurWeekPlan(cyc, 1);
+  const cycRamp = endurBuild(cyc);
+  const cycZones = endurZoneTable(cyc);
+  // --- Entlastungswoche: höchstens eine harte Einheit ---
+  const dlWeek = endurWeekPlan(cyc, 4);
+  // --- Steigerungsraten über alle Ziele beider Disziplinen prüfen ---
+  let maxJump = 0, allGoalsOk = true;
+  for (const disc of ['running', 'cycling']) {
+    for (const g of Object.keys(ENDUR_GOALS[disc])) {
+      const c = mk(disc === 'running' ? { mode: 'running', run_goal: g, run_km: 20, run_pace: 315 }
+        : { mode: 'cycling', endur_disc: 'cycling', cyc_goal: g, cyc_hours: 5, cyc_ftp: 240 });
+      const b = endurBuild(c);
+      if (b.length !== c.goal.weeks) allGoalsOk = false;
+      // Zielwoche darf das geplante Maximum nicht überschreiten
+      if (Math.max(...b.map(x => x.vol)) > c.peak * 1.02) allGoalsOk = false;
+      for (let i = 1; i < b.length; i++) if (!b[i].deload && !b[i - 1].deload)
+        maxJump = Math.max(maxJump, b[i].vol / b[i - 1].vol - 1);
+      // Jede Einheitenart liefert einen vollständigen Bauplan mit Quelle
+      for (const k of ['easy', 'long', 'thr', 'vo2', 'hiit', 'str', 'rest']) {
+        const s = endurSession(c, k, b[0].vol);
+        if (!s.headline || !s.steps.length || !s.why || !s.src) allGoalsOk = false;
+      }
+    }
+  }
+  const hardN = (w) => w.filter(k => ENDUR_KINDS[k].hard).length;
+  return {
+    runWeek, runLong: runWeek.filter(k => k === 'long').length, runHard: hardN(runWeek),
+    runStr: runWeek.filter(k => k === 'str').length, runEasy: runWeek.filter(k => k === 'easy').length,
+    runZoneN: runZones ? runZones.length : 0, runZ2: runZones && runZones[1].val,
+    runLongKm: long.vol, thrSteps: thr.steps.length, thrHasZone: /\d:\d\d–\d:\d\d\/km/.test(thr.steps[1][1]),
+    thrSrc: thr.src, rampStart: runRamp[0].vol, rampPeak: Math.max(...runRamp.map(x => x.vol)),
+    rampWeeks: runRamp.length, deloads: runRamp.filter(x => x.deload).length,
+    noThrZones, noThrTarget,
+    cycWeek, cycHard: hardN(cycWeek),
+    cycZ2: cycZones && cycZones[1].val, cycPeak: Math.max(...cycRamp.map(x => x.vol)), cycTarget: cyc.peak,
+    dlHard: hardN(dlWeek),
+    maxJump: +maxJump.toFixed(3), allGoalsOk,
+    defaultView: window.ENDUR.defaults().view,
+  };
+});
+check('Plan: Ausdauer startet im PLAN, nicht in der leeren Analyse',
+  plan.defaultView === 'plan', plan.defaultView);
+check('Plan: Läuferwoche ist polarisiert (1 lang, 1 hart, Rest locker, plus Kraft)',
+  plan.runLong === 1 && plan.runHard === 1 && plan.runStr >= 1 && plan.runEasy === 2, plan.runWeek.join('|'));
+check('Plan: Zielzonen stehen in echten Zahlen (Pace bzw. Watt)',
+  plan.runZoneN === 5 && /\d:\d\d–\d:\d\d\/km/.test(plan.runZ2) && /\d+–\d+ W/.test(plan.cycZ2),
+  JSON.stringify({ run: plan.runZ2, cyc: plan.cycZ2 }));
+check('Plan: harte Einheit trägt Aufwärmen, Hauptteil mit Zielbereich, Auslaufen und Quelle',
+  plan.thrSteps === 3 && plan.thrHasZone && /\d{4}/.test(plan.thrSrc), JSON.stringify({ n: plan.thrSteps, src: plan.thrSrc }));
+check('Plan: Rampe läuft vom Ist-Volumen zum Ziel mit Entlastungswochen',
+  plan.rampStart === 30 && plan.rampWeeks === 14 && plan.deloads === 3 && plan.rampPeak >= 45,
+  JSON.stringify({ von: plan.rampStart, bis: plan.rampPeak, wochen: plan.rampWeeks, entlastung: plan.deloads }));
+check('Plan: kein Volumensprung über 10 % pro Woche (Verletzungsschutz)',
+  plan.maxJump <= 0.101, 'max=' + Math.round(plan.maxJump * 1000) / 10 + ' %');
+check('Plan: alle Ziele beider Disziplinen liefern vollständige Einheiten mit Quelle',
+  plan.allGoalsOk, '');
+check('Plan: ohne eigenen Schwellenwert keine erfundenen Zonen, sondern Sprechtempo',
+  plan.noThrZones === null && /Sprechtempo/.test(plan.noThrTarget), plan.noThrTarget);
+check('Plan: 5 Einheiten + erfahren → zwei harte Einheiten',
+  plan.cycHard === 2, plan.cycWeek.join('|'));
+check('Plan: Entlastungswoche lässt höchstens eine harte Einheit stehen',
+  plan.dlHard <= 1, 'hart=' + plan.dlHard);
+
 check('Keine Seiten-Fehler', errs.length === 0, errs.join(' | '));
 
 await browser.close();
