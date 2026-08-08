@@ -2341,7 +2341,7 @@ function eHeader(title, sub) {
   return `<div class="row eh-in" style="align-items:flex-end;gap:12px;margin:2px 0 18px">
     <div style="flex:1;min-width:0">
       <p class="label" style="margin:0 0 3px 1px">${esc(title)}</p>
-      <h2 style="margin:0;font-size:clamp(30px,8.4vw,38px)">${esc(nm)}</h2>
+      <h2 class="hz-h" style="margin:0">${esc(nm)}</h2>
       ${sub ? `<p class="xs t2" style="margin-top:5px">${esc(sub)}</p>` : ""}
     </div>
     <button class="iconbtn eh-imp" onclick="ENDUR.pick()" aria-label="Aktivität importieren">${icon("push", 19)}</button>
