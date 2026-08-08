@@ -2584,7 +2584,7 @@ function endurZoneTable(cfg){
 function endurTarget(cfg,zone){
   const t=endurZoneTable(cfg);
   if(t){ const z=t.find(x=>x.z===zone); if(z) return z.val; }
-  const talk={2:"Sprechtempo — ganze Sätze möglich",4:"Komfortabel hart — nur noch kurze Sätze",5:"Hart — nur einzelne Worte"};
+  const talk={2:"Sprechtempo (ganze Sätze möglich)",4:"komfortabel hart (nur noch kurze Sätze)",5:"hart (nur einzelne Worte)"};
   return talk[zone]||"locker";
 }
 /* Eine konkrete Einheit: Aufwärmen, Hauptteil, Auslaufen — mit Zielzonen und Grund. */
@@ -2596,7 +2596,8 @@ function endurSession(cfg,kind,weekVol){
   const longVol=Math.min(isRun?cfg.goal.longKm:cfg.goal.longH, weekVol*longShare);
   const restVol=Math.max(0,weekVol-longVol);
   const easyVol=easyN>0?restVol/(easyN+1):restVol;
-  const fmt=(v)=>isRun?`${v.toFixed(v<10?1:0).replace(".",",")} km`:`${(v*60).toFixed(0)} min`;
+  const fmt=(v)=>{ if(isRun) return `${v.toFixed(v<10?1:0).replace(".",",")} km`;
+    const mn=Math.round(v*60); return mn>=90?`${Math.floor(mn/60)} h ${mn%60} min`:`${mn} min`; };
   const z2=endurTarget(cfg,2), z4=endurTarget(cfg,4), z5=endurTarget(cfg,5);
   const base={kind, label:K.label, icon:K.icon, hard:K.hard};
   if(kind==="rest") return {...base, headline:"Ruhetag", vol:"—",
@@ -2746,7 +2747,9 @@ function eRenderPlan(){
       </div>
       <div class="row" style="justify-content:space-between;margin-top:4px">
         <span class="xs t3">Woche 1</span><span class="xs t3">Woche ${cfg.goal.weeks}</span></div>
-      <p class="xs t2 mt12" style="line-height:1.5">${icon("info",12)} Der Zuwachs bleibt bei höchstens 10 % pro Woche. Sprünge jenseits von rund 30 % gehen mit deutlich mehr Laufverletzungen einher — deshalb steigt der Plan lieber langsam und hält durch.<span class="e-src">Nielsen et al. 2014 · J Orthop Sports Phys Ther</span></p>
+      <p class="xs t2 mt12" style="line-height:1.5">${icon("info",12)} Der Zuwachs bleibt bei höchstens 10 % pro Woche. ${isRun
+        ?`Sprünge jenseits von rund 30 % gehen mit deutlich mehr Laufverletzungen einher — deshalb steigt der Plan lieber langsam und hält durch.<span class="e-src">Nielsen et al. 2014 · J Orthop Sports Phys Ther</span>`
+        :`Plötzliche Lastsprünge über das Gewohnte hinaus gehen bei Ausdauersportlern mit mehr Ausfällen einher — schrittweiser Aufbau schützt und trägt weiter.<span class="e-src">Gabbett 2016 · Br J Sports Med</span>`}</p>
     </div>`
   // ---- ZONEN ----
   + `<div class="card">
