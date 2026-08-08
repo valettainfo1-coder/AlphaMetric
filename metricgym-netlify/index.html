@@ -368,6 +368,28 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .act-card .ai{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
     background:var(--surface); color:var(--hl);}
   .act-card.on .ai{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
+  /* Persona-Mehrfachauswahl: jede Karte ist ein Schalter. Gewählte Karten tragen ihre
+     Prioritätsnummer — Nummer 1 führt den Fragebogen, der Rest wird vorbelegt angelegt. */
+  .pg-card{background:var(--s2); border:1px solid var(--hairline); border-radius:16px; cursor:pointer;
+    color:var(--t1); font-family:inherit; position:relative;
+    transition:transform .17s var(--ease-out,ease), border-color .22s, background .22s, box-shadow .22s;}
+  .pg-card:active{transform:scale(.985);}
+  .pg-card.on{border-color:rgba(143,184,220,.42); background:var(--accent-soft); box-shadow:0 6px 22px rgba(0,0,0,.18);}
+  .pg-ic{width:42px; height:42px; border-radius:13px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:var(--surface); color:var(--hl); transition:background .22s, color .22s, transform .22s var(--spring);}
+  .pg-card.on .pg-ic{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff; transform:scale(1.05);}
+  .pg-mark{flex-shrink:0; display:flex; align-items:center; justify-content:center; width:26px; height:26px;}
+  .pg-o{width:21px; height:21px; border-radius:50%; border:1.5px solid var(--t3); display:block; opacity:.7;}
+  .pg-n{width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff; font-size:11.5px; font-weight:700;
+    font-variant-numeric:tabular-nums; animation:pgPop .34s cubic-bezier(.22,1.4,.36,1);}
+  @keyframes pgPop{from{transform:scale(.4); opacity:0} to{transform:scale(1); opacity:1}}
+  @media (prefers-reduced-motion:reduce){ .pg-n{animation:none} }
+  /* Vorschau der Profile, die aus der Auswahl entstehen — die Folge ist sichtbar, bevor sie eintritt. */
+  .pg-prev{margin-top:14px; padding:12px 13px; border-radius:14px; background:var(--s2); border:1px solid var(--hairline);}
+  .pg-prow{display:flex; align-items:center; gap:9px; padding:5px 0;}
+  .pg-prow .pi{width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:var(--surface); color:var(--hl);}
   .logo-text{font-family:var(--font-display); font-size:14.5px; font-weight:600; letter-spacing:.16em; color:var(--t1); text-transform:uppercase;}
   .logo-text .gy{color:var(--hl); font-weight:600;}
   .icon-btn{width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center;
@@ -6163,6 +6185,11 @@ const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["anal
    „Ausdauer Radfahren", steht genau das unten. Lange Namen werden fürs Tab gekürzt
    (das volle Wort steht im Kopfzeilen-Chip und als Vorlesetext). */
 function tabShort(s){ s=String(s||"").trim(); if(s.length<=13) return s;
+  // Kombi-Profile („Krafttraining & Abnehmen") zeigen im Tab die FÜHRENDE Absicht —
+  // die volle Bezeichnung steht im Kopfzeilen-Chip. Die zweite Hälfte wegzukürzen
+  // wäre irreführend, denn die erste ist die Priorität.
+  const amp=s.split(/\s*&\s*/).filter(Boolean);
+  if(amp.length>1) return tabShort(amp[0]);
   const w=s.split(/[\s·—-]+/).filter(Boolean);
   if(w.length>1){ const last=w[w.length-1]; if(last.length<=12) return last; }
   return s.slice(0,12)+"…"; }
@@ -6307,6 +6334,11 @@ function applyAccountGrants(){
 function renderApp(){
   if(!S.profile){ S.screen="onboarding"; save(); render(); return; }
   applyAccountGrants();
+  /* Ein Ausdauer-Profil hat keinen Kraft-Tab: landet jemand über Tour, Deeplink oder
+     einen alten gespeicherten Zustand auf „train", zeigen wir die Ausdauer-Ansicht statt
+     einer Oberfläche, die die Navigationsleiste hier gar nicht anbietet. Der umgekehrte
+     Weg bleibt erlaubt — ein Kraft-Nutzer darf das Ausdauer-Modul bewusst übers Menü öffnen. */
+  try{ if(actUi()==="endur" && S.tab==="train") S.tab="endurance"; }catch(e){}
   if(S.tab==="home") renderHome();
   else if(S.tab==="train") renderTrain();
   else if(S.tab==="player") renderPlayer();
@@ -7338,16 +7370,84 @@ const PERSONAS=[
   ["running","activity","Laufen","Pace-Zonen, Distanz-Ziele, Form — dein Lauf-Coach."],
   ["hybrid","zap","Hybrid — Kraft + Ausdauer","Beides verzahnt: eine Trainingslast, ein Plan, eine Bereitschaft."],
 ];
+/* ===== MEHRFACHAUSWAHL → AKTIVITÄTS-PROFILE ==============================
+   Niemand ist nur eine Sache. Wer Muskeln aufbauen UND abnehmen UND Rad fahren will,
+   wählt alles aus. Daraus baut die App genau so viele Profile, wie fachlich sinnvoll sind:
+
+   • Gleiche Disziplin → EIN Profil mit kombinierten Zielen. „Muskeln & Kraft" plus
+     „Abnehmen" ist keine zweite Sportart, sondern eine Rekomposition: eine Ernährung,
+     ein Plan, zwei Ziele in der gewählten Reihenfolge. Die Reihenfolge steuert die
+     Kalorienrichtung (calorieDirection) — Muskeln zuerst heißt knapper Überschuss,
+     Abnehmen zuerst heißt Defizit mit Muskelschutz.
+   • Andere Disziplin → eigenes Profil mit eigener Oberfläche, eigenen Tagen, eigenen
+     Zielen. Radfahren neben Krafttraining ist ein echter zweiter Trainingskontext
+     mit anderen Messgrößen (Watt statt Wiederholungen).
+
+   Profil 1 ist aktiv und führt den Fragebogen; die übrigen werden mit seriösen
+   Vorgaben angelegt und sind jederzeit im Aktivitäts-Editor änderbar. */
+const PERSONA_GROUP={gym:"strength",loss:"strength",cycling:"cycling",running:"running",hybrid:"hybrid"};
+const PERSONA_GOAL ={gym:"muscle_gain",loss:"fat_loss",cycling:"endurance",running:"endurance",hybrid:"muscle_gain"};
+function personaPlan(modes){
+  const groups=[], seen={};
+  (modes||[]).filter(m=>ACT_TYPES[m]&&!seen[m]&&(seen[m]=1)).forEach(m=>{
+    const g=PERSONA_GROUP[m]||m, hit=groups.find(x=>x.g===g);
+    if(hit) hit.modes.push(m); else groups.push({g,modes:[m]});
+  });
+  return groups.map(x=>{
+    const type=x.modes[0];
+    let goals;
+    if(x.modes.length>1){ goals=[]; x.modes.forEach(m=>{ const gg=PERSONA_GOAL[m]; if(gg&&!goals.includes(gg))goals.push(gg); }); }
+    else goals=actDefaultGoals(type).slice();
+    const capped=S.tier==="free"&&goals.length>1;      // Mehr-Ziel-Engine ist Pro — ehrlich benannt
+    if(capped) goals=[goals[0]];
+    const name=x.modes.length>1?x.modes.map(m=>actMeta(m).label).join(" & "):actMeta(type).label;
+    return {type,modes:x.modes.slice(),goals,name,capped};
+  });
+}
+/* Seriöse Vorbelegung für die NICHT befragten Profile: alles, was der Fragebogen ohnehin
+   schon weiß (Ausrüstung, Alltag, Erholung), wird übernommen; Ziel, Tage und Disziplin
+   kommen aus der Absicht. Nichts davon ist fixiert. */
+function personaSeedCfg(pl,a){
+  a=a||{};
+  const endur=actMeta(pl.type).ui==="endur";
+  const base=Math.min(6,Math.max(2,a.days||4));
+  const cfg={mode:pl.type, goals:pl.goals.slice(),
+    days: endur?Math.max(3,Math.min(5,base)):base,
+    equipment:a.equipment||"gym_full", focus:endur?[]:(a.focus||[]), split:"auto",
+    schedule_pref:a.schedule_pref||"consistent", recovery_profile:a.recovery_profile||"average",
+    act:a.act||"light"};
+  if(a.sessionTime) cfg.sessionTime=a.sessionTime;
+  if(pl.goals.includes("fat_loss")) cfg.loss_rate=a.loss_rate||"mod";
+  if(pl.type==="cycling"){ cfg.endur_disc="cycling"; cfg.cyc_goal=a.cyc_goal||"endurance"; }
+  if(pl.type==="running"){ cfg.endur_disc="running"; cfg.run_goal=a.run_goal||"endurance"; }
+  if(pl.type==="hybrid")  cfg.endur_disc=a.endur_disc||"running";
+  return cfg;
+}
 function renderPersonaGate(){
+  const sel=(S.a&&S.a.modes)||[];
+  const plan=personaPlan(sel);
+  const anyCap=plan.some(p=>p.capped);
+  const prev=plan.length?`<div class="pg-prev">
+    <p class="label" style="margin:0 0 6px">Daraus entsteht</p>
+    ${plan.map((p,i)=>`<div class="pg-prow">
+      <span class="pi">${icon(actMeta(p.type).icon,14)}</span>
+      <span style="flex:1;min-width:0"><span style="display:block;font-size:13.5px;font-weight:640">${p.name}${i===0?' <span class="badge volt" style="font-size:8px;vertical-align:middle">aktiv</span>':""}</span>
+      <span class="xs t2" style="display:block;line-height:1.35">${p.goals.map(g=>GOAL_LABEL[g]||g).join(" · ")} · ${actMeta(p.type).ui==="endur"?"Ausdauer-Ansicht":"Kraft-Ansicht"}</span></span></div>`).join("")}
+    <p class="xs t3" style="margin:8px 0 0;line-height:1.45">${plan.length>1?`${plan.length} Profile — unten als eigene Tabs, jederzeit umschaltbar. Körperdaten und Verläufe bleiben überall dieselben.`:"Du kannst später jederzeit weitere Aktivitäten anlegen."}${anyCap?" Mehrere Ziele gleichzeitig sind Teil von PERFORMANCE — vorerst zählt dein erstgenanntes Ziel.":""}</p>
+  </div>`:"";
   root.innerHTML=onbBar(1,10,"Los geht’s")+`<div class="fade">
     <h2>Wofür bist du hier?</h2>
-    <p class="hint">Danach richtet sich alles — deine Fragen, dein Plan, deine Auswertungen. Du kannst später jederzeit erweitern.</p>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-      ${PERSONAS.map(([id,ic,t,d])=>`<button class="card acc-i" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px" onclick="A.pickMode('${id}')">
-        <span style="width:46px;height:46px;border-radius:13px;background:var(--accent-soft);color:var(--hl);display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon(ic,22)}</span>
-        <span style="flex:1;min-width:0"><span class="acc-h" style="display:block;font-size:16px;font-weight:700">${t}</span><span class="acc-s" style="display:block;font-size:12.5px;color:var(--t2);line-height:1.4;margin-top:2px">${d}</span></span>
-        <span class="mi-chev">${icon("chevronR",16)}</span></button>`).join("")}
-    </div></div>`;
+    <p class="hint">Wähl <b style="color:var(--t1)">alles, was auf dich zutrifft</b>. Die Reihenfolge ist deine Priorität — was du zuerst antippst, führt den Fragebogen und steuert die Kalorien.</p>
+    <div class="stagger" style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+      ${PERSONAS.map(([id,ic,t,d],i)=>{ const k=sel.indexOf(id), on=k>=0;
+        return `<button class="pg-card ${on?"on":""}" style="--i:${i};display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:15px 16px" onclick="A.togglePersona('${id}')" aria-pressed="${on}">
+        <span class="pg-ic">${icon(ic,22)}</span>
+        <span style="flex:1;min-width:0"><span style="display:block;font-size:16px;font-weight:660;letter-spacing:-.015em">${t}</span><span style="display:block;font-size:12.5px;color:var(--t2);line-height:1.4;margin-top:2px">${d}</span></span>
+        <span class="pg-mark">${on?`<span class="pg-n">${k+1}</span>`:`<span class="pg-o"></span>`}</span></button>`;}).join("")}
+    </div>
+    ${prev}
+    <button class="btn volt mt16" ${sel.length?"":"disabled"} onclick="A.personaGo()">${plan.length>1?`Weiter mit ${plan.length} Profilen`:"Weiter"}</button>
+  </div>`;
 }
 function onbBar(cur,total,label){ return `<div class="topbar">
   <button class="back" onclick="A.back()" aria-label="Zurück">‹</button>
@@ -7411,7 +7511,21 @@ function quizRec(st){
 }
 function renderOnboarding(){
   // Persona-Weiche ganz vorn: ohne gewählten Modus zeigt der Funnel erst die Persona-Frage.
-  A.pickMode=(m)=>{ S.a.mode=m; S.step=0; save(); render(); };
+  A.pickMode=(m)=>{ S.a.modes=[m]; S.a.mode=m; S.step=0; save(); render(); };
+  // Mehrfachauswahl: Reihenfolge = Priorität. Erneutes Tippen entfernt wieder.
+  A.togglePersona=(m)=>{ const cur=(S.a.modes||[]).slice();
+    const i=cur.indexOf(m); if(i>=0)cur.splice(i,1); else cur.push(m);
+    S.a.modes=cur; S.a.mode=cur[0]||null; save(); renderPersonaGate(); };
+  /* Weiter: Haupt-Absicht setzen. Ist die führende Gruppe eine KOMBINATION (z. B. Kraft +
+     Abnehmen), sind die Ziele damit bereits beantwortet und werden vorbelegt — der Nutzer
+     sieht sie in der Zielfrage in seiner Reihenfolge und kann sie weiter ändern. Bei einer
+     einzelnen Absicht bleibt die Zielfrage offen, damit die bestehende Logik greift. */
+  A.personaGo=()=>{ const cur=(S.a.modes||[]); if(!cur.length)return;
+    S.a.mode=cur[0];
+    const pl=personaPlan(cur)[0];
+    if(pl&&pl.modes.length>1){ S.a.goals=pl.goals.slice(); S.a.gseed=1; }
+    else if(S.a.gseed){ S.a.goals=[]; S.a.gseed=0; }
+    S.step=0; save(); render(); };
   if(!S.a.mode && !S.requiz){ renderPersonaGate(); return; }
   const BLK=oblocks();                              // persona-abhängige Block-Sequenz
   const totalBlocks=BLK.length;
@@ -7474,6 +7588,24 @@ function renderOnboarding(){
       S.plan=plan; S.planB=generateTrainingPlan({a},"B"); S.rotation=null;
       const opt=generateOptimalSchedule(a);
       S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+      /* ---- Aktivitäts-Profile aus der Persona-Auswahl anlegen ----
+         Profil 1 trägt exakt die Antworten des Fragebogens. Jede weitere Absicht bekommt
+         ein eigenes Profil mit seriöser Vorbelegung — sofort umschaltbar, ohne zweiten Funnel. */
+      try{
+        const _md=(Array.isArray(S.a.modes)&&S.a.modes.length)?S.a.modes.slice():[a.mode];
+        const _pl=personaPlan(_md);
+        if(S.requiz&&Array.isArray(S.acts)&&S.acts.length){
+          // Quiz-Wiederholung: nur das AKTIVE Profil aktualisieren, die anderen bleiben unberührt.
+          const c=S.acts.find(x=>x.id===S.actId)||S.acts[0];
+          c.type=a.mode; c.cfg=actPick(a);
+          if(!c.name||Object.values(ACT_TYPES).some(m=>m.label===c.name)) c.name=(_pl[0]&&_pl[0].name)||actMeta(a.mode).label;
+        } else if(_pl.length){
+          const t0=Date.now();
+          S.acts=_pl.map((pl,i)=>({ id:"a"+(t0+i).toString(36)+(i?String(i):""), name:pl.name, type:pl.type,
+            cfg: i===0 ? actPick(a) : personaSeedCfg(pl,a) }));
+          S.actId=S.acts[0].id;
+        }
+      }catch(e){}
       trackOnce("onboard_done"); // D3
       // Beim WIEDERHOLEN des Quiz Verläufe NICHT löschen — nur beim allerersten Mal anlegen.
       if(!S.weightLog||!S.weightLog.length) S.weightLog=[{t:Date.now(),v:a.weight}];
@@ -7865,7 +7997,10 @@ function renderReveal(){
     // Nur EINE Erklärungsfolie nach dem Quiz: direkt ins Programm (Feature-Übersicht
     // bleibt über das Menü erreichbar) — mit eleganter Beam-in-Animation.
     const wasRequiz=S.requiz; S.requiz=false; S.seenFeatures=true; save();
-    beamIntoApp(()=>{ S.screen="app"; S.tab="train"; save(); render();
+    // Startansicht folgt der aktiven Aktivität: Ausdauer-Profile landen im Ausdauer-Tab,
+    // sonst zeigte die App einem Läufer eine Kraft-Oberfläche, die es für ihn gar nicht gibt.
+    const t0=(typeof actUi==="function"&&actUi()==="endur")?"endurance":"train";
+    beamIntoApp(()=>{ S.screen="app"; S.tab=t0; save(); render();
       if(wasRequiz) toast("✓ Plan aktualisiert — dein neues Ziel ist aktiv");
       else if(!S.tourDone) setTimeout(()=>startTour(0),520); });
   };
@@ -7873,7 +8008,8 @@ function renderReveal(){
   A.startAppCustom=()=>{
     if(!S.schedule&&S.scheduleSuggestion)S.schedule=S.scheduleSuggestion.slice();
     S.seenFeatures=true; save();
-    beamIntoApp(()=>{ S.screen="app"; S.tab="train"; save(); render(); setTimeout(()=>openScheduleSheet(),360); });
+    const t0=(typeof actUi==="function"&&actUi()==="endur")?"endurance":"train";
+    beamIntoApp(()=>{ S.screen="app"; S.tab=t0; save(); render(); setTimeout(()=>openScheduleSheet(),360); });
   };
   const a=p.a, sug=S.scheduleSuggestion||[];
   const trainCount=sug.filter(t=>t!=="rest").length, set=new Set(sug);
@@ -7956,6 +8092,16 @@ function renderReveal(){
         <div class="card" style="margin:0;padding:14px 6px"><p class="metric" style="font-size:17px;font-weight:600">${v}</p><p class="xs t2" style="margin-top:3px;line-height:1.3">${l}</p></div>`).join("")}
     </div>
     <p class="xs t2 mt8">${tg.dirLabel} · ${splitName} · ${a.len} Min/Einheit</p>
+    ${(()=>{ const l=(S.acts||[]); if(l.length<2) return "";
+      return `<div class="card mt12" style="text-align:left;border-color:rgba(169,196,222,.35)">
+        <p class="ct" style="margin-bottom:4px">${icon("grid",14)} Deine ${l.length} Aktivitäten</p>
+        <p class="xs t2 mb12" style="line-height:1.5">Jede hat eigene Ziele, Tage und eine eigene Oberfläche. Umschalten mit einem Tipp oben rechts — <b style="color:var(--t1)">Körperdaten, Gewichtskurve und Verläufe bleiben überall dieselben</b>.</p>
+        ${l.map((x,i)=>{ const m=actMeta(x.type);
+          return `<div class="row" style="align-items:center;gap:10px;padding:7px 0${i?";border-top:1px solid var(--hairline)":""}">
+            <span style="width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);color:var(--hl)">${icon(m.icon,15)}</span>
+            <span style="flex:1;min-width:0"><span class="sm" style="font-weight:600">${esc(x.name)}${i===0?' <span class="badge volt" style="font-size:8px;vertical-align:middle">aktiv</span>':""}</span><br>
+            <span class="xs t2">${(x.cfg.goals||actDefaultGoals(x.type)).map(g=>GOAL_LABEL[g]||g).join(" · ")} · ${x.cfg.days||4} Tage · ${m.ui==="endur"?"Ausdauer-Ansicht":"Kraft-Ansicht"}</span></span></div>`;}).join("")}
+      </div>`; })()}
     ${tg.conflicts.length?`<div class="warncard mt12" style="text-align:left" role="alert"><b>Hinweis:</b> ${tg.conflicts[0].msg}</div>`:""}
     ${(tg.recs||[]).map(rmsg=>`<div class="card mt8" style="text-align:left;border-color:rgba(169,196,222,.35)"><p class="sm" style="line-height:1.55"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Empfehlung</b><br>${rmsg}</p></div>`).join("")}
 

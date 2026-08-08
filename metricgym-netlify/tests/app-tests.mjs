@@ -237,6 +237,78 @@ check('Aktivitäten: Körperdaten bleiben geteilt (derselbe Mensch)', act.cyc.w 
 check('Aktivitäten: Zurückschalten stellt Kraft-Interface & Ziele wieder her',
   act.back.tab === 'train' && act.back.tabs === act.gymTabs && act.back.goals === act.before.goals && act.back.days === act.before.days, JSON.stringify(act.back));
 
+// ---------- 11) Persona-Mehrfachauswahl: mehrere Absichten gleichzeitig ----------
+// „Muskeln & Kraft, ABER AUCH abnehmen oder radfahren" muss gemeinsam wählbar sein.
+// Gleiche Disziplin verschmilzt zu EINEM Profil mit kombinierten Zielen (Rekomposition),
+// eine andere Disziplin bekommt ein eigenes Profil mit eigener Oberfläche.
+const multi = await page.evaluate(() => {
+  S.tier = 'pro'; save();
+  const fmt = (ms) => personaPlan(ms).map(x => `${x.type}:${x.goals.join('+')}`).join(' | ');
+  const gymLoss = fmt(['gym', 'loss']), lossGym = fmt(['loss', 'gym']);
+  const triple = personaPlan(['gym', 'loss', 'cycling']);
+  const dedupe = personaPlan(['gym', 'gym', 'nix', 'loss']).length;
+  S.tier = 'free'; const freeGoals = personaPlan(['gym', 'loss'])[0].goals.length; S.tier = 'pro'; save();
+  // Kompletter Funnel mit drei Absichten
+  localStorage.clear();
+  S.currentUser = 't@t.de'; S.tier = 'pro'; S.screen = 'onboarding'; S.step = 0; S.a = {};
+  S.profile = null; S.acts = null; S.actId = null; S.requiz = false; S.weightLog = [];
+  S.calAdjust = 0; S.calAdjustAt = 0; S.tourDone = true; save(); render();
+  A.togglePersona('gym'); A.togglePersona('loss'); A.togglePersona('cycling');
+  const marks = document.querySelectorAll('.pg-card.on').length;
+  const nums = [...document.querySelectorAll('.pg-n')].map(x => x.textContent).join('');
+  const prevRows = document.querySelectorAll('.pg-prow').length;
+  A.togglePersona('loss'); const afterOff = (S.a.modes || []).join(',');
+  A.togglePersona('loss');
+  A.personaGo();
+  const seededGoals = JSON.stringify(S.a.goals);
+  return { gymLoss, lossGym, tripleN: triple.length, tripleTypes: triple.map(x => x.type).join(','),
+    dedupe, freeGoals, marks, nums, prevRows, afterOff, seededGoals, mode: S.a.mode,
+    tabShortKombi: tabShort('Krafttraining & Abnehmen') };
+});
+check('Persona: mehrere Absichten gleichzeitig wählbar (3 Karten aktiv, nummeriert)',
+  multi.marks === 3 && multi.nums === '123', JSON.stringify({ marks: multi.marks, nums: multi.nums }));
+check('Persona: Kraft + Abnehmen = EIN Profil mit beiden Zielen in gewählter Reihenfolge',
+  multi.gymLoss === 'gym:muscle_gain+fat_loss' && multi.lossGym === 'loss:fat_loss+muscle_gain',
+  JSON.stringify({ a: multi.gymLoss, b: multi.lossGym }));
+check('Persona: andere Disziplin bleibt eigenes Profil (Kraft+Abnehmen+Rad → 2)',
+  multi.tripleN === 2 && multi.tripleTypes === 'gym,cycling' && multi.prevRows === 2, JSON.stringify(multi.tripleTypes));
+check('Persona: Abwählen entfernt wieder, Doppelnennung wird entschärft',
+  multi.afterOff === 'gym,cycling' && multi.dedupe === 1, JSON.stringify({ off: multi.afterOff, dedupe: multi.dedupe }));
+check('Persona: Kombi-Absicht belegt die Zielfrage vor (Verknüpfung greift)',
+  multi.seededGoals === '["muscle_gain","fat_loss"]' && multi.mode === 'gym', multi.seededGoals);
+check('Persona: Free-Tier bekommt aus der Kombi nur das erstgenannte Ziel',
+  multi.freeGoals === 1, 'free=' + multi.freeGoals);
+check('Persona: Kombi-Tab zeigt die führende Absicht (nicht die zweite)',
+  multi.tabShortKombi === 'Krafttraining', multi.tabShortKombi);
+
+// Der Reveal muss aus der Auswahl auch wirklich mehrere umschaltbare Profile bauen.
+const multiRev = await page.evaluate(async () => {
+  Object.assign(S.a, { sex: 'male', age: 32, height: 180, weight: 88, bf: 22, exp: 'novice',
+    injury: [], days: 4, time: 60, sessionTime: 60, split: 'auto', equipment: 'gym_full',
+    act: 'light', focus: [], recovery_profile: 'average', schedule_pref: 'consistent' });
+  S.step = oblocks().length + 1; save(); render();
+  await new Promise(r => setTimeout(r, 1800));
+  const acts = (S.acts || []).map(x => ({ name: x.name, type: x.type, goals: (x.cfg.goals || []).join('+') }));
+  const primary = { goals: JSON.stringify(S.profile.tg.goals), w: S.profile.a.weight };
+  const cyc = (S.acts || []).find(x => x.type === 'cycling');
+  A.actGo(cyc.id);
+  const onCyc = { tab: S.tab, goals: JSON.stringify(S.profile.tg.goals), w: S.profile.a.weight,
+    sport: window.ENDUR && window.ENDUR.st().sport };
+  A.actGo(S.acts[0].id);
+  const back = { tab: S.tab, goals: JSON.stringify(S.profile.tg.goals) };
+  return { acts, primary, onCyc, back };
+});
+check('Persona: Reveal legt für jede Absicht ein umschaltbares Profil an',
+  multiRev.acts.length === 2 && multiRev.acts[0].type === 'gym' && multiRev.acts[1].type === 'cycling'
+  && multiRev.acts[0].goals === 'muscle_gain+fat_loss' && multiRev.acts[1].goals === 'endurance',
+  JSON.stringify(multiRev.acts));
+check('Persona: zweites Profil schaltet auf Ausdauer, erstes bleibt Rekomposition',
+  multiRev.onCyc.tab === 'endurance' && multiRev.onCyc.sport === 'cycling'
+  && multiRev.back.tab === 'train' && multiRev.back.goals === multiRev.primary.goals,
+  JSON.stringify({ cyc: multiRev.onCyc, back: multiRev.back }));
+check('Persona: Körperdaten bleiben über alle angelegten Profile identisch',
+  multiRev.onCyc.w === multiRev.primary.w, 'kg=' + multiRev.primary.w);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
