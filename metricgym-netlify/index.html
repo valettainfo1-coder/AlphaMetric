@@ -1047,6 +1047,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .mt8{margin-top:8px;} .mt16{margin-top:16px;}
   .weekstrip{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:14px;}
   .pills{display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;}
+  /* Varianten-Umschalter: wenige, kurze Chips — die brechen um, statt zu scrollen.
+     Ein halb abgeschnittener Knopf sieht kaputt aus und niemand ahnt, dass er wischbar wäre. */
+  .pills-wrap{flex-wrap:wrap; overflow-x:visible; justify-content:center; margin-bottom:10px; padding-bottom:0;}
   .pill{flex-shrink:0; padding:8px 14px; border-radius:999px; border:none; box-shadow:inset 0 1px 0 var(--edge);
     background:var(--surface); color:var(--t2); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; min-height:38px;
     display:inline-flex; align-items:center; justify-content:center; text-align:center;}
@@ -9928,43 +9931,6 @@ const PATTERN_FAULTS={
 /* Bewegungs-Animationen (B6): 13 Muster als reduzierte Linien-Figuren mit
    SMIL-Loop — bewusst abstrakt (Trajektorie statt Pseudo-3D), Gold = das,
    was sich bewegt. Kein Video-Hosting, keine Fremd-Assets. */
-function patternAnim(pat,size){
-  size=size||92;
-  const F='stroke="#5E7A96" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"';
-  const G='stroke="#C4B47A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
-  const gd='fill="#C4B47A" stroke="none"';
-  const T=(vals,dur)=>`<animateTransform attributeName="transform" type="translate" values="${vals}" dur="${dur||"2.4s"}" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>`;
-  const R=(vals,dur)=>`<animateTransform attributeName="transform" type="rotate" values="${vals}" dur="${dur||"2.4s"}" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>`;
-  const A={
-    horizPress:`<g ${F}><path d="M16 72 H84 M26 72 V82 M74 72 V82"/><circle cx="26" cy="63" r="5"/><path d="M34 65 H58 M58 65 L70 78"/></g>
-      <g ${G}><path d="M46 63 V40"/><path d="M34 38 H58"/><circle cx="46" cy="38" r="3.5" ${gd}/>${T("0 17;0 0;0 17")}</g>`,
-    vertPress:`<g ${F}><circle cx="42" cy="22" r="5"/><path d="M42 28 V58 M42 58 L33 84 M42 58 L51 84"/></g>
-      <g ${G}><path d="M55 30 V13"/><path d="M47 12 H63"/><circle cx="55" cy="12" r="3.5" ${gd}/>${T("0 17;0 0;0 17")}</g>`,
-    raise:`<g ${F}><circle cx="40" cy="22" r="5"/><path d="M40 28 V58 M40 58 L32 84 M40 58 L48 84"/></g>
-      <g ${G}><path d="M42 33 H64"/><circle cx="66" cy="33" r="4" ${gd}/>${R("55 42 33;0 42 33;55 42 33","2.6s")}</g>`,
-    curl:`<g ${F}><circle cx="40" cy="22" r="5"/><path d="M40 28 V58 M40 58 L32 84 M40 58 L48 84 M40 32 L43 47"/></g>
-      <g ${G}><path d="M43 47 H61"/><circle cx="63" cy="47" r="4" ${gd}/>${R("62 43 47;-42 43 47;62 43 47")}</g>`,
-    triExt:`<g ${F}><circle cx="40" cy="22" r="5"/><path d="M40 28 V58 M40 58 L32 84 M40 58 L48 84 M40 32 L44 45"/><path d="M58 14 V42" stroke-dasharray="2 5"/></g>
-      <g ${G}><path d="M44 45 H60"/><circle cx="62" cy="45" r="4" ${gd}/>${R("0 44 45;52 44 45;0 44 45")}</g>`,
-    vertPull:`<g ${F}><path d="M26 14 H74"/></g>
-      <g ${G}><circle cx="50" cy="36" r="5"/><path d="M50 42 V62 M50 62 L44 82 M50 62 L56 82 M46 32 L34 16 M54 32 L66 16"/>${T("0 13;0 0;0 13","2.6s")}</g>`,
-    horizPull:`<g ${F}><circle cx="34" cy="26" r="5"/><path d="M34 32 V60 M34 60 L52 60 L58 76"/><path d="M70 44 H90" stroke-dasharray="2 5"/></g>
-      <g ${G}><path d="M38 44 H62"/><circle cx="65" cy="44" r="4" ${gd}/>${T("13 0;0 0;13 0")}</g>`,
-    squat:`<g ${F}><path d="M42 58 L34 71 L37 86 M42 58 L50 71 L47 86"/></g>
-      <g ${G}><circle cx="42" cy="24" r="5"/><path d="M42 30 V58"/><path d="M28 35 H56"/>${T("0 0;0 13;0 0","2.6s")}</g>`,
-    hinge:`<g ${F}><path d="M50 60 L45 86 M50 60 L57 86"/></g>
-      <g ${G}><path d="M50 60 V32"/><circle cx="50" cy="26" r="5"/><path d="M50 42 V59" stroke-width="2.4"/>${R("-62 50 60;0 50 60;-62 50 60","2.6s")}</g>`,
-    legCurl:`<g ${F}><path d="M14 70 H72 M22 70 V80 M64 70 V80"/><circle cx="22" cy="62" r="5"/><path d="M29 64 H52 M52 64 L64 64"/></g>
-      <g ${G}><path d="M64 64 L80 64"/><circle cx="82" cy="64" r="4" ${gd}/>${R("0 64 64;-96 64 64;0 64 64")}</g>`,
-    calf:`<g ${F}><path d="M20 86 H80"/></g>
-      <g ${G}><circle cx="46" cy="20" r="5"/><path d="M46 26 V56 M46 56 L42 80 M46 56 L52 80"/>${T("0 6;0 0;0 6","2s")}</g>`,
-    core:`<g ${F}><circle cx="26" cy="56" r="5"/><path d="M32 60 L74 70 M36 62 L36 76 M70 69 L78 84"/></g>
-      <circle cx="52" cy="64" r="4" ${gd}><animate attributeName="r" values="3;5;3" dur="2.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;1;0.6" dur="2.6s" repeatCount="indefinite"/></circle>`,
-    cardio:`<g ${F}><path d="M14 56 H34 L42 40 L54 72 L62 56 H86"/></g>
-      <circle cx="50" cy="30" r="5" ${gd}><animate attributeName="r" values="4;6;4" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.55;1;0.55" dur="1.2s" repeatCount="indefinite"/></circle>`,
-  };
-  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="flex-shrink:0">${A[pat]||A.core}</svg>`;
-}
 // Muskel-Aktivierung je Übung (Region-IDs): p = primär, s = sekundär
 const EX_ACT={
   "Bankdrücken":{p:["chest"],s:["delts","triceps"]},"Schrägbankdrücken":{p:["chest"],s:["delts","triceps"]},"KH-Bankdrücken":{p:["chest"],s:["delts","triceps"]},
@@ -10653,24 +10619,36 @@ const GRIP_VARIANTS={
     {n:"Strikt seitlich",act:{p:["delts"],s:[]},why:"Maximale Isolation der seitlichen Schulter → Breite."},
     {n:"Leicht vorgebeugt",act:{p:["reardelts"],s:["delts"]},why:"Verlagert den Reiz auf die hintere Schulter."},
   ],
+  /* HINWEIS ZUR STANDBREITE: „Enger Stand = mehr äußerer Quadrizeps (Sweep)" ist ein
+     verbreiteter Studio-Mythos. Kontrolliert gemessen unterscheidet sich die Aktivität der
+     Oberschenkelstrecker zwischen den Standbreiten NICHT nennenswert; nur Gesäß und
+     Adduktoren nehmen mit breiterem Stand zu (Paoli 2009, Escamilla 2001). Deshalb gibt es
+     hier nur noch die zwei Varianten, die tatsächlich einen Unterschied machen. */
   "Kniebeuge":[
-    {n:"Schulterbreit",act:{p:["quads"],s:["glutes","hams","lowerback","adductors"]},why:"Ausgewogen — Quadrizeps & Gesäß zusammen."},
-    {n:"Enger Stand",act:{p:["quads"],s:["glutes","lowerback"]},why:"Mehr äußerer Quadrizeps (Oberschenkel-Sweep)."},
-    {n:"Weiter Stand",act:{p:["glutes","adductors"],s:["quads","hams","lowerback"]},why:"Mehr Gesäß & Oberschenkel-Innenseite, aufrechter Rücken."},
+    {n:"Schulterbreit",act:{p:["quads"],s:["glutes","hams","lowerback","adductors"]},
+     why:"Der Standard. Quadrizeps führt, Gesäß und Beinbeuger arbeiten mit.",
+     src:"Die Tiefe entscheidet mehr als die Standbreite: tiefe Kniebeugen bauen Quadrizeps und Gesäß messbar stärker auf als flache (Kubo, Ikebukuro & Yata 2019)."},
+    {n:"Weiter Stand",act:{p:["glutes","adductors"],s:["quads","hams","lowerback"]},
+     why:"Mehr Gesäß und Oberschenkel-Innenseite, der Oberkörper bleibt aufrechter.",
+     src:"Bei breiterem Stand steigt die Aktivität des Gesäßmuskels; die Oberschenkelstrecker bleiben nahezu unverändert (Paoli et al. 2009 · Escamilla et al. 2001)."},
   ],
   "Beinpresse":[
     {n:"Füße mittig",act:{p:["quads"],s:["glutes","hams","adductors"]},why:"Quadrizeps-Fokus, ausgewogen."},
-    {n:"Füße hoch",act:{p:["glutes"],s:["hams","adductors"]},why:"Höhere Position → mehr Gesäß & Beinbeuger."},
-    {n:"Füße tief",act:{p:["quads"],s:[]},why:"Tiefe Position → maximaler Quadrizeps."},
+    {n:"Füße hoch",act:{p:["glutes"],s:["hams","adductors"]},why:"Höhere Position → mehr Gesäß & Beinbeuger.",
+     src:"Die Fußposition verschiebt die Hebelverhältnisse: weiter oben wächst der Hüftstreck-Anteil (Escamilla et al. 2001)."},
+    {n:"Füße tief",act:{p:["quads"],s:[]},why:"Tiefe Position → mehr Quadrizeps.",
+     src:"Weiter unten steigt der Kniestreck-Anteil — dafür wird der Bewegungsumfang im Sprunggelenk begrenzender (Escamilla et al. 2001)."},
   ],
   "Rumänisches Kreuzheben":[
     {n:"Hüftbreit",act:{p:["hams"],s:["glutes","lowerback","forearm"]},why:"Beinbeuger-Dehnung, klassischer Hip-Hinge."},
-    {n:"Weiter Stand",act:{p:["glutes","adductors"],s:["hams","lowerback","forearm"]},why:"Mehr Gesäß & Oberschenkel-Innenseite."},
+    {n:"Weiter Stand",act:{p:["glutes","adductors"],s:["hams","lowerback","forearm"]},why:"Mehr Gesäß und Oberschenkel-Innenseite.",
+     src:"Breiterer Stand erhöht den Anteil von Gesäß und Adduktoren (Escamilla et al. 2001)."},
   ],
   "Bizeps-Curls":[
     {n:"Untergriff",act:{p:["biceps"],s:["forearm"]},why:"Voller Bizeps-Reiz, maximale Kontraktion."},
     {n:"Hammer (neutral)",act:{p:["biceps","forearm"],s:[]},why:"Mehr Brachialis & Unterarm → dickerer Arm."},
-    {n:"Schrägbank",act:{p:["biceps"],s:["forearm"]},why:"Dehnung am langen Kopf → mehr Bizeps-Peak."},
+    {n:"Schrägbank",act:{p:["biceps"],s:["forearm"]},why:"Arbeit in voller Dehnung des langen Kopfes.",
+     src:"Training in gedehnter Position bringt messbar mehr Wachstum als in verkürzter (Wolf et al. 2024)."},
   ],
 };
 A.gripSel=(name,i)=>exDetailModal(name,i);
@@ -10768,6 +10746,9 @@ function exActFor(name){
   if(d.m==="Core")return /seitst|pallof/i.test(name)?{p:["obliques"],s:["abs"]}:{p:["abs"],s:["obliques"]};
   return {p:[],s:[]};
 }
+/* Muskelnamen an EINER Stelle — sonst laufen Detailkarte und Variantenauswahl auseinander. */
+const MUSCLE_DE={chest:"Brust",delts:"Schulter",reardelts:"Hintere Schulter",triceps:"Trizeps",biceps:"Bizeps",forearm:"Unterarm",lats:"Latissimus",traps:"Trapez",lowerback:"Rückenstrecker",quads:"Quadrizeps",hams:"Beinbeuger",glutes:"Gluteus",adductors:"Adduktoren",calves:"Waden",abs:"Bauch",obliques:"Seitlicher Bauch"};
+function actNames(list){ return (list||[]).map(x=>MUSCLE_DE[x]||x).join(", ")||"—"; }
 function exInfoFor(name){
   if(EXINFO[name])return EXINFO[name];
   const d=EXDB[name]||{}; const f=_exFamily(name); const cues=[];
@@ -10792,7 +10773,7 @@ function exInfoFor(name){
   else if(d.compound)cues.push("Rumpfspannung halten und volle Bewegungsamplitude nutzen");
   else cues.push("Am Ende der Bewegung den Muskel bewusst zusammenziehen (1 s)");
   const act=EX_ACT[name]||exActFor(name);
-  const NICE={chest:"Brust",delts:"Schulter",reardelts:"Hintere Schulter",triceps:"Trizeps",biceps:"Bizeps",forearm:"Unterarm",lats:"Latissimus",traps:"Trapez",lowerback:"Rückenstrecker",quads:"Quadrizeps",hams:"Beinbeuger",glutes:"Gluteus",adductors:"Adduktoren",calves:"Waden",abs:"Bauch",obliques:"Seitlicher Bauch"};
+  const NICE=MUSCLE_DE;
   return {prim:(act.p||[]).map(x=>NICE[x]||x).join(", ")||d.m||"—",
           sek:(act.s||[]).map(x=>NICE[x]||x).join(", ")||"—", cues};
 }
@@ -10808,24 +10789,29 @@ function exDetailModal(name,gi){
   const variants=GRIP_VARIANTS[name];
   gi=variants?Math.min(Math.max(0,gi|0),variants.length-1):0;
   const act=variants?variants[gi].act:(EX_ACT[name]||exActFor(name));
+  /* Wer eine Variante antippt, muss den Unterschied SEHEN. Vorher kam die Muskelangabe
+     aus einer fest verdrahteten Tabelle und blieb bei jeder Variante gleich — die Auswahl
+     wirkte folgenlos. Jetzt stammt sie aus der Variante selbst, genau wie die Körperkarte. */
+  const primTxt=variants?actNames(act.p):inf.prim;
+  const sekTxt =variants?actNames(act.s):inf.sek;
   const isCardio=(d.m==="Herz");
   modal(`<p class="display-m mb8">${name}</p>
     ${rec?`<p class="metric sm volt-txt mb8">Empfohlen: ${fmtKg(rec.w)} × ${rec.reps}</p>`:""}
     ${isCardio
       ?`<div class="card" style="background:var(--s2);padding:14px;margin-bottom:12px"><p class="label" style="margin-bottom:6px">Beansprucht</p><p class="sm t2" style="line-height:1.6">Herz-Kreislauf-System — stärkt deine Ausdauer und unterstützt die Erholung.</p></div>`
       :`<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
-        ${variants?`<div class="pills" style="justify-content:center;margin-bottom:8px">${variants.map((v,i)=>`<button class="pill ${i===gi?"active":""}" onclick="A.gripSel('${name.replace(/'/g,"\\'")}',${i})">${v.n}</button>`).join("")}</div>`:""}
+        ${variants?`<div class="pills pills-wrap">${variants.map((v,i)=>`<button class="pill ${i===gi?"active":""}" onclick="A.gripSel('${name.replace(/'/g,"\\'")}',${i})">${v.n}</button>`).join("")}</div>`:""}
         <div class="mg-mini">
           <div style="flex-shrink:0">${body3d(act,{h:152,w:96,small:true,hint:false})}</div>
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:9px;padding-top:4px">
             <div><p class="xs" style="color:#8FB8DC;letter-spacing:.1em;font-weight:600;margin:0 0 2px">● PRIMÄR</p>
-              <p class="sm" style="font-weight:600;line-height:1.35;margin:0">${inf.prim}</p></div>
-            <div><p class="xs" style="color:#C4B47A;letter-spacing:.1em;font-weight:600;margin:0 0 2px">● SEKUNDÄR</p>
-              <p class="xs t2" style="line-height:1.4;margin:0">${inf.sek}</p></div>
+              <p class="sm" style="font-weight:600;line-height:1.35;margin:0">${primTxt}</p></div>
+            ${sekTxt&&sekTxt!=="—"?`<div><p class="xs" style="color:#C4B47A;letter-spacing:.1em;font-weight:600;margin:0 0 2px">● SEKUNDÄR</p>
+              <p class="xs t2" style="line-height:1.4;margin:0">${sekTxt}</p></div>`:""}
             <div style="display:flex;flex-wrap:wrap;gap:4px">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir&&d.rir!=="–"?`<span class="statchip">${d.rir} in Reserve</span>`:""}${d.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</div>
           </div>
         </div>
-        ${variants?`<p class="xs t2" style="line-height:1.5;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}</p>`:""}
+        ${variants?`<p class="xs t2" style="line-height:1.5;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}${variants[gi].src?`<span style="display:block;color:var(--t3);margin-top:4px">${variants[gi].src}</span>`:""}</p>`:""}
       </div>`}
     ${inf.cues&&inf.cues.length?`<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
       <p class="label" style="margin-bottom:8px">So führst du sie aus</p>
@@ -10834,12 +10820,11 @@ function exDetailModal(name,gi){
         <span class="sm" style="line-height:1.45">${c}</span></div>`).join("")}
     </div>`:""}
     ${(()=>{ if(isCardio)return ""; const pat=patternFor(name), faults=PATTERN_FAULTS[pat]||[];
+      /* Das animierte Strichmännchen ist raus: neben der anatomischen Muskelkarte darüber
+         wirkte es billig und trug keine Information, die der Text nicht besser sagt. */
       return `<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
-        <div style="display:flex;gap:12px;align-items:center">
-          ${patternAnim(pat,84)}
-          <div style="flex:1;min-width:0"><p class="label" style="margin-bottom:4px">Bewegung</p>
-          <p class="sm t2" style="line-height:1.55;margin:0">${MOVE_TXT[pat]||""}</p></div>
-        </div>
+        <p class="label" style="margin-bottom:4px">Bewegung</p>
+        <p class="sm t2" style="line-height:1.55;margin:0">${MOVE_TXT[pat]||""}</p>
         ${faults.length?`<p class="label" style="margin:10px 0 6px;color:var(--warn)">Häufige Fehler</p>
           ${faults.map(f=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:3px 0">
             <span style="color:var(--warn);flex-shrink:0;font-weight:700;font-size:11px;line-height:1.6">✕</span><span class="xs t2" style="line-height:1.5">${f}</span></div>`).join("")}`:""}

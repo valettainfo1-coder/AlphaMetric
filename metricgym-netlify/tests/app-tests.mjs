@@ -578,6 +578,56 @@ check('Paywall: „Aktivität hinzufügen" zeigt die Paywall statt des Editors �
 check('Paywall: PERFORMANCE gibt 3 Plätze, freigeschaltetes Konto bekommt ELITE',
   ov.proMax === 3 && ov.granted.tier === 'elite' && ov.granted.max === 8, JSON.stringify({ pro: ov.proMax, konto: ov.granted }));
 
+// ---------- 20) Übungs-Detail: Varianten wirken, nichts wird abgeschnitten ----------
+const exd = await page.evaluate(() => {
+  A.devModeMenu(); S.tab = 'train'; save(); render();
+  // a) Kein Varianten-Chip läuft aus seinem Container
+  let maxOver = 0, rows = 0;
+  for (const n of Object.keys(GRIP_VARIANTS)) {
+    exDetailModal(n);
+    const row = document.querySelector('.pills-wrap'); if (!row) continue;
+    rows++;
+    const rb = row.getBoundingClientRect();
+    for (const c of row.querySelectorAll('.pill')) {
+      const b = c.getBoundingClientRect();
+      maxOver = Math.max(maxOver, Math.round(b.right - rb.right), Math.round(rb.left - b.left));
+    }
+    A.closeModal();
+  }
+  // b) Jede Variante ändert Muskelangabe UND Körperkarte — sonst ist die Auswahl folgenlos
+  const sig = (n, i) => { exDetailModal(n, i);
+    const card = document.querySelector('.mg-mini').closest('.card');
+    const svg = card.querySelector('svg');
+    const fills = svg ? [...svg.querySelectorAll('[fill]')].map(e => e.getAttribute('fill')).join(',') : '';
+    return { txt: card.innerText, fills }; };
+  let allDiffer = true, mapDiffers = true;
+  for (const n of Object.keys(GRIP_VARIANTS)) {
+    const all = GRIP_VARIANTS[n].map((_, i) => sig(n, i));
+    if (new Set(all.map(x => x.txt)).size !== all.length) allDiffer = false;
+    if (new Set(all.map(x => x.fills)).size !== all.length) mapDiffers = false;
+  }
+  // c) Kniebeuge: Studio-Mythos raus, Beleg drin, kein leeres „SEKUNDÄR —"
+  exDetailModal('Kniebeuge', 1);
+  const sq = document.body.innerText;
+  const myth = /Sweep|äußerer Quadrizeps/i.test(JSON.stringify(GRIP_VARIANTS));
+  const sourced = Object.values(GRIP_VARIANTS).flat().filter(v => v.src).length;
+  // d) Strichmännchen ist raus
+  const stick = typeof patternAnim !== 'undefined' || document.querySelectorAll('#overlay animateTransform').length > 0;
+  const emptySek = /SEKUNDÄR\s*\n\s*—/.test(sq);
+  A.closeModal();
+  return { rows, maxOver, allDiffer, mapDiffers, myth, sourced, stick, emptySek,
+    sqVariants: GRIP_VARIANTS['Kniebeuge'].length, sqSrc: /Paoli|Kubo|Escamilla/.test(sq) };
+});
+check('Übungs-Detail: kein Varianten-Chip wird abgeschnitten',
+  exd.maxOver <= 0 && exd.rows >= 10, JSON.stringify({ zeilen: exd.rows, ueberlauf: exd.maxOver }));
+check('Übungs-Detail: jede Variante ändert Muskelangabe UND Körperkarte',
+  exd.allDiffer && exd.mapDiffers, JSON.stringify({ text: exd.allDiffer, karte: exd.mapDiffers }));
+check('Übungs-Detail: Kniebeuge ohne Studio-Mythos, mit Beleg',
+  !exd.myth && exd.sqVariants === 2 && exd.sqSrc, JSON.stringify({ mythos: exd.myth, varianten: exd.sqVariants }));
+check('Übungs-Detail: Varianten tragen Belege, kein leeres „SEKUNDÄR —"',
+  exd.sourced >= 5 && !exd.emptySek, 'belegte Varianten=' + exd.sourced);
+check('Übungs-Detail: animiertes Strichmännchen ist entfernt', !exd.stick, '');
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

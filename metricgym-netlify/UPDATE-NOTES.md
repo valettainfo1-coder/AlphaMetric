@@ -871,9 +871,31 @@ Rückmeldung war eindeutig — zu wenig immersiv, zu wenig Oura-Niveau. Umgesetz
   erfährt das **vor** dem Weiter-Tippen und bekommt danach eine Karte, die benennt, was
   wartet. Nichts wird stillschweigend gekappt.
 
+## §51 — Übungs-Detail: Varianten müssen sich verdienen
+- **Abgeschnittener Knopf.** Die Varianten-Chips lagen in einer scrollenden Zeile mit
+  `justify-content:center` — „Weiter Stand" ragte aus der Karte, ohne dass etwas auf
+  Wischbarkeit hindeutete. Wenige kurze Chips **brechen jetzt um statt zu scrollen**;
+  über alle 13 Übungen mit Varianten gemessen: 0 px Überlauf.
+- **Die Auswahl war folgenlos.** `EXINFO` lieferte fest verdrahtete Muskelangaben, die
+  `exInfoFor()` unabhängig von der gewählten Variante zurückgab — „Weiter Stand" zeigte
+  weiterhin „PRIMÄR Quadrizeps", obwohl die Daten Gluteus und Adduktoren sagen. Jetzt
+  stammen Muskelangabe **und** Körperkarte aus der Variante selbst. Getestet über alle
+  Varianten: jede zeigt anderen Text und andere Einfärbung.
+- **Ein Studio-Mythos ist raus.** „Enger Stand → mehr äußerer Quadrizeps (Sweep)" ist
+  nicht belegt: kontrolliert gemessen unterscheidet sich die Aktivität der
+  Oberschenkelstrecker zwischen den Standbreiten nicht nennenswert; nur Gesäß und
+  Adduktoren nehmen mit breiterem Stand zu (Paoli et al. 2009 · Escamilla et al. 2001).
+  Die Kniebeuge hat deshalb noch zwei Varianten statt drei — und die tragen ihren Beleg
+  sichtbar. Für die Kniebeuge steht daneben, was tatsächlich mehr bringt als die
+  Standbreite: die Tiefe (Kubo, Ikebukuro & Yata 2019).
+- **Das animierte Strichmännchen ist entfernt.** Neben der anatomischen Muskelkarte wirkte
+  es billig und trug keine Information, die der Bewegungstext nicht besser sagt.
+  Funktion und Markup restlos raus (37 Zeilen).
+- Leeres „SEKUNDÄR —" wird nicht mehr gerendert, wenn eine Variante keine Nebenmuskeln hat.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v30** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v31** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
