@@ -845,9 +845,35 @@ Rückmeldung war eindeutig — zu wenig immersiv, zu wenig Oura-Niveau. Umgesetz
   eigenen. Der Scheiben-Hinweis wurde in der schmalen Zelle abgeschnitten — er nennt nur
   noch die Beladung pro Seite, das Stangengewicht steht im Scheiben-Rechner daneben.
 
+## §49 — Analytics spricht die Sprache der aktiven Aktivität (R-2)
+- Ein Läufer sah im Analytics-Tab weiterhin **Kraft-Sprache**: „Dein Trainingsvolumen diese
+  Woche" in Sätzen, die Muskel-Heatmap mit MEV/MRV-Korridor und sogar Insights wie
+  „peile mindestens 12 Sätze an (Fachbegriff: MEV)". Für jemanden ohne Sätze ist das falsch.
+- Ausdauer-Profile bekommen an derselben Stelle jetzt: **Wochenumfang** (km bzw. Stunden,
+  vier Wochen, mit dem Wochenziel des Plans als gestrichelter Linie) und die **Verteilung
+  locker/hart** — das Ausdauer-Gegenstück zum Volumen-Korridor, gerechnet aus dem
+  Intensitätsfaktor der importierten Einheiten und bewertet gegen den 80/20-Korridor
+  (Seiler 2010). Ohne genug Daten stehen ehrliche Gate-Karten statt erfundener Zahlen.
+- Kraft-spezifische Insights (Volumen-Trend in kg/Session, MEV/MRV-Warnungen) erscheinen
+  nur noch für Kraft-Profile.
+
+## §50 — Aktivitätsprofil-Übersicht + Paywall
+- **Eigene Seite statt Sheet.** Der Chip in der Kopfzeile öffnet jetzt eine vollwertige
+  Übersicht: jedes Profil mit Name, Zielen, Oberfläche — und der Kennzahl, die für DIESE
+  Absicht zählt (Kraft: Einheiten/Woche · Ausdauer: Zielwoche und Wochenumfang, z. B.
+  „Halbmarathon · Woche 1/14 · 30 km/Woche"). Ein Tipp wechselt, das Zahnrad bearbeitet.
+  Erreichbar über den Chip, das Menü und den Startschritt auf „Heute".
+- **Freie und gesperrte Plätze sind sichtbar** — niemand muss raten, was der Tarif hergibt.
+- **Paywall.** Mehrere Aktivitäts-Profile sind das Kernkonzept von PERFORMANCE: kostenlos
+  gibt es genau **ein** Profil, PERFORMANCE **drei**, ELITE **acht**. Die Grenze wird an
+  EINER Stelle entschieden (`actMax()`) und greift überall — beim Anlegen, in der Übersicht
+  und schon im Onboarding: Wer im Fragebogen mehr Absichten wählt, als sein Zugang trägt,
+  erfährt das **vor** dem Weiter-Tippen und bekommt danach eine Karte, die benennt, was
+  wartet. Nichts wird stillschweigend gekappt.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v29** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v30** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

@@ -233,6 +233,35 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .sf-foot{margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--t3);}
   .sf-foot b{color:var(--t2);} .sf-foot svg{vertical-align:-1px; color:var(--hl);}
   @media (max-width:359px){ .sf-row{flex-wrap:wrap} .sf-out{flex-basis:100%; padding-left:20px} }
+  /* ===== Aktivitätsprofil-Übersicht ===== */
+  .ap-card{display:flex; gap:8px; align-items:stretch; margin-bottom:9px;}
+  .ap-main{display:flex; align-items:center; gap:13px; flex:1; min-width:0; text-align:left; padding:15px 15px;
+    background:var(--s2); border:1px solid var(--hairline); border-radius:16px; color:var(--t1); font-family:inherit;
+    cursor:pointer; transition:transform .16s var(--ease-out,ease), border-color .22s, background .22s;}
+  .ap-main:active{transform:scale(.986);}
+  .ap-card.on .ap-main{border-color:rgba(143,184,220,.45); background:var(--accent-soft);}
+  .ap-ic{width:44px; height:44px; min-width:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    background:var(--surface); color:var(--hl); transition:background .22s, color .22s;}
+  .ap-card.on .ap-ic{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
+  .ap-n{display:block; font-size:15.5px; font-weight:660; letter-spacing:-.015em; line-height:1.2;}
+  .ap-s{display:block; font-size:12px; color:var(--t2); line-height:1.4; margin-top:3px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ap-t{display:block; font-size:10px; color:var(--t3); margin-top:3px; letter-spacing:.02em;}
+  .ap-chk{width:26px; height:26px; min-width:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
+  .ap-edit{min-width:46px; display:flex; align-items:center; justify-content:center; border-radius:16px;
+    background:var(--s2); border:1px solid var(--hairline); color:var(--t2); cursor:pointer;
+    transition:transform .16s var(--ease-out,ease), color .2s;}
+  .ap-edit:active{transform:scale(.96);}
+  .ap-add{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:15px;
+    background:var(--surface); border:1px dashed rgba(169,196,222,.34); border-radius:16px; color:var(--t1);
+    font-family:inherit; cursor:pointer; transition:transform .16s var(--ease-out,ease), border-color .22s;}
+  .ap-add:active{transform:scale(.986);}
+  .ap-add.locked{border-style:solid; border-color:var(--hairline); background:var(--s2);}
+  .ap-add.locked .ap-n{color:var(--t2);}
+  .ap-plus{width:44px; height:44px; min-width:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    background:var(--surface-2); color:var(--hl);}
+  .ap-add.locked .ap-plus{color:var(--t3);}
   /* ===== Player: im Training zählt Tempo, nicht Vollständigkeit ===== */
   .pl-meta{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .pl-hint{font-family:var(--font-mono); font-size:12px; color:var(--hl); font-weight:600; white-space:nowrap;
@@ -3753,6 +3782,7 @@ function checkReferralRankUp(){
       <p class="sm t2" style="line-height:1.6">Aufstieg geschafft. Ab jetzt bekommst du <b style="color:var(--t1)">${Math.round(r.pct*100)} % Guthaben je geworbenem Freund</b> (als Pro-Zeit nutzbar oder auszahlbar) — deine Werbungen sind jetzt mehr wert.</p></div>`); }
 }
 const TEASER_TEXT={
+  multi_activity:{t:"Mehrere Aktivitäts-Profile",b:"Kraft, Abnehmen, Radfahren und Laufen als getrennte Profile — jedes mit eigenen Zielen, eigenen Tagen und eigener Oberfläche, umschaltbar mit einem Tipp. Körperdaten und Verläufe bleiben überall dieselben. Teil von PERFORMANCE."},
   multi_goal:{t:"Mehrere Ziele gleichzeitig",b:"Die Multi-Goal-Engine (bis zu 3 gewichtete Ziele inkl. Konflikt-Analyse) ist Teil von PERFORMANCE."},
   insights:{t:"Erweiterte Insights",b:"Dein Fortschrittstempo, Ernährungs-Treue und Warnungen zur Trainingsbelastung sind Teil von PERFORMANCE."},
   micro:{t:"Bekommt dein Körper, was er braucht?",b:"Die Schätzung deiner Vitamine & Mineralstoffe aus geloggten Lebensmitteln ist Teil von PERFORMANCE."},
@@ -5280,8 +5310,8 @@ function buildInsights(){
   const r7=S.readinessHistory.slice(-7);
   const th7=S.trainingHistory.filter(t=>Date.now()-new Date(t.date).getTime()<7*dayMs);
   const th14=S.trainingHistory.filter(t=>Date.now()-new Date(t.date).getTime()<14*dayMs);
-  // Volumen-Trend
-  if(S.trainingHistory.length>=6){
+  // Volumen-Trend (kg/Session) — ebenfalls Kraft-Sprache, für Ausdauer-Profile irrelevant.
+  if((()=>{ try{ return actUi()!=="endur"; }catch(e){ return true; } })()&&S.trainingHistory.length>=6){
     const old=S.trainingHistory.slice(0,Math.floor(S.trainingHistory.length/2));
     const recent=S.trainingHistory.slice(Math.floor(S.trainingHistory.length/2));
     const avgO=old.reduce((s,t)=>s+t.volume,0)/old.length, avgR=recent.reduce((s,t)=>s+t.volume,0)/recent.length;
@@ -5316,8 +5346,11 @@ function buildInsights(){
     const adh=Math.min(100,Math.round(th7.length/Math.max(1,plannedPerWeek)*100));
     if(adh<70) out.push({t:`Dranbleiber-Check: nur ${adh} % deiner geplanten Trainings diese Woche. Kürzere Sessions schlagen ausgefallene.`,conf:80,risk:true});
   }
-  // Volumen-Toleranz: 2 Wochen in Folge außerhalb MEV–MRV (min 4 Sessions Daten)
-  if(S.trainingHistory.length>=4){
+  /* Volumen-Toleranz: 2 Wochen in Folge außerhalb MEV–MRV (min 4 Sessions Daten).
+     Der MEV/MRV-Korridor ist ein Kraft-Konzept — einem Läufer „12 Sätze für Beine"
+     zu empfehlen wäre schlicht die falsche Sprache. Deshalb nur für Kraft-Profile. */
+  const _strengthUi=(()=>{ try{ return actUi()!=="endur"; }catch(e){ return true; } })();
+  if(_strengthUi&&S.trainingHistory.length>=4){
     const w0=weeklyMuscleSets(0), w1=weeklyMuscleSets(1);
     for(const [m,band] of Object.entries(VOL_BANDS)){
       const a0=w0[m]||0, a1=w1[m]||0;
@@ -6413,7 +6446,7 @@ function renderAppbar(){
     </button>
     <div style="flex:1;min-width:2px"></div>
     ${S.profile?(()=>{ const _c=actCurrent(), _m=actMeta(_c&&_c.type);
-      return `<button class="act-chip" onclick="A.actSheet()" aria-label="Aktivität wechseln — aktuell ${esc(_c?_c.name:_m.label)}">
+      return `<button class="act-chip" onclick="A.actOverview()" aria-label="Aktivitätsprofile — aktuell ${esc(_c?_c.name:_m.label)}">
         <span class="ic">${icon(_m.icon,14)}</span><span class="nm">${esc(_c?_c.name:_m.label)}</span>${icon("chevron",12)}</button>`; })():""}
     <button class="icon-btn" onclick="A.featureHub()" aria-label="Alle Funktionen — suchen & entdecken" style="position:relative">${icon("sparkle",16)}${S.seenHub?"":'<span class="fh-dot"></span>'}</button>
     <button class="icon-btn" onclick="A.openMenu()" aria-label="Menü">${icon("menu",16)}</button>
@@ -6433,6 +6466,8 @@ function renderAppbar(){
       return item("bell","Benachrichtigungen", n?`${n} ${n===1?"neuer Insight":"Insights"} aus deinen Daten`:"Noch keine Insights — sammle ein paar Tage Daten","A.notif()"); })()}
     ${item("message","Sag, was du willst","Ziel in eigenen Worten — die App passt Plan, Kalorien & Ausdauer sofort an","A.wishOpen()")}
     ${item("star",S.tier==="free"?"Plan entdecken":"Plan verwalten",S.tier==="free"?"Mehr aus deinen Zahlen holen":"Abo & Stufe verwalten","A.menuGo('pricing')")}
+    ${(()=>{ let n=1; try{ n=actList().length; }catch(e){}
+      return item("grid","Aktivitätsprofile", n>1?`${n} Profile — Kraft, Abnehmen, Rad, Laufen umschalten`:"Kraft, Abnehmen, Rad, Laufen — je eigene Ziele & Ansicht","A.actOverview()"); })()}
     ${item("bike","Ausdauer — Cycling & Running","Fahrten & Läufe importieren, Power/Zonen/Form analysieren","A.menuGo('endurance')")}
     ${item("sparkle","Alle Funktionen entdecken","Was die App alles kann — auf einen Blick","A.menuGo('features')")}
     ${item("play","Tour wiederholen","Geführte Durchführung der Funktionen","A.replayTour()")}
@@ -6480,6 +6515,11 @@ function actMeta(t){ return ACT_TYPES[t]||ACT_TYPES.gym; }
 function actUi(){ return actMeta((actCurrent()||{}).type).ui; }
 // Laufende Änderungen (z. B. über „Engine & Ziele anpassen") ins aktive Profil zurückschreiben.
 function actSyncBack(){ try{ const c=actCurrent(); if(c&&S.profile&&S.profile.a) c.cfg=actPick(S.profile.a); }catch(e){} }
+/* PAYWALL: Mehrere Aktivitäts-Profile sind das Kernkonzept von PERFORMANCE.
+   Der kostenlose Zugang behält genau ein Profil — vollwertig, aber eines.
+   Die Grenze wird überall EINMAL hier entschieden, nie im UI dupliziert. */
+function actMax(){ return S.tier==="free"?1:(S.tier==="elite"?8:3); }
+function actLocked(){ return actList().length>=actMax(); }
 function actDefaultGoals(t){ return t==="loss"?["fat_loss"]:(t==="cycling"||t==="running")?["endurance"]:t==="hybrid"?["muscle_gain","endurance"]:["muscle_gain"]; }
 /* Profil aktivieren: Absicht übernehmen → komplette Neuberechnung → passende Oberfläche. */
 function actApply(id){
@@ -6510,6 +6550,74 @@ function actApply(id){
   S.tab = actMeta(t.type).ui==="endur" ? "endurance" : "train";
   save();
 }
+/* =====================================================================
+   AKTIVITÄTSPROFIL-ÜBERSICHT — alle Profile auf einer Seite, Wechsel mit einem Tipp.
+   Zeigt je Profil, worauf es hinausläuft: Ziele, Tage, Oberfläche und die Kennzahl,
+   die für DIESE Absicht zählt (Kraft: Einheiten/Woche · Ausdauer: Zielwoche & Umfang).
+   Freie Plätze und gesperrte Plätze sind sichtbar — niemand rät, was der Tarif hergibt.
+   ===================================================================== */
+function actSummaryLine(x){
+  const m=actMeta(x.type);
+  try{
+    if(m.ui==="endur"){
+      const a=(S.profile&&S.profile.a)||{};
+      const merged=Object.assign({},a,x.cfg);
+      const saved=S.profile.a; S.profile.a=merged;
+      let txt="";
+      try{ const c=endurCfg(), wn=endurWeekNo(c), b=endurBuild(c)[wn-1];
+        const v=c.unit==="h"?b.vol.toFixed(1).replace(".",",")+" h":Math.round(b.vol)+" km";
+        txt=`${c.goal.label} · Woche ${wn}/${c.goal.weeks} · ${v}/Woche`; }
+      finally{ S.profile.a=saved; }
+      return txt;
+    }
+  }catch(e){}
+  const g=(x.cfg.goals||actDefaultGoals(x.type)).map(k=>GOAL_LABEL[k]||k).join(" · ");
+  return `${g} · ${x.cfg.days||4} Einheiten/Woche`;
+}
+function renderActivities(){
+  const l=actList(), cur=actCurrent(), max=actMax(), free=Math.max(0,max-l.length);
+  A.actBack=()=>{ S.tab=actUi()==="endur"?"endurance":"train"; save(); render(); };
+  root.innerHTML=`<div class="topbar">
+      <button class="back" onclick="A.actBack()" aria-label="Zurück">‹</button>
+      <span class="metric xs t2">${l.length} von ${max}</span></div>
+    <div class="fade">
+      <p class="label" style="margin:0 0 3px 1px">Aktivitätsprofile</p>
+      <h2 class="hz-h" style="margin:0 0 8px">Wofür trainierst du?</h2>
+      <p class="hint">Jedes Profil hat <b style="color:var(--t1)">eigene Ziele, eigene Tage und eine eigene Oberfläche</b>. Dein Körper, deine Gewichtskurve und alle Verläufe bleiben überall dieselben — du wechselst die Absicht, nicht den Menschen.</p>
+      <div class="stagger" style="margin-top:14px">
+      ${l.map((x,ix)=>{ const m=actMeta(x.type), on=x.id===S.actId;
+        return `<div class="ap-card ${on?"on":""}" style="--i:${ix}">
+          <button class="ap-main" onclick="A.actGo('${x.id}')" aria-label="${esc(x.name)} aktivieren">
+            <span class="ap-ic">${icon(m.icon,20)}</span>
+            <span style="flex:1;min-width:0">
+              <span class="ap-n">${esc(x.name)}${on?' <span class="badge volt" style="font-size:8px;vertical-align:middle">aktiv</span>':""}</span>
+              <span class="ap-s">${esc(actSummaryLine(x))}</span>
+              <span class="ap-t">${m.label} · ${m.ui==="endur"?"Ausdauer-Ansicht":"Kraft-Ansicht"}</span>
+            </span>
+            ${on?`<span class="ap-chk">${icon("check",15)}</span>`:`<span class="mi-chev">${icon("chevronR",16)}</span>`}
+          </button>
+          <button class="ap-edit" onclick="A.actEdit('${x.id}')" aria-label="${esc(x.name)} bearbeiten">${icon("settings",16)}</button>
+        </div>`; }).join("")}
+      ${free>0?`<button class="ap-add" style="--i:${l.length}" onclick="A.actNew()">
+        <span class="ap-plus">${icon("plus",18)}</span>
+        <span style="flex:1;min-width:0;text-align:left"><span class="ap-n">Aktivität hinzufügen</span>
+        <span class="ap-s">Noch ${free} ${free===1?"freier Platz":"freie Plätze"} in deinem Plan</span></span></button>`
+        :`<button class="ap-add locked" style="--i:${l.length}" onclick="A.showTeaser('multi_activity')">
+        <span class="ap-plus">${icon("lock",16)}</span>
+        <span style="flex:1;min-width:0;text-align:left"><span class="ap-n">Weitere Profile</span>
+        <span class="ap-s">${S.tier==="free"?"Mehrere Aktivitäts-Profile sind Teil von PERFORMANCE":"Du nutzt alle "+max+" Plätze deines Plans"}</span></span>
+        ${S.tier==="free"?`<span class="mi-chev">${icon("chevronR",16)}</span>`:""}</button>`}
+      </div>
+      ${S.actCapped?`<div class="card mt12" style="border-color:rgba(196,180,122,.45)">
+        <p class="sm" style="line-height:1.55">${icon("info",14)} Du hattest im Fragebogen <b style="color:var(--t1)">${S.actCapped} weitere ${S.actCapped===1?"Aktivität":"Aktivitäten"}</b> gewählt. Im kostenlosen Zugang legt METRICGYM ${max===1?"ein Profil":max+" Profile"} an — der Rest wartet auf dich, sobald du upgradest.</p>
+        <button class="btn volt mt8" onclick="A.showTeaser('multi_activity')">Was PERFORMANCE freischaltet</button>
+        <button class="btn ghost mt8" style="min-height:38px;font-size:12.5px" onclick="A.actDismissCap()">Verstanden, ausblenden</button></div>`:""}
+      <p class="xs t3" style="margin:16px 2px 0;line-height:1.5">Beim Wechsel rechnet dieselbe geprüfte Engine alles neu: Kalorien, Makros, Trainingsplan, Wochenplan und — bei Ausdauer — dein Athletenprofil. Kein zweites Regelwerk, keine doppelte Pflege.</p>
+    </div>`;
+}
+A.actDismissCap=()=>{ S.actCapped=0; save(); render(); };
+A.actOverview=()=>{ menuOpen=false; if(!S.profile){toast("Erst Onboarding abschließen");return;}
+  S.seenActs=true; S.tab="activities"; save(); render(); };
 /* ---- Umschalt-Sheet: aktive Aktivität wählen, neue anlegen, bestehende pflegen ---- */
 function renderActSheet(){
   const l=actList(), cur=actCurrent();
@@ -6538,7 +6646,9 @@ function renderActSheet(){
 }
 A.actSheet=()=>{ menuOpen=false; if(!S.profile){toast("Erst Onboarding abschließen");return;}
   S.seenActs=true; save(); renderActSheet(); };   // Startschritt „Aktivitäten kennen" abgehakt
-A.actGo=(id)=>{ if(id===S.actId){ overlay.innerHTML=""; render(); return; }
+// Abbrechen führt dorthin zurück, wo der Editor geöffnet wurde.
+A.actCancel=()=>{ _actDraft=null; overlay.innerHTML=""; if(S.tab==="activities")render(); else renderActSheet(); };
+A.actGo=(id)=>{ if(id===S.actId){ overlay.innerHTML=""; A.actBack?A.actBack():render(); return; }
   actApply(id); overlay.innerHTML=""; render();
   const c=actCurrent(); toast(`✓ ${c.name} aktiv — Plan, Kalorien & Ansicht angepasst`); };
 // Anlegen / Bearbeiten in einem Formular — Typ bestimmt die Oberfläche.
@@ -6576,7 +6686,7 @@ function renderActEdit(){
       <div class="chips mb12">${Object.entries(EQ_LABEL).map(([k,lb])=>`<button class="chip ${(d.equipment||"gym_full")===k?"sel":""}" onclick="A.actField('equipment','${k}')">${lb}</button>`).join("")}</div>`:""}
       <button class="btn volt mt8" onclick="A.actSave()">${icon("check",15)} ${isNew?"Anlegen & aktivieren":"Speichern & aktivieren"}</button>
       ${!isNew&&actList().length>1?`<button class="btn ghost mt8" style="color:var(--warn)" onclick="A.actDelete()">Diese Aktivität löschen</button>`:""}
-      <button class="btn mt8" onclick="A.actSheet()">Abbrechen</button>
+      <button class="btn mt8" onclick="A.actCancel()">Abbrechen</button>
     </div></div>`;
   const el=document.getElementById("act-name"); if(el&&isNew)setTimeout(()=>el.focus(),60);
 }
@@ -6593,7 +6703,8 @@ function actDraftDefaults(type){
   return { type, name:actMeta(type).label, goals:actDefaultGoals(type),
     days:endur?4:(a.days||4), equipment:a.equipment||"gym_full" };
 }
-A.actNew=()=>{ _actDraft=actDraftDefaults(actSuggestType()); renderActEdit(); };
+A.actNew=()=>{ if(actLocked()){ overlay.innerHTML=""; showUpgradeTeaser("multi_activity"); return; }
+  _actDraft=actDraftDefaults(actSuggestType()); renderActEdit(); };
 A.actEdit=(id)=>{ const x=actList().find(y=>y.id===id); if(!x)return;
   _actDraft={id:x.id,type:x.type,name:x.name,goals:(x.cfg.goals||actDefaultGoals(x.type)).slice(),
     days:x.cfg.days||4,equipment:x.cfg.equipment||"gym_full"}; renderActEdit(); };
@@ -6801,6 +6912,7 @@ function renderApp(){
   else if(S.tab==="pricing") renderPricing();
   else if(S.tab==="features") renderFeatureOverview();
   else if(S.tab==="endurance") renderEndurance();
+  else if(S.tab==="activities") renderActivities();
   else renderHome();
 }
 
@@ -7885,7 +7997,7 @@ function renderPersonaGate(){
       <span class="pi">${icon(actMeta(p.type).icon,14)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:13.5px;font-weight:640">${p.name}${i===0?' <span class="badge volt" style="font-size:8px;vertical-align:middle">aktiv</span>':""}</span>
       <span class="xs t2" style="display:block;line-height:1.35">${p.goals.map(g=>GOAL_LABEL[g]||g).join(" · ")} · ${actMeta(p.type).ui==="endur"?"Ausdauer-Ansicht":"Kraft-Ansicht"}</span></span></div>`).join("")}
-    <p class="xs t3" style="margin:8px 0 0;line-height:1.45">${plan.length>1?`${plan.length} Profile — unten als eigene Tabs, jederzeit umschaltbar. Körperdaten und Verläufe bleiben überall dieselben.`:"Du kannst später jederzeit weitere Aktivitäten anlegen."}${anyCap?" Mehrere Ziele gleichzeitig sind Teil von PERFORMANCE — vorerst zählt dein erstgenanntes Ziel.":""}</p>
+    <p class="xs t3" style="margin:8px 0 0;line-height:1.45">${plan.length>1?`${plan.length} Profile — unten als eigene Tabs, jederzeit umschaltbar. Körperdaten und Verläufe bleiben überall dieselben.`:"Du kannst später jederzeit weitere Aktivitäten anlegen."}${anyCap?" Mehrere Ziele gleichzeitig sind Teil von PERFORMANCE — vorerst zählt dein erstgenanntes Ziel.":""}${plan.length>actMax()?` Im kostenlosen Zugang wird <b style="color:var(--t1)">${actMax()===1?"ein Profil":actMax()+" Profile"}</b> angelegt (${plan[0].name}); mehrere Aktivitäts-Profile sind Teil von PERFORMANCE.`:""}</p>
   </div>`:"";
   root.innerHTML=onbBar(1,10,"Los geht’s")+`<div class="fade">
     <h2>Wofür bist du hier?</h2>
@@ -8180,8 +8292,11 @@ function renderOnboarding(){
           c.type=a.mode; c.cfg=actPick(a);
           if(!c.name||Object.values(ACT_TYPES).some(m=>m.label===c.name)) c.name=(_pl[0]&&_pl[0].name)||actMeta(a.mode).label;
         } else if(_pl.length){
+          // Mehrere Profile sind Teil von PERFORMANCE — gekappt wird sichtbar, nicht heimlich.
+          const _max=actMax(), _use=_pl.slice(0,_max);
+          if(_pl.length>_max) S.actCapped=_pl.length-_max;
           const t0=Date.now();
-          S.acts=_pl.map((pl,i)=>({ id:"a"+(t0+i).toString(36)+(i?String(i):""), name:pl.name, type:pl.type,
+          S.acts=_use.map((pl,i)=>({ id:"a"+(t0+i).toString(36)+(i?String(i):""), name:pl.name, type:pl.type,
             cfg: i===0 ? actPick(a) : personaSeedCfg(pl,a) }));
           S.actId=S.acts[0].id;
         }
@@ -8971,7 +9086,7 @@ function starterSteps(){
     {ic:"scale",t:"Zweimal wiegen",d:"Zwei Messungen im Abstand einiger Tage genügen.",
      un:["Kalorien-Abgleich","Stoffwechsel-Zwilling"],done:wl>=2,act:"A.q('profile')"},
     {ic:"grid",t:"Deine Aktivitäten kennen",d:"Kraft, Abnehmen, Rad, Laufen — jede mit eigenen Zielen und eigener Ansicht.",
-     un:["Profil-Umschalter","Eigene Tabs"],done:!!S.seenActs||acts>=2,act:"A.actSheet()"},
+     un:["Profil-Umschalter","Eigene Tabs"],done:!!S.seenActs||acts>=2,act:"A.actOverview()"},
     endur
       ? {ic:"push",t:"Drei Aktivitäten importieren",d:"GPX, TCX oder FIT aus Strava, Garmin, Wahoo, Komoot oder Zwift.",
          un:["Form-Kurve","TSS & Zonenverteilung","Entkopplung"],done:eActs>=3,act:"ENDUR.pick()"}
@@ -12692,6 +12807,78 @@ function developmentTrend(){
 // =====================================================================
 // ANALYTICS — niemals erfundene Werte, Daten-Gates pro Modul
 // =====================================================================
+/* =====================================================================
+   AUSDAUER-ANALYTICS — Analytics spricht die Sprache der aktiven Aktivität.
+   Ein Läufer hat keine MEV/MRV-Korridore und keine Sätze je Muskelgruppe.
+   Für ihn zählen zwei Dinge: der Wochenumfang gegen das Wochenziel des Plans
+   und die Verteilung locker/hart. Letztere ist das Ausdauer-Gegenstück zum
+   Volumen-Korridor: rund 80 % locker, 20 % hart (Seiler 2010) — messbar aus
+   dem Intensitätsfaktor der importierten Einheiten.
+   ===================================================================== */
+function endurAnalyticsHTML(){
+  let out="", cfg=null, acts=[];
+  try{ cfg=endurCfg(); acts=window.ENDUR.activities(); }catch(e){ return ""; }
+  const isRun=cfg.disc==="running", unit=isRun?"km":"h";
+  const val=(a)=>isRun?(a.dist/1000):(a.dur/3600);
+  const fmt=(v)=>v.toFixed(1).replace(/\.0$/,"").replace(".",",")+" "+unit;
+  const wn=endurWeekNo(cfg), plan=endurBuild(cfg)[wn-1]||{vol:cfg.cur,deload:false};
+
+  // ---- Wochenumfang: vier Wochen aus echten Dateien, dazu das Wochenziel des Plans ----
+  out+="§SEG:volumen§";
+  if(acts.length>=2){
+    const wks=[...Array(4)].map((_,i)=>{
+      const from=Date.now()-(4-i)*7*dayMs, to=Date.now()-(3-i)*7*dayMs;
+      return acts.filter(a=>a.start>=from&&a.start<to).reduce((s,a)=>s+val(a),0);
+    });
+    const maxW=Math.max(...wks,plan.vol,1), cur=wks[3];
+    const pct=plan.vol>0?Math.round(cur/plan.vol*100):0;
+    const line=Math.round(plan.vol/maxW*76);
+    const why=plan.deload
+      ? `Diese Woche ist <b style="color:var(--t1)">Entlastung</b> — weniger Umfang ist hier der Plan, kein Ausfall.`
+      : pct>=95 ? `Du liegst auf Kurs — <b style="color:var(--t1)">${pct} %</b> des Wochenziels sind gefahren bzw. gelaufen.`
+      : pct>=60 ? `<b style="color:var(--t1)">${pct} %</b> des Wochenziels erreicht — der Rest der Woche trägt den Aufbau.`
+      : `Erst <b style="color:var(--t1)">${pct} %</b> des Wochenziels. Nur importierte Dateien zählen hier mit.`;
+    out+=`<div class="card"><p class="ct" style="margin-bottom:14px">Dein Wochenumfang</p>
+      <div style="display:flex;align-items:flex-end;gap:10px;height:80px;padding:0 8px;position:relative">
+        <div style="position:absolute;left:8px;right:8px;bottom:${line}px;border-top:1px dashed rgba(169,196,222,.55);pointer-events:none"></div>
+        ${wks.map((v,i)=>`<div class="volbar" style="flex:1;height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C4DE,#6E93B8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(110,147,184,.45)":""};animation-delay:${i*0.08}s"></div>`).join("")}
+      </div>
+      <div style="display:flex;gap:10px;padding:0 8px;margin-top:6px">
+        ${wks.map((v,i)=>`<div style="flex:1;text-align:center"><p class="xs t2">W${i+1}</p><p class="metric xs" style="${i===3?"color:var(--hl)":""}">${v?fmt(v).replace(" "+unit,""):"0"}</p></div>`).join("")}
+      </div>
+      <p class="xs t2 mt8">Woche ${wn} von ${cfg.goal.weeks} · Ziel dieser Woche <b style="color:var(--t1)">${fmt(plan.vol)}</b> (gestrichelte Linie). ${why}</p></div>`;
+  } else out+=gateCard("Wochenumfang","2",acts.length,"Aktivitäten","Aktivität importieren","endurance");
+
+  // ---- Polarisierung: das Ausdauer-Gegenstück zum Volumen-Korridor ----
+  out+="§SEG:heatmap§";
+  const last28=acts.filter(a=>a.start>=Date.now()-28*dayMs);
+  const rated=last28.filter(a=>a.if!=null&&a.if>0);
+  if(rated.length>=4){
+    // Intensitätsfaktor als Trennschärfe: bis 0,75 locker, bis 0,90 Tempo/Schwelle, darüber hart.
+    let easy=0, mod=0, hard=0;
+    for(const a of rated){ if(a.if<=0.75)easy++; else if(a.if<=0.90)mod++; else hard++; }
+    const n=rated.length, pE=Math.round(easy/n*100), pM=Math.round(mod/n*100), pH=100-pE-pM;
+    const hardShare=pM+pH;
+    const verdict=hardShare<=12
+      ? ["Sehr locker unterwegs","Fast alles im Grundlagenbereich. Ein harter Reiz pro Woche würde Schwelle und VO₂max zusätzlich heben.","var(--info)"]
+      : hardShare<=28
+      ? ["Polarisiert — genau richtig","Deine Verteilung liegt im Bereich, in dem Ausdauersportler nachweislich am meisten gewinnen.","var(--volt)"]
+      : ["Zu viel im Mittelbereich","Zu viele Einheiten liegen zwischen locker und hart. Das kostet Erholung, ohne den Reiz einer echten harten Einheit zu setzen.","var(--danger)"];
+    out+=`<div class="card"><p class="ct">${icon("activity",14)} Deine Verteilung · letzte 4 Wochen</p>
+      <p class="xs t2 mb12">Wie viel deiner Zeit locker und wie viel hart war — das Ausdauer-Gegenstück zum Volumen-Korridor im Kraftplan.</p>
+      <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;margin-bottom:10px">
+        <div style="width:${pE}%;background:#7FA98F"></div>
+        <div style="width:${pM}%;background:#E0A341"></div>
+        <div style="width:${pH}%;background:#D08B6E"></div>
+      </div>
+      ${[["Locker · Grundlage",pE,"#7FA98F"],["Tempo / Schwelle",pM,"#E0A341"],["Hart · VO₂max",pH,"#D08B6E"]].map(([l,v,c])=>
+        `<div class="row" style="padding:4px 0"><span class="sm" style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:${c};display:inline-block"></span>${l}</span><span class="metric xs">${v} %</span></div>`).join("")}
+      <p class="sm mt12" style="font-weight:600;color:${verdict[2]}">${verdict[0]}</p>
+      <p class="xs t2" style="line-height:1.5;margin-top:3px">${verdict[1]} Zielkorridor: rund <b style="color:var(--t1)">80 % locker</b> zu <b style="color:var(--t1)">20 % hart</b>.<span class="e-src">Seiler 2010 · Int J Sports Physiol Perform</span></p>
+      <p class="xs t3" style="margin-top:8px">Aus ${n} ${n===1?"Einheit":"Einheiten"} mit Intensitätsdaten. Einheiten ohne Leistungs- oder Schwellenwert zählen nicht mit.</p></div>`;
+  } else out+=gateCard("Verteilung locker / hart","4",rated.length,"Einheiten mit Intensität","Aktivität importieren","endurance");
+  return out;
+}
 function gateCard(title,need,have,unit,ctaLabel,ctaTab){
   // FIX (v5/6B): need kam teils als String ("3"/"5") an — hart auf Number, sonst
   // rechnet `need-have` per Typkoersion zwar, aber `have/need` ist fragil.
@@ -12877,53 +13064,59 @@ function renderAnalytics(){
       ${consistencyHeatmap()}</div>`;
   }
 
+  /* Kraft-Segmente NUR für Kraft-Profile. Ein Läufer bekommt hier seinen Wochenumfang
+     und die Verteilung locker/hart statt Sätzen je Muskelgruppe — dieselbe Stelle,
+     die passende Sprache. */
+  if((()=>{ try{ return actUi()==="endur"; }catch(e){ return false; } })()){
+    html+=endurAnalyticsHTML();
+  } else {
   html+="§SEG:volumen§";
-  // Volumen
-  if(S.trainingHistory.length>=3){
-    const wks=[...Array(4)].map((_,i)=>{
-      const from=Date.now()-(4-i)*7*dayMs, to=Date.now()-(3-i)*7*dayMs;
-      return S.trainingHistory.filter(t=>{const x=new Date(t.date).getTime();return x>=from&&x<to;}).reduce((s,t)=>s+t.sets,0);
-    });
-    const maxW=Math.max(...wks,1);
-    const volWhy=S.currentWeek===4
-      ?`Grund: geplante ${LABELS.deload} (Woche 4 von 4) — bewusst weniger Sätze, kein Trainingsausfall.`
-      :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Sessions prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
-    html+=`<div class="card"><p class="ct" style="margin-bottom:14px">Dein Trainingsvolumen diese Woche</p>
-      <div style="display:flex;align-items:flex-end;gap:10px;height:80px;padding:0 8px">
-        ${wks.map((v,i)=>`<div class="volbar" style="flex:1;height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C4DE,#6E93B8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(110,147,184,.45)":""};animation-delay:${i*0.08}s"></div>`).join("")}
-      </div>
-      <div style="display:flex;gap:10px;padding:0 8px;margin-top:6px">
-        ${wks.map((v,i)=>`<div style="flex:1;text-align:center"><p class="xs t2">W${i+1}</p><p class="metric xs" style="${i===3?"color:var(--hl)":""}">${v}</p></div>`).join("")}
-      </div>
-      <p class="xs t2 mt8">${volWhy}</p></div>`;
-  } else html+=gateCard("Wochenvolumen","3",S.trainingHistory.length,"Sessions");
-
-  html+="§SEG:heatmap§";
-  // Muskelbalance: Sätze je Muskelgruppe diese Woche vs. optimaler Korridor (MEV–MRV)
-  if(allSets.length>=10){
-    const w0=weeklyMuscleSets(0);
-    const groups=Object.keys(VOL_BANDS).filter(m=>w0[m]>0);
-    if(groups.length){
-      html+=`<div class="card"><p class="ct">${icon("activity",14)} Deine Muskel-Heatmap · diese Woche ${infoBtn("volumeBand")}</p>
-        <p class="xs t2 mb12">Welcher Muskel wie viel Reiz bekommt — eingefärbt nach deinem optimalen Volumen-Korridor.</p>
-        ${muscleHeatBody()}
-        <p class="label" style="margin:16px 0 8px">Im Detail</p>
-        ${groups.map(m=>{
-          const v=w0[m]||0, [lo,hi]=VOL_BANDS[m];
-          const scale=Math.max(hi,v)*1.1;
-          const status=v<lo?["zu niedrig","var(--info)"]:v>hi?["zu hoch","var(--danger)"]:["optimal","var(--volt)"];
-          return `<div class="mb12"><div class="row mb4"><span class="sm" style="font-weight:600">${m}</span>
-            <span class="metric xs ${v<lo?"":v>hi?"danger-txt":"volt-txt"}">${v} Sätze · ${status[0]}</span></div>
-            <div style="position:relative;height:14px;background:var(--s3);border-radius:7px;overflow:hidden">
-              <div style="position:absolute;left:${lo/scale*100}%;width:${(hi-lo)/scale*100}%;top:0;bottom:0;background:rgba(143,184,220,.16)"></div>
-              <div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100,v/scale*100)}%;background:${status[1]};opacity:.8;border-radius:7px"></div>
-            </div>
-            <p class="xs t2" style="margin-top:3px">Optimal: ${lo}–${hi} Sätze/Woche</p></div>`;
-        }).join("")}
-      </div>`;
+    // Volumen
+    if(S.trainingHistory.length>=3){
+      const wks=[...Array(4)].map((_,i)=>{
+        const from=Date.now()-(4-i)*7*dayMs, to=Date.now()-(3-i)*7*dayMs;
+        return S.trainingHistory.filter(t=>{const x=new Date(t.date).getTime();return x>=from&&x<to;}).reduce((s,t)=>s+t.sets,0);
+      });
+      const maxW=Math.max(...wks,1);
+      const volWhy=S.currentWeek===4
+        ?`Grund: geplante ${LABELS.deload} (Woche 4 von 4) — bewusst weniger Sätze, kein Trainingsausfall.`
+        :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Sessions prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
+      html+=`<div class="card"><p class="ct" style="margin-bottom:14px">Dein Trainingsvolumen diese Woche</p>
+        <div style="display:flex;align-items:flex-end;gap:10px;height:80px;padding:0 8px">
+          ${wks.map((v,i)=>`<div class="volbar" style="flex:1;height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C4DE,#6E93B8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(110,147,184,.45)":""};animation-delay:${i*0.08}s"></div>`).join("")}
+        </div>
+        <div style="display:flex;gap:10px;padding:0 8px;margin-top:6px">
+          ${wks.map((v,i)=>`<div style="flex:1;text-align:center"><p class="xs t2">W${i+1}</p><p class="metric xs" style="${i===3?"color:var(--hl)":""}">${v}</p></div>`).join("")}
+        </div>
+        <p class="xs t2 mt8">${volWhy}</p></div>`;
+    } else html+=gateCard("Wochenvolumen","3",S.trainingHistory.length,"Sessions");
+  
+    html+="§SEG:heatmap§";
+    // Muskelbalance: Sätze je Muskelgruppe diese Woche vs. optimaler Korridor (MEV–MRV)
+    if(allSets.length>=10){
+      const w0=weeklyMuscleSets(0);
+      const groups=Object.keys(VOL_BANDS).filter(m=>w0[m]>0);
+      if(groups.length){
+        html+=`<div class="card"><p class="ct">${icon("activity",14)} Deine Muskel-Heatmap · diese Woche ${infoBtn("volumeBand")}</p>
+          <p class="xs t2 mb12">Welcher Muskel wie viel Reiz bekommt — eingefärbt nach deinem optimalen Volumen-Korridor.</p>
+          ${muscleHeatBody()}
+          <p class="label" style="margin:16px 0 8px">Im Detail</p>
+          ${groups.map(m=>{
+            const v=w0[m]||0, [lo,hi]=VOL_BANDS[m];
+            const scale=Math.max(hi,v)*1.1;
+            const status=v<lo?["zu niedrig","var(--info)"]:v>hi?["zu hoch","var(--danger)"]:["optimal","var(--volt)"];
+            return `<div class="mb12"><div class="row mb4"><span class="sm" style="font-weight:600">${m}</span>
+              <span class="metric xs ${v<lo?"":v>hi?"danger-txt":"volt-txt"}">${v} Sätze · ${status[0]}</span></div>
+              <div style="position:relative;height:14px;background:var(--s3);border-radius:7px;overflow:hidden">
+                <div style="position:absolute;left:${lo/scale*100}%;width:${(hi-lo)/scale*100}%;top:0;bottom:0;background:rgba(143,184,220,.16)"></div>
+                <div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100,v/scale*100)}%;background:${status[1]};opacity:.8;border-radius:7px"></div>
+              </div>
+              <p class="xs t2" style="margin-top:3px">Optimal: ${lo}–${hi} Sätze/Woche</p></div>`;
+          }).join("")}
+        </div>`;
+      }
     }
   }
-
   html+="§SEG:rpe§";
   // RPE
   if(allSets.length>=10){

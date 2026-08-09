@@ -514,6 +514,70 @@ check('Player: Loggen aktualisiert Punkte, Liste und Button weiterhin in-place',
   play.after.dots === 1 && play.after.rows === 1 && /Satz 2 von/.test(play.after.cta), JSON.stringify(play.after));
 check('Player: Schnell-Eintrag klappt den Bereich automatisch auf', play.bulkOpen, '');
 
+// ---------- 18) Analytics spricht die Sprache der aktiven Aktivität (R-2) ----------
+const r2 = await page.evaluate(() => {
+  A.devModeMenu(); S.tier = 'pro'; S.acts = null; S.actId = null; S.profile.a.mode = 'gym'; save(); actList();
+  S.tab = 'analytics'; save(); render();
+  const gym = document.body.innerText;
+  A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave(); A.closeModal();
+  S.profile.a.run_goal = 'half'; S.profile.a.run_km = 30; S.profile.a.run_pace = 315;
+  window.ENDUR.st().athlete.running.thrSet = true; S.endurStart = Date.now();
+  S.tab = 'analytics'; save(); render();
+  const run = document.body.innerText;
+  const has = (t, s) => new RegExp(t, 'i').test(s);
+  return {
+    gymVol: has('Trainingsvolumen', gym), gymHeat: has('Muskel-Heatmap', gym),
+    runVol: has('Trainingsvolumen', run), runHeat: has('Muskel-Heatmap', run),
+    runMev: has('MEV|MRV|Volumen-Korridor|Sätze/Woche', run),
+    runUmfang: has('Wochenumfang', run), runVerteilung: has('Verteilung locker', run),
+  };
+});
+check('Analytics: Kraft-Profil behält Trainingsvolumen und Muskel-Heatmap',
+  r2.gymVol && r2.gymHeat, JSON.stringify({ vol: r2.gymVol, heat: r2.gymHeat }));
+check('Analytics: Ausdauer-Profil sieht keine Sätze, kein MEV/MRV, keine Muskel-Heatmap',
+  !r2.runVol && !r2.runHeat && !r2.runMev, JSON.stringify({ vol: r2.runVol, heat: r2.runHeat, mev: r2.runMev }));
+check('Analytics: Ausdauer-Profil bekommt Wochenumfang und Verteilung locker/hart',
+  r2.runUmfang && r2.runVerteilung, JSON.stringify({ umfang: r2.runUmfang, verteilung: r2.runVerteilung }));
+
+// ---------- 19) Aktivitätsprofil-Übersicht + Paywall ----------
+const ov = await page.evaluate(() => {
+  // PRO: mehrere Profile, Übersicht listet sie mit ihrer je eigenen Kennzahl
+  S.tier = 'pro'; save(); A.actOverview();
+  const proMax = actMax(), cards = document.querySelectorAll('.ap-card').length;
+  const addFree = !!document.querySelector('.ap-add:not(.locked)');
+  const txt = document.body.innerText;
+  const endurLine = /Woche \d+\/\d+/.test(txt);            // Ausdauer-Profil zeigt Zielwoche
+  const gymLine = /Einheiten\/Woche/.test(txt);            // Kraft-Profil zeigt Einheiten
+  // Wechsel direkt aus der Übersicht
+  const r = actList().find(x => x.type === 'running'); A.actGo(r.id);
+  const switched = { tab: S.tab, ui: actUi() };
+  // FREE: gekappt, gesperrt, Paywall statt Editor
+  S.tier = 'free'; S.acts = null; S.actId = null; S.profile.a.mode = 'gym'; save(); actList();
+  A.actOverview();
+  const freeMax = actMax(), lockedCard = !!document.querySelector('.ap-add.locked');
+  const nBefore = actList().length;
+  A.actNew();
+  const paywallShown = /Aktivitäts-Profile/i.test(document.body.innerText) && !document.getElementById('act-name');
+  const nAfter = actList().length;
+  A.closeModal();
+  // ELITE über Konto-Freischaltung
+  S.tier = 'free'; S.users[S.currentUser].email = 'aerion.online@gmail.com';
+  window.METRICGYM_CONFIG = Object.assign({}, window.METRICGYM_CONFIG, { eliteAccounts: ['aerion.online@gmail.com'] });
+  S.tab = 'home'; save(); render();
+  const granted = { tier: S.tier, max: actMax() };
+  return { proMax, cards, addFree, endurLine, gymLine, switched, freeMax, lockedCard, nBefore, nAfter, paywallShown, granted };
+});
+check('Übersicht: listet alle Profile mit ihrer je eigenen Kennzahl',
+  ov.cards === 2 && ov.endurLine && ov.gymLine, JSON.stringify({ karten: ov.cards, ausdauer: ov.endurLine, kraft: ov.gymLine }));
+check('Übersicht: Wechsel direkt aus der Liste schaltet die Oberfläche um',
+  ov.switched.tab === 'endurance' && ov.switched.ui === 'endur', JSON.stringify(ov.switched));
+check('Paywall: kostenloser Zugang bekommt genau ein Profil',
+  ov.freeMax === 1 && ov.lockedCard && ov.nBefore === 1, JSON.stringify({ max: ov.freeMax, gesperrt: ov.lockedCard }));
+check('Paywall: „Aktivität hinzufügen" zeigt die Paywall statt des Editors — kein Profil entsteht',
+  ov.paywallShown && ov.nAfter === ov.nBefore, JSON.stringify({ paywall: ov.paywallShown, vorher: ov.nBefore, nachher: ov.nAfter }));
+check('Paywall: PERFORMANCE gibt 3 Plätze, freigeschaltetes Konto bekommt ELITE',
+  ov.proMax === 3 && ov.granted.tier === 'elite' && ov.granted.max === 8, JSON.stringify({ pro: ov.proMax, konto: ov.granted }));
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

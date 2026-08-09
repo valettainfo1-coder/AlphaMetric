@@ -26,7 +26,7 @@ window.METRICGYM_CONFIG = {
 
   /* Konten mit dauerhaftem ELITE-Zugang (z. B. Gründer, Familie, Presse).
      Wird beim Login/App-Start geprüft — Klein-/Großschreibung egal. */
-  eliteAccounts: ["lovisstumpfe@icloud.com"],
+  eliteAccounts: ["lovisstumpfe@icloud.com", "aerion.online@gmail.com"],
 
   /* Cloud-Sync pro Konto. anon-Key ist öffentlich – Schutz erfolgt über RLS. */
   supabaseUrl: "https://nsdziafvhhzuuhrctozl.supabase.co",
