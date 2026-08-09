@@ -893,9 +893,40 @@ Rückmeldung war eindeutig — zu wenig immersiv, zu wenig Oura-Niveau. Umgesetz
   Funktion und Markup restlos raus (37 Zeilen).
 - Leeres „SEKUNDÄR —" wird nicht mehr gerendert, wenn eine Variante keine Nebenmuskeln hat.
 
+## §52 — Vierte Suite: der UI-Wächter
+Drei Suiten meldeten grün, während die Kopfzeile 154 px aus dem Bildschirm ragte und ein
+Varianten-Umschalter folgenlos war. Grund: 179 Prüfungen testeten **Zustand**, keine
+einzige **Aussehen**. `tests/ui-guard-tests.mjs` schließt genau diese Lücke.
+
+- **Block 0 · Selbsttest.** Jedes Messgerät wird zuerst gegen einen bekannt-wahren *und*
+  einen bekannt-falschen Fall geprüft. Schlägt er fehl, bricht die Suite ab, statt grün zu
+  lügen. Er hat sofort angeschlagen — mein erster Überlauf-Detektor war falsch gebaut.
+- **Block 1 · Layout-Invarianten.** 16 Screens × 4 Breiten (320–430 px): kein Element ragt
+  aus seinem Container, keine Seite scrollt horizontal. Bewusste Ausnahmen (scrollende oder
+  abschneidende Container, absolut positionierte Deko, gedrehte Elemente) sind begründet
+  übersprungen.
+- **Block 2 · Differenz.** Wo der Nutzer wählen kann, muss die Wahl etwas ändern —
+  Muskeltext und Körperkarte werden **getrennt** geprüft, sonst deckt eine Änderung die
+  andere zu.
+- **Block 3 · Persona-Durchläufe.** Fünf Personas durch alle Tabs: kein leerer Screen
+  (gemessen am Inhaltsbereich, nicht am Body), keine Fremdsprache (ein Läufer liest nie
+  „MEV" oder „Sätze/Woche"), keine Roh-Artefakte (`undefined`, `NaN`, `[object Object]`).
+
+**Mutationsprobe.** Die vier Original-Bugs wurden absichtlich wieder eingebaut; alle vier
+werden gefangen. Zwei davon erst, nachdem die Probe **Löcher im Wächter selbst** aufdeckte:
+die verschmolzene Varianten-Signatur und die Leer-Messung am Body statt am Inhaltsbereich.
+
+**Dabei gefundene und behobene Layoutfehler** (alle vorher unbemerkt):
+Session-Anatomie-Zeilen und Player-Steppzellen ragten auf schmalen Geräten aus der Karte
+(fehlendes `min-width:0`, feste Knopfbreiten), Diagramme waren breiter als ihr Kasten,
+der Scheiben-Knopf schob sich per negativem Rand hinaus, und die Preiszeile lief bei
+320 px um 72 px über. Zusätzlich sind zwei unbelegte Varianten-Behauptungen korrigiert:
+Varianten tragen jetzt `kind` — „andere Muskeln" oder „gleiche Muskeln, anderer Reiz" —
+und die App sagt das ausdrücklich, statt eine unveränderte Körperkarte unkommentiert zu lassen.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v31** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v32** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

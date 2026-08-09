@@ -369,7 +369,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Das Drücken ist keine reine Skalierung, sondern ein echtes Eindrücken (Schatten kollabiert). */
   .btn{
     position:relative; overflow:hidden; isolation:isolate;
-    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-width:0;
     min-height:54px; border-radius:999px; border:none;
     background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.055) 62%, rgba(255,255,255,.03));
     color:var(--t1); font-size:15.5px; font-weight:600; letter-spacing:-.005em;
@@ -622,7 +622,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   body.overlay-open .tabbar, body.overlay-open .fab{opacity:0; pointer-events:none; visibility:hidden;}
   .coach-panel{position:fixed; bottom:104px; right:12px; left:12px; max-width:406px; margin:0 auto; z-index:50;}
 
-  .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0;}
   .stepper{display:flex; align-items:center; gap:4px;}
   .stepper button{width:44px; height:44px; border-radius:999px; background:var(--surface); color:var(--t1);
     border:1px solid var(--hairline); font-size:20px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.05);}
@@ -891,22 +891,39 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lcells{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px;}
   .lcell{background:var(--s2); border-radius:16px; padding:12px 10px 9px; text-align:center; box-shadow:inset 0 1px 0 var(--edge);}
   .lcell-l{font-size:9.5px; font-weight:650; letter-spacing:.13em; text-transform:uppercase; color:var(--t3); margin:0 0 8px;}
-  .lcell-row{display:flex; align-items:center; justify-content:center; gap:4px;}
-  .lcell-row>button{width:38px; height:42px; border:none; border-radius:13px; background:rgba(255,255,255,.07);
-    color:var(--t1); font-size:21px; line-height:1; cursor:pointer; font-family:inherit; flex-shrink:0;
-    box-shadow:inset 0 1px 0 var(--edge);}
+  .lcell-row{display:flex; align-items:center; justify-content:center; gap:4px; min-width:0;}
+  /* Statt fester Breite: Wunschmaß 38 px, darf aber bis 28 px schrumpfen. Damit passt die
+     Zelle auf jedem Gerät, ohne dass eine Breite per Media-Query geraten werden muss. */
+  .lcell-row>button{flex:0 1 38px; min-width:28px; height:42px; border:none; border-radius:13px;
+    background:rgba(255,255,255,.07); color:var(--t1); font-size:21px; line-height:1; cursor:pointer;
+    font-family:inherit; box-shadow:inset 0 1px 0 var(--edge);}
   .lcell-row>button:active{transform:scale(.94); background:rgba(255,255,255,.12);}
-  .lcell-row input{flex:1; min-width:54px; width:auto; background:none; border:none; color:var(--t1); font-size:23px; font-weight:300;
+  .lcell-row input{flex:1 1 auto; min-width:0; width:auto; background:none; border:none; color:var(--t1); font-size:23px; font-weight:300;
     text-align:center; font-variant-numeric:tabular-nums; font-family:var(--font-hero); padding:0 2px; min-height:42px;}
+  /* Zwei 38-px-Knöpfe plus Eingabefeld passen bei 320 px nicht mehr in eine halbe Zeile.
+     Statt überzulaufen werden Knöpfe, Feld und Abstände dort proportional kleiner. */
+  @media (max-width:360px){
+    .lcells{gap:7px}
+    .lcell{padding:11px 6px 8px}
+    .lcell-row>button{height:38px; font-size:18px; border-radius:11px}
+    .lcell-row input{font-size:19px}
+    .lcell-l{letter-spacing:.08em}
+  }
   .lcell-hint{font-size:10.5px; color:var(--t3); margin:7px 0 0; min-height:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   /* Session-Anatomie: Körper + Fokus-Liste in einer ruhigen Fläche */
   .sess-anat{display:flex; gap:16px; align-items:center; background:var(--s2); border-radius:18px; padding:14px;
     box-shadow:inset 0 1px 0 var(--edge);}
-  .sa-bodies{display:flex; gap:6px; flex-shrink:0;}
+  .sa-bodies{display:flex; gap:6px; flex-shrink:0; min-width:0;}
+  @media (max-width:360px){ .sess-anat{gap:10px; padding:12px 10px} .sess-anat .mg-svg{width:58px; height:118px} }
   .sess-anat .mg-svg{width:72px; height:146px;}
   .sess-anat .sa-bodies p{display:none;}
   .sa-list{flex:1; min-width:0; display:flex; flex-direction:column; gap:11px;}
-  .sa-row{position:relative; display:flex; justify-content:space-between; font-size:13px; color:var(--t2); padding-bottom:8px;}
+  .sa-row{position:relative; display:flex; justify-content:space-between; gap:8px; min-width:0;
+    font-size:13px; color:var(--t2); padding-bottom:8px;}
+  /* Ohne min-width:0 können Flex-Kinder nicht unter ihre Inhaltsbreite schrumpfen und
+     ragen auf schmalen Geräten aus der Karte. Der Muskelname kürzt, die Zahl bleibt ganz. */
+  .sa-row>span:first-child{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .sa-row>span+span{flex-shrink:0;}
   .sa-row .metric{color:var(--t1);}
   .sa-row i{position:absolute; left:0; bottom:0; height:2px; border-radius:2px;
     background:linear-gradient(90deg,#8FB8DC,rgba(143,184,220,.15));}
@@ -1262,8 +1279,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .hz-kick{font-size:10.5px; font-weight:650; letter-spacing:.18em; text-transform:uppercase; color:var(--hz-k); margin-bottom:12px;}
   .hz-h{font-family:var(--font-serif); font-size:33px; font-weight:560; font-optical-sizing:auto; letter-spacing:-.015em; line-height:1.12; margin:0 0 8px; color:var(--t1);}
   .hz-sub{font-size:15px; line-height:1.6; color:var(--t2); max-width:36ch;}
-  .hz-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:22px;}
-  .hz-stat{background:rgba(255,255,255,.06); border-radius:18px; padding:14px 6px 12px; text-align:center;
+  /* Grundregel für jedes eingebettete Bild: nie breiter als sein Kasten. */
+  svg, canvas, img{max-width:100%;}
+  .hz-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:22px;}
+  .hz-stat{min-width:0; background:rgba(255,255,255,.06); border-radius:18px; padding:14px 6px 12px; text-align:center;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 4px 16px rgba(0,0,0,.25);}
   .hz-stat .v{font-family:var(--font-hero); font-size:26px; font-weight:300; letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; color:var(--t1);}
   .hz-stat .v em{font-style:normal; font-size:14px; font-weight:400; color:var(--t2);}
@@ -10598,8 +10617,11 @@ const GRIP_VARIANTS={
     {n:"Weiter Obergriff",act:{p:["traps","reardelts"],s:["lats","forearm"]},why:"Oberer Rücken & hintere Schulter, mehr Dicke."},
   ],
   "Trizepsdrücken":[
-    {n:"Seil",act:{p:["triceps"],s:[]},why:"Volle Streckung + Spreizen am Ende — langer Trizepskopf."},
-    {n:"Gerade Stange",act:{p:["triceps"],s:[]},why:"Mehr Last möglich, Fokus seitlicher/medialer Kopf."},
+    /* Beide treffen denselben Muskel — welcher Kopf wie stark beteiligt ist, lässt sich
+       über die Griffart nicht seriös steuern. Der Unterschied liegt in Bewegungsumfang
+       und ladbarem Gewicht, und genau das steht auch da. */
+    {n:"Seil",act:{p:["triceps"],s:[]},kind:"load",why:"Größerer Bewegungsumfang, am Ende auseinanderziehen."},
+    {n:"Gerade Stange",act:{p:["triceps"],s:[]},kind:"load",why:"Stabiler geführt, mehr Gewicht ladbar."},
   ],
   "Bankdrücken":[
     {n:"Flachbank",act:{p:["chest"],s:["delts","triceps"]},why:"Ganze Brust gleichmäßig — der Standard für Brustdicke."},
@@ -10613,7 +10635,7 @@ const GRIP_VARIANTS={
   ],
   "Schulterdrücken":[
     {n:"Frontal (Standard)",act:{p:["delts"],s:["triceps","traps"]},why:"Vordere & mittlere Schulter, viel Last möglich."},
-    {n:"Neutralgriff",act:{p:["delts"],s:["triceps","traps"]},why:"Schulterfreundlicher, etwas mehr vordere Schulter."},
+    {n:"Neutralgriff",act:{p:["delts"],s:["triceps","traps"]},kind:"load",why:"Dieselbe Muskulatur, gelenkschonendere Bahn — die erste Wahl bei empfindlichen Schultern."},
   ],
   "Seitheben":[
     {n:"Strikt seitlich",act:{p:["delts"],s:[]},why:"Maximale Isolation der seitlichen Schulter → Breite."},
@@ -10647,7 +10669,7 @@ const GRIP_VARIANTS={
   "Bizeps-Curls":[
     {n:"Untergriff",act:{p:["biceps"],s:["forearm"]},why:"Voller Bizeps-Reiz, maximale Kontraktion."},
     {n:"Hammer (neutral)",act:{p:["biceps","forearm"],s:[]},why:"Mehr Brachialis & Unterarm → dickerer Arm."},
-    {n:"Schrägbank",act:{p:["biceps"],s:["forearm"]},why:"Arbeit in voller Dehnung des langen Kopfes.",
+    {n:"Schrägbank",act:{p:["biceps"],s:["forearm"]},kind:"load",why:"Dieselbe Muskulatur, aber in voller Dehnung des langen Kopfes.",
      src:"Training in gedehnter Position bringt messbar mehr Wachstum als in verkürzter (Wolf et al. 2024)."},
   ],
 };
@@ -10811,7 +10833,9 @@ function exDetailModal(name,gi){
             <div style="display:flex;flex-wrap:wrap;gap:4px">${d.tempo?`<span class="statchip">Tempo ${d.tempo}</span>`:""}${d.rir&&d.rir!=="–"?`<span class="statchip">${d.rir} in Reserve</span>`:""}${d.lengthened?'<span class="statchip">Volle Dehnung</span>':""}</div>
           </div>
         </div>
-        ${variants?`<p class="xs t2" style="line-height:1.5;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}${variants[gi].src?`<span style="display:block;color:var(--t3);margin-top:4px">${variants[gi].src}</span>`:""}</p>`:""}
+        ${variants?`<p class="xs t2" style="line-height:1.5;margin-top:8px"><b style="color:var(--hl)">${variants[gi].n}:</b> ${variants[gi].why}${
+          variants[gi].kind==="load"?` <span class="statchip" style="margin:0 0 0 2px;color:var(--t3)">gleiche Muskeln · anderer Reiz</span>`:""}${
+          variants[gi].src?`<span style="display:block;color:var(--t3);margin-top:4px">${variants[gi].src}</span>`:""}</p>`:""}
       </div>`}
     ${inf.cues&&inf.cues.length?`<div class="card" style="background:var(--s2);padding:12px;margin-bottom:10px">
       <p class="label" style="margin-bottom:8px">So führst du sie aus</p>
@@ -12540,7 +12564,7 @@ function renderPlayer(){
       })():`
       <div class="lcells mb8">
         <div class="lcell">
-          <p class="lcell-l" style="display:flex;align-items:center;justify-content:space-between">Gewicht · kg${(EXDB[name]||{}).eq==="barbell"?`<button class="iconbtn" style="min-width:30px;min-height:30px;margin:-6px -4px -6px 0" onclick="A.plateCalc()" aria-label="Scheiben-Rechner">${icon("scale",14)}</button>`:""}</p>
+          <p class="lcell-l" style="display:flex;align-items:center;justify-content:space-between">Gewicht · kg${(EXDB[name]||{}).eq==="barbell"?`<button class="iconbtn" style="min-width:30px;min-height:30px;margin:-6px 0 -6px 0;flex-shrink:0" onclick="A.plateCalc()" aria-label="Scheiben-Rechner">${icon("scale",14)}</button>`:""}</p>
           <div class="lcell-row"><button onclick="A.stepW(-1)" aria-label="Gewicht verringern">−</button><input id="pw-in" type="number" inputmode="decimal" step="${wStep}" value="${pw}" onchange="A.setW(this.value)" onfocus="this.select()" aria-label="Gewicht in kg"><button onclick="A.stepW(1)" aria-label="Gewicht erhöhen">+</button></div>
           <p id="platehint" class="lcell-hint">${plateHint(name,pw)}</p>
         </div>
@@ -13918,8 +13942,10 @@ function renderPricing(){
       : `<button class="btn mt16" onclick="A.confirmUpgrade('${t}')">Wechseln</button>`;
     return `<div class="tier-card ${featured?"featured":""}">
       ${featured?'<span class="badge volt" style="position:absolute;top:-11px;left:20px">Beliebteste Wahl</span>':""}
-      <div class="row mb8" style="align-items:flex-start"><p class="display-m">${TIER_LABEL[t]}</p>
-        <div style="text-align:right"><p class="metric" style="font-size:20px;white-space:nowrap">${tierPriceLabel(t,b)}</p>
+      <!-- Preisblock: Der Preis darf nie umbrechen, der Tarifname darf schrumpfen. Wird es
+           zu eng, rutscht der Preis auf eine eigene Zeile, statt aus der Karte zu ragen. -->
+      <div class="row mb8" style="align-items:flex-start;flex-wrap:wrap;row-gap:2px"><p class="display-m" style="min-width:0">${TIER_LABEL[t]}</p>
+        <div style="text-align:right;margin-left:auto"><p class="metric" style="font-size:20px;white-space:nowrap">${tierPriceLabel(t,b)}</p>
         ${t!=="free"?`<p class="xs volt-txt" style="white-space:nowrap">${perDayLabel(t,b)}</p>`:""}
         ${t!=="free"&&b==="yearly"?`<p class="xs t2" style="white-space:nowrap">${freeMonths(t)} Monate geschenkt</p>`:""}</div></div>
       ${feats[t].map(f=>`<div class="tier-feat"><span>${f.startsWith("Alles aus")?"":"✓"}</span><span style="${f.startsWith("Alles aus")?"color:var(--t2);font-weight:600":""}">${f}</span></div>`).join("")}
@@ -13938,7 +13964,7 @@ function renderPricing(){
     ${trialBanner}${founding}
     <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
       <button class="btn ${b==="monthly"?"volt":"ghost"}" style="min-height:40px;flex:1;white-space:nowrap" onclick="A.billing('monthly')">Monatlich</button>
-      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px;flex:1;white-space:nowrap;font-size:13.5px;gap:6px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="font-size:8.5px;padding:1px 6px">2 Monate gratis</span></button></div>
+      <button class="btn ${b==="yearly"?"volt":"ghost"}" style="min-height:40px;flex:1;min-width:0;font-size:13.5px;gap:5px;padding:0 8px" onclick="A.billing('yearly')">Jährlich <span class="badge ${b==="yearly"?"mute":"volt"}" style="font-size:8.5px;padding:1px 6px">2 Monate gratis</span></button></div>
     ${card("free",false)}
     ${card("pro",true)}
     ${card("elite",false)}
