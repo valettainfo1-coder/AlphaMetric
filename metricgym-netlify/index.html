@@ -262,6 +262,15 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .ap-plus{width:44px; height:44px; min-width:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
     background:var(--surface-2); color:var(--hl);}
   .ap-add.locked .ap-plus{color:var(--t3);}
+  .act-nag{border-color:rgba(169,196,222,.42); background:linear-gradient(165deg,rgba(110,147,184,.13),transparent 62%);}
+  .act-auto{border-color:var(--hairline);}
+  .act-auto.on{border-color:rgba(143,184,220,.4); background:var(--accent-soft);}
+  .ap-sw{width:42px; height:25px; min-width:42px; border-radius:999px; background:var(--surface-2);
+    display:flex; align-items:center; padding:3px; transition:background .22s; align-self:center;}
+  .ap-sw>i{width:19px; height:19px; border-radius:50%; background:var(--t3); display:block;
+    transition:transform .22s var(--spring), background .22s;}
+  .ap-sw.on{background:linear-gradient(135deg,#6E93B8,#8FB8DC);}
+  .ap-sw.on>i{transform:translateX(17px); background:#fff;}
   /* ===== Player: im Training zählt Tempo, nicht Vollständigkeit ===== */
   .pl-meta{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .pl-hint{font-family:var(--font-mono); font-size:12px; color:var(--hl); font-weight:600; white-space:nowrap;
@@ -6536,7 +6545,19 @@ function actCurrent(){ const l=actList(); return l.find(x=>x.id===S.actId)||l[0]
 function actMeta(t){ return ACT_TYPES[t]||ACT_TYPES.gym; }
 function actUi(){ return actMeta((actCurrent()||{}).type).ui; }
 // Laufende Änderungen (z. B. über „Engine & Ziele anpassen") ins aktive Profil zurückschreiben.
-function actSyncBack(){ try{ const c=actCurrent(); if(c&&S.profile&&S.profile.a) c.cfg=actPick(S.profile.a); }catch(e){} }
+/* Was zu EINEM Profil gehört — und beim Wechsel mitgenommen werden muss.
+   Ein Kontextwechsel darf niemals Arbeit vernichten: wer Übungen getauscht oder seinen
+   Wochenplan selbst gelegt hat, findet beides beim Zurückschalten unverändert vor.
+   Der Deload-Zyklus (currentWeek/blockNum) gehört ebenfalls zum Trainingsblock — die
+   Entlastungswoche des Kraftplans hat im Radprofil nichts zu suchen.
+   Muskelkater bleibt bewusst GETEILT: der Körper ist derselbe Mensch. */
+const ACT_STATE=["schedule","exOverrides","currentWeek","rotationPos","planMode","blockNum","rotation"];
+function actStateGrab(){ const o={}; for(const k of ACT_STATE) o[k]=(S[k]===undefined?null:JSON.parse(JSON.stringify(S[k]??null))); return o; }
+function actStatePut(st){ if(!st) return false;
+  for(const k of ACT_STATE) if(st[k]!==undefined&&st[k]!==null) S[k]=JSON.parse(JSON.stringify(st[k]));
+  return true; }
+function actSyncBack(){ try{ const c=actCurrent();
+  if(c&&S.profile&&S.profile.a){ c.cfg=actPick(S.profile.a); c.st=actStateGrab(); } }catch(e){} }
 /* PAYWALL: Mehrere Aktivitäts-Profile sind das Kernkonzept von PERFORMANCE.
    Der kostenlose Zugang behält genau ein Profil — vollwertig, aber eines.
    Die Grenze wird überall EINMAL hier entschieden, nie im UI dupliziert. */
@@ -6562,8 +6583,13 @@ function actApply(id){
   p.tg=multiTargets(a,p.bmr,p.td);
   S.plan=generateTrainingPlan(p); S.planB=generateTrainingPlan(p,"B"); S.rotation=null;
   const opt=generateOptimalSchedule(a);
-  S.schedule=opt.schedule.slice(); S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
-  S.exOverrides={};
+  S.scheduleSuggestion=opt.schedule; S.scheduleRationale=opt.rationale;
+  /* Frisches Profil → Vorschlag der Engine. Bekanntes Profil → exakt der Stand, den der
+     Nutzer dort verlassen hat. Sein Wochenplan und seine Übungstausche gehören ihm. */
+  if(!actStatePut(t.st)){
+    S.schedule=opt.schedule.slice(); S.exOverrides={};
+    S.currentWeek=1; S.rotationPos=0; S.planMode="week"; S.rotation=null;
+  }
   try{ if(window.ENDUR){ const en=window.ENDUR.st();
     if(t.type==="cycling") en.sport="cycling";
     else if(t.type==="running") en.sport="running";
@@ -6571,6 +6597,62 @@ function actApply(id){
     if(a.weight) en.athlete.weight=a.weight; } }catch(e){}
   S.tab = actMeta(t.type).ui==="endur" ? "endurance" : "train";
   save();
+}
+/* =====================================================================
+   AUTOMATIK — das Profil folgt dem Wochenplan.
+   Der Kalender weiß längst, dass Montag Kraft und Dienstag Laufen ist. Statt den
+   Nutzer daran zu erinnern, umzuschalten, schlägt die App den Wechsel selbst vor.
+   Voreinstellung ist der VORSCHLAG, nicht der automatische Wechsel — entschieden wird
+   nur, was der Nutzer wirklich entscheiden will. Wer die Automatik einschaltet, bekommt
+   den Wechsel beiläufig erledigt und kann ihn mit einem Tipp zurücknehmen.
+   ===================================================================== */
+// Was steht heute in DIESEM Profil an? Rechnet auf einer Kopie, ohne den aktiven Zustand
+// anzufassen — sonst würde die Vorschau den laufenden Plan verändern.
+function actTodayKind(x){
+  const dow=(new Date().getDay()+6)%7;
+  try{
+    if(actMeta(x.type).ui==="endur"){
+      const saved=S.profile.a;
+      S.profile.a=Object.assign({},saved,x.cfg);
+      try{ const c=endurCfg(); return endurWeekPlan(c,endurWeekNo(c))[dow]; }
+      finally{ S.profile.a=saved; }
+    }
+    if(x.st&&Array.isArray(x.st.schedule)) return x.st.schedule[dow];
+    const saved=S.profile.a; S.profile.a=Object.assign({},saved,x.cfg);
+    try{ return generateOptimalSchedule(S.profile.a).schedule[dow]; }
+    finally{ S.profile.a=saved; }
+  }catch(e){ return null; }
+}
+const ACT_IDLE=["rest",null,undefined,""];
+function actHasSessionToday(x){ const k=actTodayKind(x); return !ACT_IDLE.includes(k); }
+/* Vorschlag nur, wenn er eindeutig ist: heute ist im aktiven Profil frei, und GENAU EIN
+   anderes Profil hat eine Einheit. Bei mehreren Kandidaten schweigt die App lieber. */
+function actSuggestToday(){
+  try{
+    const l=actList(); if(l.length<2) return null;
+    const cur=actCurrent(); if(!cur||actHasSessionToday(cur)) return null;
+    const cand=l.filter(x=>x.id!==cur.id&&actHasSessionToday(x));
+    if(cand.length!==1) return null;
+    const x=cand[0], k=actTodayKind(x);
+    const lbl=(ENDUR_KINDS[k]&&ENDUR_KINDS[k].label)||((TYPE_META[parseTypeKey(k).base]||{}).label)||"Einheit";
+    return {id:x.id, name:x.name, kind:k, label:lbl};
+  }catch(e){ return null; }
+}
+A.actAutoToggle=()=>{ S.actAuto=!S.actAuto; save(); render();
+  toast(S.actAuto?"Automatik an — das Profil folgt deinem Wochenplan":"Automatik aus — du wechselst selbst"); };
+A.actSwitchToday=()=>{ const s=actSuggestToday(); if(!s)return;
+  S.actNagDay=todayKey(); actApply(s.id); render();
+  toast(`✓ ${s.name} aktiv — ${s.label} steht heute an`); };
+A.actNagOff=()=>{ S.actNagDay=todayKey(); save(); render(); };
+/* Einmal pro Tag: bei eingeschalteter Automatik still umschalten, mit Rückgängig. */
+function actAutoRun(){
+  if(!S.actAuto||S.actAutoDay===todayKey()) return false;
+  const s=actSuggestToday(); if(!s) return false;
+  const fromId=S.actId, fromName=(actCurrent()||{}).name;
+  S.actAutoDay=todayKey(); actApply(s.id);
+  try{ toastAction(`${s.name} aktiv — ${s.label} steht an`,"Rückgängig",()=>{ actApply(fromId); render();
+    toast(`Zurück auf ${fromName}`); }); }catch(e){}
+  return true;
 }
 /* =====================================================================
    AKTIVITÄTSPROFIL-ÜBERSICHT — alle Profile auf einer Seite, Wechsel mit einem Tipp.
@@ -6634,6 +6716,13 @@ function renderActivities(){
         <p class="sm" style="line-height:1.55">${icon("info",14)} Du hattest im Fragebogen <b style="color:var(--t1)">${S.actCapped} weitere ${S.actCapped===1?"Aktivität":"Aktivitäten"}</b> gewählt. Im kostenlosen Zugang legt METRICGYM ${max===1?"ein Profil":max+" Profile"} an — der Rest wartet auf dich, sobald du upgradest.</p>
         <button class="btn volt mt8" onclick="A.showTeaser('multi_activity')">Was PERFORMANCE freischaltet</button>
         <button class="btn ghost mt8" style="min-height:38px;font-size:12.5px" onclick="A.actDismissCap()">Verstanden, ausblenden</button></div>`:""}
+      ${l.length>1?`<button class="card act-auto ${S.actAuto?"on":""}" style="width:100%;text-align:left;cursor:pointer;font-family:inherit;color:var(--t1);margin-top:14px" onclick="A.actAutoToggle()">
+        <div class="row" style="align-items:flex-start;gap:11px">
+          <span class="ap-ic" style="width:36px;height:36px;border-radius:11px">${icon("zap",16)}</span>
+          <span style="flex:1;min-width:0"><span class="ap-n" style="font-size:14.5px">Dem Wochenplan folgen</span>
+          <span class="ap-s" style="white-space:normal">${S.actAuto?"An — das passende Profil wird morgens automatisch aktiv, rückgängig mit einem Tipp.":"Aus — du bekommst einen Vorschlag auf „Heute\" und entscheidest selbst."}</span></span>
+          <span class="ap-sw ${S.actAuto?"on":""}" aria-hidden="true"><i></i></span></div>
+      </button>`:""}
       <p class="xs t3" style="margin:16px 2px 0;line-height:1.5">Beim Wechsel rechnet dieselbe geprüfte Engine alles neu: Kalorien, Makros, Trainingsplan, Wochenplan und — bei Ausdauer — dein Athletenprofil. Kein zweites Regelwerk, keine doppelte Pflege.</p>
     </div>`;
 }
@@ -6750,8 +6839,14 @@ A.actSave=()=>{
   d.name=(nm!=null?nm:d.name||"").trim()||actMeta(d.type).label;
   if(!d.goals||!d.goals.length) d.goals=actDefaultGoals(d.type);
   const l=actList();
-  if(d.id){ const x=l.find(y=>y.id===d.id); if(x){ x.name=d.name; x.type=d.type;
-      x.cfg=Object.assign({},x.cfg,{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment}); } }
+  if(d.id){ const x=l.find(y=>y.id===d.id); if(x){
+      // Ändern sich Typ, Tage oder Ziele, passt der gespeicherte Wochenplan nicht mehr —
+      // dann rechnet die Engine neu, statt einen Plan zu erhalten, der nicht mehr stimmt.
+      const structural = x.type!==d.type || (x.cfg.days||4)!==d.days
+        || JSON.stringify(x.cfg.goals||[])!==JSON.stringify(d.goals||[]);
+      x.name=d.name; x.type=d.type;
+      x.cfg=Object.assign({},x.cfg,{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment});
+      if(structural) delete x.st; } }
   else { const id="a"+Date.now().toString(36);
     l.push({id,name:d.name,type:d.type,cfg:{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment,
       split:"auto",focus:[],schedule_pref:"consistent",recovery_profile:"average",act:(S.profile&&S.profile.a.act)||"light"}});
@@ -8320,6 +8415,7 @@ function renderOnboarding(){
           const t0=Date.now();
           S.acts=_use.map((pl,i)=>({ id:"a"+(t0+i).toString(36)+(i?String(i):""), name:pl.name, type:pl.type,
             cfg: i===0 ? actPick(a) : personaSeedCfg(pl,a) }));
+          // Profil 1 ist ab jetzt aktiv — sein Zustand wird beim ersten Wegschalten gesichert.
           S.actId=S.acts[0].id;
         }
       }catch(e){}
@@ -9457,6 +9553,9 @@ function renderHome(){
     const wkp=endurWeekPlan(c,wn), dd=(new Date().getDay()+6)%7;
     return {kind:wkp[dd], ses:endurSession(c,wkp[dd],b.vol)}; }catch(e){ return null; } })():null;
 
+  // Automatik: höchstens einmal am Tag, still, mit Rückgängig — Kalender vor Klickarbeit.
+  try{ if(actAutoRun()) return; }catch(e){}
+
   setTimeout(checkCelebrations,400); // variable Belohnung: neue Meilensteine/Level feiern
   // Streak-Ring (Flamme) als Verlustangst-Anker
   const streakRing=(()=>{const sz=58,st=5,rr=(sz-st)/2,cc=2*Math.PI*rr,goal=Math.max(7,Math.ceil((streak+1)/7)*7),pct=Math.min(1,streak/goal);
@@ -9516,6 +9615,22 @@ function renderHome(){
         <span class="brief-orb" style="background:radial-gradient(circle at 35% 30%,#A9C4DE,#8FB8DC 70%);box-shadow:0 0 18px rgba(143,184,220,.5)">${icon("play",20)}</span>
         <span class="sm" style="flex:1;line-height:1.5"><b>${d.label} fortsetzen</b><br><span class="t2">${S.logged.length} von ${tot} Sätzen geloggt — genau da weiter, wo du warst.</span></span>
         <span class="iconbtn" style="min-width:36px;min-height:36px" role="button" aria-label="Session verwerfen" onclick="event.stopPropagation();A.discardSess()">✕</span></button>`;})():""}
+    ${(()=>{ if(S.actAuto) return ""; if(S.actNagDay===todayKey()) return "";
+      let sg=null; try{ sg=actSuggestToday(); }catch(e){}
+      if(!sg) return "";
+      return `<div class="card act-nag">
+        <div class="row" style="align-items:flex-start;gap:11px">
+          <span class="ap-ic" style="width:38px;height:38px;border-radius:12px">${icon(actMeta((actList().find(x=>x.id===sg.id)||{}).type).icon,17)}</span>
+          <span style="flex:1;min-width:0">
+            <span class="label" style="display:block;margin:0 0 2px">Dein Plan sagt</span>
+            <span class="sm" style="font-weight:640;display:block">Heute steht <b style="color:var(--t1)">${sg.label}</b> in „${esc(sg.name)}" an</span>
+            <span class="xs t2" style="display:block;line-height:1.45;margin-top:3px">Dein aktives Profil hat heute frei. Umschalten dauert einen Tipp — Kalorien, Plan und Ansicht ziehen mit.</span>
+          </span></div>
+        <div class="row" style="gap:8px;margin-top:12px">
+          <button class="btn volt" style="flex:1" onclick="A.actSwitchToday()">${icon("check",15)} Wechseln</button>
+          <button class="btn" style="flex:0 0 auto;width:auto;padding:0 16px" onclick="A.actNagOff()">Heute nicht</button></div>
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px;margin-top:2px" onclick="A.actAutoToggle()">${icon("zap",13)} Immer automatisch wechseln</button>
+      </div>`; })()}
     ${installCardHTML()}
     ${briefingCard}
     ${starterCard()}

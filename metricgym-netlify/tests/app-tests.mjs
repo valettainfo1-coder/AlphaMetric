@@ -628,6 +628,55 @@ check('Übungs-Detail: Varianten tragen Belege, kein leeres „SEKUNDÄR —"',
   exd.sourced >= 5 && !exd.emptySek, 'belegte Varianten=' + exd.sourced);
 check('Übungs-Detail: animiertes Strichmännchen ist entfernt', !exd.stick, '');
 
+// ---------- 21) Profilwechsel vernichtet keine Arbeit + Wochenplan-Automatik ----------
+const keep = await page.evaluate(() => {
+  A.devModeMenu(); S.tier = 'pro'; S.acts = null; S.actId = null; S.profile.a.mode = 'gym'; save(); actList();
+  A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave(); A.closeModal();
+  S.profile.a.exp = 'intermediate';
+  const gym = actList().find(x => x.type === 'gym'); A.actGo(gym.id);
+  const run = actList().find(x => x.type === 'running');
+  run.cfg.days = 5;                                  // nach dem Wechsel: actSyncBack ist durch
+  // Nutzer richtet sein Kraft-Profil von Hand ein
+  const key = Object.keys(TYPES).find(k => k !== 'rest' && TYPES[k].ex && TYPES[k].ex.length);
+  S.exOverrides[key] = { 0: 'Kurzhantel-Bankdrücken' };
+  S.schedule = ['rest', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest'];
+  S.currentWeek = 3; S.planMode = 'rotation'; S.rotationPos = 2; save();
+  const before = { ov: JSON.stringify(S.exOverrides), sch: S.schedule.join(','), wk: S.currentWeek, mode: S.planMode, pos: S.rotationPos };
+  A.actGo(run.id);
+  const onRun = { wk: S.currentWeek, ov: JSON.stringify(S.exOverrides), sch: (S.schedule || []).join(','), mode: S.planMode };
+  A.actGo(gym.id);
+  const after = { ov: JSON.stringify(S.exOverrides), sch: (S.schedule || []).join(','), wk: S.currentWeek, mode: S.planMode, pos: S.rotationPos };
+  // Strukturelle Änderung (Tage) muss den gespeicherten Plan verwerfen
+  A.actEdit(gym.id); A.actField('days', 6); A.actSave(); A.closeModal();
+  const rebuilt = (S.schedule || []).join(',') !== before.sch && S.profile.a.days === 6;
+  // --- Automatik ---
+  A.actGo(gym.id); S.schedule = ['rest', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest']; actSyncBack();
+  S.actAuto = false; S.actNagDay = null; S.actAutoDay = null; save();
+  const sg = actSuggestToday();
+  // Zwei Kandidaten → die App schweigt lieber
+  A.actNew(); A.actField('type', 'cycling'); A.actField('name', 'Rad'); A.actSave(); A.closeModal();
+  A.actGo(gym.id);
+  actList().find(x => x.type === 'cycling').cfg.days = 5;   // damit heute auch dort etwas ansteht
+  S.schedule = ['rest', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest']; actSyncBack(); save();
+  const many = actList().filter(x => x.id !== S.actId && actHasSessionToday(x)).length;
+  const sgMany = actSuggestToday();
+  return { before, onRun, after, rebuilt, sg, many, ambiguous: sgMany };
+});
+check('Wechsel: Übungs-Anpassungen und eigener Wochenplan überleben',
+  keep.after.ov === keep.before.ov && keep.after.sch === keep.before.sch,
+  JSON.stringify({ ov: keep.after.ov === keep.before.ov, sch: keep.after.sch === keep.before.sch }));
+check('Wechsel: Deload-Zyklus, Plan-Modus und Rotation gehören zum Profil',
+  keep.after.wk === 3 && keep.after.mode === 'rotation' && keep.after.pos === 2 && keep.onRun.wk === 1,
+  JSON.stringify({ zurueck: keep.after.wk, aufLauf: keep.onRun.wk, mode: keep.after.mode }));
+check('Wechsel: das andere Profil hat seinen EIGENEN Stand (keine Vermischung)',
+  keep.onRun.ov === '{}' && keep.onRun.sch !== keep.before.sch && keep.onRun.mode === 'week',
+  JSON.stringify(keep.onRun));
+check('Wechsel: strukturelle Änderung (Tage) verwirft den veralteten Plan', keep.rebuilt, '');
+check('Automatik: eindeutiger Fall wird vorgeschlagen',
+  !!keep.sg && !!keep.sg.label, JSON.stringify(keep.sg));
+check('Automatik: bei mehreren Kandidaten schweigt die App',
+  keep.many >= 2 && keep.ambiguous === null, JSON.stringify({ kandidaten: keep.many, vorschlag: keep.ambiguous }));
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

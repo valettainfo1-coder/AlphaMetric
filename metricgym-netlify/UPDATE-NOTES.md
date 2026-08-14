@@ -924,9 +924,32 @@ der Scheiben-Knopf schob sich per negativem Rand hinaus, und die Preiszeile lief
 Varianten tragen jetzt `kind` — „andere Muskeln" oder „gleiche Muskeln, anderer Reiz" —
 und die App sagt das ausdrücklich, statt eine unveränderte Körperkarte unkommentiert zu lassen.
 
+## §53 — Aktivitätsprofile auf Apple-Niveau, Teil 1: Zustand & Automatik
+**P0 — der Wechsel vernichtete Arbeit.** Gemessen und behoben: `actApply()` setzte bei
+jedem Wechsel `S.exOverrides={}` und überschrieb `S.schedule` mit dem Engine-Vorschlag.
+Wer Übungen getauscht oder seinen Wochenplan selbst gelegt hatte, verlor beides — lautlos.
+Umgekehrt war der Deload-Zyklus (`currentWeek`) **geteilt**: der Kraft-Block zog die
+Radfahr-Woche mit.
+
+Jedes Profil trägt jetzt seinen eigenen Zustand (`schedule`, `exOverrides`, `currentWeek`,
+`rotationPos`, `planMode`, `blockNum`, `rotation`). Beim Wechsel wird gesichert und beim
+Zurückschalten exakt wiederhergestellt. Muskelkater bleibt bewusst geteilt — der Körper ist
+derselbe Mensch. Ändern sich Typ, Tage oder Ziele eines Profils, wird der gespeicherte Plan
+verworfen und neu gerechnet, statt einen Plan zu erhalten, der nicht mehr stimmt.
+
+**Automatik — das Profil folgt dem Wochenplan.** Der Kalender weiß längst, dass Montag
+Kraft und Dienstag Laufen ist. Hat das aktive Profil heute frei und genau EIN anderes eine
+Einheit, schlägt die App den Wechsel vor — als Karte auf „Heute", nicht als Modal. Bei
+mehreren Kandidaten schweigt sie lieber. Voreinstellung ist der Vorschlag; wer die Automatik
+einschaltet, bekommt den Wechsel einmal täglich still erledigt, mit Rückgängig im Toast.
+
+**Neue Layout-Invariante im UI-Wächter:** kein sichtbarer Knopf darf auf 0 px zusammenfallen.
+Sie ist aus einem echten Fund entstanden — im Vorschlagsdialog war „Wechseln" unsichtbar,
+weil ein Nachbar mit `width:100%` und `flex:0 0 auto` die ganze Zeile fraß.
+
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v32** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v33** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

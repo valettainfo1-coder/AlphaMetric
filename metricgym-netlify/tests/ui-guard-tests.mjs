@@ -108,6 +108,21 @@ await page.addScriptTag({
       }
       return out;
     },
+    /* Ein sichtbarer, bedienbarer Knopf mit Breite 0 ist immer ein Fehler — meist die
+       Flex-Falle: ein Nachbar mit width:100% und flex:0 0 auto frisst die ganze Zeile,
+       der flexible Knopf schrumpft auf nichts. Optisch fehlt er einfach. */
+    collapsedControls() {
+      const out = [];
+      for (const el of document.querySelectorAll('button, a[href], input, select')) {
+        if (!this.visible(el)) continue;
+        if (el.disabled) continue;
+        const r = el.getBoundingClientRect();
+        const label = (el.innerText || el.getAttribute('aria-label') || el.value || '').trim();
+        if (!label) continue;                       // reine Deko ohne Beschriftung
+        if (r.width < 2 || r.height < 2) out.push({ txt: label.slice(0, 26), w: Math.round(r.width), h: Math.round(r.height) });
+      }
+      return out;
+    },
     pageScrollsSideways() {
       return Math.round(document.documentElement.scrollWidth - window.innerWidth);
     },
@@ -192,28 +207,33 @@ const OVERLAYS = [
   ['Aktivität bearbeiten', 'A.actEdit(actList()[0].id)'],
 ];
 
-let layoutBad = [], sideways = [];
+let layoutBad = [], sideways = [], collapsed = [];
 for (const w of WIDTHS) {
   await page.setViewportSize({ width: w, height: 844 });
   for (const [label, fn] of SCREENS) {
     await page.evaluate((src) => { (new Function(src))(); save(); render(); }, '(' + fn.toString() + ')()');
     await page.waitForTimeout(120);
-    const r = await page.evaluate(() => ({ ov: UIG.overflows(), side: UIG.pageScrollsSideways() }));
+    const r = await page.evaluate(() => ({ ov: UIG.overflows(), side: UIG.pageScrollsSideways(), col: UIG.collapsedControls() }));
     if (r.ov.length) layoutBad.push({ w, label, items: r.ov.slice(0, 3) });
     if (r.side > 2) sideways.push({ w, label, px: r.side });
+    if (r.col.length) collapsed.push({ w, label, items: r.col.slice(0, 3) });
   }
   for (const [label, call] of OVERLAYS) {
     await page.evaluate((c) => { try { (new Function(c))(); } catch (e) {} }, call);
     await page.waitForTimeout(140);
-    const r = await page.evaluate(() => ({ ov: UIG.overflows(), side: UIG.pageScrollsSideways() }));
+    const r = await page.evaluate(() => ({ ov: UIG.overflows(), side: UIG.pageScrollsSideways(), col: UIG.collapsedControls() }));
     if (r.ov.length) layoutBad.push({ w, label, items: r.ov.slice(0, 3) });
     if (r.side > 2) sideways.push({ w, label, px: r.side });
+    if (r.col.length) collapsed.push({ w, label, items: r.col.slice(0, 3) });
     await page.evaluate(() => { A.closeModal(); overlay.innerHTML = ''; });
   }
 }
 check(`Layout: kein Element ragt aus seinem Container (${SCREENS.length + OVERLAYS.length} Screens × ${WIDTHS.length} Breiten)`,
   layoutBad.length === 0,
   layoutBad.length ? layoutBad.slice(0, 4).map(b => `${b.w}px/${b.label}: ` + b.items.map(i => `${i.tag}.${i.cls} in .${i.par}["${i.parTxt}"] +${i.over}px`).join(', ')).join(' | ') : '');
+check('Layout: kein sichtbarer Knopf ist auf 0 px zusammengefallen',
+  collapsed.length === 0,
+  collapsed.length ? collapsed.slice(0, 4).map(c => `${c.w}px/${c.label}: ` + c.items.map(i => `"${i.txt}" ${i.w}×${i.h}`).join(', ')).join(' | ') : '');
 check('Layout: keine Seite scrollt horizontal', sideways.length === 0,
   sideways.length ? sideways.slice(0, 4).map(s => `${s.w}px/${s.label} +${s.px}px`).join(' | ') : '');
 
