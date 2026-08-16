@@ -949,7 +949,54 @@ weil ein Nachbar mit `width:100%` und `flex:0 0 auto` die ganze Zeile fraß.
 
 ## Deploy
 Ordner unverändert als Netlify-Site deployen (Drag & Drop oder CLI). Cache-
-Version aktuell **v33** — Nutzer bekommen Updates beim nächsten Besuch
+## §54 — Einheitlich und übersichtlich: Karten-Töne, Screen-Kopf, Gliederung
+
+**Beschwerde:** „super unordentlich von A–Z entlang der Customer Experience".
+
+**Befund vor dem Bauen — gemessen, nicht vermutet.** 30 Karten trugen ein
+Inline-`border-color`. Appweit gilt `border:none`. Im Browser nachgemessen:
+`border-style: none`, `border-width: 0px`. **Keine einzige dieser Farben hat
+je gezeichnet.** Jede Karte sah aus wie jede andere — keine Hierarchie, keine
+Gruppen, eine graue Fläche. Dazu: Analytics 7.652 px hoch, 17 Karten, null
+Zwischenüberschriften. Fünfzehn verschiedene Zeilenhöhen. 47 verschiedene
+Abstandswerte.
+
+**Karten-System.** `data-tone` mit fünf Bedeutungen (hl/good/warn/gold/cy):
+gefärbte Lichtkante oben, zarter Verlauf, schmale Kante links — kein Rahmen,
+der Grundsatz „Konturen sind abgeschafft" bleibt. 26 tote Rahmenfarben
+überführt, 11 doppelte Verläufe entfernt, Dichte-Stufen `pad-0/xs/s/l` statt
+zwölf Inline-Paddings. Dieselbe Kur für Knöpfe (`.btn.danger/.attn/.accent`),
+Chips und Warnkarten: ein Löschen-Knopf sah aus wie „Weiter".
+**Inline-`border-color` in der Quelle: 45 → 0.**
+
+**Screen-Kopf.** `scrHead(kick,title,sub,action)` — dieselbe Hierarchie wie
+der Tab-Hero, ohne Szenerie. Player, Ausdauer und Aktivitätsprofile bauten
+diesen Dreiklang bisher je einzeln nach. Löst nebenbei einen Widerspruch: der
+Übungsname stand als Serif-`h2` *innerhalb* einer Karte — Serif ist der Name
+des Screens, er steht jetzt darüber.
+
+**Gliederung.** Analytics 5 Gruppen, Ernährung 3, Profil 4. Reihenfolge und
+Inhalt unverändert, nur benannt und gefasst. Oberste Ebene: Analytics 20 → 7,
+Ernährung 9 → 4, Profil 16 → 6. Gruppenkopf `.label.sect-h` ist kräftiger als
+ein Etikett innerhalb einer Gruppe — vorher trugen beide Ebenen dasselbe
+Gewicht, was keine Gliederung ist.
+
+**Rhythmus.** Fließtext von sieben Werten (1,4–1,7) auf 1,55; Display auf 1,2.
+Aus 15 Zeilenhöhen wurden 4. Abstände auf 2-px-Raster (118 Werte, höchstens
+1 px Versatz).
+
+**Wächter, Block 4 — und zwei eigene Fehlversuche.** Neue Regel: *eine
+Deklaration, die hervorheben soll, muss auch hervorheben.* Das Messgerät
+brauchte drei Anläufe:
+1. Vergleich der berechneten CSS-Strings — fiel auf einen vollständig
+   transparenten Verlauf herein (anderer String, identisches Bild).
+2. Vergleich der PNG-Bytes — zu streng: ein transparenter Verlauf verschiebt
+   das Kantenglätten runder Ecken um wenige Bytes.
+3. Echte Pixelwerte mit Toleranz 3/255. Mutationstest bestanden.
+Der DOM-Durchlauf allein meldete „0 geprüft" — vier Deklarationen lagen
+hinter Bedingungen. Ergänzt um eine Quellenprüfung, die vollständig ist.
+
+Version aktuell **v34** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
