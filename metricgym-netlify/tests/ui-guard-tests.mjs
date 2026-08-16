@@ -381,6 +381,114 @@ check('Personas: keine Fremdsprache (Läufer liest kein Kraft-Vokabular und umge
 check('Personas: keine Roh-Artefakte (undefined/NaN/[object Object]/§SEG:)',
   artAll.length === 0, artAll.slice(0, 5).join(' | '));
 
+/* ======================= 4) WIRKSAMKEIT DER GESTALTUNG =======================
+   Entstanden aus einem echten Fund: 30 Karten trugen ein Inline-`border-color`,
+   während appweit `border:none` gilt. KEINE dieser Farben hat je gezeichnet —
+   drei Suiten waren grün, und jede Karte sah trotzdem aus wie jede andere.
+   Zustands-Tests können das nicht sehen: der Zustand stimmte ja.
+   Die Regel lautet deshalb: eine Deklaration, die etwas hervorheben soll, muss
+   AUCH etwas hervorheben — gemessen, nicht behauptet.                        */
+// Zurück auf ein vollwertiges Konto — die Persona-Läufe haben den Zustand verstellt.
+await page.evaluate(() => { localStorage.clear(); });
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => typeof S !== 'undefined' && typeof render === 'function', null, { timeout: 20000 });
+await page.evaluate(() => {
+  S.currentUser = 'ui@guard.de';
+  S.users = S.users || {}; S.users['ui@guard.de'] = { username: 'Wächter', email: 'ui@guard.de' };
+  save();
+});
+await page.evaluate(() => { A.devMode(); });
+await page.waitForTimeout(400);
+await page.evaluate(() => { A.devModeMenu(); });
+await page.waitForTimeout(2200);
+await page.evaluate(() => { S.tier = 'elite'; S.tourDone = true; S.seenCatalog = true; S.seenHub = true; save(); });
+
+// 4a) Tote Deklarationen: Farbe gesetzt, aber nichts zeichnet sie.
+//     Über ALLE Screens — sonst prüft der Wächter nur die zuletzt offene Seite.
+const deadAll = new Map(); let deadTot = 0;
+for (const [name, setup] of SCREENS) {
+  await page.evaluate((src) => { (new Function(src))(); save(); render(); }, '(' + setup.toString() + ')()');
+  await page.waitForTimeout(180);
+  const r = await page.evaluate(() => {
+    const out = { tot: 0, dead: [] };
+    for (const el of document.querySelectorAll('[style*="border-color"]')) {
+      out.tot++;
+      const cs = getComputedStyle(el);
+      const zeichnet = ['Top', 'Right', 'Bottom', 'Left']
+        .some(s => cs['border' + s + 'Style'] !== 'none' && parseFloat(cs['border' + s + 'Width']) > 0);
+      if (!zeichnet) out.dead.push((el.className || el.tagName).toString().slice(0, 40));
+    }
+    return out;
+  });
+  deadTot += r.tot;
+  for (const d of r.dead) deadAll.set(name + ': ' + d, true);
+}
+const dead = [...deadAll.keys()];
+check('Gestaltung: keine wirkungslose Rahmenfarbe im gerenderten DOM',
+  dead.length === 0, dead.length ? `${dead.length} tot — ${dead.slice(0, 4).join(' | ')}` : `${deadTot} Deklarationen über ${SCREENS.length} Screens geprüft`);
+
+/* Der DOM-Durchlauf oben sieht nur, was gerade gerendert ist — Zustände hinter
+   Bedingungen (Entlastungswoche, Warnkarten, Modals) verfehlt er und meldet dann
+   fälschlich „0 geprüft". Die Quelle dagegen ist vollständig. Da in dieser App
+   `Konturen abgeschafft` sind (jede Fläche trägt `border:none`), ist ein Inline-
+   `border-color` IMMER wirkungslos — die Regel lässt sich deshalb hart prüfen. */
+const src = await (await fetch(BASE + '/index.html')).text();
+const inline = (src.match(/style="[^"]*border-color[^"]*"/g) || []);
+check('Gestaltung: keine Inline-Rahmenfarbe in der Quelle (Konturen sind abgeschafft)',
+  inline.length === 0,
+  inline.length ? `${inline.length} in der Quelle: ${inline.slice(0, 2).join(' | ').slice(0, 120)}`
+                : `${(src.match(/style="/g) || []).length} Inline-Stile durchsucht`);
+
+/* 4b) Jeder Karten-Ton muss sich SICHTBAR von einer schlichten Karte abheben.
+   Zwei Fehlversuche auf dem Weg zu diesem Messgerät, beide lehrreich:
+     1. Vergleich der berechneten CSS-Strings — fiel auf einen vollständig
+        transparenten Verlauf herein: anderer String, identisches Bild.
+     2. Vergleich der PNG-Bytes — zu streng: ein transparenter Verlauf
+        verschiebt das Kantenglätten der runden Ecken um wenige Bytes,
+        für das Auge bleibt alles gleich.
+   Gemessen wird deshalb, was der Nutzer sieht: echte Pixelwerte mit Toleranz.
+   Ein Ton gilt als wirkungslos, wenn KEIN Pixel sich um mehr als 3/255
+   unterscheidet — das ist unterhalb jeder Wahrnehmungsschwelle. */
+const TONES = ['hl', 'good', 'warn', 'gold', 'cy'];
+await page.evaluate((tones) => {
+  const box = document.createElement('div');
+  box.id = 'tone-probe';
+  box.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;width:300px;background:var(--bg);padding:0';
+  box.innerHTML = ['', ...tones].map(t =>
+    `<div class="card" ${t ? `data-tone="${t}"` : ''} style="height:60px;margin:0"></div>`).join('');
+  document.body.appendChild(box);
+}, TONES);
+await page.waitForTimeout(250);
+const cdpT = await ctx.newCDPSession(page);
+const shot = async (i) => (await cdpT.send('Page.captureScreenshot',
+  { format: 'png', clip: { x: 0, y: i * 60, width: 300, height: 60, scale: 1 } })).data;
+const shots = [];
+for (let i = 0; i <= TONES.length; i++) shots.push(await shot(i));
+await cdpT.detach();
+// PNGs zurück in die Seite geben, auf Canvas zeichnen, echte Pixel lesen.
+const toneDiff = await page.evaluate(async (pngs) => {
+  const px = async (b64) => {
+    const img = new Image();
+    await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + b64; });
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  };
+  const base = await px(pngs[0]); const out = [];
+  for (let i = 1; i < pngs.length; i++) {
+    const d = await px(pngs[i]); let max = 0;
+    for (let j = 0; j < base.length; j++) { const v = Math.abs(base[j] - d[j]); if (v > max) max = v; }
+    out.push(max);
+  }
+  return out;
+}, shots);
+await page.evaluate(() => { const b = document.getElementById('tone-probe'); if (b) b.remove(); });
+const toneDead = TONES.filter((t, i) => toneDiff[i] <= 3);
+check('Gestaltung: jeder Karten-Ton hebt sich SICHTBAR von einer schlichten Karte ab',
+  toneDead.length === 0,
+  toneDead.length ? 'bildgleich: ' + toneDead.map((t, i) => `${t}(Δ${toneDiff[TONES.indexOf(t)]})`).join(', ')
+                  : `${TONES.length} Töne, kleinster sichtbarer Unterschied Δ${Math.min(...toneDiff)}/255`);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 
 await browser.close();
