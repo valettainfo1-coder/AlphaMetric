@@ -69,8 +69,20 @@ Deno.serve(async (req) => {
   const GEMINI = Deno.env.get("GEMINI_API_KEY") ?? "";
   const OPENROUTER = Deno.env.get("OPENROUTER_API_KEY") ?? "";
   const GROQ = Deno.env.get("GROQ_API_KEY") ?? "";
+  const CEREBRAS = Deno.env.get("CEREBRAS_API_KEY") ?? "";
   const OR_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "openai/gpt-4o-mini";
   const GROQ_MODEL = Deno.env.get("GROQ_MODEL") ?? "llama-3.3-70b-versatile";
+  /* Cerebras-Standardmodell: gemma-4-31b. Gegen die Alternativen gemessen
+     (je 3 Läufe, gleicher Prompt):
+       gemma-4-31b    ⌀ 599 ms · JSON-Modus liefert valides JSON
+       gpt-oss-120b   ⌀ 660 ms · JSON-Modus liefert LEER — das Reasoning
+                                 verbraucht das Token-Budget vor der Antwort
+       zai-glm-4.7      langsam · 828 Token ohne jeden Inhalt
+     Die App braucht kurze Antworten und strukturiertes JSON (Ernährungs-
+     Erkennung), deshalb das schlanke Modell ohne Reasoning-Overhead.
+     Ein Reasoning-Modell hier nur mit deutlich höherem max_tokens setzen. */
+  const CB_MODEL = Deno.env.get("CEREBRAS_MODEL") ?? "gemma-4-31b";
+  const CB_URL = "https://api.cerebras.ai/v1/chat/completions";
 
   // ---- Provider-Adapter --------------------------------------------------
   const geminiComplete = async (): Promise<string> => {
@@ -161,6 +173,9 @@ Deno.serve(async (req) => {
   try {
     if (mode === "stream") {
       const chain: Array<() => Promise<Response>> = [];
+      // Cerebras zuerst: gemessen ⌀ 599 ms gegen ⌀ 1.147 ms bei Groq (je 3 Läufe).
+      // Das SSE-Format ist identisch (choices[0].delta.content) — kein eigener Adapter.
+      if (CEREBRAS) chain.push(() => openaiCompatStream(CB_URL, CEREBRAS, CB_MODEL));
       if (GROQ) chain.push(() => openaiCompatStream("https://api.groq.com/openai/v1/chat/completions", GROQ, GROQ_MODEL));
       if (OPENROUTER) chain.push(() => openaiCompatStream("https://openrouter.ai/api/v1/chat/completions", OPENROUTER, OR_MODEL));
       let last: unknown;
@@ -169,6 +184,8 @@ Deno.serve(async (req) => {
     }
     // complete / vision
     const chain: Array<() => Promise<string>> = [];
+    // Cerebras hat KEINEN Bild-Eingang — im Vision-Modus bleibt Gemini der einzige Weg.
+    if (CEREBRAS && mode !== "vision") chain.push(() => openaiCompatComplete(CB_URL, CEREBRAS, CB_MODEL));
     if (GEMINI) chain.push(geminiComplete);
     if (OPENROUTER && mode !== "vision") chain.push(() => openaiCompatComplete("https://openrouter.ai/api/v1/chat/completions", OPENROUTER, OR_MODEL));
     if (GROQ && mode !== "vision") chain.push(() => openaiCompatComplete("https://api.groq.com/openai/v1/chat/completions", GROQ, GROQ_MODEL));

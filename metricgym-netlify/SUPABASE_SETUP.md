@@ -183,13 +183,38 @@ Der Quellcode liegt im Repo: `supabase/functions/ai-proxy/index.ts`.
 
 ```bash
 supabase functions deploy ai-proxy
-supabase secrets set GEMINI_API_KEY=... OPENROUTER_API_KEY=... GROQ_API_KEY=...
+supabase secrets set CEREBRAS_API_KEY=... GROQ_API_KEY=... \
+                     GEMINI_API_KEY=... OPENROUTER_API_KEY=...
 ```
+
+Es genügt **ein** Schlüssel — die Kette überspringt jeden Anbieter ohne Key.
+Keiner dieser Werte gehört jemals in `config.js`: diese Datei wird beim Deploy
+öffentlich ausgeliefert.
 
 Verhalten: ohne gültiges Nutzer-JWT → 401 · Tageslimits FREE 5 / PRO 60 /
 ELITE 200 (Tabelle `ai_usage`) → 429 mit deutscher Meldung, die die App
-direkt anzeigt · Provider-Kette Gemini → OpenRouter → Groq (Streaming über
-die OpenAI-kompatiblen Provider).
+direkt anzeigt.
+
+**Provider-Kette**
+- Text & Streaming: Cerebras → Groq → OpenRouter (Gemini im `complete`-Modus
+  nach Cerebras)
+- Bilderkennung (`vision`): **nur Gemini** — Cerebras, Groq und OpenRouter
+  haben in dieser Anbindung keinen Bild-Eingang. Ohne `GEMINI_API_KEY` bleibt
+  die Foto-Erkennung inaktiv, alles andere läuft.
+
+**Warum Cerebras zuerst** (gemessen, je 3 Läufe, gleicher Prompt):
+
+| Anbieter · Modell | Antwortzeit | JSON-Modus |
+|---|---|---|
+| Cerebras `gemma-4-31b` | ⌀ 599 ms | valide |
+| Cerebras `gpt-oss-120b` | ⌀ 660 ms | **leer** — Reasoning frisst das Budget |
+| Groq `llama-3.3-70b-versatile` | ⌀ 1.147 ms | valide |
+
+Das Standardmodell ist deshalb `gemma-4-31b` (überschreibbar via
+`CEREBRAS_MODEL`). Ein Reasoning-Modell hier nur mit deutlich höherem
+`max_tokens` setzen, sonst liefert die Ernährungs-Erkennung leere Antworten.
+Das SSE-Format von Cerebras ist identisch zu OpenAI
+(`choices[0].delta.content`) — kein eigener Adapter nötig.
 
 Hinweis Trial: Der lokale 7-Tage-Test schaltet die App-Ansichten frei; die
 Server-Limits folgen dem Server-Tier. Mit Stripe (Roadmap D4) wird der Trial
