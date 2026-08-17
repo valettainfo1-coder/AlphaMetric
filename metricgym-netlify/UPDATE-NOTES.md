@@ -1172,7 +1172,47 @@ den Knopf selbst, nichts über versteckte Vorfahren — gemeldet wurde „auf al
 Seiten sichtbar", richtig war das Gegenteil. `offsetParent === null` sieht die
 ganze Kette.
 
-Version aktuell **v37** — Nutzer bekommen Updates beim nächsten Besuch
+## §58 — Auswertung Seite 1: Konfetti raus, Kasten raus, Kurve rein
+
+Beschwerde: „Diese Seite geht designmäßig gar nicht!! Bitte moderner."
+
+**Zwei davon waren keine Geschmacksfragen, sondern Fehler.**
+
+*Das Konfetti lag VOR der Schrift.* 190 Partikel auf `z-index:75`, über dem
+gesamten Inhalt — ausgerechnet auf dem Screen, der den Plan verkauft, war der
+Text schwer lesbar. Ersatzlos gestrichen. Den Moment trägt jetzt die Zahl
+selbst: sie kommt aus der Tiefe (Maßstab + Unschärfe), statt zu hüpfen.
+
+*Der Kasten hatte eine 1-px-Kontur.* `border:1px solid rgba(169,196,222,.4)` —
+in einer App, deren Gestaltungsregel seit §54 lautet „Konturen sind
+abgeschafft". Der Hero war damit das einzige Element, das noch einen Rahmen
+trug, und sah entsprechend fremd aus.
+
+**Der Umbau.** Der Moment IST jetzt die Seite: keine Box, keine Kontur, eine
+Szene, die nach oben ausläuft — dieselbe Sprache wie die Tab-Heroes. Die Zahl
+steht auf `clamp(52px, 16vw, 72px)` statt fix 54 px und dominiert unbestritten.
+
+**Kurve statt Klötze.** Drei Balken lasen sich wie ein Diagramm-Platzhalter.
+Jetzt eine steigende Fläche mit weicher Linie (Catmull-Rom → Bézier), die bei
+0 startet und über die Meilensteine läuft; die Linie zeichnet sich, die Fläche
+blendet nach, die Punkte setzen sich einzeln. Rechnerisch dieselben Zahlen.
+
+**Ein Ausrichtungsfehler dabei gefunden und behoben:** die Werte standen unter
+dem Diagramm in drei gleich breiten Spalten (Mitten bei 1/6, 3/6, 5/6), die
+Punkte aber bei 1/3, 2/3, 1 — sie passten nie zusammen. Die Beschriftung sitzt
+jetzt IM Diagramm, im selben Koordinatensystem wie ihr Punkt, mit
+`text-anchor` start/middle/end an den Rändern. Damit stimmt die Zuordnung
+unabhängig von Breite und Werten.
+
+`prefers-reduced-motion` schaltet Zeichnen, Einblenden und Punkt-Animation ab;
+Inhalt und Ausrichtung bleiben identisch.
+
+**Eigener Fehler unterwegs:** beim Ersetzen des Balken-Blocks blieb ein
+doppeltes Backtick stehen — die gesamte Datei war damit syntaktisch kaputt und
+`S` existierte nicht mehr. Aufgefallen ist es sofort, weil der Test nicht auf
+ein Aussehen wartete, sondern darauf, dass die App überhaupt hochkommt.
+
+Version aktuell **v38** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
