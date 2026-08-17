@@ -315,6 +315,32 @@ check('Differenz: die Fokus-Empfehlung unterscheidet sich je Ziel', diff.picksUn
 check('Differenz: Persona-Kombinationen ergeben verschiedene Profil-Pläne', diff.plansUnique === 4, `${diff.plansUnique}/4`);
 check('Differenz: Profilwechsel ändert Oberfläche und Tab-Leiste', diff.actDiffers, '');
 
+/* Ein Tab muss halten, was seine Beschriftung verspricht.
+   Entstanden aus einem echten Fund: der zweite Tab trug den NAMEN des aktiven
+   Profils. Bei „Laufen" ging das gut, bei „Abnehmen" nicht — der Tab nannte ein
+   ZIEL und öffnete einen Trainingsplan („Oberkörper A."). Die Regel lautet
+   deshalb: die Beschriftung benennt das Ziel des Tabs, nicht die Absicht des
+   Nutzers. Geprüft wird gegen eine Positivliste erlaubter Ziel-Wörter. */
+const ZIEL_WOERTER = ['Heute', 'Training', 'Ausdauer', 'Analytics', 'Ernährung', 'Coach'];
+const tabTruth = await page.evaluate(async (erlaubt) => {
+  const out = { schlecht: [], geprueft: 0 };
+  for (const typ of ['gym', 'loss', 'running', 'cycling']) {
+    // Profil dieses Typs anlegen bzw. auswählen, ohne das Onboarding erneut zu fahren
+    const vorhanden = actList().find(x => x.type === typ);
+    if (!vorhanden) continue;
+    A.actGo(vorhanden.id);
+    await new Promise(r => setTimeout(r, 260));
+    for (const [id, , label] of tabsFor()) {
+      out.geprueft++;
+      if (!erlaubt.includes(label)) out.schlecht.push(`${vorhanden.name}: Tab „${label}" (${id})`);
+    }
+  }
+  return out;
+}, ZIEL_WOERTER);
+check('Beschriftung: jeder Tab nennt sein ZIEL, nicht den Profilnamen',
+  tabTruth.schlecht.length === 0,
+  tabTruth.schlecht.length ? tabTruth.schlecht.slice(0, 3).join(' | ') : `${tabTruth.geprueft} Beschriftungen geprüft`);
+
 /* ============================ 3) PERSONA-DURCHLÄUFE ============================ */
 /* Ein Läufer darf nirgends Kraft-Vokabular lesen und umgekehrt. Und kein Screen,
    den ein Tab anbietet, darf leer sein — der leere Ausdauer-Tab war genau das. */

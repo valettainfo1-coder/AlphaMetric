@@ -6454,7 +6454,7 @@ A.dismissBanner=(id)=>{ if(!S.dismissedBanners.includes(id))S.dismissedBanners.p
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
-const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",endurance:"Ausdauer",features:"So funktioniert's"};
+const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",endurance:"Ausdauer",features:"So funktioniert's",coach:"Coach"};
 let menuOpen=false;
 
 // Lebendiges KI-Feld als persistente Ebene hinter der ganzen App (kein Neustart pro Render).
@@ -6946,11 +6946,17 @@ A.actDelete=()=>{ const d=_actDraft; if(!d||!d.id)return; const l=actList();
   S.acts=l.filter(x=>x.id!==d.id); _actDraft=null;
   if(S.actId===d.id){ S.actId=S.acts[0].id; actApply(S.acts[0].id); }
   save(); overlay.innerHTML=""; render(); toast(`„${nm}" gelöscht`); };
-const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
-const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["profile","user","Profil"]];
-/* Der Trainings-Tab trägt den NAMEN der aktiven Aktivität — nennt jemand sein Profil
-   „Ausdauer Radfahren", steht genau das unten. Lange Namen werden fürs Tab gekürzt
-   (das volle Wort steht im Kopfzeilen-Chip und als Vorlesetext). */
+/* Fünf Tabs. Der fünfte Platz gehört dem Coach, nicht dem Profil: Einstellungen
+   öffnet man selten und sie stehen ohnehin im ☰-Menü — den Coach braucht man täglich.
+   Sechs Tabs passen nicht: bei 320 px bricht die Leiste in zwei Reihen um (gemessen). */
+const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["coach","message","Coach"]];
+const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["coach","message","Coach"]];
+/* Ein Tab wird nach seinem ZIEL benannt, nie nach dem aktiven Profil.
+   Vorher trug der zweite Tab den Profilnamen. Bei „Laufen" ging das gut — der Tab
+   öffnet die Laufansicht. Bei „Abnehmen" log er: der Name ist ein ZIEL, geöffnet
+   wird aber ein Trainingsplan („Oberkörper A."). Welches Profil aktiv ist, sagt
+   der Chip in der Kopfzeile — samt Umschalter. Das Symbol des Tabs übernimmt
+   weiterhin die Aktivität, damit der Wechsel trotzdem sichtbar bleibt. */
 function tabShort(s){ s=String(s||"").trim(); if(s.length<=13) return s;
   // Kombi-Profile („Krafttraining & Abnehmen") zeigen im Tab die FÜHRENDE Absicht —
   // die volle Bezeichnung steht im Kopfzeilen-Chip. Die zweite Hälfte wegzukürzen
@@ -6965,10 +6971,15 @@ function tabsFor(){
   const base=endur?TABS_ENDUR:TABS;
   if(!cur) return base;
   const meta=actMeta(cur.type);
-  return base.map((t,i)=> i===1 ? [t[0], meta.icon, tabShort(cur.name)||t[2], cur.name] : t);
+  // Symbol vom Profil, Beschriftung vom Ziel. Der Vorlesetext nennt beides,
+  // damit Screenreader den Kontext bekommen, ohne dass der Tab sein Ziel verschweigt.
+  return base.map((t,i)=> i===1 ? [t[0], meta.icon, t[2], `${t[2]} · ${cur.name}`] : t);
 }
 function renderTabbar(){
-  A.tab=(t)=>{menuOpen=false;S.tab=t;save();render();};
+  A.tab=(t)=>{menuOpen=false;
+    // Beim Sprung in den Coach merken, woher man kam — daraus leitet er sein Thema ab.
+    if(t==="coach"&&S.tab!=="coach"){ S.coachFrom=S.tab; S.coachTopic=null; }
+    S.tab=t;save();render();};
   const TB=tabsFor();
   let active=["player","summary"].includes(S.tab)?(actUi()==="endur"?"endurance":"train"):(S.tab==="today"?"home":S.tab);
   tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner">
@@ -7009,8 +7020,37 @@ function startTour(i){
 
 // ---------- Floating Coach (kontextuell, kein eigener Tab) ----------
 let coachOpen=false;
-function coachContext(){
-  const p=S.profile, tab=S.tab;
+/* Der Coach kennt vier Themen. Bisher hing der Kontext allein am aktuellen Tab —
+   sinnvoll für die schwebende Blase („frag mich zu dem, was du siehst"), aber
+   nutzlos im eigenen Coach-Tab: dort IST der Tab der Coach. Deshalb nimmt
+   coachContext() jetzt ein Thema entgegen; ohne Angabe bleibt es beim Tab. */
+const COACH_TOPICS=[
+  ["train",     "dumbbell", "Training"],
+  ["nutrition", "utensils", "Ernährung"],
+  ["loss",      "scale",    "Abnehmen"],
+  ["analytics", "chart",    "Fortschritt"],
+];
+function coachContext(topic){
+  const p=S.profile, tab=topic||S.tab;
+  if(tab==="loss"){
+    const a=(p&&p.a)||{}, w=a.weight||0;
+    const tgK=p?p.tg.rest.kcal:0, tgP=p?p.tg.rest.p:0;
+    // Echte Zahl statt Behauptung: metabolicTwin() rechnet die Regression über die
+    // Gewichtskurve (≥10 Tage) und fällt sonst auf die Energiebilanz zurück.
+    let trend=null;
+    try{ const tw=metabolicTwin();
+      if(tw&&isFinite(tw.dWeight)) trend=`${tw.dWeight>0?"+":""}${nf.format(tw.dWeight)} kg in 6 Wochen`
+        +(tw.usingTrend?` (aus ${tw.nDays} Tagen echter Kurve)`:" (aus deiner Energiebilanz geschätzt)");
+    }catch(e){}
+    return {chips:["Wie schnell darf ich abnehmen?","Warum stagniert mein Gewicht?","Verliere ich Muskeln?"],
+      answers:{
+        // nf (eine Nachkommastelle), NICHT nfi — nfi rundet auf ganze Zahlen und
+        // machte aus „0,5–1 kg" ein sinnloses „1–1 kg".
+        "Wie schnell darf ich abnehmen?":`0,5–1 % Körpergewicht pro Woche — bei dir ${w?nf.format(Math.round(w*0.005*10)/10)+"–"+nf.format(Math.round(w*0.01*10)/10)+" kg":"je nach Gewicht"}. Schneller kostet überproportional Muskeln (Garthe 2011). Dein Ruhetag-Ziel liegt bei ${fmtKcal(tgK)}.`,
+        "Warum stagniert mein Gewicht?":`Drei häufige Gründe, in dieser Reihenfolge: Wasser­einlagerung nach harten Einheiten verdeckt echten Fettverlust (2–3 Wochen Mittelwert ansehen, nicht Einzelwerte)${trend?` — dein Trend zeigt aktuell ${trend}`:""}; unbewusste Mehr­aufnahme an Wochenenden; und Anpassung des Grundumsatzes nach längerem Defizit. Erst messen, dann kürzen.`,
+        "Verliere ich Muskeln?":`Zwei Schutzschalter: mindestens ${nfi.format(tgP)} g Protein täglich und Krafttraining beibehalten. Wer beides einhält, hält im moderaten Defizit die Magermasse weitgehend (Helms 2014). Sinkt deine Kraft über 3 Wochen deutlich, ist das Defizit zu groß.`,
+      }};
+  }
   const log=nlogToday(), sum=log.meals.reduce((s,m)=>({k:s.k+m.k,p:s.p+m.p}),{k:0,p:0});
   if(tab==="nutrition"||tab==="home"){
     const restP=Math.max(0,(p?p.tg.train.p:0)-Math.round(sum.p));
@@ -7045,44 +7085,91 @@ function coachContext(){
       "Wie baue ich am schnellsten Muskeln auf?":"Drei Hebel in dieser Reihenfolge: Progressive Überladung (jede Woche +Reps oder +2,5 kg), 1,8–2,2 g/kg Protein täglich, 7–9 h Schlaf. Alles andere ist Feintuning (Schoenfeld, 2017).",
     }};
 }
+/* =====================================================================
+   COACH-TAB — der Ort für freie Fragen.
+   Die schwebende Blase konnte das nie: 200 px hoch, über dem Inhalt, leicht
+   zu übersehen. Sie bleibt als Abkürzung erhalten, führt aber hierher statt
+   ein zweites, enges Panel zu öffnen — ein Coach, ein Ziel.
+   Der Herkunfts-Tab wird gemerkt (S.coachFrom), damit der Kontext beim
+   Wechsel nicht verloren geht: wer aus der Ernährung kommt, bekommt
+   Ernährungs-Vorschläge, nicht die des Coach-Tabs selbst.
+   ===================================================================== */
+function renderCoach(){
+  window["__rerender_coach-screen"]=renderCoach;
+  const from=S.coachFrom||"home";
+  // Thema: bewusst gewählt, sonst aus dem Screen abgeleitet, aus dem man kam.
+  const auto=({nutrition:"nutrition",train:"train",player:"train",summary:"train",
+               endurance:"train",analytics:"analytics"})[from]||"train";
+  const topic=S.coachTopic||auto;
+  const ctx=coachContext(topic);
+  const ki=aiActive();
+
+  const fallback=(q)=>{ const c=coachContext(topic);
+    if(c.answers[q]) return c.answers[q];
+    const hit=Object.keys(c.answers).find(k=>k.toLowerCase().split(" ").some(w=>w.length>4&&q.toLowerCase().includes(w)));
+    return hit?c.answers[hit]:"Dazu habe ich keine hinterlegte Antwort. Mit aktivem KI-Coach beantworte ich freie Fragen — sonst hilft einer der Vorschläge oben.";};
+  const ask=(q)=>{ if(!q)return;
+    S.chat.push({r:"user",t:q});
+    S.chat.push({r:"ai",t:ki?"…":fallback(q)});
+    save(); renderCoach();
+    if(ki) aiTurn(S.chat,"coach-screen",()=>fallback(q));
+  };
+  A.cAsk=ask;
+  A.cTopic=(t)=>{ S.coachTopic=t; save(); renderCoach(); };
+  A.cSend=()=>{ const i=document.getElementById("c-in"); if(!i||!i.value.trim())return;
+    const q=i.value.trim(); i.value=""; ask(q); };
+  A.cVoice=()=>speech((txt)=>{ const i=document.getElementById("c-in"); if(i){i.value=txt; A.cSend();} },"c-mic");
+  A.cClear=()=>{ S.chat=[]; save(); renderCoach(); toast("Verlauf geleert"); };
+
+  const limit=S.tier==="elite"?40:8;
+  const msgs=S.chat.slice(-limit);
+
+  root.innerHTML=`
+    ${scrHead("Coach", ki?"Frag mich alles.":"Was dich weiterbringt.",
+      ki?"Ich kenne deine Zahlen — Plan, Kalorien, Gewichtskurve, Verlauf. Frag in eigenen Worten."
+        :"Ohne aktiven KI-Coach beantworte ich die Fragen unten aus deinen echten Zahlen.",
+      S.chat.length?`<button class="iconbtn" onclick="A.cClear()" aria-label="Verlauf leeren">${icon("undo",17)}</button>`:"")}
+
+    <div class="chips mb16" role="tablist" aria-label="Thema">
+      ${COACH_TOPICS.map(([id,ic,l])=>`<button class="chip ${topic===id?"accent":""}" role="tab"
+        aria-selected="${topic===id}" onclick="A.cTopic('${id}')">${icon(ic,13)} ${l}</button>`).join("")}
+    </div>
+
+    ${ki?"":`<div class="card pad-s mb16" data-tone="warn">
+      <p class="sm" style="line-height:1.55">Der <b>KI-Coach</b> ist nicht aktiv. Die Vorschläge unten
+      beantworte ich trotzdem — sie kommen aus deinen echten Zahlen. Freie Fragen brauchen die KI.</p>
+      <button class="btn attn mt8" style="min-height:42px" onclick="A.tab('profile')">Im Profil aktivieren</button></div>`}
+
+    <div class="card pad-s" style="margin-bottom:14px">
+      <div id="coach-screen" style="min-height:180px;max-height:46vh;overflow-y:auto">
+        ${msgs.length?msgs.map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${esc(m.t)}</div>`).join("")
+          :`<p class="sm t2" style="line-height:1.55">Stell deine Frage — oder tipp einen der Vorschläge unten an.
+             Ich antworte mit deinen Daten, nicht mit Allgemeinplätzen.</p>`}
+      </div>
+    </div>
+
+    <p class="label">Häufig gefragt · ${esc((COACH_TOPICS.find(t=>t[0]===topic)||[,,""])[2])}</p>
+    <div class="chips mb16">
+      ${ctx.chips.map(c=>`<button class="chip" onclick="A.cAsk('${c.replace(/'/g,"\\'")}')">${esc(c)}</button>`).join("")}
+    </div>
+
+    <div class="row" style="gap:8px">
+      <button id="c-mic" class="btn" style="width:52px;min-width:52px" onclick="A.cVoice()" aria-label="Frage sprechen">${icon("mic",17)}</button>
+      <input type="text" id="c-in" placeholder="Frag deinen Coach …" style="flex:1;border-radius:999px"
+        onkeydown="if(event.key==='Enter')A.cSend()">
+      <button class="btn volt" style="width:52px;min-width:52px" onclick="A.cSend()" aria-label="Senden">${icon("send",17)}</button>
+    </div>`;
+  const box=document.getElementById("coach-screen"); if(box)box.scrollTop=box.scrollHeight;
+}
+
 function renderFab(){
   window["__rerender_coach-chat"]=renderFab;
-  A.coach=()=>{coachOpen=!coachOpen;renderFab();};
-  const coachFallback=(q)=>{const ctx=coachContext();
-    if(ctx.answers[q])return ctx.answers[q];
-    const hit=Object.keys(ctx.answers).find(k=>k.toLowerCase().split(" ").some(w=>w.length>4&&q.toLowerCase().includes(w)));
-    return hit?ctx.answers[hit]:"Dazu habe ich gerade keine Standard-Antwort — aktiviere den KI-Coach im Profil für freie Fragen, oder probier die Vorschläge unten.";};
-  const respond=(q)=>{
-    S.chat.push({r:"user",t:q});
-    S.chat.push({r:"ai",t:aiActive()?"…":coachFallback(q)});
-    save(); renderFab();
-    if(aiActive()) aiTurn(S.chat,"coach-chat",()=>coachFallback(q));
-  };
-  A.coachAsk=respond;
-  A.coachVoice=()=>speech((txt)=>{const inp=document.getElementById("coach-in"); if(inp){inp.value=txt; A.coachSend();}},"co-mic");
-  A.coachSend=()=>{
-    const inp=document.getElementById("coach-in");
-    if(!inp||!inp.value.trim())return;
-    const q=inp.value.trim(); inp.value=""; respond(q);
-  };
-  if(!coachOpen){
-    fabEl.innerHTML=`<button class="fab" onclick="A.coach()" aria-label="Coach öffnen">${icon("message",22)}</button>`;
-    return;
-  }
-  const ctx=coachContext();
-  fabEl.innerHTML=`<div class="coach-panel"><div class="card fade" data-tone="hl" style="box-shadow:0 8px 32px rgba(0,0,0,.55); margin:0">
-    <div class="row mb8"><p class="ct" style="margin:0">${icon("message",15)} ${aiActive()?"Coach Metric":"Coach"} · ${TAB_TITLES[S.tab]||"Kontext"}${aiActive()?' <span class="badge volt" style="font-size:9.5px">KI</span>':""}</p>
-      <button class="btn ghost" style="width:auto" onclick="A.coach()" aria-label="Schließen">✕</button></div>
-    <div id="coach-chat" style="max-height:200px;overflow-y:auto;margin-bottom:8px">
-      ${S.chat.slice(S.tier==="elite"?-20:-6).map(m=>`<div class="msg ${m.r==="user"?"user":"ai"}">${esc(m.t)}</div>`).join("")||'<p class="sm" style="line-height:1.55">Hi, ich bin dein Coach. Ich kenne deine Daten und den Bereich, in dem du gerade bist — frag mich, was dich weiterbringt.</p>'}
-      ${S.tier!=="elite"&&S.chat.length>6?`<button class="btn ghost" style="min-height:32px;font-size:12px" onclick="A.showTeaser('coach_history')">${icon("lock",13)} Älterer Verlauf (ELITE)</button>`:""}</div>
-    <div class="chips mb8">${ctx.chips.map(c=>`<button class="chip" onclick="A.coachAsk('${c.replace(/'/g,"\\'")}')">${c}</button>`).join("")}</div>
-    <div class="row">
-      <button id="co-mic" class="btn" style="width:48px;min-width:48px" onclick="A.coachVoice()" aria-label="Sprechen">${icon("mic",16)}</button>
-      <input type="text" id="coach-in" placeholder="Frag deinen Coach …" style="flex:1;border-radius:999px" onkeydown="if(event.key==='Enter')A.coachSend()">
-      <button class="btn volt" style="width:48px;min-width:48px" onclick="A.coachSend()" aria-label="Senden">${icon("send",16)}</button></div>
-  </div></div>`;
-  const cc=document.getElementById("coach-chat"); if(cc)cc.scrollTop=cc.scrollHeight;
+  /* Die Blase öffnet kein zweites Panel mehr, sondern den Coach-Tab — mit dem
+     Screen, aus dem sie angetippt wurde, als Kontext. Ein Coach, ein Ziel.
+     Auf dem Coach-Tab selbst wäre sie sinnlos und verdeckt nur Inhalt. */
+  A.coach=()=>{ S.coachFrom=S.tab; S.coachTopic=null; S.tab="coach"; save(); render(); };
+  if(S.tab==="coach"){ fabEl.innerHTML=""; return; }
+  fabEl.innerHTML=`<button class="fab" onclick="A.coach()" aria-label="Coach öffnen">${icon("message",22)}</button>`;
 }
 
 /* KONTO-FREISCHALTUNGEN: E-Mails aus config.eliteAccounts bekommen dauerhaft ELITE —
@@ -7117,6 +7204,7 @@ function renderApp(){
   else if(S.tab==="features") renderFeatureOverview();
   else if(S.tab==="endurance") renderEndurance();
   else if(S.tab==="activities") renderActivities();
+  else if(S.tab==="coach") renderCoach();
   else renderHome();
 }
 

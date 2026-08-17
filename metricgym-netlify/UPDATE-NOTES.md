@@ -996,7 +996,66 @@ brauchte drei Anläufe:
 Der DOM-Durchlauf allein meldete „0 geprüft" — vier Deklarationen lagen
 hinter Bedingungen. Ergänzt um eine Quellenprüfung, die vollständig ist.
 
-Version aktuell **v34** — Nutzer bekommen Updates beim nächsten Besuch
+## §55 — Coach als eigener Tab, und ein Tab der sein Ziel nennt
+
+**Zwei Meldungen, ein Bereich.**
+
+### Der Tab log
+
+Beschwerde: „wenn ich abnehmen will und unten auf mein Trainingspad drücke
+steht da Abnehmen obwohl da dann mein Trainingsplan erscheint. Relativ wirr."
+
+Nachgestellt statt nur gelesen — `tabsFor()` überschrieb die Beschriftung des
+zweiten Tabs mit dem Namen des aktiven Profils:
+
+| Profil | Tab sagte | Screen zeigte |
+|---|---|---|
+| Laufen | „Laufen" | Laufen — stimmig |
+| Krafttraining | „Krafttraining" | Oberkörper A. — vertretbar |
+| **Abnehmen** | **„Abnehmen"** | **Oberkörper A. — falsch** |
+
+Die Regel funktionierte bei *Aktivitäten* und brach bei *Zielen*. Ein Tab wird
+jetzt nach seinem ZIEL benannt („Training" / „Ausdauer"); das Symbol übernimmt
+weiter die Aktivität, der Vorlesetext nennt beides („Training · Abnehmen").
+Welches Profil aktiv ist, sagt der Chip in der Kopfzeile — samt Umschalter, wo
+es ohnehin schon stand.
+
+### Coach als Tab
+
+Die KI hing bereits an acht Stellen (Coach-Blase, freies Ziel, Plan-Chat,
+Plan-Foto, Essen per Text, Essen per Foto, Mahlzeit-Vorschlag, Erklärboxen).
+Was fehlte, war ein großzügiger Ort für freie Fragen: die schwebende Blase war
+200 px hoch, lag über dem Inhalt und war leicht zu übersehen.
+
+Der Coach hat jetzt einen eigenen Tab mit vier Themen (Training, Ernährung,
+Abnehmen, Fortschritt), Sprach-Eingabe und dem vollen Verlauf. Neu ist das
+Thema **Abnehmen** — Abnehmtempo, Stagnation, Muskelerhalt, alles aus echten
+Zahlen: das Abnehmtempo aus dem Körpergewicht, der Trend aus
+`metabolicTwin()` (Regression über die Gewichtskurve, sonst Energiebilanz).
+
+Platz: sechs Tabs passen nicht — bei 320 px bricht die Leiste in zwei Reihen
+(gemessen: 118 px Leistenhöhe). Deshalb rückt **Profil** ganz ins ☰-Menü, wo
+es ohnehin schon zweimal stand. Einstellungen öffnet man selten, den Coach
+täglich. Die Blase bleibt als Abkürzung, öffnet aber den Tab statt eines
+zweiten Panels — und merkt sich, aus welchem Screen sie kam, damit die
+Vorschläge zum Kontext passen. Auf dem Coach-Tab selbst blendet sie sich aus.
+
+### Wächter
+
+Neue Regel: *jeder Tab nennt sein ZIEL, nicht den Profilnamen* — geprüft gegen
+eine Positivliste über alle Profiltypen. Mutationstest bestanden: mit wieder
+eingebautem Fehler meldet der Wächter „Krafttraining: Tab ,Krafttraining'" und
+„Laufen: Tab ,Laufen'".
+
+### Zwei eigene Fehler unterwegs
+
+- Ein `typeof weightTrend==="function"`-Schutz um eine Funktion, die es nie
+  gab — der hätte stillschweigend nie einen Trend gezeigt. Ersetzt durch
+  `metabolicTwin()`, das die Regression wirklich rechnet.
+- Das Abnehmtempo lief durch `nfi` (ganze Zahlen) und wurde zu „1–1 kg".
+  Jetzt `nf`: „0,5–1 kg".
+
+Version aktuell **v35** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
