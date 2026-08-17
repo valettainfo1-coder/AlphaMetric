@@ -1055,7 +1055,52 @@ eingebautem Fehler meldet der Wächter „Krafttraining: Tab ,Krafttraining'" un
 - Das Abnehmtempo lief durch `nfi` (ganze Zahlen) und wurde zu „1–1 kg".
   Jetzt `nf`: „0,5–1 kg".
 
-Version aktuell **v35** — Nutzer bekommen Updates beim nächsten Besuch
+## §56 — Tableiste: lesbarer Grund, ein gleitender Anzeiger
+
+Wunsch: „das Menü unten überarbeiten, übersichtlicher, mit Animationen,
+schicker, analog Oura."
+
+**Beim Nachmessen kam mehr heraus als „Animationen fehlen".**
+
+*Der Seitentext las sich durch die Leiste.* Der Grund lag bei 50–72 %
+Deckkraft; im Screenshot stand „Trainingstag-Ziel — enthält die Kalorien…"
+quer über „Heute · Training". Beschriftungen konkurrierten mit dem Inhalt
+dahinter — das war der eigentliche Grund für „unübersichtlich". Jetzt trägt
+die Leiste einen deckenden Grund; der Blur bleibt für die Tiefe.
+
+*Analytics sah immer ausgewählt aus.* Sein Symbol war dauerhaft cremefarben,
+die vier anderen grau. Im Ruhezustand ist es jetzt wie jeder andere Tab und
+wird nur ausgezeichnet, wenn es aktiv ist.
+
+*Der erhöhte Knopf ragte über den Inhalt.* Der cremefarbene Kreis saß per
+`margin-top:-22px` außerhalb der Leiste und überdeckte die Seite (gemessen:
+9 px über der Oberkante, dazu die volle Kreishöhe). Analytics bleibt betont —
+aber IN der Reihe, über Farbe statt über Höhe. Der Rhythmus der fünf Tabs
+bleibt heil.
+
+**Der gleitende Anzeiger.** Statt einer hüpfenden Pille pro Tab gibt es eine
+einzige, die zwischen den Tabs gleitet (Federkurve, feines Überschwingen).
+Sie zeigt nicht nur, wo man ist, sondern woher man kam.
+
+Der erste Versuch sprang trotz Transition. Nachgemessen: 288 → 288 → 288 →
+288. Ursache war nicht die CSS, sondern dass `render()` die Leiste bei JEDEM
+Durchlauf komplett neu baute — das animierbare Element wurde jedes Mal
+zerstört. Die Leiste erkennt jetzt an einer Signatur (Tab-Kennungen, Symbole,
+Beschriftungen), ob sich die Struktur wirklich geändert hat, und aktualisiert
+sonst nur den Zustand. Danach: 159 → 240 → 277 → 288 → 289 → 288. Nebenbei
+entfällt bei jedem Rendern der Neuaufbau von fünf Knöpfen.
+
+**Randfälle geprüft**
+- Anzeiger sitzt auf allen fünf Tabs exakt mittig über dem Symbol (0 px
+  Versatz, gemessen).
+- Unter dem aktiven Analytics-Tab blendet er sich aus, sonst lägen zwei
+  Hervorhebungen übereinander.
+- Auf Screens, die nicht in der Leiste stehen (Profil, Preise), wird er
+  unsichtbar, statt stumm auf Tab 1 zu stehen und Aktivität vorzutäuschen.
+- Desktop-Seitenleiste: Anzeiger aus, Zustand über den Tab-Hintergrund.
+- `prefers-reduced-motion`: Übergangsdauer 0 s, der Wechsel erfolgt sofort.
+
+Version aktuell **v36** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

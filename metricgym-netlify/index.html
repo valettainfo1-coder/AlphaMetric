@@ -647,54 +647,74 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     padding:0 12px calc(10px + env(safe-area-inset-bottom));
     transform:none !important;
   }
-  /* Liquid-Glass v2: mehrschichtiges Glas — Verlauf + Blur + Specular-Highlight,
-     aktiver Tab bekommt eine eigene Glas-Pille. */
+  /* ══════════ TABLEISTE ═══════════════════════════════════════════════════
+     Vorher: halbdurchsichtiges Glas (50–72 % Deckkraft). Der Seitentext las
+     sich mitten durch die Beschriftungen — „Trainingstag-Ziel — enthält die
+     Kalorien…" stand quer über „Heute · Training". Dazu ein cremefarbener
+     Analytics-Knopf, der aus der Leiste heraus über den Inhalt ragte.
+     Jetzt: ruhiger Grund, auf dem die Beschriftung immer gewinnt, und EIN
+     gleitender Anzeiger statt eines hüpfenden Kreises pro Tab. Die Bewegung
+     trägt Bedeutung — sie zeigt, WOHER man kam.
+     ────────────────────────────────────────────────────────────────────── */
   .tabbar-inner{
     pointer-events:auto; max-width:406px; margin:0 auto; position:relative;
     display:grid; grid-template-columns:repeat(5,1fr);
-    background:linear-gradient(135deg, rgba(40,38,48,.72), rgba(22,21,27,.5));
-    -webkit-backdrop-filter:blur(32px) saturate(200%); backdrop-filter:blur(32px) saturate(200%);
-    border:1px solid var(--surface);
-    border-radius:999px; padding:6px 8px;
-    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 14px 38px rgba(0,0,0,.14),
-      inset 0 1px 0 rgba(255,255,255,.10), inset 0 -10px 18px rgba(0,0,0,.2);
+    /* Deckend genug, dass nichts durchliest — Blur bleibt für die Tiefe. */
+    background:linear-gradient(180deg, rgba(23,27,34,1), rgba(14,17,22,1));
+    -webkit-backdrop-filter:blur(28px) saturate(180%); backdrop-filter:blur(28px) saturate(180%);
+    border:none;
+    border-radius:var(--r-pill); padding:6px 8px;
+    box-shadow:0 -1px 0 rgba(255,255,255,.07) inset, 0 12px 34px rgba(0,0,0,.46), 0 2px 8px rgba(0,0,0,.3);
   }
-  .tabbar-inner::before{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:linear-gradient(115deg, rgba(255,255,255,.10), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 62%, rgba(255,255,255,.06));
-    opacity:.7;
+  /* Der gleitende Anzeiger: ein Element für fünf Tabs. --i trägt den Index. */
+  .tab-ind{
+    position:absolute; top:6px; bottom:6px; left:8px; z-index:0; pointer-events:none;
+    width:calc((100% - 16px) / 5);
+    transform:translateX(calc(var(--i,0) * 100%));
+    transition:transform .46s cubic-bezier(.34,1.12,.42,1);
+  }
+  .tab-ind::before{
+    content:""; position:absolute; left:50%; top:2px; transform:translateX(-50%);
+    width:46px; height:28px; border-radius:var(--r-pill);
+    background:rgba(239,231,220,.15);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
   }
   .tab{
-    position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px 5px;
-    background:none; border:none; color:var(--t3); font-size:9.5px; font-weight:600; cursor:pointer; font-family:inherit; min-height:48px;
+    position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px 5px;
+    background:none; border:none; color:var(--t3); font-size:var(--fs-micro); font-weight:600;
+    cursor:pointer; font-family:inherit; min-height:48px;
     letter-spacing:.005em; min-width:0; flex:1;
-    transition:color .25s var(--spring);
+    transition:color .3s ease;
   }
   /* Frei benennbare Tabs: der Name darf lang sein, das Tab bleibt schmal und bricht nie um. */
-  .tab .tl{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.15;}
+  .tab .tl{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.15;
+    transition:opacity .3s ease, font-weight .2s ease;}
   .tab .ic{
     display:flex; align-items:center; justify-content:center;
-    width:46px; height:27px; border-radius:999px;
-    transition:all .3s var(--spring);
+    width:46px; height:28px; border-radius:var(--r-pill);
+    transition:transform .42s cubic-bezier(.34,1.12,.42,1), color .3s ease;
   }
   .tab.active{color:var(--t1);}
-  .tab.active .ic{
-    transform:translateY(-1px);
-    background:rgba(239,231,220,.14);
-    border:none;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
-    animation:tabPop .42s var(--spring);
-  }
-  @keyframes tabPop{0%{transform:translateY(-1px) scale(.78)}58%{transform:translateY(-1px) scale(1.16)}100%{transform:translateY(-1px) scale(1)}}
-  .tab:active .ic{transform:scale(.92);}
-  .tab.flag .ic{
-    width:46px; height:46px; margin-top:-22px; border-radius:50%;
-    background:linear-gradient(180deg,#F6F0E7,#E7DCCB); color:#14171C; border:3px solid var(--bg);
-    box-shadow:0 8px 22px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.8);
-  }
-  .tab.flag{color:var(--t3);}
+  .tab.active .tl{font-weight:700;}
+  .tab.active .ic{transform:translateY(-1px) scale(1.06);}
+  .tab:active .ic{transform:scale(.9);}
+  /* Analytics bleibt hervorgehoben — aber IN der Reihe. Der erhöhte Cremekreis
+     ragte über den Seiteninhalt und brach den Rhythmus der fünf Tabs. Die
+     Betonung trägt jetzt Farbe statt Höhe. */
+  /* Kein Dauer-Creme mehr: ein immer heller Analytics-Knopf sah aus, als wäre er
+     ausgewählt. Im Ruhezustand wie jeder andere Tab, ausgezeichnet nur wenn aktiv. */
+  .tab.flag.active .ic{color:#14171C; background:linear-gradient(180deg,#F6F0E7,#E4D8C6);
+    box-shadow:0 2px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.7);}
   .tab.flag.active{color:var(--t1);}
-  .tab.flag.active .ic{transform:translateY(-3px) scale(1.05); box-shadow:0 8px 20px rgba(26,26,26,.3);}
+  /* Unter dem aktiven Analytics-Tab verschwindet der Anzeiger — sonst lägen
+     zwei Hervorhebungen übereinander. */
+  .tabbar-inner[data-flag="1"] .tab-ind::before{opacity:0;}
+  .tab-ind::before{transition:opacity .25s ease;}
+  @media (prefers-reduced-motion:reduce){
+    .tab-ind{transition:none;} .tab .ic{transition:color .3s ease;}
+    .tab.active .ic{transform:none;}
+  }
 
   .fab{
     position:fixed; bottom:104px; right:16px; z-index:47;
@@ -1647,6 +1667,10 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     .tab .ic{width:auto!important; height:auto!important; margin:0!important; background:none!important; border:none!important; box-shadow:none!important; border-radius:0!important; color:inherit!important; transform:none!important;}
     .tab.active{background:var(--accent-soft);}
     .tab.flag{color:var(--t3);} .tab.flag.active{color:var(--t1);}
+    .tab.flag.active .ic{background:none!important; box-shadow:none!important;}
+    /* In der Seitenleiste markiert der Hintergrund des Tabs den Zustand — der
+       waagerechte Anzeiger der Handy-Leiste hätte hier keine Entsprechung. */
+    .tab-ind{display:none;}
     /* Inhalt rechts neben der Sidebar, komfortable Breite */
     .appbar-inner{max-width:none; padding-left:24px; padding-right:24px;}
     .wrap{max-width:780px; margin-left:236px; margin-right:auto; padding:84px 48px 64px;}
@@ -6982,8 +7006,35 @@ function renderTabbar(){
     S.tab=t;save();render();};
   const TB=tabsFor();
   let active=["player","summary"].includes(S.tab)?(actUi()==="endur"?"endurance":"train"):(S.tab==="today"?"home":S.tab);
-  tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-inner">
-    ${TB.map(([id,ic,l,full],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${esc(full||l)}">
+  // Index des aktiven Tabs treibt den gleitenden Anzeiger. Kein Treffer (z. B. auf
+  // „Profil" oder „Preise", die nicht mehr in der Leiste stehen) → Anzeiger ausblenden,
+  // statt ihn stumm auf Tab 1 stehen zu lassen und Aktivität vorzutäuschen.
+  const ai=TB.findIndex(t=>t[0]===active);
+  const flagAktiv=ai===2?"1":"0";
+
+  /* Der Anzeiger kann nur gleiten, wenn er DASSELBE Element bleibt. Vorher baute
+     jedes render() die Leiste komplett neu — das alte Element war weg, es gab
+     nichts zu animieren, der Anzeiger sprang. Deshalb: Struktur nur neu bauen,
+     wenn sie sich wirklich geändert hat (Profilwechsel ändert Symbol + Namen),
+     sonst ausschließlich den Zustand aktualisieren. Spart nebenbei bei jedem
+     Rendern den Neuaufbau von fünf Knöpfen. */
+  const sig=TB.map(t=>t[0]+"|"+t[1]+"|"+t[2]).join(",");
+  const inner=tabbarEl.querySelector(".tabbar-inner");
+  if(inner && inner.dataset.sig===sig){
+    inner.style.setProperty("--i", String(Math.max(0,ai)));
+    inner.dataset.flag=flagAktiv;
+    const ind=inner.querySelector(".tab-ind"); if(ind) ind.style.opacity=ai<0?"0":"";
+    inner.querySelectorAll(".tab").forEach((b,i)=>{
+      const on=TB[i][0]===active;
+      b.classList.toggle("active",on);
+      if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+    });
+    return;
+  }
+  tabbarEl.innerHTML=`<nav class="tabbar" aria-label="Hauptnavigation">
+    <div class="tabbar-inner" style="--i:${Math.max(0,ai)}" data-flag="${flagAktiv}" data-sig="${esc(sig)}">
+    <span class="tab-ind" aria-hidden="true" style="${ai<0?"opacity:0":""}"></span>
+    ${TB.map(([id,ic,l,full],i)=>`<button class="tab ${i===2?"flag":""} ${active===id?"active":""}" onclick="A.tab('${id}')" aria-label="${esc(full||l)}"${active===id?' aria-current="page"':""}>
       <span class="ic" aria-hidden="true">${icon(ic,i===2?22:19)}</span><span class="tl">${esc(l)}</span></button>`).join("")}</div></nav>`;
 }
 /* ---------- Onboarding-Tour: geführte Durchführung der Hauptfunktionen ----------
