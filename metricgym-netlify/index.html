@@ -994,6 +994,66 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:linear-gradient(90deg,#6E93B8,#8FB8DC); animation:gnBar linear forwards; transform:scaleX(0);}
   @keyframes gnBar{to{transform:scaleX(1)}}
   .gn-skip{font-size:10.5px; color:var(--t3); margin-top:14px;}
+  /* ══════════ ERST-GENESIS ═════════════════════════════════════════════════
+     Nach der letzten Frage stand bisher ein nackter Spinner: 1,3 Sekunden
+     Kreisel, dann sprang die Auswertung ins Bild. Der teuerste Moment der App
+     — hier entsteht der Plan — sah aus wie ein Ladefehler.
+     Jetzt arbeiten vier Engines sichtbar parallel, jede mit eigenem Balken und
+     eigenem Tempo, darunter läuft ein Band echter Quellen durch. Die Belege
+     sind die, mit denen die App wirklich rechnet — keine erfundenen Titel.
+     ────────────────────────────────────────────────────────────────────── */
+  /* ══════════ AUSWERTUNG: vier Seiten statt einer Wand ═════════════════════
+     Nur die aktive Seite ist im Dokument sichtbar — die anderen sind komplett
+     entfernt (display:none), damit weder Screenreader noch Tab-Reihenfolge
+     durch verborgene Inhalte laufen. */
+  .rv-deck>.rv-page{display:none;}
+  .rv-deck[data-page="1"]>.rv-page[data-p="1"],
+  .rv-deck[data-page="2"]>.rv-page[data-p="2"],
+  .rv-deck[data-page="3"]>.rv-page[data-p="3"],
+  .rv-deck[data-page="4"]>.rv-page[data-p="4"],
+  .rv-deck[data-page="5"]>.rv-page[data-p="5"]{display:block; animation:rvIn .5s cubic-bezier(.22,1,.36,1);}
+  @keyframes rvIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  /* Die Blöcke einer Seite laufen leicht versetzt ein — der Blick bekommt eine
+     Reihenfolge, statt alles gleichzeitig serviert zu bekommen. */
+  .rv-page>*{animation:rvUp .52s cubic-bezier(.22,1,.36,1) backwards;}
+  .rv-page>*:nth-child(1){animation-delay:.02s} .rv-page>*:nth-child(2){animation-delay:.09s}
+  .rv-page>*:nth-child(3){animation-delay:.16s} .rv-page>*:nth-child(4){animation-delay:.23s}
+  .rv-page>*:nth-child(5){animation-delay:.3s}  .rv-page>*:nth-child(n+6){animation-delay:.36s}
+  @keyframes rvUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .rv-nav{margin-top:26px;}
+  .rv-dots{display:flex; gap:7px; justify-content:center; margin-bottom:16px;}
+  .rv-dot{width:7px; height:7px; padding:0; border:none; border-radius:var(--r-pill);
+    background:var(--t3); opacity:.45; cursor:pointer;
+    transition:width .38s cubic-bezier(.34,1.12,.42,1), opacity .3s ease, background .3s ease;}
+  .rv-dot.on{width:24px; opacity:1; background:var(--hl);}
+  @media (prefers-reduced-motion:reduce){
+    .rv-deck>.rv-page, .rv-page>*{animation:none!important;}
+    .rv-dot{transition:none;}
+  }
+  .gn-lanes{width:100%; max-width:340px; display:flex; flex-direction:column; gap:13px; margin-bottom:18px;}
+  .gn-lane{opacity:0; animation:gnLaneIn .5s cubic-bezier(.22,1,.36,1) forwards;}
+  @keyframes gnLaneIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .gn-lane .row{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px;}
+  .gn-lane .nm{display:flex; align-items:center; gap:7px; font-size:var(--fs-xs); font-weight:600; color:var(--t1); min-width:0;}
+  .gn-lane .nm svg{flex:0 0 auto; color:var(--hl);}
+  .gn-lane .pct{font-size:var(--fs-micro); font-weight:600; color:var(--t3); font-variant-numeric:tabular-nums; flex:0 0 auto;}
+  .gn-lane .trk{height:5px; border-radius:var(--r-pill); background:rgba(255,255,255,.07); overflow:hidden;}
+  .gn-lane .fil{display:block; height:100%; width:100%; border-radius:var(--r-pill); transform:scaleX(0); transform-origin:left;
+    background:linear-gradient(90deg,#6E93B8,#8FB8DC);
+    animation:gnFill var(--dur,1600ms) cubic-bezier(.35,.9,.3,1) forwards;}
+  @keyframes gnFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .gn-lane.done .pct{color:var(--good);}
+  /* Quellenband: die Belege, die wirklich hinter den Zahlen stehen. */
+  .gn-src{width:100%; max-width:340px; height:19px; overflow:hidden; position:relative; margin-bottom:6px;}
+  .gn-src span{position:absolute; inset:0; display:flex; align-items:center; gap:6px;
+    font-size:var(--fs-micro); letter-spacing:.06em; text-transform:uppercase; color:var(--t3);
+    opacity:0; animation:gnSrc 1s ease forwards;}
+  @keyframes gnSrc{0%{opacity:0;transform:translateY(7px)}18%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-7px)}}
+  @media (prefers-reduced-motion:reduce){
+    .gn-lane{opacity:1; animation:none;}
+    .gn-lane .fil{transform:scaleX(1); animation:none;}
+    .gn-src span{opacity:1; animation:none;}
+  }
   /* Log-Bedienfeld im Player: klare Zellen — Gewicht | Reps | Anstrengung */
   .lcells{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px;}
   .lcell{background:var(--s2); border-radius:18px; padding:12px 10px 9px; text-align:center; box-shadow:inset 0 1px 0 var(--edge);}
@@ -1564,6 +1624,14 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Statchips sind keine Boxen mehr — stille Metadaten-Worte (Oura: Text statt Chip) */
   .statchip{display:inline-flex; align-items:center; gap:4px; background:none; border-radius:999px; padding:0; font-size:12px; font-weight:500; color:var(--t3); margin:0 12px 0 0; letter-spacing:.01em;}
   .statchip[style*="background"]{padding:2px 9px; font-size:10.5px; font-weight:600; letter-spacing:.05em; margin-right:6px;}
+  /* Technik-Hinweis an einer Übung. Vorher lief er durch die Chip-Auszeichnung —
+     999 px Radius, gedacht für zwei Wörter. Bei drei Zeilen Fließtext wurde daraus
+     eine Blase mit rundgelutschten Ecken. Ein Hinweis ist kein Chip. */
+  .exnote{display:flex; align-items:flex-start; gap:7px; margin:6px 0 2px; max-width:100%;
+    background:rgba(143,184,220,.10); border-radius:var(--r-sm); padding:7px 10px;
+    font-size:var(--fs-xs); font-weight:500; line-height:1.45; letter-spacing:0;
+    color:var(--hl); text-align:left; white-space:normal;}
+  .exnote>svg{flex:0 0 auto; margin-top:1px;}
   .whybox{background:var(--s2); border-radius:14px; padding:10px 12px; font-size:12px; line-height:1.55; color:var(--t2); margin-top:8px;}
   .avatar{width:52px;height:52px;border-radius:50%;background:var(--s3);color:var(--t1);font-weight:600;display:flex;align-items:center;justify-content:center;}
   .icon-circle{width:44px;height:44px;min-width:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--t1);}
@@ -8612,8 +8680,13 @@ function renderOnboarding(){
   }
   // ---- Reveal (Plan-Bau) ----
   if(S.step>=REVEAL){
-    root.innerHTML=`<div class="center"><div class="spin" style="width:46px;height:46px;border-width:3px"></div><p class="sm t2" style="margin-top:14px">Engine berechnet deinen Plan …</p></div>`;
-    setTimeout(()=>{
+    /* Der teuerste Moment der App — hier entsteht der Plan. Vorher stand hier
+       1,3 Sekunden ein nackter Kreisel, dann sprang die Auswertung ins Bild.
+       Jetzt arbeiten die vier Engines sichtbar, und der Plan wird DANACH
+       gerechnet: firstGenesis ruft den Aufbau genau einmal auf, auch beim
+       Überspringen. */
+    root.innerHTML=`<div class="center"></div>`;
+    firstGenesis(()=>{
       const a={...S.a,days:S.a.days||4,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
       a.mode=a.mode||"gym";
       // Ausdauer-Personas: Ziel auf endurance/fat_loss mappen, damit Ernährung & Projektion passen.
@@ -8664,8 +8737,9 @@ function renderOnboarding(){
       // Beim WIEDERHOLEN des Quiz Verläufe NICHT löschen — nur beim allerersten Mal anlegen.
       if(!S.weightLog||!S.weightLog.length) S.weightLog=[{t:Date.now(),v:a.weight}];
       if(S.requiz) S.schedule=opt.schedule.slice(); // neuen Wochenplan übernehmen
+      S.revealPage=1;
       save(); renderReveal();
-    },1300);
+    });
     return;
   }
   // ---- Frage-Block: 2 Fragen + EIN Weiter-Button ----
@@ -9042,8 +9116,35 @@ A.wishApply=(intent)=>{
   S.tab=(a.mode==="cycling"||a.mode==="running")?"endurance":"train"; save(); render();
   toast(_wishCapped?"✓ Wunsch aktiv — mehrere Ziele zugleich sind Pro; Metric nutzt dein Hauptziel.":"✓ Dein Wunsch ist aktiv — Kalorien, Makros, Plan & Readiness neu vermascht");
 };
+/* Die Auswertung war EIN Scroll mit zehn Blöcken — Ziel, Jahrespfad, Gewinne,
+   Start-Setup, vier USP-Kacheln, Skeptiker-Fakten, Studienbasis, Details. Alles
+   richtig, alles auf einmal: niemand liest das. Jetzt vier Seiten, eine Aussage
+   pro Seite, mit Fortschrittspunkten. Der Inhalt ist derselbe geblieben —
+   verteilt statt gestapelt. */
+const REVEAL_PAGES=[
+  ["Dein Ziel",       "Das erreichst du"],
+  ["Dein Weg",        "So kommst du hin"],
+  ["Dein Start",      "Womit du morgen beginnst"],
+  ["Warum das wirkt", "Die vier Hebel"],
+  ["Die Belege",      "Schwarz auf weiß"],
+];
+function revealNav(){
+  const n=Math.min(REVEAL_PAGES.length, Math.max(1, S.revealPage||1));
+  const letzte=n===REVEAL_PAGES.length;
+  return `<div class="rv-nav">
+    <div class="rv-dots" role="tablist" aria-label="Seite">
+      ${REVEAL_PAGES.map((pg,i)=>`<button class="rv-dot ${i+1===n?"on":""}" role="tab"
+        aria-selected="${i+1===n}" aria-label="${esc(pg[0])}" onclick="A.rvGo(${i+1})"></button>`).join("")}
+    </div>
+    ${letzte?"":`<button class="btn volt" onclick="A.rvGo(${n+1})">Weiter · ${esc(REVEAL_PAGES[n][0])}</button>`}
+    ${n>1?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.rvGo(${n-1})">Zurück</button>`:""}
+  </div>`;
+}
 function renderReveal(){
   const p=S.profile, tg=p.tg;
+  if(!S.revealPage) S.revealPage=1;
+  A.rvGo=(n)=>{ S.revealPage=Math.min(REVEAL_PAGES.length,Math.max(1,n)); save(); renderReveal();
+    try{ window.scrollTo({top:0,behavior:"instant"}); }catch(e){ window.scrollTo(0,0); } };
   // Nach dem Onboarding einmalig die Feature-Übersicht zeigen (v5/Phase 3).
   // Der vorgeschlagene Wochenplan wird übernommen — bleibt aber frei editierbar.
   A.startApp=()=>{
@@ -9088,8 +9189,10 @@ function renderReveal(){
   const bigNum=primary.hi==null
     ? `<p class="hero-num volt-txt" style="font-size:44px;line-height:1">${primary.word||"spürbar"}</p>`
     : `<p class="hero-num volt-txt" style="font-size:54px;line-height:1">${primary.prefix||""}<span data-count="${primary.lo}">0</span>–<span data-count="${primary.hi}">0</span><span style="font-size:33px"> ${primary.unit}</span></p>`;
-  setTimeout(()=>{try{confetti();}catch{}},220);
-  root.innerHTML=`<div class="fade" style="text-align:center">
+  // Konfetti gehört zum Moment des Ergebnisses — nicht zu jedem Blättern.
+  if((S.revealPage||1)===1) setTimeout(()=>{try{confetti();}catch{}},220);
+  root.innerHTML=`<div class="fade rv-deck" data-page="${S.revealPage||1}" style="text-align:center">
+    <div class="rv-page" data-p="1">
     <!-- PRIMÄR-HERO: Begrüßung GANZ OBEN in der Box (kein Leerraum, kein separater Haken) -->
     <div class="reveal-hero">
       <div class="reveal-orb" aria-hidden="true"></div>
@@ -9116,6 +9219,7 @@ function renderReveal(){
         <p class="metric" style="font-size:15px">${s.hi==null?(s.word||"+"):`${s.prefix||""}${s.lo}–${s.hi} ${s.unit}`}</p>
         <p class="xs t2" style="margin-top:2px">auch ${s.headline}</p></div>`).join("")}</div>`:""}
 
+    </div><div class="rv-page" data-p="2">
     <!-- JAHRES-PFAD: ehrliche Makro-Periodisierung aus Körperfett + Ziel -->
     ${(()=>{ const mp=macroPhases(a,tg); if(!mp)return "";
       return `<div class="card" data-tone="hl" style="text-align:left">
@@ -9132,6 +9236,7 @@ function renderReveal(){
       <p class="sm t2" style="line-height:1.55">Mit jedem Level passt sich dein Plan an und wird anspruchsvoller. Du wirst stärker — <b style="color:var(--t1)">und dein Plan wächst mit dir</b>. Genau so entsteht echter, dauerhafter Fortschritt statt Stillstand.</p>
     </div>
 
+    </div><div class="rv-page" data-p="3">
     <!-- DOPAMIN: Das erreichst du (kompakt) -->
     <div class="card" style="text-align:left; background:var(--accent); border:none">
       <p class="ct" style="color:rgba(255,255,255,.65);margin-bottom:10px">Das holst du raus</p>
@@ -9159,6 +9264,7 @@ function renderReveal(){
     ${tg.conflicts.length?`<div class="warncard mt12" style="text-align:left" role="alert"><b>Hinweis:</b> ${tg.conflicts[0].msg}</div>`:""}
     ${(tg.recs||[]).map(rmsg=>`<div class="card mt8" data-tone="hl" style="text-align:left"><p class="sm" style="line-height:1.55"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Empfehlung</b><br>${rmsg}</p></div>`).join("")}
 
+    </div><div class="rv-page" data-p="4">
     <!-- USP: So funktioniert METRICGYM (4 Boxen) -->
     <p class="label" style="text-align:center;margin:26px 0 10px">Warum METRICGYM dein bester Plan ist</p>
     <div class="grid2" style="gap:10px;text-align:left">
@@ -9170,6 +9276,7 @@ function renderReveal(){
           <p class="sm" style="font-weight:600;margin-bottom:4px">${t}</p><p class="xs t2" style="line-height:1.55">${d}</p></div>`).join("")}
     </div>
 
+    </div><div class="rv-page" data-p="5">
     <!-- SKEPTIKER-ZERSTÖRER: harte Evidenz, dass dies die beste Form ist -->
     <div class="card" data-tone="hl" style="margin-top:14px; text-align:left">
       <p class="ct" style="margin-bottom:6px">${icon("zap",14)} „Mein alter Plan war doch gut" — die Fakten</p>
@@ -9208,7 +9315,8 @@ function renderReveal(){
         <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
           ${WD.map((d,i)=>{const t=sug[i]||"rest";const tr=t!=="rest";return `<div style="background:${tr?"var(--s2)":"none"};border-radius:10px;padding:5px 0"><p class="xs" style="color:var(--t3)">${d}</p><p style="font-size:13.5px;margin:4px 0">${tr?`<span style="display:inline-flex">${icon((TYPE_META[parseTypeKey(t).base]||TYPE_META.rest).icon,13)}</span>`:'<span style="color:var(--t3)">·</span>'}</p></div>`;}).join("")}
         </div>
-      </div></details></div>`;
+      </div></details></div>
+    ${revealNav()}</div>`;
   // Kino-Onboarding: Projektions-Zahlen zaehlen hoch
   requestAnimationFrame(()=>animateCounts());
 }
@@ -11251,6 +11359,64 @@ function blockAnalysis(){
 /* ===== PLAN-GENESE: der Signature-Moment. Die Engine baut den Plan SICHTBAR —
    Orb atmet, Zahnraeder ticken einzeln ein (echte Schritte, keine Show-Luegen),
    Lichtleiste laeuft, dann materialisiert sich der Plan. Tap = ueberspringen. ===== */
+/* Erst-Genesis: läuft EINMAL, direkt nach der letzten Onboarding-Frage, während
+   der Plan wirklich gerechnet wird. Vier Engines laufen sichtbar parallel — die
+   Balken haben verschiedene Laufzeiten, damit es nach echter Arbeit aussieht und
+   nicht nach einem gleichmäßigen Fortschrittsbalken. Darunter ziehen die Quellen
+   durch, mit denen die Engine tatsächlich rechnet.
+   `run` wird garantiert genau einmal ausgeführt — auch beim Überspringen. */
+function firstGenesis(run){
+  const a=S.a||{};
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lanes=[
+    ["activity","Stoffwechsel-Engine", "Grundumsatz, Aktivität, Zielkalorien", 1900],
+    ["dumbbell","Trainings-Engine",    "112 Übungen · "+(EQ_LABEL[a.equipment]||"Gym")+" · "+(a.days||4)+" Tage", 2600],
+    ["chart",   "Volumen-Engine",      "MEV–MRV je Muskelgruppe kalibriert", 2250],
+    ["utensils","Ernährungs-Engine",   "Makros auf dein Ziel gerechnet", 1600],
+  ];
+  // Echte Belege — genau die, auf die sich die Engine stützt.
+  const QUELLEN=[
+    "Schoenfeld 2016 · Trainingsfrequenz",
+    "Israetel 2017 · Volumen-Korridore",
+    "Helms 2014 · Protein & Muskelerhalt",
+    "Zourdos 2016 · Autoregulation",
+    "Morton 2018 · Proteinbedarf",
+    "Wolf 2024 · Lengthened Partials",
+    "Garthe 2011 · Abnehmtempo",
+    "Grgic 2018 · Satzpausen",
+  ];
+  const dauer=reduce?600:3400;
+  const gid="fgen-"+Date.now();
+  let fired=false; const finish=()=>{ if(fired)return; fired=true; try{ run(); }catch(e){} };
+
+  overlay.innerHTML=`<div class="genesis" id="${gid}" role="status" aria-live="polite">
+    <div class="gn-orb" aria-hidden="true">${rauchkreis(104)}</div>
+    <p class="gn-title">Deine Engine rechnet</p>
+    <div class="gn-lanes">
+      ${lanes.map(([ic,nm,sub,ms],i)=>`<div class="gn-lane" style="animation-delay:${i*130}ms">
+        <div class="row"><span class="nm">${icon(ic,13)} ${nm}</span><span class="pct">läuft</span></div>
+        <div class="trk"><i class="fil" style="--dur:${ms}ms;animation-delay:${i*130}ms"></i></div>
+        <p class="xs t2" style="margin-top:4px;font-size:var(--fs-micro)">${sub}</p>
+      </div>`).join("")}
+    </div>
+    <div class="gn-src" aria-hidden="true">
+      ${QUELLEN.map((q,i)=>`<span style="animation-delay:${i*(dauer/QUELLEN.length)}ms">${icon("check",11)} ${q}</span>`).join("")}
+    </div>
+    <p class="gn-skip">Tippen zum Überspringen</p>
+  </div>`;
+
+  const g=document.getElementById(gid);
+  // Jede Bahn meldet sich fertig, sobald ihr Balken durchgelaufen ist.
+  if(!reduce) lanes.forEach(([,,,ms],i)=>setTimeout(()=>{
+    const el=g&&g.querySelectorAll(".gn-lane")[i]; if(!el)return;
+    el.classList.add("done"); const p=el.querySelector(".pct"); if(p)p.textContent="fertig ✓";
+  }, ms+i*130));
+
+  const weg=()=>{ const gg=document.getElementById(gid);
+    if(gg){ gg.classList.add("out"); setTimeout(()=>{ if(overlay.firstElementChild&&overlay.firstElementChild.id===gid) overlay.innerHTML=""; },430); } };
+  g.addEventListener("click",()=>{ finish(); weg(); },{once:true});
+  setTimeout(()=>{ finish(); weg(); }, dauer);
+}
 function planGenesis(run,ctx){
   ctx=ctx||{};
   if(matchMedia("(prefers-reduced-motion: reduce)").matches){ run(); return; }
@@ -11780,7 +11946,7 @@ function maxStatusCard(){
       <div class="row" style="align-items:center;gap:14px;margin-bottom:12px">
         <div style="width:64px;height:64px;flex-shrink:0;border-radius:50%;background:rgba(127,169,143,.18);color:#7FA98F;display:flex;align-items:center;justify-content:center">${icon("check",34)}</div>
         <div style="flex:1">
-          <p class="st-word" style="font-size:26px">Optimal dosiert</p>
+          <p class="st-word" style="font-size:26px">Voll ausgereizt</p>
           <p class="xs t2" style="line-height:1.55;margin-top:4px">Jeder Muskel trainiert am Rand deines erholbaren Maximums — <b style="color:var(--t1)">der stärkste Reiz ohne Übertraining</b>. Du holst <b style="color:var(--t1)">${st.util} % deines Potenzials</b> raus.</p>
         </div>
       </div>
@@ -11827,7 +11993,7 @@ function openMaxStatus(){
       </div>
       <p class="xs t2" style="margin-top:4px">${m.v} Sätze/Woche — dein Wachstums-Fenster: ${m.mev}–${m.mrv}</p></div>`;}).join("");
   const head = st.state==="optimal"
-    ? `<p class="sm" style="line-height:1.55;margin:8px 0 12px"><b style="color:#7FA98F">✓ Optimal dosiert.</b> Alle Muskeln liegen exakt im wissenschaftlichen Wachstums-Korridor (MEV–MRV, Israetel 2017) — du holst <b style="color:var(--t1)">${st.util} % deines erholbaren Maximums</b> raus. Mehr wäre Übertraining.</p>`
+    ? `<p class="sm" style="line-height:1.55;margin:8px 0 12px"><b style="color:#7FA98F">✓ Voll ausgereizt.</b> Alle Muskeln liegen exakt im wissenschaftlichen Wachstums-Korridor (MEV–MRV, Israetel 2017) — du holst <b style="color:var(--t1)">${st.util} % deines erholbaren Maximums</b> raus. Mehr wäre Übertraining.</p>`
     : `<p class="sm" style="line-height:1.55;margin:8px 0 12px"><b style="color:var(--warn)">${st.over||st.under} ${(st.over||st.under)===1?"Muskel":"Muskeln"} ${st.state==="over"?"über dem Maximum":"unter dem optimalen Reiz"}.</b> Durch deine Anpassungen ist der Plan nicht mehr perfekt dosiert.</p>
        <button class="btn volt mb12" style="min-height:44px" onclick="A.closeModal();A.resetToOptimum()">${icon("zap",15)} Auf wissenschaftliches Optimum bringen</button>`;
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
@@ -11841,7 +12007,7 @@ function openMaxStatus(){
 }
 async function shareMaxStatus(){
   const st=maxStimulusStatus(); if(!st)return;
-  const txt=`Mein Trainingsplan ist wissenschaftlich optimal dosiert: jeder Muskel exakt im Wachstums-Korridor (MEV–MRV), ${st.util} % meines erholbaren Maximums genutzt — maximaler Reiz, kein Übertraining. Gebaut mit METRICGYM. 💪`;
+  const txt=`Mein Trainingsplan reizt jeden Muskel voll aus: jeder Muskel exakt im Wachstums-Korridor (MEV–MRV), ${st.util} % meines erholbaren Maximums genutzt — maximaler Reiz, kein Übertraining. Gebaut mit METRICGYM. 💪`;
   try{ if(navigator.share){ await navigator.share({title:"Mein Reiz-Status — METRICGYM",text:txt}); return; } }catch{}
   try{ await navigator.clipboard.writeText(txt); toast("Beweis kopiert — einfügen & posten"); }
   catch{ modal(`<p class="ct">Dein Beweis</p><p class="sm" style="line-height:1.55">${txt}</p>`); }
@@ -12170,7 +12336,7 @@ function renderTrain(){
       <span class="exn" style="flex-direction:column;align-items:flex-start;gap:2px">
         <span style="display:flex;align-items:center;gap:6px">${warn?`<span style="color:var(--warn);display:inline-flex">${icon("alert",13)}</span>`:""}${name}${e.swapped?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Alternative</span>':""}${e.userSwap?'<span class="statchip" style="background:var(--hl-soft);color:var(--hl)">Getauscht</span>':""}</span>
         <span><span class="statchip">${weekSets(e.orig||e.n,e.sets)} × ${e.reps}</span>${e.rir&&e.rir!=="–"?`<span class="statchip">RIR ${e.rir}</span>`:""}</span>
-        ${e.tech?`<span><span class="statchip" style="background:var(--hl-soft);color:var(--hl)">⚡ ${e.tech}</span></span>`:""}
+        ${e.tech?`<span class="exnote">${icon("zap",13)}<span>${e.tech}</span></span>`:""}
       </span>
       <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
         <span class="metric xs" style="color:${_up?"#8FB8DC":"var(--t2)"}">${_up?"▲ ":""}${r?fmtKg(r.w):""}</span>

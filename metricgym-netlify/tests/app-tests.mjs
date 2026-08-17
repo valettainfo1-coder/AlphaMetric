@@ -287,7 +287,8 @@ const multiRev = await page.evaluate(async () => {
     injury: [], days: 4, time: 60, sessionTime: 60, split: 'auto', equipment: 'gym_full',
     act: 'light', focus: [], recovery_profile: 'average', schedule_pref: 'consistent' });
   S.step = oblocks().length + 1; save(); render();
-  await new Promise(r => setTimeout(r, 1800));
+  // Warten, bis die Genesis durch ist und das Profil steht (statt fester Frist).
+  for (let i = 0; i < 120 && !S.profile; i++) await new Promise(r => setTimeout(r, 100));
   const acts = (S.acts || []).map(x => ({ name: x.name, type: x.type, goals: (x.cfg.goals || []).join('+') }));
   const primary = { goals: JSON.stringify(S.profile.tg.goals), w: S.profile.a.weight };
   const cyc = (S.acts || []).find(x => x.type === 'cycling');

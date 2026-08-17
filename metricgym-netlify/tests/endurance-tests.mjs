@@ -187,10 +187,14 @@ const funnel = await page.evaluate(async () => {
     S.a = { height: 180, weight: 76, sleep: 7, goals: [], mode: 'cycling', sex: 'male', age: 31, cyc_goal: 'ftp', exp: 'intermediate', cyc_ftp: 275, cyc_hours: 8, days: 4 };
     delete S.profile; delete S.requiz;
     const BLK = oblocks(); S.step = BLK.length + 1; S.screen = 'onboarding'; save(); render();
-    setTimeout(() => {
+    // Auf den Zustand warten statt auf eine feste Frist: vor dem Reveal läuft die
+    // Genesis-Animation, und S.profile entsteht erst an ihrem Ende. S.profile wurde
+    // oben gelöscht und ist damit das verlässliche Signal.
+    (async () => {
+      for (let i = 0; i < 150 && !(S.profile && S.profile.tg); i++) await new Promise(r => setTimeout(r, 100));
       S.a.mode = 'gym'; const gymSame = JSON.stringify(oblocks()) === JSON.stringify(OBLOCKS);
       resolve({ hasProfile: !!(S.profile && S.profile.tg), mode: S.profile && S.profile.a.mode, ftp: S.endur && S.endur.athlete.cycling.ftp, sport: S.endur && S.endur.sport, goals: S.profile && S.profile.a.goals, gymSame });
-    }, 1700);
+    })();
   });
 });
 check('Funnel: Cyclist-Persona erzeugt valides Profil', funnel.hasProfile && funnel.mode === 'cycling', funnel.mode);
@@ -212,11 +216,13 @@ const loss = await page.evaluate(async () => {
     const dEasy = calorieDirection({ ...S.a, loss_rate: 'easy', goals: ['fat_loss'] }).dir;
     const dFast = calorieDirection({ ...S.a, loss_rate: 'fast', goals: ['fat_loss'] }).dir;
     const BLK = oblocks(); S.step = BLK.length + 1; S.screen = 'onboarding'; save(); render();
-    setTimeout(() => {
+    // Zustand abwarten statt fester Frist — die Genesis läuft vor dem Reveal.
+    (async () => {
+      for (let i = 0; i < 150 && !(S.profile && S.profile.tg); i++) await new Promise(r => setTimeout(r, 100));
       resolve({ hasLossRate, hasPersona, goals: S.profile && S.profile.a.goals,
         deficit: S.profile && S.profile.tg.dir < 0,
         dNone, dMod, dEasy, dFast });
-    }, 1700);
+    })();
   });
 });
 check('Funnel: Abnehmen-Persona registriert (+ loss_rate-Frage)', loss.hasPersona && loss.hasLossRate, { p: loss.hasPersona, q: loss.hasLossRate });

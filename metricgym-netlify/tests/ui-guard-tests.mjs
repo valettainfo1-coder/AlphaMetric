@@ -373,7 +373,15 @@ for (const [label, a] of PERSONAS) {
       exp: 'novice', injuries: [], sessionTime: 60, act: 'light', focus: [],
       recovery_profile: 'average', schedule_pref: 'consistent' }, a);
     S.step = oblocks().length + 1; save(); render();
-    await new Promise(r => setTimeout(r, 1900));
+    // Auf den Zustand warten, nicht auf eine Zahl: die Genesis-Animation läuft vor
+    // dem Reveal, und A.startApp entsteht erst dort. Ein fester Wert bräche bei
+    // jeder Änderung ihrer Dauer erneut.
+    // WICHTIG: NICHT auf A.startApp warten — A ist global und trägt die Funktion aus
+    // dem VORHERIGEN Persona-Durchlauf noch. Die Schleife liefe sofort durch und riefe
+    // die veraltete Fassung. S.profile wird oben je Persona auf null gesetzt und ist
+    // damit das einzige verlässliche Signal.
+    for (let i = 0; i < 150 && !S.profile; i++) await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 120));
     A.startApp();
     await new Promise(r => setTimeout(r, 1500));
 

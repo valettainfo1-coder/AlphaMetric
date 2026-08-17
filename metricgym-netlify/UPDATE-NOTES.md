@@ -1100,7 +1100,79 @@ entfällt bei jedem Rendern der Neuaufbau von fünf Knöpfen.
 - Desktop-Seitenleiste: Anzeiger aus, Zustand über den Tab-Hintergrund.
 - `prefers-reduced-motion`: Übergangsdauer 0 s, der Wechsel erfolgt sofort.
 
-Version aktuell **v36** — Nutzer bekommen Updates beim nächsten Besuch
+## §57 — Auswertung auf fünf Seiten, Engine-Genesis, zwei Detailfehler
+
+### Der Moment vor der Auswertung
+
+Nach der letzten Frage stand 1,3 Sekunden ein nackter Kreisel, dann sprang die
+Auswertung ins Bild. Der teuerste Moment der App — hier entsteht der Plan —
+sah aus wie ein Ladefehler.
+
+Jetzt arbeiten vier Engines sichtbar parallel (Stoffwechsel, Training, Volumen,
+Ernährung), jede mit eigenem Balken und eigener Laufzeit, damit es nach echter
+Arbeit aussieht statt nach einem gleichmäßigen Fortschrittsbalken. Darunter
+ziehen die Quellen durch, mit denen die Engine wirklich rechnet — Schoenfeld
+2016, Israetel 2017, Helms 2014, Zourdos 2016, Morton 2018, Wolf 2024, Garthe
+2011, Grgic 2018. **Keine erfundenen Titel.** Dauer 3,4 s, jederzeit durch
+Antippen überspringbar, bei `prefers-reduced-motion` 0,6 s ohne Bewegung. Der
+Plan wird garantiert genau einmal gebaut — auch beim Überspringen.
+
+### Die Auswertung: fünf Seiten statt einer Wand
+
+Beschwerde: „komplett unübersichtlich, zu viel Informationen."
+
+Zu Recht — es war EIN Scroll mit zehn Blöcken: Ziel, Jahrespfad, Gewinne,
+Start-Setup, vier USP-Kacheln, Skeptiker-Fakten, Studienbasis, Details.
+
+Jetzt fünf Seiten mit Fortschrittspunkten, eine Aussage pro Seite. Der Inhalt
+ist Wort für Wort derselbe — verteilt statt gestapelt:
+
+| Seite | Höhe |
+|---|---|
+| Dein Ziel | 722 px |
+| Dein Weg | 664 px |
+| Dein Start | 686 px |
+| Warum das wirkt | 778 px |
+| Die Belege | 1.271 px |
+
+Zwischenstand unterwegs: der erste Schnitt ergab eine Seite mit 1.758 px und
+1.486 von 2.314 Zeichen — die alte Wand, nur verschoben. Nach dem Nachmessen in
+zwei Seiten geteilt und die Gewinn-Liste von Seite 2 nach 3 verschoben, weil
+Seite 3 sonst fast leer war. Nur die aktive Seite steht im Dokument
+(`display:none`), damit weder Screenreader noch Tab-Reihenfolge durch
+verborgene Inhalte laufen. Konfetti nur beim ersten Auftritt, nicht bei jedem
+Blättern.
+
+### Zwei Detailfehler aus dem Feedback
+
+*Der blaue Kreis an der Übung.* Der Technik-Hinweis („Lengthened Partials: …")
+lief durch die **Chip**-Auszeichnung — 999 px Radius, gedacht für zwei Wörter.
+Bei drei Zeilen Fließtext wurde daraus eine Blase mit rundgelutschten Ecken.
+Ein Hinweis ist kein Chip: eigene Klasse `.exnote` mit maßvollem Radius,
+lesbarer Zeilenhöhe und Symbol an fester Position.
+
+*„Optimal dosiert."* Klang nach Apotheke, nicht nach Training. Jetzt
+**„Voll ausgereizt"** — an allen drei Stellen (Statuswort, Fließtext, Teilen-Text).
+
+### Was die Tests dabei gelernt haben
+
+Der Wächter fand die Regression sofort: `A.startApp is not a function`. Drei
+Suiten warteten mit festen Fristen (1.700–1.900 ms) darauf, dass der Reveal
+fertig ist — die Genesis davor macht jede solche Zahl falsch.
+
+Mein erster Fix war selbst fehlerhaft: warten, bis `A.startApp` existiert. `A`
+ist global und trug die Funktion aus dem VORHERIGEN Persona-Durchlauf noch, die
+Schleife lief sofort durch und rief die veraltete Fassung — drei Personas
+fielen um. Jetzt wird auf `S.profile` gewartet, das je Durchlauf zurückgesetzt
+wird.
+
+Ebenfalls eigener Messfehler: geprüft, ob der Start-Knopf nur auf der letzten
+Seite sichtbar ist, über `getComputedStyle(b).display`. Das sagt nur etwas über
+den Knopf selbst, nichts über versteckte Vorfahren — gemeldet wurde „auf allen
+Seiten sichtbar", richtig war das Gegenteil. `offsetParent === null` sieht die
+ganze Kette.
+
+Version aktuell **v37** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
