@@ -1021,7 +1021,14 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .rv-page>*:nth-child(5){animation-delay:.3s}  .rv-page>*:nth-child(n+6){animation-delay:.36s}
   @keyframes rvUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   .rv-nav{margin-top:26px;}
-  .rv-dots{display:flex; gap:7px; justify-content:center; margin-bottom:16px;}
+  /* Eine Zeile: Zurück-Pfeil, Punkte, Ausgleich — die Punkte bleiben exakt mittig. */
+  .rv-steps{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px;}
+  .rv-back,.rv-spacer{flex:0 0 32px; width:32px;}
+  .rv-back{background:none; border:none; color:var(--t3); font-size:24px; line-height:1; cursor:pointer;
+    padding:6px 0; min-height:34px; transition:color .2s ease, transform .2s ease;}
+  .rv-back:active{transform:translateX(-2px); color:var(--t1);}
+  .rv-back[hidden]{visibility:hidden; display:block;}
+  .rv-dots{display:flex; gap:7px; justify-content:center; flex:1 1 auto;}
   .rv-dot{width:7px; height:7px; padding:0; border:none; border-radius:var(--r-pill);
     background:var(--t3); opacity:.45; cursor:pointer;
     transition:width .38s cubic-bezier(.34,1.12,.42,1), opacity .3s ease, background .3s ease;}
@@ -9205,13 +9212,20 @@ function revealChart(ms,primary){
 function revealNav(){
   const n=Math.min(REVEAL_PAGES.length, Math.max(1, S.revealPage||1));
   const letzte=n===REVEAL_PAGES.length;
+  /* Ein Knopf, eine Aktion. „Weiter · Dein Weg" packte Aktion UND Zielvorschau
+     in eine Beschriftung — die Punkte darüber sagen ohnehin, wo man steht, und
+     die nächste Seite nennt sich selbst. Zurück ist ein Pfeil neben den Punkten
+     statt eines zweiten gestapelten Knopfes. */
   return `<div class="rv-nav">
-    <div class="rv-dots" role="tablist" aria-label="Seite">
-      ${REVEAL_PAGES.map((pg,i)=>`<button class="rv-dot ${i+1===n?"on":""}" role="tab"
-        aria-selected="${i+1===n}" aria-label="${esc(pg[0])}" onclick="A.rvGo(${i+1})"></button>`).join("")}
+    <div class="rv-steps">
+      <button class="rv-back" onclick="A.rvGo(${n-1})" aria-label="Zurück"${n>1?"":" hidden"}>‹</button>
+      <div class="rv-dots" role="tablist" aria-label="Seite">
+        ${REVEAL_PAGES.map((pg,i)=>`<button class="rv-dot ${i+1===n?"on":""}" role="tab"
+          aria-selected="${i+1===n}" aria-label="${esc(pg[0])}" onclick="A.rvGo(${i+1})"></button>`).join("")}
+      </div>
+      <span class="rv-spacer" aria-hidden="true"></span>
     </div>
-    ${letzte?"":`<button class="btn volt" onclick="A.rvGo(${n+1})">Weiter · ${esc(REVEAL_PAGES[n][0])}</button>`}
-    ${n>1?`<button class="btn ghost mt8" style="min-height:40px" onclick="A.rvGo(${n-1})">Zurück</button>`:""}
+    ${letzte?"":`<button class="btn volt" onclick="A.rvGo(${n+1})">Weiter</button>`}
   </div>`;
 }
 function renderReveal(){
@@ -9301,6 +9315,18 @@ function renderReveal(){
           <span style="flex:1"><span class="sm" style="font-weight:600">${ph.name}</span><br><span class="xs t2" style="line-height:1.55">${ph.desc}</span></span></div>`).join("")}
         <p class="xs t2 mt8" style="line-height:1.55">${icon("info",12)} ${mp.note}</p>
       </div>`; })()}
+
+    <div class="card" data-tone="hl" style="text-align:left">
+      <p class="ct" style="margin-bottom:10px">${icon("calendar",14)} Deine Woche</p>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center">
+        ${WD.map((d,i)=>{const t=sug[i]||"rest";const tr=t!=="rest";
+          return `<div style="background:${tr?"rgba(143,184,220,.14)":"rgba(255,255,255,.03)"};border-radius:var(--r-sm);padding:7px 0">
+            <p class="xs" style="color:${tr?"var(--hl)":"var(--t3)"};font-weight:600">${d}</p>
+            <p style="margin:5px 0 0;display:flex;justify-content:center;color:${tr?"var(--t1)":"var(--t3)"}">${tr?icon((TYPE_META[parseTypeKey(t).base]||TYPE_META.rest).icon,14):"·"}</p>
+          </div>`;}).join("")}
+      </div>
+      <p class="xs t2 mt8" style="line-height:1.55">${trainCount} Einheiten, verteilt nach deiner Erholung — im Training-Tab jederzeit änderbar.</p>
+    </div>
 
     <!-- Progression: je besser du wirst, desto höher der Plan -->
     <div class="card" data-tone="hl" style="text-align:left">

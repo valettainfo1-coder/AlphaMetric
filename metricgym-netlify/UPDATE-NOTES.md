@@ -1212,7 +1212,32 @@ doppeltes Backtick stehen — die gesamte Datei war damit syntaktisch kaputt und
 `S` existierte nicht mehr. Aufgefallen ist es sofort, weil der Test nicht auf
 ein Aussehen wartete, sondern darauf, dass die App überhaupt hochkommt.
 
-Version aktuell **v38** — Nutzer bekommen Updates beim nächsten Besuch
+## §59 — Ein Knopf, eine Aktion
+
+„Weiter · Dein Weg" packte Aktion UND Zielvorschau in eine Beschriftung. Oura
+macht das nie: dort steht die Aktion, sonst nichts. Die Punkte darüber sagen
+ohnehin, wo man steht, und die nächste Seite nennt sich beim Öffnen selbst.
+
+- Knopf heißt jetzt schlicht **„Weiter"**.
+- „Zurück" war ein zweiter gestapelter Knopf unter dem ersten — zwei
+  konkurrierende Aktionen. Jetzt ein Pfeil links neben den Punkten, in einer
+  Zeile. Auf Seite 1 unsichtbar, aber platzhaltend, damit die Punkte nicht
+  springen (gemessen: 0 px Versatz auf allen fünf Seiten).
+
+**Seite 2 war fast leer.** Der 12-Monats-Pfad entsteht nur bei bestimmten
+Zielen; ohne ihn blieb dort eine einzige Karte und viel Nichts. Der Wochenplan
+lag dagegen ganz unten im Aufklapp-Bereich vergraben — obwohl er die
+konkreteste Antwort auf „wie sieht mein Weg aus" ist. Er steht jetzt als
+„Deine Woche" auf Seite 2: sieben Tage, Trainingstage hervorgehoben.
+
+**Eigener Messfehler, zum dritten Mal in dieser Familie:** geprüft, ob der
+Zurück-Pfeil auf Seite 1 verborgen ist — über `offsetParent`. Das erkennt
+`display:none`, aber nicht `visibility:hidden`: das Element belegt weiter Platz
+und gilt als „sichtbar", obwohl der Nutzer nichts sieht. Gemeldet wurde ein
+Fehler, der keiner war. `checkVisibility({visibilityProperty:true})` sieht
+beides.
+
+Version aktuell **v39** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
