@@ -385,7 +385,31 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     position:relative; border:none;
     box-shadow:0 24px 60px rgba(0,0,0,.5), inset 0 1px 0 var(--edge);
   }
-  .card{border-radius:var(--r-lg); padding:20px; margin-bottom:var(--sp-3);}
+  /* ══════════ DIE KARTE ═══════════════════════════════════════════════════
+     Gemessen, bevor geändert: auf Analytics waren 86 % der Bildfläche Kästen,
+     auf Heute 70 % — bei 135 Karten in der App. Eine Oberfläche, die zu vier
+     Fünfteln aus Schachteln besteht, wirkt zwangsläufig unruhig, egal wie
+     sauber die einzelne Schachtel ist. (Das Ton-System aus §54 hat das sogar
+     verstärkt: 38 Karten bekamen zusätzlich Farbe.)
+     Der Grundsatz kehrt sich um: Inhalt steht auf dem GRUND, getrennt durch
+     Raum und Haarlinie. Eine Fläche bekommt nur, was eine braucht — Kacheln,
+     Knöpfe und getönte Hinweise.
+     ────────────────────────────────────────────────────────────────────── */
+  .card{background:none; box-shadow:none; border-radius:0;
+    padding:0 0 24px; margin:0 0 24px; border-bottom:1px solid var(--hairline);}
+  .card:last-child{border-bottom:none; padding-bottom:0; margin-bottom:0;}
+  /* Erhaben bleibt, was eine Fläche wirklich braucht. */
+  button.card, label.card, a.card, .grid2>.card, .row>.card, .card.raised, .card.tile{
+    background:var(--s1); box-shadow:inset 0 1px 0 var(--edge);
+    border-radius:var(--r-lg); padding:20px; border-bottom:none; margin-bottom:var(--sp-3);}
+  /* Getönte Hinweise: Kante links und zarter Anlauf statt vollflächigem Kasten. */
+  .card[data-tone]{background:linear-gradient(90deg,var(--tone-wash),transparent 46%);
+    box-shadow:none; border-bottom:1px solid var(--hairline);
+    border-radius:0 var(--r-sm) var(--r-sm) 0; padding:16px 0 20px 15px;}
+  .card[data-tone]::before{top:2px; bottom:22px;}
+  .grid2>.card[data-tone], .row>.card[data-tone]{padding:20px; border-bottom:none;
+    background:linear-gradient(158deg,var(--tone-wash),transparent 64%),var(--s1);
+    box-shadow:inset 0 1px 0 var(--tone-edge); border-radius:var(--r-lg);}
   /* ══════════ KARTEN-SYSTEM ═══════════════════════════════════════════════
      Eine Karte = eine Aussage. Vorher trugen 30 Karten ein Inline-
      `border-color` — appweit gilt aber `border:none`, also zeichnete keine

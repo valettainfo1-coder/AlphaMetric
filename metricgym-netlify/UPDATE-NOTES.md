@@ -1271,7 +1271,49 @@ waren noch nicht gebaut, und der Test scheiterte an
 `actList().find(...).id`. Wie beim Wächter zuvor: der Zustand muss ZUERST
 gelöscht werden, sonst ist er kein Signal.
 
-Version aktuell **v40** — Nutzer bekommen Updates beim nächsten Besuch
+## §61 — Die Karte wird flach: Inhalt auf dem Grund statt in Schachteln
+
+Drei Runden Feedback, dreimal „immer noch unübersichtlich, nicht Oura-like".
+Ich habe jedes Mal lokal geflickt — einen Knopf, eine Seite, eine Karte — statt
+zu messen, woran es liegt. Nachgeholt:
+
+| Screen | Fläche, die Kasten ist | Karten | Wörter |
+|---|---|---|---|
+| Analytics | **86 %** | 17 | 812 |
+| Training | 72 % | 3 | 281 |
+| Heute | 70 % | 12 | 478 |
+
+Eine Oberfläche, die zu vier Fünfteln aus Schachteln besteht, wirkt unruhig —
+unabhängig davon, wie sauber die einzelne Schachtel ist. **Und mein Ton-System
+aus §54 hat das verstärkt**, nicht gemildert: es gab 38 Karten zusätzlich
+Farbe. Ich habe die App dekorierter gemacht, nicht ruhiger.
+
+**Der Grundsatz kehrt sich um.** Inhalt steht auf dem GRUND, getrennt durch
+Raum und eine Haarlinie. Eine Fläche bekommt nur noch, was eine braucht:
+Kacheln, Knöpfe, getönte Hinweise. Getönte Hinweise tragen jetzt eine Kante
+links und einen zarten Anlauf statt eines vollflächigen Kastens.
+
+Ergebnis, dieselbe Messung:
+
+| Screen | vorher | nachher |
+|---|---|---|
+| Analytics | 86 % | **5 %** |
+| Training | 72 % | **10 %** |
+| Heute | 70 % | **45 %** |
+
+Heute bleibt höher, weil dort viele Karten in Wahrheit Knöpfe sind (Briefing,
+Wochentage, Kalorien-Kachel) — die sollen eine Fläche haben. Der große Rest
+sind die Start-Übersicht und die beiden Orakel-Karten.
+
+**Auch die Kennzahl war erst falsch.** Der erste Durchlauf zählte jede `.card`,
+egal ob sie noch etwas malt — und meldete 83 % statt 5 %. Eine flache Karte ist
+kein Kasten mehr; gezählt wird jetzt, was tatsächlich Hintergrund oder Schatten
+zeichnet.
+
+Eine Änderung, 135 Karten, alle vier Suiten grün — der Layout-Wächter prüft 16
+Screens × 4 Breiten und fand keinen Überlauf.
+
+Version aktuell **v41** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
