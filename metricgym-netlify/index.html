@@ -9375,19 +9375,21 @@ function renderReveal(){
     </div>
 
     </div><div class="rv-page" data-p="5">
-    <!-- SKEPTIKER-ZERSTÖRER: harte Evidenz, dass dies die beste Form ist -->
-    <div class="card" data-tone="hl" style="margin-top:14px; text-align:left">
-      <p class="ct" style="margin-bottom:6px">${icon("zap",14)} „Mein alter Plan war doch gut" — die Fakten</p>
-      <p class="xs t2 mb12" style="line-height:1.55">Bauchgefühl-Pläne lassen im Schnitt Ergebnisse liegen. Genau diese Hebel macht METRICGYM richtig — belegt durch Forschung:</p>
-      ${[["+25–48 %","mehr Muskel, weil dein Wochenvolumen exakt im erholbaren Korridor (MEV–MRV) liegt — statt blind „so viel wie möglich“","Schoenfeld 2017 · Pelland 2025"],
-         ["2×/Woche","jeder Muskel wird doppelt so oft gereizt wie im klassischen Bro-Split — doppelt so viele Wachstumssignale pro Woche","Schoenfeld 2016"],
-         ["+9 %","extra Wachstum durch Übungen in voller Dehnung (lengthened) — gezielt in deinen Plan eingebaut","Wolf 2024"],
-         ["0 kg","Muskelverlust im Defizit: 2,0–2,4 g/kg Protein + RIR-Steuerung halten deine Muskeln — es verschwindet nur Fett","Helms 2014 · Morton 2018"]]
-        .map(([n,t,c])=>`<div class="row" style="align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--hairline)">
-          <span class="hero-num volt-txt" style="font-size:20px;min-width:78px;line-height:1.2">${n}</span>
-          <span style="flex:1"><span class="sm" style="line-height:1.55">${t}</span><br><span class="xs" style="color:var(--t3)">${c}</span></span></div>`).join("")}
-      <p class="xs t2 mt10" style="line-height:1.55">Dein Plan kombiniert <b style="color:var(--t1)">alle vier Hebel gleichzeitig</b> und passt sie an deine Daten an. Ein Standard- oder Bauchgefühl-Plan trifft meist nur einen davon.</p>
-    </div>
+    <!-- BELEGE: vier Hebel, jeder als eigene Karte mit voller Textbreite -->
+    <p class="label" style="text-align:center;margin:0 0 4px">Warum dieser Plan mehr bringt</p>
+    <p class="xs t2" style="margin:0 auto 16px;max-width:34ch;line-height:1.55">Bauchgefühl-Pläne lassen Ergebnisse liegen. Diese vier Hebel sind in deinem Plan eingebaut — jeder einzeln belegt.</p>
+    ${[["+25–48 %","mehr Muskel","Dein Wochenvolumen liegt exakt im erholbaren Korridor (MEV–MRV) — statt blind „so viel wie möglich“.","Schoenfeld 2017 · Pelland 2025"],
+       ["2×/Woche","doppelter Reiz","Jeder Muskel wird doppelt so oft trainiert wie im klassischen Bro-Split.","Schoenfeld 2016"],
+       ["+9 %","extra Wachstum","Übungen in voller Dehnung (lengthened) — gezielt in deinen Plan eingebaut.","Wolf 2024"],
+       ["0 kg","Muskelverlust","2,0–2,4 g/kg Protein plus RIR-Steuerung halten deine Muskeln auch im Defizit.","Helms 2014"]]
+      .map(([n,kurz,t,c])=>`<div class="card pad-s" data-tone="hl" style="text-align:left">
+        <div class="row" style="align-items:baseline;justify-content:flex-start;gap:9px;margin-bottom:6px;flex-wrap:wrap">
+          <span class="hero-num volt-txt" style="font-size:var(--fs-xl);line-height:1.1;letter-spacing:-.02em">${n}</span>
+          <span class="sm" style="font-weight:650;color:var(--t1)">${kurz}</span></div>
+        <p class="sm t2" style="line-height:1.55">${t}</p>
+        <p class="xs" style="color:var(--t3);margin-top:7px">${c}</p>
+      </div>`).join("")}
+    <p class="xs t2" style="line-height:1.55;margin:2px 0 0">Dein Plan kombiniert <b style="color:var(--t1)">alle vier gleichzeitig</b> — deshalb ist er einem Bauchgefühl-Plan überlegen.</p>
 
     <!-- STUDIENBASIS: passt sich der Persona/dem Ziel an — nur echte, attribuierte Papers -->
     ${(()=>{ const g=(tg.goals||[]); let html="";
@@ -9395,9 +9397,11 @@ function renderReveal(){
       if(a.mode==="cycling"||a.mode==="running"||a.mode==="hybrid"||g.includes("endurance")) html+=scienceRefsPanelHTML("endurance","Studienbasis · Ausdauer");
       return html; })()}
 
-    <button class="btn volt mt16" onclick="A.startApp()">Plan aktivieren — jetzt starten</button>
-    <button class="btn mt8" onclick="A.startAppCustom()">${icon("calendar",15)} Tage lieber selbst festlegen</button>
-    <button class="btn mt8" onclick="sharePlanPNG()">${icon("send",15)} Plan teilen</button>
+    <button class="btn volt mt16" onclick="A.startApp()">Plan aktivieren</button>
+    <div class="row mt8" style="gap:8px">
+      <button class="btn ghost" style="flex:1;min-height:44px;font-size:13.5px" onclick="A.startAppCustom()">${icon("calendar",14)} Tage selbst wählen</button>
+      <button class="btn ghost" style="flex:1;min-height:44px;font-size:13.5px" onclick="sharePlanPNG()">${icon("send",14)} Teilen</button>
+    </div>
     <details class="acc mt8" style="text-align:left"><summary style="font-size:13.5px;padding:12px 14px">Alle Details — Umsätze, Makros, Wochenplan<span class="chev">${icon("chevron",15)}</span></summary>
       <div class="accbody">
         <div class="grid2 mb12">

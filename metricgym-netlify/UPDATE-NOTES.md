@@ -1237,7 +1237,41 @@ und gilt als „sichtbar", obwohl der Nutzer nichts sieht. Gemeldet wurde ein
 Fehler, der keiner war. `checkVisibility({visibilityProperty:true})` sieht
 beides.
 
-Version aktuell **v39** — Nutzer bekommen Updates beim nächsten Besuch
+## §60 — Die Belege-Seite, und eine Vorabprüfung gegen kaputte Dateien
+
+Seite 5 war die letzte, die nur geteilt und nie gestaltet wurde: EINE Karte,
+770 px hoch, in der die Zahlen in einer 78-px-Spalte standen und den Text auf
+fünf Zeilen quetschten. Dazu drei gestapelte Knöpfe am Ende.
+
+Jetzt trägt jeder der vier Hebel eine eigene Karte: Zahl und Kurzform in einer
+Zeile, darunter der Satz über die volle Breite (zwei bis drei Zeilen statt
+fünf), darunter die Quelle. Die Aktionen sind hierarchisiert — „Plan
+aktivieren" als einzige Hauptaktion, „Tage selbst wählen" und „Teilen" als
+Nebenaktionen nebeneinander statt dreimal volle Breite untereinander.
+
+### Vorabprüfung: ist die Datei überhaupt gültig?
+
+Ich habe `index.html` in dieser Sitzung ZWEIMAL beim Bearbeiten großer
+Template-Literale syntaktisch zerstört:
+1. ein doppeltes Backtick beim Ersetzen des Balken-Blocks,
+2. ein gerades `"` statt `“`, das eine Zeichenkette vorzeitig beendete.
+
+Beide Male meldete der Browser nur „S is not defined", die Suite lief 20
+Sekunden in einen Timeout, und ich musste die Ursache suchen. Der Wächter
+prüft jetzt VOR allem anderen die Syntax jedes Script-Blocks und bricht mit
+der echten Fehlermeldung ab — im Mutationstest: eine Sekunde statt zwanzig,
+und die Meldung lautet „Unexpected string" statt „S is not defined".
+
+### Derselbe Stale-State-Fehler, zum zweiten Mal
+
+Nach dem Einbau der Genesis-Animation ersetzte ich in `app-tests` eine feste
+Frist durch „warten, bis `S.profile` steht". Dort trägt `S.profile` aber den
+Stand aus einem früheren Block — die Schleife lief sofort durch, die Profile
+waren noch nicht gebaut, und der Test scheiterte an
+`actList().find(...).id`. Wie beim Wächter zuvor: der Zustand muss ZUERST
+gelöscht werden, sonst ist er kein Signal.
+
+Version aktuell **v40** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

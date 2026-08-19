@@ -34,6 +34,22 @@ const page = await ctx.newPage();
 const errs = [];
 page.on('pageerror', e => errs.push(String(e).slice(0, 200)));
 
+/* ===================== VORAB: ist die Datei überhaupt gültig? =====================
+   Zweimal in einer Sitzung habe ich beim Bearbeiten großer Template-Literale die
+   Datei syntaktisch zerstört — einmal ein doppeltes Backtick, einmal ein gerades
+   Anführungszeichen, das eine Zeichenkette vorzeitig beendete. Beide Male meldete
+   der Browser nur „S is not defined" und die Suite lief 20 Sekunden in einen
+   Timeout. Diese Prüfung sagt in einer Sekunde, WAS kaputt ist. */
+{
+  const src = await (await fetch(BASE + '/index.html')).text();
+  const bloecke = [...src.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  let fehler = null;
+  for (const b of bloecke) { try { new Function(b[1]); } catch (e) { fehler = e.message; break; } }
+  check('Vorab: index.html ist syntaktisch gültig', !fehler,
+    fehler ? fehler : `${bloecke.length} Script-Blöcke geprüft`);
+  if (fehler) { await browser.close(); console.log('\n✗ Abbruch: die Seite kann so nicht laufen.'); process.exit(1); }
+}
+
 await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => typeof S !== 'undefined' && typeof render === 'function', null, { timeout: 20000 });
 
