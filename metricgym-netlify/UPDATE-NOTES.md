@@ -1354,7 +1354,60 @@ nächsten Besuch offen vor. Nichts ist verschwunden:
 Inhalt zählt dort nicht. Die Tests klappen jetzt vor der Prüfung auf: geprüft
 wird, was die Seite ANBIETET, nicht was ohne Zutun gerade sichtbar ist.
 
-Version aktuell **v42** — Nutzer bekommen Updates beim nächsten Besuch
+## §63 — Kopfzeile ohne Kante, Leiste mit Tiefe, jeder Screen unter vier Bildschirmen
+
+### Die Kopfzeile war wirklich abgehackt
+
+Drei messbare Ursachen, keine davon Geschmack:
+1. **„Krafttrai…"** — der Profil-Chip kürzte. Nachgerechnet: 390 px minus
+   Wortmarke (125), zwei Knöpfe (76) und Abstände lassen 144 px; „Krafttraining"
+   braucht rund 170.
+2. Eine harte **1-px-Kante** quer über den Schirm, unter der eine deutlich
+   hellere Szene beginnt — der sichtbare Schnitt.
+3. Vier gerahmte Formen nebeneinander (Chip, zwei Kreise).
+
+Jetzt löst sich die Kopfzeile nach unten auf: Verlauf plus Maske statt Kante,
+beim Scrollen verdichtet sie sich. Die Symbol-Knöpfe verlieren Kreis und
+Kontur. Und die Wortmarke verschwindet unter 520 px — die Absicht gab es schon
+(Regel bei 360 px), sie griff nur auf keinem üblichen Telefon. Im App-Kopf
+trägt sie ohnehin keine Information; das Symbol daneben führt weiterhin nach
+Hause. Ergebnis: „Krafttraining" steht vollständig.
+
+### Die Leiste unten
+
+Geschichtete Fläche mit Lichtkante oben und dunkler Unterkante, der Anzeiger
+sitzt IM Glas: gefüllte Pille mit gefärbtem Rand und einem Schein darunter, den
+man eher ahnt als sieht. Das aktive Symbol nimmt die Akzentfarbe an.
+
+### Maximales Oura-Gefühl: Tiefe statt Länge, überall
+
+Nach Analytics (§62) dasselbe Prinzip auf Heute — aber nur für Abschnitte, die
+ERKLÄREN, nicht für das Tagesgeschäft. Zugeklappt starten „Deine Reise",
+„Adaptives Training", „Diese Woche", „Analytics" und die Start-Übersicht; der
+Status-Check und die heutige Einheit bleiben offen.
+
+Die Start-Übersicht allein war **1.093 px** — ein Viertel des ganzen Screens,
+dauerhaft offen, obwohl man sie nach den ersten Tagen selten braucht. Sie
+bleibt vollständig, zeigt aber nur noch den Fortschritt („3 von 7 Startschritten
+erledigt") und öffnet auf Tipp.
+
+| Screen | vorher | jetzt |
+|---|---|---|
+| Heute | 5,3 Bildschirme · 470 Wörter | **3,6 · 246** |
+| Analytics | 9,1 · 812 | **3,8 · 320** |
+| Training | 3,3 | 3,3 |
+| Ernährung | 3,8 | 3,8 |
+| Profil | 3,3 | 3,3 |
+| Coach | 1,3 | 1,3 |
+
+**Jeder Screen liegt unter vier Bildschirmen.** Aufgeklappt sind es wieder
+4.458 px und 473 Wörter — nichts ist verschwunden.
+
+Zwei App-Tests wurden rot, weil sie über `innerText` Inhalte aus jetzt
+eingeklappten Abschnitten suchten. Sie klappen vor der Prüfung auf — dieselbe
+Korrektur wie in §62.
+
+Version aktuell **v43** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

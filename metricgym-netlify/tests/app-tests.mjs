@@ -401,6 +401,9 @@ const runUi = await page.evaluate(() => {
   window.ENDUR.st().athlete.running.thrSet = true; window.ENDUR.st().athlete.running.thrPace = 315;
   S.endurStart = Date.now(); S.endurDone = {};
   S.tab = 'home'; S.checkin = null; S.trainingHistory = []; save(); render();
+  // Seit §63 sind die erklärenden Heute-Abschnitte eingeklappt (Tiefe statt Länge).
+  // Der Inhalt IST da, innerText sieht ihn nur nicht — zum Prüfen aufklappen.
+  document.querySelectorAll('#root .an-grp').forEach(d => d.open = true);
   const home = document.body.innerText;
   const steps = starterSteps().map(x => x.t).join(' | ');
   const flow = systemFlow().map(x => x[1]).join(' | ');
