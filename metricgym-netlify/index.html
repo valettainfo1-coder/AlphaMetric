@@ -213,6 +213,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Gruppenkopf — die oberste Gliederungsebene eines Screens. Muss sich deutlich
      von einem Etikett INNERHALB einer Gruppe abheben, sonst stehen zwei Ebenen
      gleich stark da und die Gliederung hilft nicht. Linie trägt das Auge weiter. */
+  /* Aufklappbare Gruppe: der Kopf bleibt sichtbar, der Inhalt folgt auf Wunsch. */
+  .an-grp{margin-bottom:var(--sp-6);}
+  .an-sum{display:flex; align-items:center; gap:10px; cursor:pointer; list-style:none;
+    padding:6px 0; min-height:44px;}
+  .an-sum::-webkit-details-marker{display:none;}
+  .an-chev{flex:0 0 auto; color:var(--t3); display:flex; transition:transform .3s var(--spring);}
+  .an-grp[open] .an-chev{transform:rotate(180deg);}
+  .an-body{animation:anOpen .42s cubic-bezier(.22,1,.36,1);}
+  @keyframes anOpen{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.an-chev{transition:none} .an-body{animation:none}}
   .label.sect-h{font-size:var(--fs-xs); font-weight:650; letter-spacing:.13em;
     color:var(--t2); display:flex; align-items:center; gap:10px; margin:0 0 14px;}
   .label.sect-h::after{content:""; flex:1 1 auto; height:1px; background:var(--hairline);}
@@ -13926,10 +13936,23 @@ function renderAnalytics(){
     ["Verlauf",           ["monat","trend","status"]],
   ];
   const _used=new Set(_groups.flatMap(g=>g[1]));
-  // Eine Gruppe ohne Inhalt bekommt auch keine Überschrift.
-  const _body=_groups.map(([label,keys])=>{
+  /* TIEFE STATT LÄNGE. Diese Seite war 9,1 Bildschirme lang — siebzehn Abschnitte
+     hintereinander, alle gleichzeitig offen. Man scrollt daran vorbei, statt sie
+     zu lesen. Jetzt trägt jede Gruppe einen Kopf zum Aufklappen: die wichtigste
+     ist offen, der Rest liegt einen Tipp entfernt. Nichts ist verschwunden — es
+     liegt nur nicht mehr alles gleichzeitig auf dem Tisch.
+     Der Zustand merkt sich pro Gruppe, wer ihn einmal geöffnet hat. */
+  S.anOpen=S.anOpen||{};
+  A.anToggle=(k,on)=>{ S.anOpen[k]=on; save(); };
+  const _body=_groups.map(([label,keys],gi)=>{
     const inner=keys.map(k=>_seg[k]||"").join("");
-    return inner.trim()?renderSection(label,inner):"";
+    if(!inner.trim()) return "";
+    const offen=(S.anOpen[label]!==undefined)?S.anOpen[label]:(gi===0);
+    return `<details class="an-grp"${offen?" open":""} ontoggle="A.anToggle('${label.replace(/'/g,"\\'")}',this.open)">
+      <summary class="an-sum"><span class="label sect-h" style="margin:0">${label}</span>
+        <span class="an-chev" aria-hidden="true">${icon("chevron",16)}</span></summary>
+      <div class="an-body">${inner}</div>
+    </details>`;
   }).join("");
   const _rest=Object.keys(_seg).filter(k=>!_used.has(k)).map(k=>_seg[k]).join("");
   root.innerHTML=_parts[0]+_body+_rest;

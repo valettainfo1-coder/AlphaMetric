@@ -523,11 +523,18 @@ check('Player: Schnell-Eintrag klappt den Bereich automatisch auf', play.bulkOpe
 const r2 = await page.evaluate(() => {
   A.devModeMenu(); S.tier = 'pro'; S.acts = null; S.actId = null; S.profile.a.mode = 'gym'; save(); actList();
   S.tab = 'analytics'; save(); render();
+  // Die Analytics-Gruppen sind seit §62 standardmäßig eingeklappt (Tiefe statt
+  // Länge). Der Inhalt IST da, innerText sieht ihn nur nicht — zum Prüfen also
+  // alles aufklappen. Geprüft wird, was die Seite ANBIETET, nicht was ohne
+  // Zutun gerade sichtbar ist.
+  const alleAuf = () => document.querySelectorAll('.an-grp').forEach(d => d.open = true);
+  alleAuf();
   const gym = document.body.innerText;
   A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave(); A.closeModal();
   S.profile.a.run_goal = 'half'; S.profile.a.run_km = 30; S.profile.a.run_pace = 315;
   window.ENDUR.st().athlete.running.thrSet = true; S.endurStart = Date.now();
   S.tab = 'analytics'; save(); render();
+  alleAuf();
   const run = document.body.innerText;
   const has = (t, s) => new RegExp(t, 'i').test(s);
   return {
