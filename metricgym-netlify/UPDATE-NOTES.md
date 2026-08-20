@@ -1313,7 +1313,48 @@ zeichnet.
 Eine Änderung, 135 Karten, alle vier Suiten grün — der Layout-Wächter prüft 16
 Screens × 4 Breiten und fand keinen Überlauf.
 
-Version aktuell **v41** — Nutzer bekommen Updates beim nächsten Besuch
+## §62 — Tiefe statt Länge: Analytics klappt auf
+
+Nach dem Flachlegen der Karten (§61) blieb die Frage, wo die restlichen
+Oura-Vibes fehlen. Erst gemessen, statt zu raten — drei Verdächtige
+ausgeschlossen:
+
+- **Typografie**: große Zahlen liegen bereits auf Gewicht 300, Überschriften
+  auf 500–560. Leicht und ruhig, wie es sein soll. (Fund nebenbei: ein
+  Vollbreiten-Plus `＋` fällt mangels Zeichen auf **Arial** zurück.)
+- **Farbe**: 17 Textfarben klingt viel, aber vier Töne tragen **92 %** aller
+  Vorkommen. Der Rest sind Statusfarben mit je ein bis fünf Einsätzen.
+- **Lange Absätze**: in der ganzen App genau zwei über 130 Zeichen.
+
+Der wahre Unterschied ist die **Menge**:
+
+| Screen | Länge | Wörter |
+|---|---|---|
+| Analytics | **9,1 Bildschirme** | 812 |
+| Heute | 5,3 | 470 |
+| Ernährung | 3,8 | 353 |
+| Coach | 1,3 | 83 |
+
+Oura zeigt eine ruhige Oberfläche und legt das Detail einen Tipp weiter. Diese
+App legte alles gleichzeitig auf den Tisch — an siebzehn gestapelten
+Abschnitten scrollt man vorbei, statt sie zu lesen.
+
+**Die fünf Analytics-Gruppen klappen jetzt auf.** „Das Wichtigste" ist offen,
+der Rest liegt einen Tipp entfernt; wer eine Gruppe öffnet, findet sie beim
+nächsten Besuch offen vor. Nichts ist verschwunden:
+
+| | Länge | sichtbare Wörter |
+|---|---|---|
+| vorher | 9,1 Bildschirme | 812 |
+| jetzt, eingeklappt | **3,8 Bildschirme** | **320** |
+| alles aufgeklappt | 9,0 Bildschirme | 812 |
+
+**Zwei App-Tests wurden dadurch rot** — sie prüften über `innerText`, ob
+„Trainingsvolumen" und „Muskel-Heatmap" auf dem Schirm stehen. Eingeklappter
+Inhalt zählt dort nicht. Die Tests klappen jetzt vor der Prüfung auf: geprüft
+wird, was die Seite ANBIETET, nicht was ohne Zutun gerade sichtbar ist.
+
+Version aktuell **v42** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
