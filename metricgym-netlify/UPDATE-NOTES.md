@@ -1407,7 +1407,61 @@ Zwei App-Tests wurden rot, weil sie über `innerText` Inhalte aus jetzt
 eingeklappten Abschnitten suchten. Sie klappen vor der Prüfung auf — dieselbe
 Korrektur wie in §62.
 
-Version aktuell **v43** — Nutzer bekommen Updates beim nächsten Besuch
+## §64 — Analytics zurück auf offen, und ein Datenverlust-Fehler
+
+### Der Einwand war berechtigt
+
+„Ich will die Analytics eigentlich nicht schmälern, das ist für den Kunden sehr
+interessant." Nachgemessen, was das Einklappen aus §62 wirklich gekostet hat:
+
+| | eingeklappt | aufgeklappt |
+|---|---|---|
+| Zahlenangaben sichtbar | 56 | **186** |
+| Diagramme sichtbar | 17 | **33** |
+
+**70 % der Zahlen und die Hälfte der Diagramme** — auf dem Screen, dessen Zweck
+genau diese Analyse ist. Der falsche Tausch. Die Gruppen starten wieder offen.
+
+Zuklappen bleibt möglich und wird gemerkt, für alle, die es kompakt wollen. Und
+damit auch eine zugeklappte Gruppe ihre Substanz zeigt statt nur einer
+Überschrift mit Pfeil, trägt jeder Gruppenkopf jetzt seine eigene Kennzahl:
+
+- Dein Training — „6 Sätze diese Woche · 6 Übungen im Verlauf"
+- Körper & Erholung — „+1,7 kg seit Start · 14 Erholungs-Checks"
+- Ernährung — „7 Tage geloggt · Ø 2.415 kcal"
+- Verlauf — „33 Einheiten · 88 % Konstanz"
+
+Unterm Strich sind es jetzt **194 Zahlen statt 186** — mehr als vor dem Umbau.
+Auf Heute bleiben die erklärenden Abschnitte zugeklappt, der Analytics-
+Ausschnitt startet offen.
+
+### Dabei einen echten Fehler gefunden: verschwindende Aktivitätsprofile
+
+Beim Prüfen fiel eine unregelmäßig rote Suite auf. Die Ursache war kein
+Testproblem:
+
+Nach dem Onboarding bleibt `S.screen` auf „onboarding", bis der Nutzer den Plan
+aktiviert. Jedes weitere `render()` lief deshalb erneut in den Reveal-Zweig —
+**die Genesis startete nochmal, und ihr Rückruf baute Profil UND
+Aktivitätsprofile aus `S.a` neu.** Nachgestellt: ein frisch angelegtes
+Laufprofil war vier Sekunden später verschwunden (2 Profile → 1,
+Ausdauer-Ansicht → Kraft-Ansicht).
+
+Der Reveal muss sich neu zeichnen lassen, ohne den Plan neu zu rechnen. Eine
+Marke (`S.planBuiltFor`) hält fest, dass für diesen Durchlauf gebaut wurde; ein
+Rücksprung in den Fragebogen löscht sie wieder.
+
+### Und zwei Testfehler, die das verdeckt hatten
+
+1. Die Tests verließen den Reveal nie — `S.screen` blieb „onboarding", also
+   zeigte jedes `render()` die Auswertung statt des angeforderten Tabs. Sie
+   wechseln jetzt in die App, wie ein Nutzer es mit „Plan aktivieren" tut.
+2. Ein Block erbte sein Laufprofil vom Nachbarblock. Mal war es da, mal nicht.
+   Er legt es jetzt selbst an, wenn es fehlt — und zwar VOR dem Zählen.
+
+Vier Läufe der App-Suite hintereinander grün, die übrigen drei je zweimal.
+
+Version aktuell **v44** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

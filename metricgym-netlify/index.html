@@ -218,6 +218,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .an-sum{display:flex; align-items:center; gap:10px; cursor:pointer; list-style:none;
     padding:6px 0; min-height:44px;}
   .an-sum::-webkit-details-marker{display:none;}
+  .an-kz{display:block; font-size:var(--fs-xs); color:var(--t2); margin-top:3px; font-weight:500;
+    letter-spacing:0; text-transform:none;}
   .an-chev{flex:0 0 auto; color:var(--t3); display:flex; transition:transform .3s var(--spring);}
   .an-grp[open] .an-chev{transform:rotate(180deg);}
   .an-body{animation:anOpen .42s cubic-bezier(.22,1,.36,1);}
@@ -8778,12 +8780,16 @@ function renderOnboarding(){
     return;
   }
   // ---- Reveal (Plan-Bau) ----
+  if(S.step<REVEAL) S.planBuiltFor=null;   // zurück im Fragebogen → nächster Reveal baut neu
   if(S.step>=REVEAL){
-    /* Der teuerste Moment der App — hier entsteht der Plan. Vorher stand hier
-       1,3 Sekunden ein nackter Kreisel, dann sprang die Auswertung ins Bild.
-       Jetzt arbeiten die vier Engines sichtbar, und der Plan wird DANACH
-       gerechnet: firstGenesis ruft den Aufbau genau einmal auf, auch beim
-       Überspringen. */
+    /* NUR EINMAL BAUEN. Nach dem Onboarding bleibt S.screen auf „onboarding"
+       stehen, bis der Nutzer den Plan aktiviert. Jedes weitere render() lief
+       deshalb erneut in diesen Zweig — die Genesis startete nochmal und ihr
+       Rückruf baute Profil UND Aktivitätsprofile aus S.a neu. Nachgestellt:
+       ein frisch angelegtes Laufprofil war 4 Sekunden später verschwunden
+       (2 Profile → 1, Ausdauer-Ansicht → Kraft-Ansicht).
+       Der Reveal muss sich neu zeichnen lassen, ohne den Plan neu zu rechnen. */
+    if(S.profile && S.planBuiltFor===S.step){ renderReveal(); return; }
     root.innerHTML=`<div class="center"></div>`;
     firstGenesis(()=>{
       const a={...S.a,days:S.a.days||4,act:S.a.act||"light",sex:S.a.sex||"male",age:S.a.age||29};
@@ -8837,6 +8843,7 @@ function renderOnboarding(){
       if(!S.weightLog||!S.weightLog.length) S.weightLog=[{t:Date.now(),v:a.weight}];
       if(S.requiz) S.schedule=opt.schedule.slice(); // neuen Wochenplan übernehmen
       S.revealPage=1;
+      S.planBuiltFor=S.step;      // Marke: für diesen Durchlauf ist der Plan gebaut
       save(); renderReveal();
     });
     return;
@@ -9600,7 +9607,11 @@ function renderSection(label,content){return `<div class="section"><span class="
 function renderFold(label,content,offenStd){
   if(!content||!String(content).trim()) return "";
   S.foldOpen=S.foldOpen||{};
-  const offen=(S.foldOpen[label]!==undefined)?S.foldOpen[label]:!!offenStd;
+  // Der Analytics-Ausschnitt auf Heute ist eine Kostprobe der Auswertung — und die
+  // ist das, was Kunden am meisten interessiert. Er startet offen, die erklärenden
+  // Abschnitte daneben zugeklappt.
+  const STD_OFFEN=["Analytics"];
+  const offen=(S.foldOpen[label]!==undefined)?S.foldOpen[label]:(!!offenStd||STD_OFFEN.includes(label));
   return `<details class="an-grp"${offen?" open":""} ontoggle="A.foldToggle('${label.replace(/'/g,"\\'")}',this.open)">
     <summary class="an-sum"><span class="label sect-h" style="margin:0">${label}</span>
       <span class="an-chev" aria-hidden="true">${icon("chevron",16)}</span></summary>
@@ -13996,13 +14007,50 @@ function renderAnalytics(){
      liegt nur nicht mehr alles gleichzeitig auf dem Tisch.
      Der Zustand merkt sich pro Gruppe, wer ihn einmal geöffnet hat. */
   S.anOpen=S.anOpen||{};
+  /* Kennzahl je Gruppe: damit auch eine zugeklappte Gruppe ihre Substanz zeigt
+     und nicht nur eine Überschrift mit Pfeil. Jede Zahl kommt aus echten Daten;
+     fehlen sie, bleibt die Zeile weg statt zu raten. */
+  const _kennzahl=(label)=>{ try{
+    if(label==="Dein Training"){
+      const s7=wkSetsNow||0; const n=Object.keys(S.liftLog||{}).length;
+      if(!s7&&!n) return "";
+      return [s7?`${s7} Sätze diese Woche`:null, n?`${n} Übungen im Verlauf`:null].filter(Boolean).join(" · ");
+    }
+    if(label==="Körper & Erholung"){
+      const wl=(S.weightLog||[]).filter(x=>x&&x.v);
+      const d=wl.length>=2?Math.round((wl[wl.length-1].v-wl[0].v)*10)/10:null;
+      const r=(S.readinessHistory||[]).length;
+      return [d!=null?`${d>0?"+":""}${nf.format(d)} kg seit Start`:null, r?`${r} Erholungs-Checks`:null].filter(Boolean).join(" · ");
+    }
+    if(label==="Ernährung"){
+      const tage=Object.keys(S.nutritionLog||{}).filter(k=>((S.nutritionLog[k].meals)||[]).length).length;
+      if(!tage) return "";
+      const alle=Object.values(S.nutritionLog).filter(l=>(l.meals||[]).length);
+      const kcal=Math.round(alle.reduce((s,l)=>s+(l.meals||[]).reduce((a,m)=>a+(m.k||0),0),0)/alle.length);
+      return `${tage} Tage geloggt · Ø ${nfi.format(kcal)} kcal`;
+    }
+    if(label==="Verlauf"){
+      const n=(S.trainingHistory||[]).length;
+      return [n?`${n} Einheiten`:null, isFinite(consistency)?`${consistency} % Konstanz`:null].filter(Boolean).join(" · ");
+    }
+    return "";
+  }catch(e){ return ""; } };
   A.anToggle=(k,on)=>{ S.anOpen[k]=on; save(); };
   const _body=_groups.map(([label,keys],gi)=>{
     const inner=keys.map(k=>_seg[k]||"").join("");
     if(!inner.trim()) return "";
-    const offen=(S.anOpen[label]!==undefined)?S.anOpen[label]:(gi===0);
+    // Offen als Standard. Ein erster Versuch startete sie zugeklappt — gemessen
+    // kostete das den Kunden 130 von 186 Zahlenangaben und 16 von 33 Diagrammen.
+    // Auf dem Screen, dessen ZWECK diese Analyse ist, ist das der falsche Tausch.
+    // Zuklappen bleibt möglich und wird gemerkt, für alle, die es kompakt wollen.
+    const offen=(S.anOpen[label]!==undefined)?S.anOpen[label]:true;
+    const kz=_kennzahl(label);
     return `<details class="an-grp"${offen?" open":""} ontoggle="A.anToggle('${label.replace(/'/g,"\\'")}',this.open)">
-      <summary class="an-sum"><span class="label sect-h" style="margin:0">${label}</span>
+      <summary class="an-sum">
+        <span style="flex:1;min-width:0">
+          <span class="label sect-h" style="margin:0">${label}</span>
+          ${kz?`<span class="an-kz">${kz}</span>`:""}
+        </span>
         <span class="an-chev" aria-hidden="true">${icon("chevron",16)}</span></summary>
       <div class="an-body">${inner}</div>
     </details>`;

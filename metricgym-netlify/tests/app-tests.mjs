@@ -293,6 +293,11 @@ const multiRev = await page.evaluate(async () => {
   // Auf den Zustand warten, nicht auf eine Frist: vor dem Reveal läuft die Genesis.
   for (let i = 0; i < 150 && !S.profile; i++) await new Promise(r => setTimeout(r, 100));
   await new Promise(r => setTimeout(r, 120));
+  // In die App wechseln, wie ein echter Nutzer es mit „Plan aktivieren" tut.
+  // Bleibt S.screen auf „onboarding", zeigt JEDES spätere render() die Auswertung
+  // statt des angeforderten Tabs — daran sind die folgenden Blöcke unregelmäßig
+  // gescheitert, mit wechselnden Symptomen.
+  S.screen = 'app'; save();
   const acts = (S.acts || []).map(x => ({ name: x.name, type: x.type, goals: (x.cfg.goals || []).join('+') }));
   const primary = { goals: JSON.stringify(S.profile.tg.goals), w: S.profile.a.weight };
   const cyc = (S.acts || []).find(x => x.type === 'cycling');
@@ -557,7 +562,14 @@ check('Analytics: Ausdauer-Profil bekommt Wochenumfang und Verteilung locker/har
 // ---------- 19) Aktivitätsprofil-Übersicht + Paywall ----------
 const ov = await page.evaluate(() => {
   // PRO: mehrere Profile, Übersicht listet sie mit ihrer je eigenen Kennzahl
-  S.tier = 'pro'; save(); A.actOverview();
+  S.tier = 'pro'; save();
+  // Nicht auf die Überreste des Nachbarblocks bauen: fehlt das Laufprofil, wird es
+  // hier angelegt — VOR dem Zählen. Vorher erbte dieser Block es aus Block 18, mal
+  // war es da, mal nicht, und die Suite brach unregelmäßig ab.
+  if (!actList().some(x => x.type === 'running')) {
+    A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave(); A.closeModal();
+  }
+  A.actOverview();
   const proMax = actMax(), cards = document.querySelectorAll('.ap-card').length;
   const addFree = !!document.querySelector('.ap-add:not(.locked)');
   const txt = document.body.innerText;
@@ -649,6 +661,9 @@ const keep = await page.evaluate(() => {
   A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave(); A.closeModal();
   S.profile.a.exp = 'intermediate';
   const gym = actList().find(x => x.type === 'gym'); A.actGo(gym.id);
+  if (!actList().some(x => x.type === 'running')) {
+    A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave(); A.closeModal();
+  }
   const run = actList().find(x => x.type === 'running');
   run.cfg.days = 5;                                  // nach dem Wechsel: actSyncBack ist durch
   // Nutzer richtet sein Kraft-Profil von Hand ein
