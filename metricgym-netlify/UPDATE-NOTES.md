@@ -1605,7 +1605,54 @@ Die Idee bleibt: außen Rauschen, zur Fokusachse hin Ordnung, und auf Heute
 kommt diese Ordnung weiterhin aus der Tagesform. Nur trägt sie jetzt so leise,
 wie sie soll.
 
-Version aktuell **v48** — Nutzer bekommen Updates beim nächsten Besuch
+## §69 — Lichtfeld statt Partikel; und der Tagesform-Check wirkt doch
+
+### „Macht der Tagesform-Check wenig Sinn?"
+
+Ich war nahe dran zuzustimmen — und das wäre **falsch** gewesen. Nachgesehen:
+`readinessToday()` nimmt den Check als Hauptquelle und speist die
+Autoregulation. Bei „Mäßig" gehen die Sätze auf **85 %**, bei „Erholung" auf
+**65 %** (`sets * R.mult`), dazu ein RIR-Ziel. Ohne Check und ohne Wearable
+gibt es **gar keine** Autoregulation.
+
+Der Check ist also nicht folgenlos — aber er **fühlt** sich so an, und das ist
+ein echter Mangel: Die Wirkung stand nur im Trainings-Tab hinter einem Banner.
+Dort, wo man vier Fragen beantwortet, kam eine Zahl und sonst nichts.
+
+Jetzt sagt die App direkt nach dem Check, was sich geändert hat:
+- schlechter Tag → „Training heute −35 % Sätze · Ziel RIR 2" mit Sprung dorthin
+- guter Tag → „Volle Sätze heute — deine Erholung trägt es"
+
+### Das Medium war falsch, nicht die Lautstärke
+
+Erst zu viel (Schweife), dann zu wenig (Staub). Zweimal dieselbe Idee in
+anderer Dosis — der Fehler lag eine Ebene tiefer: **Partikel sind Körnung.**
+Oura arbeitet mit großflächigem, weichem Licht.
+
+Das Feld besteht jetzt aus fünf driftenden Lichtern im blau-silbernen Band der
+Marke, additiv überlagert, auf langsamen Lissajous-Bahnen. Dazu:
+- **Korn gegen Streifenbildung**: weiche Verläufe zeigen auf dunklem Grund sonst
+  sichtbare Ringe. Ein Hauch Rauschen löst sie auf — das ist der Unterschied
+  zwischen „Verlauf" und „hochwertig".
+- Gezeichnet wird auf 42 % Fläche und hochskaliert: bei weichem Licht sichtbar
+  verlustfrei, aber ein Vielfaches günstiger.
+- Die Kohärenz kommt auf Heute weiterhin aus der Tagesform.
+
+**Und meine Schleier haben die Szene erstickt.** Sie stammten aus der
+Partikel-Zeit, wo Körnung von der Schrift weggehalten werden musste. Gemessen
+war der Canvas hell (Mittel 194, Spitze 595 von 765) — sichtbar war fast
+nichts. Weiches Licht greift Text nicht an; die Schleier sind raus, nur ein
+weicher Auslauf nach unten bleibt.
+
+### Dritte Ursache der unregelmäßigen Suite
+
+In §64 hatte ich zwei Ursachen behoben und die Suite für stabil erklärt. Sie
+war es nicht. Die dritte: `actAutoRun()` wechselt beim Rendern einmal täglich
+das aktive Profil. In der App gewollt und mit Rückgängig versehen — im Test zog
+es dem Ausdauer-Block das Profil unter den Füßen weg. Dort ist die Automatik
+jetzt stillgelegt; drei Läufe hintereinander grün.
+
+Version aktuell **v49** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

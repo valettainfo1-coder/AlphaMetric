@@ -397,6 +397,12 @@ check('Start-Übersicht: komplett erledigt → eingeklappt, aber weiter erreichb
 // ---------- 14) Ausdauer-Profil: die ganze App spricht Ausdauer, nicht nur ein Tab ----------
 const runUi = await page.evaluate(() => {
   A.devModeMenu();
+  // Die Tages-Automatik wechselt beim Rendern EINMAL TÄGLICH das aktive Profil
+  // (actAutoRun → actApply). In der App ist das gewollt und mit Rückgängig
+  // versehen; hier zieht es dem Block das Profil unter den Füßen weg und war die
+  // dritte Ursache der unregelmäßig roten Läufe. Dieser Block will ein festes
+  // Profil, also bleibt die Automatik aus.
+  S.actAuto = false; S.actAutoDay = todayKey();
   S.acts = null; S.actId = null; S.profile.a.mode = 'gym'; save();
   actList();
   // Laufprofil über die echten Handler anlegen und aktivieren

@@ -1827,8 +1827,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     pointer-events:none;}
   /* Das Feld läuft nach unten aus, damit der Hero nicht als Kasten endet. */
   .lp-hero::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
-    background:linear-gradient(180deg, rgba(10,12,15,.60) 0%, rgba(10,12,15,.06) 30%,
-      rgba(10,12,15,.30) 70%, var(--bg) 100%);}
+    background:linear-gradient(180deg, rgba(10,12,15,0) 0%, rgba(10,12,15,0) 62%,
+      rgba(10,12,15,.55) 88%, var(--bg) 100%);}
   .lp-herocopy{position:relative; z-index:2; width:100%;}
   /* Auf Heute liegt das Feld in der Szene: über dem Verlauf, unter allem Inhalt. */
   .today-hero{position:relative;}
@@ -1836,16 +1836,15 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Begrüßung und Kennzahlen, unten Überschrift und Fließtext; dort blendet es
      aus, damit die Schrift nicht gegen Spuren ankämpft. Maske statt Übermalen. */
   .feld-home{position:absolute; inset:0; z-index:0; opacity:.92;
-    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 17%, #000 43%, transparent 63%);
-    mask-image:linear-gradient(180deg, transparent 0%, #000 17%, #000 43%, transparent 63%);}
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 12%, #000 58%, transparent 82%);
+    mask-image:linear-gradient(180deg, transparent 0%, #000 12%, #000 58%, transparent 82%);}
   .today-hero>*:not(.th-scene):not(.feld-home){position:relative; z-index:1;}
   /* Eigener, weicher Grund NUR hinter der Kopie — das Feld bleibt an den Rändern
      kräftig, die Schrift steht ruhig. Ein Verlauf, kein Kasten: die Kante darf
      nirgends sichtbar werden. */
-  .lp-herocopy::before{content:""; position:absolute; z-index:-1;
-    left:-8%; right:-8%; top:-6%; bottom:-6%; pointer-events:none;
-    background:radial-gradient(72% 54% at 50% 42%, rgba(10,12,15,.86) 0%,
-      rgba(10,12,15,.66) 46%, rgba(10,12,15,0) 78%);}
+  /* Kein Schleier hinter der Kopie mehr. Er stammte aus der Partikel-Zeit, wo
+     Körnung und Schweife von der Schrift weggehalten werden mussten. Weiches
+     Licht greift Text nicht an — der Schleier hat nur die Szene erstickt. */
   .lp-herocopy{position:relative;z-index:1;}
   .lp-claimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   /* Mobile: Landing bewusst kurz — textlastige Sektionen nur auf Desktop */
@@ -2109,68 +2108,74 @@ function feldStart(cv,opts){
   const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const ctx=cv.getContext("2d",{alpha:false});
   if(!ctx) return;
-  const farbe=opts.farbe||[143,184,220];
   const grund=opts.grund||"#0A0C0F";
-  // Kohärenz: 0 = alles Rauschen, 1 = alles Welle. Steuert, wie stark sich das
-  // Feld ordnet — auf Heute kommt sie aus der Tagesform, hier ist sie der Standard.
+  /* Kohärenz: wie eng das Licht zusammenrückt und wie ruhig es atmet.
+     Auf Heute kommt sie aus der Tagesform — ein guter Tag sammelt das Licht,
+     ein zäher lässt es auseinanderziehen. */
   const koh=Math.max(0,Math.min(1, opts.koharenz==null?0.62:opts.koharenz));
-  // Lage der geordneten Welle (0 = oben, 1 = unten). Sie darf nicht dort liegen,
-  // wo der Text steht — sonst laufen die Spuren durch die Schrift und man liest
-  // schlechter. Komposition schlägt Übermalen.
   const achse=opts.achse==null?0.5:opts.achse;
-  const inst={cv,ctx,farbe,grund,koh,t:Math.random()*1000,visible:true,tot:false,reduce,frames:0};
+
+  /* Fünf Lichter aus der Hausfarbe. Kein Regenbogen: alles liegt im blau-silbernen
+     Band der Marke, nur Helligkeit und Sättigung unterscheiden sie. */
+  const LICHT=[
+    {c:[110,147,184], r:0.62, a:0.50, fx:0.07, fy:0.05, px:0.0, py:1.1},
+    {c:[143,184,220], r:0.48, a:0.42, fx:0.05, fy:0.08, px:2.1, py:0.3},
+    {c:[169,196,222], r:0.40, a:0.30, fx:0.09, fy:0.06, px:4.0, py:2.4},
+    {c:[ 92,124,158], r:0.72, a:0.34, fx:0.04, fy:0.03, px:1.2, py:3.3},
+    {c:[201,210,226], r:0.26, a:0.22, fx:0.11, fy:0.09, px:5.4, py:1.7},
+  ];
+
+  const inst={cv,ctx,grund,koh,achse,t:Math.random()*40,visible:true,reduce,frames:0};
+
+  // Rauschkachel gegen Streifenbildung: weiche Verläufe auf dunklem Grund zeigen
+  // sonst sichtbare Ringe. Ein Hauch Korn löst sie auf — das ist der Unterschied
+  // zwischen „Verlauf" und „hochwertig".
+  const korn=document.createElement("canvas"); korn.width=korn.height=64;
+  {const k=korn.getContext("2d"), im=k.createImageData(64,64);
+   for(let i=0;i<im.data.length;i+=4){const v=(Math.random()*255)|0;
+     im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=9;}
+   k.putImageData(im,0,0);}
+
+  // Die Lichter werden auf einer kleineren Fläche gezeichnet und hochskaliert:
+  // weiche Verläufe verlieren dabei nichts, es kostet aber ein Vielfaches weniger.
+  const off=document.createElement("canvas"); const octx=off.getContext("2d");
 
   const messen=()=>{
     const r=cv.getBoundingClientRect();
     const dpr=Math.min(3, window.devicePixelRatio||1);
     inst.w=Math.max(1,Math.round(r.width)); inst.h=Math.max(1,Math.round(r.height));
     cv.width=Math.round(inst.w*dpr); cv.height=Math.round(inst.h*dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.fillStyle=grund; ctx.fillRect(0,0,inst.w,inst.h);
-    // Punktzahl an die Fläche koppeln: gleiche Dichte auf Telefon wie auf Desktop
-    const n=Math.round(Math.min(460, Math.max(130, inst.w*inst.h/900)));
-    inst.p=Array.from({length:n},()=>({
-      x:Math.random()*inst.w, y:Math.random()*inst.h,
-      v:0.10+Math.random()*0.28, a:Math.random()*6.283, alt:Math.random()*260}));
+    ctx.setTransform(1,0,0,1,0,0);
+    off.width=Math.max(2,Math.round(cv.width*0.42));
+    off.height=Math.max(2,Math.round(cv.height*0.42));
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
   };
-  messen();
-  inst.messen=messen;
-
-  // billiges Wert-Rauschen — kein Bibliotheks-Import für vier Zeilen Mathematik
-  const hash=(x,y)=>{ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); };
-  const rausch=(x,y)=>{
-    const xi=Math.floor(x), yi=Math.floor(y), xf=x-xi, yf=y-yi;
-    const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf);
-    return (hash(xi,yi)*(1-u)+hash(xi+1,yi)*u)*(1-v) + (hash(xi,yi+1)*(1-u)+hash(xi+1,yi+1)*u)*v;
-  };
+  messen(); inst.messen=messen;
 
   inst.schritt=()=>{
-    const {w,h}=inst; if(!w||!h) return;
-    inst.t+=0.0011;
-    /* KEINE Spuren. Der erste Entwurf löschte das Bild nur halb, wodurch die
-       Punkte Schweife zogen — quer über den Schirm, laut und unruhig. Genau das
-       würde Oura nie tun: dort ist die Atmosphäre fast unsichtbar, man spürt sie.
-       Jedes Bild wird jetzt vollständig gelöscht; es bleiben ruhige Punkte. */
-    ctx.fillStyle=inst.grund; ctx.fillRect(0,0,w,h);
-    const [R,G,B]=inst.farbe;
-    for(const p of inst.p){
-      // Ordnung nimmt zur waagerechten Mittelachse hin zu
-      const d=Math.abs(p.y/h-achse)*2;
-      const ordnung=inst.koh*Math.max(0,1-d*1.25);
-      const welle=Math.sin(p.x*0.0065+inst.t*2.1)*0.55 + Math.PI*0.5;
-      const chaos=rausch(p.x*0.0035, p.y*0.0035+inst.t)*6.283;
-      p.a += (((ordnung*welle + (1-ordnung)*chaos) - p.a)*0.06);
-      p.x += Math.cos(p.a)*p.v*0.75; p.y += Math.sin(p.a)*p.v*0.5;
-      p.alt--;
-      if(p.alt<0 || p.x<-20 || p.x>w+20 || p.y<-20 || p.y>h+20){
-        p.x=Math.random()*w; p.y=Math.random()*h; p.alt=180+Math.random()*260;
-      }
-      // geordnete Punkte leuchten stärker: das Signal hebt sich vom Rauschen ab
-      // Zurückhaltend: ungeordnet kaum zu ahnen, geordnet gerade sichtbar.
-      const a=(0.07+ordnung*0.32);
-      ctx.fillStyle=`rgba(${R},${G},${B},${a})`;
-      ctx.fillRect(p.x, p.y, 1.15, 1.15);
+    const W=off.width, H=off.height; if(!W||!H) return;
+    inst.t+=reduce?0:0.0016;
+    octx.globalCompositeOperation="source-over";
+    octx.fillStyle=inst.grund; octx.fillRect(0,0,W,H);
+    octx.globalCompositeOperation="lighter";
+    const D=Math.max(W,H);
+    for(const l of LICHT){
+      // langsame Lissajous-Bahn; Kohärenz zieht die Lichter zur Achse zusammen
+      const x=(0.5+Math.sin(inst.t*l.fx*6.283+l.px)*0.34*(1.25-inst.koh*0.5))*W;
+      const y=(inst.achse+Math.cos(inst.t*l.fy*6.283+l.py)*0.30*(1.25-inst.koh*0.5))*H;
+      const rad=D*l.r*(0.86+Math.sin(inst.t*2.4+l.px)*0.14);
+      const g=octx.createRadialGradient(x,y,0,x,y,rad);
+      const [R,G,B]=l.c, a=l.a*(0.55+inst.koh*0.55);
+      g.addColorStop(0,   `rgba(${R},${G},${B},${(a).toFixed(3)})`);
+      g.addColorStop(0.42,`rgba(${R},${G},${B},${(a*0.34).toFixed(3)})`);
+      g.addColorStop(1,   `rgba(${R},${G},${B},0)`);
+      octx.fillStyle=g; octx.beginPath(); octx.arc(x,y,rad,0,6.283); octx.fill();
     }
+    // hochskalieren, dann Korn darüber
+    ctx.globalCompositeOperation="source-over";
+    ctx.drawImage(off,0,0,cv.width,cv.height);
+    const pat=ctx.createPattern(korn,"repeat");
+    if(pat){ ctx.fillStyle=pat; ctx.fillRect(0,0,cv.width,cv.height); }
     inst.frames++;
   };
 
@@ -2182,8 +2187,7 @@ function feldStart(cv,opts){
       if(!FELD.inst.length){ FELD.loop=null; return; }
       if(!document.hidden) for(const i of FELD.inst){
         if(!i.visible) continue;
-        // Standbild: einmal sauber auskomponieren, dann ruhen lassen
-        if(i.reduce && i.frames>90) continue;
+        if(i.reduce && i.frames>2) continue;   // Standbild: einmal komponieren, dann ruhen
         i.schritt();
       }
       FELD.loop=requestAnimationFrame(tick);
@@ -9884,7 +9888,24 @@ function openStatusSheet(){
     S.readinessHistory=S.readinessHistory.filter(x=>x.date!==todayKey());
     S.readinessHistory.push({date:todayKey(),score:r.score,tier:r.tier,sleep:ci.sleep,energy:ci.energy,stress:ci.stress,sore:ci.sore,sleepH:4+ci.sleep});
     try{navigator.vibrate&&navigator.vibrate([0,25,50,25]);}catch{}
-    overlay.innerHTML=""; save(); render(); };
+    overlay.innerHTML=""; save(); render();
+    /* KONSEQUENZ ZEIGEN. Der Check hat sehr wohl eine Wirkung — readinessToday()
+       speist ihn in die Autoregulation, die bei „Mäßig" auf 85 % und bei
+       „Erholung" auf 65 % der Sätze geht und ein RIR-Ziel setzt. Nur sah man das
+       nirgends an der Stelle, wo man die vier Fragen beantwortet: dort stand eine
+       Zahl und sonst nichts. Genau deshalb wirkte der Check folgenlos.
+       Jetzt sagt die App direkt, was sich am heutigen Training geändert hat. */
+    setTimeout(()=>{ try{
+      const R=readinessToday(); if(!R) return;
+      if(R.mult<1){
+        const proz=Math.round((1-R.mult)*100);
+        toastAction(`Training heute −${proz} % Sätze · Ziel RIR ${R.rir}`,"Ansehen",
+          ()=>{ S.tab=(typeof actUi==="function"&&actUi()==="endur")?"endurance":"train"; save(); render(); });
+      } else if(R.tier==="Stark"){
+        toast("Volle Sätze heute — deine Erholung trägt es");
+      }
+    }catch(e){} },420);
+  };
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()">
     <div class="sheet fade">
       <p class="display-m mb16">Bereit für heute?</p>
