@@ -1461,7 +1461,41 @@ Rücksprung in den Fragebogen löscht sie wieder.
 
 Vier Läufe der App-Suite hintereinander grün, die übrigen drei je zweimal.
 
-Version aktuell **v44** — Nutzer bekommen Updates beim nächsten Besuch
+## §65 — Rundum-Prüfung aller zwölf Screens
+
+Bisher habe ich sechs Screens gemessen und dort verbessert. Die App hat zwölf.
+Derselbe Maßstab über alle — Länge, Textmenge, Kastenfläche, abgeschnittener
+Text:
+
+| Screen | Schirme | Kastenfläche | Befund |
+|---|---|---|---|
+| Player | 1,2 | 0 % | sauber |
+| Abschluss | 0,9 | 25 % | sauber |
+| Aktivitäten | 0,8 | 0 % | **Text abgeschnitten** |
+| Coach | 1,3 | 16 % | sauber |
+| Funktionen | 1,3 | 52 % | sauber |
+| Preise | 2,2 | 0 % | sauber |
+| Ausdauer | 2,6 | 22 % | **Text abgeschnitten** |
+| Profil | 3,3 | **69 %** | höchster Wert der App |
+| Heute · Training · Ernährung | 3,3–3,8 | 10–32 % | sauber |
+| Analytics | 9,0 | 5 % | bewusst lang (§64) |
+
+**Drei Funde, alle behoben:**
+
+1. *Aktivitäten* — die Zusammenfassung einer Aktivität („Muskelaufbau · 4
+   Einheiten/Woche") lief einzeilig mit Ellipse und wurde abgeschnitten. In
+   einer Karte ist Platz für zwei Zeilen, begrenzt auf zwei.
+2. *Ausdauer* — im Wochenstreifen lassen sieben Spalten rund 48 px; „Grundlage"
+   braucht vier mehr und wurde immer gekürzt. Darf jetzt umbrechen.
+3. *Profil* — dreizehn gestapelte Aufklapp-Karten, 69 % Kastenfläche. Jetzt eine
+   flache Liste mit Trennlinien, wie Einstellungen überall aussehen; die Fläche
+   kommt zurück, sobald eine Zeile geöffnet ist und damit Inhalt trägt.
+   **69 % → 43 %.**
+
+Außerdem das `＋` im Tagesform-Ring: das Vollbreiten-Zeichen fehlt im Font und
+fiel auf Arial zurück — jetzt ein normales Plus in der Hausschrift.
+
+Version aktuell **v45** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

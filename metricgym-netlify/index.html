@@ -282,8 +282,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:var(--surface); color:var(--hl); transition:background .22s, color .22s;}
   .ap-card.on .ap-ic{background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
   .ap-n{display:block; font-size:15px; font-weight:660; letter-spacing:-.015em; line-height:1.2;}
-  .ap-s{display:block; font-size:12px; color:var(--t2); line-height:1.4; margin-top:3px;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  /* Die Zusammenfassung einer Aktivität („Muskelaufbau · 4 Einheiten/Woche") lief
+     einzeilig mit Ellipse und wurde dadurch regelmäßig abgeschnitten. In einer
+     Karte ist Platz für zwei Zeilen — begrenzt, damit sie nie ausufert. */
+  .ap-s{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    font-size:12px; color:var(--t2); line-height:1.4; margin-top:3px; overflow:hidden;}
   .ap-t{display:block; font-size:10.5px; color:var(--t3); margin-top:3px; letter-spacing:.02em;}
   .ap-chk{width:26px; height:26px; min-width:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(135deg,#6E93B8,#8FB8DC); color:#fff;}
@@ -367,7 +370,12 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .e-day.now .e-wd{color:var(--hl);}
   .e-dot{display:flex; align-items:center; justify-content:center; height:17px; color:var(--t2); font-size:15px;}
   .e-day.hard .e-dot{color:#E0A341;} .e-day.now .e-dot{color:var(--hl);}
-  .e-dl{font-size:9.5px; line-height:1.15; color:var(--t3); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;}
+  /* Tages-Beschriftung im Wochenstreifen: sieben Spalten lassen ~48 px, „Grundlage"
+     braucht vier mehr und wurde deshalb immer abgeschnitten. Zwei Zeilen sind hier
+     kein Problem — der Streifen darf ein paar Pixel höher sein. */
+  .e-dl{font-size:9.5px; line-height:1.15; color:var(--t3); text-align:center; max-width:100%;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    overflow-wrap:anywhere;}
   .e-ramp{display:flex; align-items:flex-end; gap:3px; height:76px; padding-top:4px;}
   .e-ramp .e-bar{flex:1; height:100%; display:flex; align-items:flex-end;}
   .e-ramp .e-bar i{display:block; width:100%; height:var(--h); border-radius:6px 4px 2px 2px;
@@ -1447,8 +1455,17 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   }
   .exrow{display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; padding:13px 4px; background:none; border:none; border-top:1px solid var(--hairline); color:var(--t1); font-family:inherit; font-size:15px; cursor:pointer; min-height:50px; text-align:left;}
   .exrow .exn{font-weight:600; display:flex; align-items:center; gap:6px;}
-  .acc{border-radius:18px; margin-bottom:10px;}
-  .acc summary{display:flex; align-items:center; justify-content:space-between; padding:16px; cursor:pointer; min-height:48px; font-size:15px; font-weight:600;}
+  /* ══════════ AUFKLAPP-ZEILEN ═════════════════════════════════════════════
+     Profil bestand zu 69 % aus Kastenfläche — dreizehn gestapelte Karten, der
+     höchste Wert der App. Als flache Liste mit Trennlinien ist es ruhiger und
+     zugleich vertrauter: so sehen Einstellungen überall aus. Die Fläche kommt
+     zurück, sobald eine Zeile geöffnet ist — dann trägt sie ja Inhalt. */
+  .acc{border-radius:0; margin-bottom:0; background:none!important; box-shadow:none!important;
+    border-bottom:1px solid var(--hairline);}
+  .acc[open]{background:var(--s1)!important; border-radius:var(--r-lg); margin-bottom:var(--sp-3);
+    border-bottom:none; box-shadow:inset 0 1px 0 var(--edge)!important;}
+  .acc summary{display:flex; align-items:center; justify-content:space-between; padding:16px 2px; cursor:pointer; min-height:52px; font-size:15px; font-weight:600;}
+  .acc[open] summary{padding:16px;}
   .acc summary .chev{transition:transform .3s var(--spring); display:inline-flex;}
   .acc[open] summary .chev{transform:rotate(180deg);}
   .acc[open] summary{border-bottom:1px solid var(--hairline);}
@@ -10144,7 +10161,7 @@ function renderHome(){
             return `<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Bereitschaft ${r.score} — ${tier}">${ringSVG(r.score,tier,184)}</button>`;})()
             :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
                 <div style="width:184px;height:184px;border-radius:50%;border:7px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-                  <span style="font-size:33px;color:var(--hl)">＋</span><span class="xs t2" style="line-height:1.55">Tagesform<br>messen</span>
+                  <span style="font-size:33px;font-weight:300;line-height:1;color:var(--hl)" aria-hidden="true">+</span><span class="xs t2" style="line-height:1.55">Tagesform<br>messen</span>
                 </div></button>`}
         </div>
         <p class="th-lbl">${r?"Bereitschaft":"Tages-Check"}</p>
