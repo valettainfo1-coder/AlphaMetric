@@ -539,6 +539,61 @@ check('Gestaltung: jeder Karten-Ton hebt sich SICHTBAR von einer schlichten Kart
   toneDead.length ? 'bildgleich: ' + toneDead.map((t, i) => `${t}(Δ${toneDiff[TONES.indexOf(t)]})`).join(', ')
                   : `${TONES.length} Töne, kleinster sichtbarer Unterschied Δ${Math.min(...toneDiff)}/255`);
 
+/* ======================= 5) DER USP HÄLT, WAS ER VERSPRICHT =======================
+   Die Landing behauptet: "Jede Zahl nennt ihre Quelle" und nennt eine konkrete
+   Anzahl Arbeiten. Das ist die eine Aussage der App, die nachweisbar falsch sein
+   KANN — und genau darum muss sie eine Prüfung haben. Eine Zahl, die niemand
+   nachrechnet, wird irgendwann unwahr: jemand streicht eine Regel, ergänzt ein
+   Zitat, schreibt "60+" ins Marketing. Ab hier fällt das auf.                     */
+const usp = await page.evaluate(() => {
+  const roh = [];
+  for (const g of QUELLEN) for (const [was, cite] of g.items) roh.push({ g: g.g, was, cite });
+  // Erstautor+Jahr — dieselbe Normalisierung wie quellenZahl(), hier zum Dublettenfund.
+  const werke = new Map();
+  for (const r of roh) {
+    let a = '';
+    for (const t of String(r.cite).split('·')) {
+      const x = t.trim(); if (!/(19|20)\d{2}/.test(x)) continue;
+      const nm = x.replace(/(19|20)\d{2}.*$/, '').trim();
+      if (nm) { const m = nm.match(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]{2,}/); if (m) a = m[0].toLowerCase(); }
+      for (const y of x.match(/(19|20)\d{2}/g) || []) if (a) {
+        const k = a + ' ' + y; werke.set(k, (werke.get(k) || 0) + 1);
+      }
+    }
+  }
+  return {
+    zahl: quellenZahl(),
+    werke: werke.size,
+    regeln: roh.length,
+    ohneJahr: roh.filter(r => !/(19|20)\d{2}/.test(r.cite)).map(r => r.was.slice(0, 46)),
+    ohneText: roh.filter(r => !r.was || r.was.trim().length < 25).map(r => r.cite),
+    imMenue: (() => { try { A.openMenu(); const t = [...document.querySelectorAll('.menu-item')]
+      .some(e => /Quellen/i.test(e.innerText)); A.openMenu(); return t; } catch (e) { return 'Menü nicht prüfbar: ' + e.message; } })(),
+  };
+});
+check('USP: die genannte Anzahl wird aus dem Register gerechnet, nicht behauptet',
+  usp.zahl === usp.werke && usp.zahl > 0,
+  `quellenZahl()=${usp.zahl} · eindeutige Arbeiten im Register=${usp.werke} · ${usp.regeln} Regeln`);
+check('USP: jede Regel im Register nennt eine Arbeit mit Jahreszahl',
+  usp.ohneJahr.length === 0, usp.ohneJahr.join(' | ').slice(0, 180));
+check('USP: jede Arbeit sagt auch, WAS sie in der App steuert',
+  usp.ohneText.length === 0, usp.ohneText.join(' | ').slice(0, 180));
+check('USP: „nachprüfbar in der App" stimmt — das Register steht im Menü',
+  usp.imMenue === true, String(usp.imMenue));
+
+/* Die Landing darf keine zweite, handpflegte Studienzahl führen: zwei Zahlen
+   driften auseinander, und die falsche ist dann die, die der Kunde liest. */
+const hart = await page.evaluate(() => {
+  const s = document.documentElement.outerHTML;
+  const n = (typeof quellenZahl === 'function') ? quellenZahl() : -1;
+  const treffer = [];
+  for (const m of s.matchAll(/(?:über|ueber|mehr als|alle)\s*(\d{2,3})\s*(?:\+\s*)?(?:Studien|Arbeiten|Quellen)/gi))
+    if (parseInt(m[1]) !== n) treffer.push(m[0]);
+  return treffer;
+});
+check('USP: keine zweite, von Hand gepflegte Studienzahl auf der Seite',
+  hart.length === 0, hart.join(' | ').slice(0, 180));
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 
 await browser.close();

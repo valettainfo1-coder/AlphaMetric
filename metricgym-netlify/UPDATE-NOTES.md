@@ -1652,7 +1652,58 @@ das aktive Profil. In der App gewollt und mit Rückgängig versehen — im Test 
 es dem Ausdauer-Block das Profil unter den Füßen weg. Dort ist die Automatik
 jetzt stillgelegt; drei Läufe hintereinander grün.
 
-Version aktuell **v49** — Nutzer bekommen Updates beim nächsten Besuch
+## §70 — Der USP: nicht „wissenschaftlich", sondern nachprüfbar
+
+**Die Frage war: ist die Wissenschaft der USP?** Halb. „Wissenschaftlich
+fundiert" behauptet jede Fitness-App — Freeletics, Fitbod, Alpha Progression,
+Dr. Muscle, JuggernautAI. Was alle sagen, unterscheidet niemanden; es ist
+Eintrittskarte, kein Vorsprung. Und „40+ Studien" ist eine *Mengen*behauptung,
+das Erkennungszeichen der Nahrungsergänzungs-Werbung — ausgerechnet bei dem
+Publikum, das Belege ernst nimmt, zahlt sie negativ ein.
+
+**Der echte Unterschied steht längst im Code: die Rechnung liegt offen.**
+Andere Apps geben dir eine Zahl. METRICGYM gibt dir die Zahl, das Toleranzband,
+in dem sie liegt, den Grund und die Arbeit. Das ist mit einer Marketingzeile
+nicht kopierbar — dafür müsste ein Wettbewerber die App neu bauen.
+
+**Gebaut:**
+- **Quellen-Register** (`QUELLEN`, 41 Regeln / 57 Arbeiten). Links steht in
+  Alltagssprache, *was die Regel in der App tut*, rechts die Arbeit. Zitate
+  stehen so, wie der Code sie führt (`src:`-Felder, `why:`-Texte) — keine
+  erfundenen Journale, keine erfundenen DOIs.
+- **Der Beleg im Hero** (`.lp-beleg`): `corridorHTML()` — exakt die Komponente
+  aus der App, kein Werbebild. Ein Blick: 16 Sätze, Korridor MEV 10–MRV 20,
+  Israetel 2017. Das Versprechen wird gezeigt, nicht behauptet.
+- **Die Kachel ist antippbar** → Register. Eine Behauptung, die man sofort
+  prüfen kann, ist keine Behauptung mehr.
+- **Register auch in der App** (Menü). Die Landing sagt „nachprüfbar in der
+  App" — ohne diesen Eintrag wäre das für jeden Angemeldeten eine leere Zusage.
+
+**Drei eigene Fehler, gefunden und behoben:**
+1. Die erste Zählung ergab 66 — sie zählte „MEV–MRV", „DUP" und Journalnamen
+   als eigene Arbeiten. Jetzt zählt nur, was eine Jahreszahl trägt.
+2. Danach 58 — darin Seiler 2010 und Helms 2014 doppelt, weil dieselbe Arbeit
+   an zwei Stellen unterschiedlich ausführlich zitiert ist. Normalisierung auf
+   Erstautor + Jahr: **57**. Lieber untertrieben als aufgeblasen.
+3. Der Beleg drückte den Haupt-CTA unter die Falz (gemessen: y=639 bei 664 px
+   Fensterhöhe). Text gestrafft, Polster reduziert → y=551, ganz sichtbar.
+   Ein Beweis, der den Startknopf verdrängt, kostet mehr als er bringt.
+
+**Und eine Drift, die schon live war:** die `<meta>`-Beschreibungen trugen
+weiterhin „über 40 Studien" — eine zweite, eingefrorene Zahl neben der
+gerechneten. In Google und in jeder Link-Vorschau stand die falsche. Die Zahl
+ist dort jetzt raus; sie existiert auf der Seite genau einmal und kommt aus
+`quellenZahl()`.
+
+**Wächter (`ui-guard`, Block 5):** die genannte Anzahl muss dem Register
+entsprechen, jede Regel eine Jahreszahl tragen, jede Arbeit sagen was sie
+steuert, das Register im Menü stehen, und keine zweite handgepflegte
+Studienzahl auf der Seite existieren. Mutationsgetestet: erfundene Zahl,
+entfernter Menüeintrag und geschmuggeltes „über 90 Studien" werden alle drei
+rot. Die Umlaute im Register waren zuerst als `ae/oe/ue` geschrieben — 63
+Stellen korrigiert.
+
+Version aktuell **v50** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

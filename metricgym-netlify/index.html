@@ -12,17 +12,21 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.</title>
-<meta name="description" content="METRICGYM baut deinen Trainingsplan aus über 40 Studien, misst ihn Woche für Woche an deinen echten Zahlen und zeigt dir, warum du stärker wirst. Ernährung in 10 Sekunden, anatomische Muskel-Engine, ehrliche Statistiken.">
+<!-- Bewusst OHNE Studienzahl: die Zahl steht auf der Seite genau EINMAL und
+     wird dort aus dem Quellen-Register gerechnet (quellenZahl()). Eine zweite,
+     hier eingefrorene Zahl driftet vom Register weg — und die falsche wäre dann
+     ausgerechnet die, die in Google und in der Link-Vorschau steht. -->
+<meta name="description" content="METRICGYM zeigt dir bei jeder Zahl deines Trainingsplans, warum sie so lautet — und aus welcher Arbeit sie stammt. Nachprüfbar in der App: Volumen-Korridor je Muskel, Ernährung in 10 Sekunden, anatomische Muskel-Engine.">
 <!-- Open Graph / Link-Vorschau (Product-led Growth): geteilte Links zeigen eine attraktive Vorschau -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.">
-<meta property="og:description" content="Die Trainings-Intelligenz: Plan aus 40+ Studien, jede Empfehlung belegt, jeder Fortschritt schwarz auf weiß — mit anatomischer Muskel-Engine.">
+<meta property="og:description" content="Die Trainings-Intelligenz, die ihre Rechnung offenlegt: jede Zahl nennt ihre Quelle, jeder Fortschritt steht schwarz auf weiß — mit anatomischer Muskel-Engine.">
 <meta property="og:image" content="og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.">
-<meta name="twitter:description" content="Die Trainings-Intelligenz: Plan aus 40+ Studien, jede Empfehlung belegt, jeder Fortschritt schwarz auf weiß — mit anatomischer Muskel-Engine.">
+<meta name="twitter:description" content="Die Trainings-Intelligenz, die ihre Rechnung offenlegt: jede Zahl nennt ihre Quelle, jeder Fortschritt steht schwarz auf weiß — mit anatomischer Muskel-Engine.">
 <meta name="twitter:image" content="og-image.png">
 <!-- Optionale lokale Konfiguration (z. B. KI-Key). NICHT im Repo — liegt nur im Deploy-Ordner.
      Achtung: bei öffentlichem Deploy ist diese Datei abrufbar; für Produktion Server-Proxy nutzen. -->
@@ -1821,7 +1825,11 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      und der Satz steht sofort da. Zwei Partikelsysteme übereinander (Kugel plus
      Feld) hätten sich gegenseitig geschwächt, deshalb ist die Kugel hier raus;
      als Marke steht sie weiter oben in der Navigation. */
-  .lp-hero{padding:96px 20px 76px; text-align:center; position:relative; overflow:hidden;
+  /* Padding knapper als frueher: seit der Beleg im Hero steht, muss der
+     Haupt-CTA trotzdem ueber der Falz bleiben (gemessen auf iPhone 13, 664 px
+     sichtbare Hoehe). Ein Beweis, der den Startknopf verdraengt, kostet mehr
+     als er bringt. */
+  .lp-hero{padding:64px 20px 56px; text-align:center; position:relative; overflow:hidden;
     min-height:min(88vh,720px); display:flex; align-items:center; justify-content:center;}
   .feld{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;
     pointer-events:none;}
@@ -1846,6 +1854,20 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Körnung und Schweife von der Schrift weggehalten werden mussten. Weiches
      Licht greift Text nicht an — der Schleier hat nur die Szene erstickt. */
   .lp-herocopy{position:relative;z-index:1;}
+  /* DER BELEG im Hero. Bewusst ruhig: er soll wie ein herausgeloestes Stueck App
+     wirken, nicht wie eine Werbekachel. Deshalb linksbuendig (der Hero ist
+     zentriert — der Bruch signalisiert "das ist echt"), sehr flacher Grund,
+     kein Schatten. Die Balkenfarben kommen unveraendert aus .corr. */
+  .lp-beleg{max-width:352px; margin:0 auto 16px; text-align:left;
+    background:linear-gradient(168deg, rgba(255,255,255,.055), rgba(255,255,255,.012) 70%);
+    border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:14px 16px 13px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .lp-beleg .corr{margin-bottom:10px;}
+  .lp-beleg-k{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--t3); margin-bottom:9px;}
+  .lp-beleg-q{font-size:12.5px; line-height:1.5; color:var(--t2);
+    border-top:1px solid rgba(255,255,255,.08); padding-top:9px;}
+  .lp-beleg-q span{color:var(--hl); font-weight:600;}
   .lp-claimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   /* Mobile: Landing bewusst kurz — textlastige Sektionen nur auf Desktop */
   .lp-deskonly{display:none;}
@@ -1853,6 +1875,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px 10px;text-align:center;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07);transition:transform .28s var(--spring),box-shadow .28s ease,border-color .28s ease;}
   .lp-claim:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(110,147,184,.16);border-color:rgba(169,196,222,.30);}
+  button.lp-claim{font:inherit;color:inherit;width:100%;cursor:pointer;display:block;}
+  button.lp-claim .l u{text-decoration-color:var(--hl);text-underline-offset:2px;}
   .lp-claim .n{font-family:var(--font-hero);font-weight:650;font-size:33px;letter-spacing:-.03em;line-height:1;}
   .lp-claim .l{font-size:13.5px;color:var(--t2);margin-top:9px;line-height:1.42;}
   .lp-pillar{display:flex;gap:14px;align-items:flex-start;padding:18px 0;border-top:1px solid var(--hairline);}
@@ -6980,6 +7004,10 @@ function renderAppbar(){
     ${item("bike","Ausdauer — Cycling & Running","Fahrten & Läufe importieren, Power/Zonen/Form analysieren","A.menuGo('endurance')")}
     ${item("sparkle","Alle Funktionen entdecken","Was die App alles kann — auf einen Blick","A.menuGo('features')")}
     ${item("play","Tour wiederholen","Geführte Durchführung der Funktionen","A.replayTour()")}
+    ${/* Das Register gehoert in die App, nicht nur auf die Landing: dort steht
+          "nachpruefbar, in der App" — ohne diesen Eintrag waere das eine leere
+          Zusage fuer jeden, der schon angemeldet ist. */""}
+    ${item("activity",`Quellen — ${quellenZahl()} Arbeiten`,"Worauf jede Zahl deines Plans sich stützt","A.quellen()")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
     ${item("info","Rechtliches & Datenschutz","Impressum · AGB · Datenschutz","openLegalIndex()")}
     <div class="menu-divider"></div>
@@ -7938,6 +7966,118 @@ function lpAnatInner(n){
     <p class="xs t2" style="text-align:center;line-height:1.55;max-width:300px;margin:0 auto">${d.why||""}</p>`;
 }
 A.lpDemo=(n)=>{ const el=document.getElementById("lp-anat"); if(el)el.innerHTML=lpAnatInner(n); };
+
+/* ============================ DAS QUELLEN-REGISTER ============================
+   Der USP dieser App ist NICHT "wissenschaftlich fundiert" — das behauptet jede
+   Fitness-App, es ist Eintrittskarte, kein Unterschied. Der Unterschied ist die
+   NACHPRÜFBARKEIT: jede Zahl nennt ihre Quelle, und hier stehen sie alle.
+
+   Damit das kein Bluff wird, gelten drei Regeln ohne Ausnahme:
+     1. Es steht NUR drin, was die Engine wirklich benutzt. Kein Zitat zur Zier.
+     2. Die Zitate stehen so, wie der Code sie führt (src:-Felder, why:-Texte).
+        Keine erfundenen Journale, keine erfundenen DOIs, keine Aufblähung.
+     3. Links steht in Alltagssprache, WAS die Regel in der App tut — nicht das
+        Studienthema. Wer prüft, will wissen, welche Zahl daran hängt.
+   Wer eine Trainings- oder Ernährungsregel ändert, ändert hier mit.
+   Die auf der Landing genannte Anzahl wird aus diesem Array GERECHNET
+   (quellenZahl()), nie von Hand gepflegt — so kann sie nicht driften. */
+const QUELLEN=[
+  {g:"Wie viel du trainierst", items:[
+    ["Der Volumen-Korridor je Muskel (MEV–MRV): unter MEV fehlt der Wachstumsreiz, über MRV entsteht mehr Ermüdung als Anpassung. Er setzt den Deckel für jede Muskelgruppe in deinem Plan.","Israetel et al. 2017 · MEV–MRV"],
+    ["5–10 direkte Sätze pro Muskel und Woche — der Arbeitsbereich, in dem die Engine dein Volumen verteilt.","Pelland et al. 2025"],
+    ["Jede Muskelgruppe 2×/Woche statt 1× — entscheidet bei 2–4 Trainingstagen die Split-Wahl (Ganzkörper statt Muskel-pro-Tag).","Schoenfeld et al. 2016"],
+    ["Progressive Ueberladung als Fortschritts-Motor: jede Woche mehr Wiederholungen oder mehr Gewicht.","Schoenfeld 2017"],
+    ["Mehr als 4–6 Uebungen pro Einheit erhöhen vor allem die Ermüdung — späte Uebungen verlieren Reizqualität. Begrenzt die Uebungszahl je Session.","Schoenfeld 2019"],
+  ]},
+  {g:"Welche Uebungen du bekommst", items:[
+    ["Mechanische Spannung als Haupttreiber des Muskelwachstums — Grundlage der Uebungsbewertung.","Schoenfeld 2010"],
+    ["Training in gedehnter Position bringt messbar mehr Wachstum als in verkürzter. Steuert Lengthened Partials und die Auswahl gedehnter Isolationen.","Wolf et al. 2024"],
+    ["Dehnungsbetonte Isolation schlägt Standard-Ausführung (Bizeps, Trizeps, Beinbeuger, Waden).","Maeo et al. 2021 · 2023 · Pedrosa et al. 2023 · Sato et al. 2021 · Larsen 2025"],
+    ["Isolationsarbeit schließt die Lücken, die Mehrgelenkübungen offen lassen — begründet direkte Arm-, Waden- und Schulterarbeit.","Schoenfeld 2010 · Gentil et al. 2017"],
+    ["Die Tiefe entscheidet mehr als die Standbreite: tiefe Kniebeugen bauen Quadrizeps und Gesäß messbar stärker auf als flache.","Kubo, Ikebukuro & Yata 2019"],
+    ["Standbreite und Fußposition verschieben den Muskelanteil (Gesäß/Adduktoren vs. Oberschenkelstrecker) — Grundlage der Varianten-Hinweise.","Escamilla et al. 2001 · Paoli et al. 2009"],
+    ["Muskeln wachsen dort, wo sie belastet wurden: regionale Hypertrophie folgt der regionalen Aktivierung.","Wakahara et al. 2013"],
+    ["Uebungswechsel bei Stagnation statt Wiederholung desselben Reizes — löst den Tausch nach drei Sessions ohne Fortschritt aus.","Fonseca et al. 2014"],
+    ["Satzpausen: 2,5–3 Min bei Grundübungen sichern volle Kraft pro Satz, 60–90 s bei Isolation erhöhen den metabolischen Stress.","Grgic et al. 2017 · 2018"],
+  ]},
+  {g:"Wie dein Plan mitwächst", items:[
+    ["RIR-gesteuerte Progression (Reps in Reserve) statt fester Prozentwerte — das Grundprinzip der Steuerung.","Robinson et al. 2024 · Helms et al. 2016"],
+    ["Die RIR-/RPE-Skala und wechselnde Reize an verschiedenen Tagen (schwer/Volumen) bauen mehr Muskel als zweimal dasselbe.","Zourdos et al. 2016 · DUP · Schoenfeld 2015"],
+    ["Ohne Entlastung keine Superkompensation — begründet die Erholungswoche jede vierte Woche (−40 % Sätze, −10 % Gewicht).","Seiler 2010 · Israetel et al. 2017"],
+    ["Zustandsgesteuertes Training: an schlechten Tagen weniger Volumen und mehr Reserve, unabhängig vom Plan. Genau das macht dein Tagesform-Check.","Javaloyes et al. 2019 · Vesterinen et al. 2016"],
+    ["Zu schnelle Belastungssprünge gehen mit mehr Ausfällen einher — deckelt die wöchentliche Steigerung (typisch ≤ 10 %).","Gabbett 2016 · Br J Sports Med · Nielsen et al. 2014 · J Orthop Sports Phys Ther"],
+  ]},
+  {g:"Was du isst", items:[
+    ["Protein und Muskelproteinsynthese — Grundlage deines täglichen Proteinziels.","Morton et al. 2018"],
+    ["2,3–3,1 g Protein pro kg fettfreier Masse schützen die Muskulatur im Defizit; Grundlage von Recomp- und Cut-Protokoll.","Helms ER, Aragon AA, Fitschen PJ. J Int Soc Sports Nutr 2014;11:20"],
+    ["Abnehmtempo: bis ~0,5–0,7 % Körpergewicht pro Woche erhält Muskeln — doppelt so schnell kostet Magermasse. Setzt die Grenzen im Funnel.","Garthe I et al. Int J Sport Nutr Exerc Metab 2011;21(2):97–104"],
+    ["Krafttraining plus hohes Protein hält die Magermasse im Defizit — darum bleibt Kraft der Kern des Abnehm-Plans, nicht Cardio.","Longland TM et al. Am J Clin Nutr 2016;103(3):738–746"],
+    ["Proteinverteilung über den Tag und anabole Resistenz ab ~50 Jahren (+0,2 g/kg).","Moore et al. 2015 · Wall et al. 2015"],
+    ["Fettabbau und Muskelaufbau sind energetisch gegensätzlich — beides gleichzeitig maximal geht nicht. Begründet die Reihenfolge-Entscheidung im Funnel.","Slater et al. 2019 · Helms et al. 2014"],
+    ["Kalorienziel als adaptives Modell statt starrer 7.000-kcal-Regel — die App zieht dein echtes Ergebnis nach.","Wishnofsky M. Am J Clin Nutr 1958;6(5):542–546 · Hall KD, Lancet 2011"],
+    ["Metabolische Anpassung im Defizit — warum das Ziel nachjustiert wird statt stur zu rechnen.","Fothergill E et al. (Hall KD). Obesity 2016;24(8):1612–1619"],
+    ["Punktuellen Fettabbau gibt es nicht: Bauchtraining baut kein Bauchfett ab. Steht so im Coach, damit du nicht falsch planst.","Vispute et al. 2011"],
+    ["Sättigungsindex: energiedichte, eiweißarme Mahlzeiten machen schneller wieder hungrig.","Holt et al. 1995"],
+    ["Ballaststoff-Zielwert 30 g/Tag.","DGE-Referenzwert · Slavin 2005"],
+    ["Grundumsatz nach Mifflin-St Jeor bzw. Katch-McArdle, wenn dein Körperfett bekannt ist.","Mifflin-St Jeor 1990 · Katch-McArdle"],
+  ]},
+  {g:"Ausdauer", items:[
+    ["Polarisiert ~80 % locker / ~20 % hart — die belegte Intensitätsverteilung bei Spitzenathleten und die Grundstruktur deiner Laufwoche.","Seiler S. Int J Sports Physiol Perform 2010;5(3):276–291"],
+    ["Schwellentraining für das Tempo, das du lange durchhältst.","Laursen & Jenkins 2002 · Seiler 2010"],
+    ["VO₂max-Intervalle: viel Zeit nahe der maximalen Sauerstoffaufnahme bei weniger Ermüdung pro Einheit.","Billat 2001 · Rønnestad 2015"],
+    ["Intervalle schlagen reines Dauertraining für die VO₂max.","Helgerud 2007 · Bacon 2013 (Meta-Analyse)"],
+    ["Fettstoffwechsel und Laktat-Clearance entstehen im lockeren Volumen — die aerobe Basis.","Seiler 2010 · San-Millán & Brooks 2018"],
+    ["Krafttraining verbessert die Bewegungsökonomie von Ausdauersportlern, ohne Ausdauervolumen zu verdrängen.","Rønnestad & Mujika 2014 · Scand J Med Sci Sports · Beattie et al. 2014"],
+    ["Fitness-/Form-Modell (Belastung, Ermüdung, Frische) hinter deiner Formkurve.","Banister EW et al. Aust J Sports Med 1975;7:57–61"],
+    ["Kritische Leistung als Anker der Leistungs-Zeit-Kurve.","Monod H, Scherrer J. Ergonomics 1965;8:329–338 · Jones AM, Vanhatalo A. Sports Med 2017"],
+    ["Power, TSS und Form für Rad-Einheiten.","Allen H, Coggan A, McGregor S. Training and Racing with a Power Meter, 3. Aufl., VeloPress 2019"],
+    ["Interferenz-Effekt: Ausdauer direkt nach Kraft kann die Aufbau-Signalwege dämpfen — begründet die zeitliche Trennung im Plan.","Wilson et al. 2012 · Schumann et al. 2022"],
+  ]},
+];
+/* Anzahl der genannten ARBEITEN. Die Zahl steht auf der Landing, also muss sie
+   im Zweifel zu niedrig sein, nie zu hoch — eine geschönte Zahl würde genau
+   das Versprechen brechen, für das sie da ist.
+   Gezählt wird deshalb nur, was eine Jahreszahl trägt: das ist eine
+   veröffentlichte Arbeit. Labels ("MEV–MRV", "DUP"), Journalnamen
+   ("Br J Sports Med") und Formeln ohne Jahr (Mifflin-St Jeor) zählen NICHT
+   mit, obwohl sie im Register stehen — lieber untertrieben als aufgeblasen.
+   Ein Eintrag wie "Maeo et al. 2021 · 2023" trägt zwei Arbeiten; die blanke
+   Jahreszahl wird deshalb dem vorangehenden Autor zugeordnet.
+   Normalisiert wird auf ERSTAUTOR + JAHR, weil dieselbe Arbeit im Register
+   an zwei Stellen unterschiedlich ausführlich zitiert sein darf ("Seiler 2010"
+   und "Seiler S. Int J Sports Physiol Perform 2010") — ohne diesen Schritt
+   zählte sie doppelt, und die Zahl wäre um genau den Betrag zu hoch, der
+   das Versprechen unglaubwürdig macht. */
+function quellenZahl(){
+  const s=new Set();
+  for(const grp of QUELLEN) for(const [,cite] of grp.items){
+    let autor="";
+    for(const teil of String(cite).split("·")){
+      const t=teil.trim(); if(!/(19|20)\d{2}/.test(t)) continue;
+      const nm=t.replace(/(19|20)\d{2}.*$/,"").trim();
+      // Erstautor = erstes Wort des Namens, ohne Initialen und Satzzeichen.
+      if(nm){ const m=nm.match(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]{2,}/); if(m) autor=m[0].toLowerCase(); }
+      for(const jahr of t.match(/(19|20)\d{2}/g)||[]) if(autor) s.add(autor+" "+jahr);
+    }
+  }
+  return s.size;
+}
+function renderQuellen(){
+  const n=quellenZahl();
+  return `<p class="lp-eyebrow" style="margin-top:0">Quellen-Register</p>
+    <h2 class="lp-h2 mb8" style="font-size:26px">${n} Arbeiten.<br>Und wo jede wirkt.</h2>
+    <p class="sm t2 mb16" style="line-height:1.6">Links steht, was die Regel in der App tut — rechts, worauf sie sich stützt. Wenn eine Zeile dich nicht überzeugt, weißt du genau, welche Zahl du hinterfragen musst. Das ist der Punkt.</p>
+    ${QUELLEN.map(grp=>`<div style="margin-bottom:22px">
+      <p class="xs" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--hl);margin-bottom:8px">${grp.g}</p>
+      ${grp.items.map(([was,cite])=>`<div style="padding:11px 0;border-top:1px solid var(--hairline)">
+        <p class="sm" style="line-height:1.55;margin-bottom:5px">${was}</p>
+        <p class="xs" style="color:var(--t3);line-height:1.5">${cite}</p></div>`).join("")}
+    </div>`).join("")}
+    <p class="xs t3" style="line-height:1.55;border-top:1px solid var(--hairline);padding-top:12px">
+      METRICGYM ist kein Medizinprodukt und ersetzt keine ärztliche Beratung. Die genannten Arbeiten begründen die Trainings- und Ernährungslogik der App — sie sind keine Zusage eines individuellen Ergebnisses.</p>`;
+}
+A.quellen=()=>{ modal(`<div style="max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch">${renderQuellen()}</div>`); };
+
 function renderLanding(){
   A.lpSet=(k,v)=>{
     LP[k]=(k==="days")?parseInt(v):v;
@@ -7963,9 +8103,20 @@ function renderLanding(){
     <section class="lp-hero" style="--par:0px">
       <canvas class="feld" id="feld-lp" aria-hidden="true"></canvas>
       <div class="lp-herocopy">
-        <p class="lp-eyebrow">Trainings-Intelligenz · kein weiterer Tracker</p>
+        <p class="lp-eyebrow">Jede Zahl nennt ihre Quelle</p>
         <h1 class="lp-h">Rate nicht, ob dein<br>Training wirkt. <span class="volt-txt">Wisse es.</span></h1>
-        <p class="lp-lead" style="max-width:380px;margin:0 auto 22px">In METRICGYM arbeitet eine Intelligenz, die deinen Plan aus über 40 Studien baut, ihn Woche für Woche an deinen echten Zahlen misst — und dir zeigt, <b style="color:var(--t1)">warum</b> du stärker wirst.</p>
+        <p class="lp-lead" style="max-width:392px;margin:0 auto 16px">Andere Apps sagen dir, <i>was</i>. METRICGYM zeigt bei jeder Zahl das <b style="color:var(--t1)">warum</b> — und die Arbeit dahinter.</p>
+
+        <!-- DER BELEG: das Versprechen wird hier eingelöst, nicht behauptet.
+             Kein Werbebild — corridorHTML() ist exakt die Komponente, die in der
+             App über deinem Trainingsplan steht. Ein Blick: Zahl, Korridor,
+             Quelle. Genau das kann kein Wettbewerber per Textzeile kopieren. -->
+        <div class="lp-beleg">
+          <p class="lp-beleg-k">So sieht das aus</p>
+          ${corridorHTML([{g:"Brust · deine Woche",tot:16,mev:10,mrv:20}])}
+          <p class="lp-beleg-q">Warum 16? Unter 10 fehlt der Reiz, über 20 kommt die Erholung nicht nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor</span></p>
+        </div>
+
         <div class="lp-cta-row" style="display:flex;flex-direction:column;gap:8px;align-items:center">
           <button class="btn volt" style="max-width:320px;width:100%;margin:0 auto" onclick="A.toRegister()">Meinen Plan bauen — kostenlos</button>
           <button class="btn" style="max-width:320px;width:100%;margin:0 auto" onclick="A.devMode()">${icon("play",15)} Erst reinschauen — Demo</button>
@@ -7979,7 +8130,9 @@ function renderLanding(){
     <!-- ZAHLEN, DIE TRAGEN -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-claimgrid">
-        <div class="lp-claim lp-rev"><p class="n volt-txt"><span data-cnt="40">0</span>+</p><p class="l">Studien tragen jede einzelne Empfehlung</p></div>
+        <!-- Antippbar: eine Behauptung, die man sofort pruefen kann, ist keine
+             Behauptung mehr. Die Zahl kommt aus dem Register (quellenZahl()). -->
+        <button class="lp-claim lp-rev" onclick="A.quellen()"><p class="n volt-txt"><span data-cnt="${quellenZahl()}">0</span></p><p class="l">Arbeiten tragen den Plan —<br><u>alle einsehen</u></p></button>
         <div class="lp-claim lp-rev"><p class="n"><span data-cnt="112">0</span></p><p class="l">Übungen, die die Engine versteht</p></div>
         <div class="lp-claim lp-rev"><p class="n"><span data-cnt="10">0</span><span style="font-size:20px">s</span></p><p class="l">vom Satz zum Log — tippen oder sprechen</p></div>
       </div>
@@ -8106,15 +8259,20 @@ function renderLanding(){
     <!-- WISSENSCHAFT: Fundament + Belege in EINER Sektion -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-dark">
-        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Das Fundament</p>
-        <p class="lp-quote mb8">Keine Behauptungen.<br>Belege.</p>
-        <p class="sm mb16" style="color:rgba(255,255,255,.72);line-height:1.55">Jede Regel im System stammt aus peer-reviewter Trainings- und Ernährungsforschung — und daneben liegt dein Fortschritt, in deinen eigenen Zahlen.</p>
-        ${[["Progressive Überladung & Volumen","Schoenfeld 2017 · Pelland 2025"],
-           ["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
+        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Der Unterschied</p>
+        <p class="lp-quote mb8">„Wissenschaftlich"<br>sagen alle.</p>
+        <p class="sm mb16" style="color:rgba(255,255,255,.72);line-height:1.6">Der Satz kostet nichts — jede Fitness-App schreibt ihn hin. Nachprüfbar macht ihn erst, wer die Rechnung offenlegt: <b style="color:#fff">Bei METRICGYM trägt jede Zahl ihre Quelle bei sich.</b> Warum <i>diese</i> Satzzahl, <i>dieses</i> Proteinziel, <i>diese</i> Pause — steht direkt daneben, nicht im Kleingedruckten.</p>
+        ${[["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
+           ["Progressive Überladung & Volumen-Dosis","Schoenfeld 2017 · Pelland 2025"],
            ["RIR-gesteuerte Progression","Helms 2016 · Robinson 2024"],
-           ["Protein & Körperkomposition","Morton et al. 2018 · Helms 2014"]]
+           ["Training in gedehnter Position","Wolf et al. 2024 · Maeo 2023"],
+           ["Protein & Körperkomposition","Morton et al. 2018 · Helms 2014"],
+           ["Abnehmtempo & Muskelschutz","Garthe et al. 2011"]]
           .map(([t,c])=>`<div class="row" style="padding:10px 0;border-top:1px solid rgba(255,255,255,.12)">
             <span class="sm" style="color:#fff;font-weight:600">${t}</span><span class="xs" style="color:rgba(255,255,255,.55);text-align:right">${c}</span></div>`).join("")}
+        ${/* Kontur per inset-Schatten, nicht per border-color: `.btn` traegt appweit
+             `border:none`, eine Rahmenfarbe zeichnete hier nie. */""}
+        <button class="btn ghost mt16" style="box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);color:#fff" onclick="A.quellen()">Alle ${quellenZahl()} Arbeiten ansehen</button>
       </div>
     </section>
 
