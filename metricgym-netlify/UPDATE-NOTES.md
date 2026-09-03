@@ -1574,7 +1574,38 @@ Rücksichten: pausiert außerhalb des Sichtfelds und bei verborgenem Tab; bei
 `prefers-reduced-motion` wird ein ruhiges Standbild komponiert und angehalten —
 die Szene bleibt, die Bewegung nicht.
 
-Version aktuell **v47** — Nutzer bekommen Updates beim nächsten Besuch
+## §68 — Die Spuren raus: minimalistisch, wie es sein sollte
+
+Rückmeldung: „Die Spuren sind viel zu viel! Würde Oura niemals machen!
+Minimalistisch halten!"
+
+Berechtigt, und mein Fehler. Auf „ballern" habe ich mit **mehr** geantwortet
+statt mit **besser** — 2.400 Partikel, die Schweife quer über den Schirm zogen.
+Genau das Gegenteil dessen, wofür ich die ganze Sitzung argumentiert habe
+(§61 Karten flach, §56 Text gegen Hintergrund). Ouras Atmosphäre ist fast
+unsichtbar; man spürt sie, statt sie zu sehen.
+
+**Ursache der Schweife:** das Bild wurde je Einzelbild nur halb gelöscht
+(`rgba(...,0.055)` statt Vollflächen-Löschen). Dadurch blieben die alten
+Positionen stehen und wurden zu Streifen. Jetzt wird vollständig gelöscht — es
+bleiben ruhige Punkte statt Bahnen.
+
+| | vorher | jetzt |
+|---|---|---|
+| Punkte | bis 2.400 | bis 460 |
+| Deckkraft (geordnet) | 0,72 | 0,39 |
+| helle Bildpunkte, Landing | 5.485 | **29** |
+| helle Bildpunkte, Heute | 4.657 | **36** |
+
+Dazu halb so schnell und mit kürzerem Weg je Bild. Der erste Versuch ging mit
+12 bzw. 9 Bildpunkten zu weit — da war es abwesend statt zurückhaltend; die
+jetzige Stufe liegt dazwischen.
+
+Die Idee bleibt: außen Rauschen, zur Fokusachse hin Ordnung, und auf Heute
+kommt diese Ordnung weiterhin aus der Tagesform. Nur trägt sie jetzt so leise,
+wie sie soll.
+
+Version aktuell **v48** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

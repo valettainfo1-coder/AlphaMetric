@@ -2128,10 +2128,10 @@ function feldStart(cv,opts){
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.fillStyle=grund; ctx.fillRect(0,0,inst.w,inst.h);
     // Punktzahl an die Fläche koppeln: gleiche Dichte auf Telefon wie auf Desktop
-    const n=Math.round(Math.min(2400, Math.max(340, inst.w*inst.h/165)));
+    const n=Math.round(Math.min(460, Math.max(130, inst.w*inst.h/900)));
     inst.p=Array.from({length:n},()=>({
       x:Math.random()*inst.w, y:Math.random()*inst.h,
-      v:0.16+Math.random()*0.5, a:Math.random()*6.283, alt:Math.random()*260}));
+      v:0.10+Math.random()*0.28, a:Math.random()*6.283, alt:Math.random()*260}));
   };
   messen();
   inst.messen=messen;
@@ -2146,9 +2146,12 @@ function feldStart(cv,opts){
 
   inst.schritt=()=>{
     const {w,h}=inst; if(!w||!h) return;
-    inst.t+=0.0022;
-    // Schleier statt Vollflächen-Löschen: die Punkte ziehen weiche Spuren.
-    ctx.fillStyle="rgba(10,12,15,0.055)"; ctx.fillRect(0,0,w,h);
+    inst.t+=0.0011;
+    /* KEINE Spuren. Der erste Entwurf löschte das Bild nur halb, wodurch die
+       Punkte Schweife zogen — quer über den Schirm, laut und unruhig. Genau das
+       würde Oura nie tun: dort ist die Atmosphäre fast unsichtbar, man spürt sie.
+       Jedes Bild wird jetzt vollständig gelöscht; es bleiben ruhige Punkte. */
+    ctx.fillStyle=inst.grund; ctx.fillRect(0,0,w,h);
     const [R,G,B]=inst.farbe;
     for(const p of inst.p){
       // Ordnung nimmt zur waagerechten Mittelachse hin zu
@@ -2157,15 +2160,16 @@ function feldStart(cv,opts){
       const welle=Math.sin(p.x*0.0065+inst.t*2.1)*0.55 + Math.PI*0.5;
       const chaos=rausch(p.x*0.0035, p.y*0.0035+inst.t)*6.283;
       p.a += (((ordnung*welle + (1-ordnung)*chaos) - p.a)*0.06);
-      p.x += Math.cos(p.a)*p.v*1.7; p.y += Math.sin(p.a)*p.v;
+      p.x += Math.cos(p.a)*p.v*0.75; p.y += Math.sin(p.a)*p.v*0.5;
       p.alt--;
       if(p.alt<0 || p.x<-20 || p.x>w+20 || p.y<-20 || p.y>h+20){
         p.x=Math.random()*w; p.y=Math.random()*h; p.alt=180+Math.random()*260;
       }
       // geordnete Punkte leuchten stärker: das Signal hebt sich vom Rauschen ab
-      const a=(0.10+ordnung*0.62);
+      // Zurückhaltend: ungeordnet kaum zu ahnen, geordnet gerade sichtbar.
+      const a=(0.07+ordnung*0.32);
       ctx.fillStyle=`rgba(${R},${G},${B},${a})`;
-      ctx.fillRect(p.x, p.y, 1.4, 1.4);
+      ctx.fillRect(p.x, p.y, 1.15, 1.15);
     }
     inst.frames++;
   };
