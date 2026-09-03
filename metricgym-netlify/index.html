@@ -1816,7 +1816,36 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lp-h{font-family:var(--font-serif);font-size:33px;font-weight:500;letter-spacing:-.015em;line-height:1.08;margin-bottom:16px;text-align:center;}
   .lp-h2{font-family:var(--font-serif);font-size:33px;font-weight:500;letter-spacing:-.01em;line-height:1.16;margin-bottom:11px;}
   .lp-lead{font-size:17px;line-height:1.62;color:var(--t2);}
-  .lp-hero{padding:40px 20px 32px;text-align:center;position:relative;overflow:hidden;}
+  /* Der Hero ist die erste Begegnung. Vorher: Partikel-Kugel, dann Zeile, dann
+     Aussage — die Botschaft kam als Drittes. Jetzt trägt das Feld die Atmosphäre
+     und der Satz steht sofort da. Zwei Partikelsysteme übereinander (Kugel plus
+     Feld) hätten sich gegenseitig geschwächt, deshalb ist die Kugel hier raus;
+     als Marke steht sie weiter oben in der Navigation. */
+  .lp-hero{padding:96px 20px 76px; text-align:center; position:relative; overflow:hidden;
+    min-height:min(88vh,720px); display:flex; align-items:center; justify-content:center;}
+  .feld{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;
+    pointer-events:none;}
+  /* Das Feld läuft nach unten aus, damit der Hero nicht als Kasten endet. */
+  .lp-hero::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(180deg, rgba(10,12,15,.60) 0%, rgba(10,12,15,.06) 30%,
+      rgba(10,12,15,.30) 70%, var(--bg) 100%);}
+  .lp-herocopy{position:relative; z-index:2; width:100%;}
+  /* Auf Heute liegt das Feld in der Szene: über dem Verlauf, unter allem Inhalt. */
+  .today-hero{position:relative;}
+  /* Der Ring in der Mitte ist der Anker — dort trägt das Feld. Oben stehen
+     Begrüßung und Kennzahlen, unten Überschrift und Fließtext; dort blendet es
+     aus, damit die Schrift nicht gegen Spuren ankämpft. Maske statt Übermalen. */
+  .feld-home{position:absolute; inset:0; z-index:0; opacity:.92;
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 17%, #000 43%, transparent 63%);
+    mask-image:linear-gradient(180deg, transparent 0%, #000 17%, #000 43%, transparent 63%);}
+  .today-hero>*:not(.th-scene):not(.feld-home){position:relative; z-index:1;}
+  /* Eigener, weicher Grund NUR hinter der Kopie — das Feld bleibt an den Rändern
+     kräftig, die Schrift steht ruhig. Ein Verlauf, kein Kasten: die Kante darf
+     nirgends sichtbar werden. */
+  .lp-herocopy::before{content:""; position:absolute; z-index:-1;
+    left:-8%; right:-8%; top:-6%; bottom:-6%; pointer-events:none;
+    background:radial-gradient(72% 54% at 50% 42%, rgba(10,12,15,.86) 0%,
+      rgba(10,12,15,.66) 46%, rgba(10,12,15,0) 78%);}
   .lp-herocopy{position:relative;z-index:1;}
   .lp-claimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   /* Mobile: Landing bewusst kurz — textlastige Sektionen nur auf Desktop */
@@ -2056,6 +2085,110 @@ function logoMark(size){ return logoSVG(size||72,200); }
    Kugel aus tausenden Punkten, Trägheits-Rotation und Finger-Abstoßung.
    Ohne Canvas bleibt die CSS-Kern-Sphäre (.rk-core) als Fallback sichtbar.
    Name „rauchkreis" ist historisch — das Markup/die Klassen bleiben stabil. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   FELD — die generative Szene hinter Landing-Hero und Heute-Kopf.
+
+   Die These der Seite lautet „Rate nicht, ob dein Training wirkt. Wisse es."
+   Das Feld tut genau das: außen driften die Punkte im Rauschen, zur Mittelachse
+   hin richten sie sich zu einer glatten Welle aus. Rauschen wird Signal — die
+   Aussage des Produkts als Bild, nicht als Dekoration.
+
+   Zur Auflösung: gezeichnet wird in der ECHTEN Pixeldichte des Geräts
+   (devicePixelRatio, bis 3×). Auf einem Telefon sind das ~1.170 px Breite, auf
+   einem 4K-Monitor volle 3.840 — schärfer als jedes feste Bild und in jeder
+   Größe knackig, bei rund zwei Kilobyte Code statt zweistelliger Megabyte.
+
+   Rücksichten: pausiert außerhalb des Sichtfelds und bei verborgenem Tab;
+   bei „prefers-reduced-motion" wird EIN ruhiges Standbild komponiert und
+   angehalten — die Szene bleibt, die Bewegung nicht.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const FELD={inst:[], loop:null};
+function feldStart(cv,opts){
+  if(!cv) return;
+  opts=opts||{};
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ctx=cv.getContext("2d",{alpha:false});
+  if(!ctx) return;
+  const farbe=opts.farbe||[143,184,220];
+  const grund=opts.grund||"#0A0C0F";
+  // Kohärenz: 0 = alles Rauschen, 1 = alles Welle. Steuert, wie stark sich das
+  // Feld ordnet — auf Heute kommt sie aus der Tagesform, hier ist sie der Standard.
+  const koh=Math.max(0,Math.min(1, opts.koharenz==null?0.62:opts.koharenz));
+  // Lage der geordneten Welle (0 = oben, 1 = unten). Sie darf nicht dort liegen,
+  // wo der Text steht — sonst laufen die Spuren durch die Schrift und man liest
+  // schlechter. Komposition schlägt Übermalen.
+  const achse=opts.achse==null?0.5:opts.achse;
+  const inst={cv,ctx,farbe,grund,koh,t:Math.random()*1000,visible:true,tot:false,reduce,frames:0};
+
+  const messen=()=>{
+    const r=cv.getBoundingClientRect();
+    const dpr=Math.min(3, window.devicePixelRatio||1);
+    inst.w=Math.max(1,Math.round(r.width)); inst.h=Math.max(1,Math.round(r.height));
+    cv.width=Math.round(inst.w*dpr); cv.height=Math.round(inst.h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle=grund; ctx.fillRect(0,0,inst.w,inst.h);
+    // Punktzahl an die Fläche koppeln: gleiche Dichte auf Telefon wie auf Desktop
+    const n=Math.round(Math.min(2400, Math.max(340, inst.w*inst.h/165)));
+    inst.p=Array.from({length:n},()=>({
+      x:Math.random()*inst.w, y:Math.random()*inst.h,
+      v:0.16+Math.random()*0.5, a:Math.random()*6.283, alt:Math.random()*260}));
+  };
+  messen();
+  inst.messen=messen;
+
+  // billiges Wert-Rauschen — kein Bibliotheks-Import für vier Zeilen Mathematik
+  const hash=(x,y)=>{ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); };
+  const rausch=(x,y)=>{
+    const xi=Math.floor(x), yi=Math.floor(y), xf=x-xi, yf=y-yi;
+    const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf);
+    return (hash(xi,yi)*(1-u)+hash(xi+1,yi)*u)*(1-v) + (hash(xi,yi+1)*(1-u)+hash(xi+1,yi+1)*u)*v;
+  };
+
+  inst.schritt=()=>{
+    const {w,h}=inst; if(!w||!h) return;
+    inst.t+=0.0022;
+    // Schleier statt Vollflächen-Löschen: die Punkte ziehen weiche Spuren.
+    ctx.fillStyle="rgba(10,12,15,0.055)"; ctx.fillRect(0,0,w,h);
+    const [R,G,B]=inst.farbe;
+    for(const p of inst.p){
+      // Ordnung nimmt zur waagerechten Mittelachse hin zu
+      const d=Math.abs(p.y/h-achse)*2;
+      const ordnung=inst.koh*Math.max(0,1-d*1.25);
+      const welle=Math.sin(p.x*0.0065+inst.t*2.1)*0.55 + Math.PI*0.5;
+      const chaos=rausch(p.x*0.0035, p.y*0.0035+inst.t)*6.283;
+      p.a += (((ordnung*welle + (1-ordnung)*chaos) - p.a)*0.06);
+      p.x += Math.cos(p.a)*p.v*1.7; p.y += Math.sin(p.a)*p.v;
+      p.alt--;
+      if(p.alt<0 || p.x<-20 || p.x>w+20 || p.y<-20 || p.y>h+20){
+        p.x=Math.random()*w; p.y=Math.random()*h; p.alt=180+Math.random()*260;
+      }
+      // geordnete Punkte leuchten stärker: das Signal hebt sich vom Rauschen ab
+      const a=(0.10+ordnung*0.62);
+      ctx.fillStyle=`rgba(${R},${G},${B},${a})`;
+      ctx.fillRect(p.x, p.y, 1.4, 1.4);
+    }
+    inst.frames++;
+  };
+
+  FELD.inst.push(inst);
+  try{ new IntersectionObserver((es)=>{es.forEach(e=>{inst.visible=e.isIntersecting;});}).observe(cv); }catch(e){}
+  if(!FELD.loop){
+    const tick=()=>{
+      FELD.inst=FELD.inst.filter(i=>i.cv.isConnected);
+      if(!FELD.inst.length){ FELD.loop=null; return; }
+      if(!document.hidden) for(const i of FELD.inst){
+        if(!i.visible) continue;
+        // Standbild: einmal sauber auskomponieren, dann ruhen lassen
+        if(i.reduce && i.frames>90) continue;
+        i.schritt();
+      }
+      FELD.loop=requestAnimationFrame(tick);
+    };
+    FELD.loop=requestAnimationFrame(tick);
+  }
+  addEventListener("resize",()=>{ try{ messen(); }catch(e){} },{passive:true});
+  return inst;
+}
 function rauchkreis(size,opts){
   return `<div class="rk" style="width:${size}px;height:${size}px;--d:${size}px" aria-hidden="true"><span class="rk-aura"></span><div class="rk-core"><i></i><i></i><i></i></div><canvas class="rk-gl"></canvas></div>`;
 }
@@ -7820,8 +7953,8 @@ function renderLanding(){
 
     <!-- HERO: Geist-Sphäre + Kernversprechen (USP: Beweis statt Bauchgefühl) -->
     <section class="lp-hero" style="--par:0px">
+      <canvas class="feld" id="feld-lp" aria-hidden="true"></canvas>
       <div class="lp-herocopy">
-        <div class="orb-float" style="display:flex;justify-content:center;margin:6px auto 18px">${rauchkreis(150)}</div>
         <p class="lp-eyebrow">Trainings-Intelligenz · kein weiterer Tracker</p>
         <h1 class="lp-h">Rate nicht, ob dein<br>Training wirkt. <span class="volt-txt">Wisse es.</span></h1>
         <p class="lp-lead" style="max-width:380px;margin:0 auto 22px">In METRICGYM arbeitet eine Intelligenz, die deinen Plan aus über 40 Studien baut, ihn Woche für Woche an deinen echten Zahlen misst — und dir zeigt, <b style="color:var(--t1)">warum</b> du stärker wirst.</p>
@@ -7999,7 +8132,10 @@ function renderLanding(){
     </section>
   </div>`;
   // Sphären mountet der MutationObserver (GEIST) — hier nur Zahlen & Choreografie.
-  setTimeout(()=>{ lpAnimateResult(); lpFX(); },60);
+  setTimeout(()=>{ lpAnimateResult(); lpFX();
+    // Das Feld hinter dem Hero: hohe Ordnung, damit die Welle deutlich trägt.
+    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.78, achse:0.80}); }catch(e){}
+  },60);
 }
 /* ===== LANDING-FX: Scroll- & Bühnen-Choreografie — idempotent pro Render =====
    1) Reveal-Einstiege + Counter   2) Sticky-CTA nur zwischen Hero und Finale
@@ -10226,6 +10362,7 @@ function renderHome(){
       const metric=(ic,v,l,oc)=>`<button class="th-metric" ${oc?`onclick="${oc}"`:""}><div class="m-ic">${icon(ic,17)}</div><p class="m-v">${v}</p><p class="m-l">${l}</p></button>`;
       const heroTier=r?(r.score>=80?"th-strong":r.score>=60?"th-good":r.score>=40?"th-mod":"th-rest"):"";
       return `<section class="today-hero fade ${heroTier}"><div class="th-scene"></div>
+        <canvas class="feld feld-home" id="feld-home" aria-hidden="true"></canvas>
         <p class="sm" style="color:var(--t2);margin-bottom:10px">${greet()}, ${userName()}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
         <div class="th-metrics">
           ${metric(_eu?"activity":"dumbbell",isRest?"Frei":tLabel,"Heute",_eu?"A.q('endurance')":"A.q('train')")}
@@ -10430,6 +10567,14 @@ function renderHome(){
         <span class="sm">${visIns.length?`${visIns.length===1?"1 neuer Insight":visIns.length+" Insights"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt deine ersten Daten"}</span>
         <span class="t2">→</span></button>`)}
   `;
+  /* Das Feld hinter dem Tageskopf. Seine Ordnung kommt aus der Tagesform: ein
+     guter Tag ordnet die Bewegung, ein zäher lässt sie streuen. Damit trägt die
+     Atmosphäre eine Information statt bloß Stimmung. Ohne Check bleibt sie neutral. */
+  setTimeout(()=>{ try{
+    const c=todayCheckin();
+    const koh = c && isFinite(c.score) ? 0.30+Math.max(0,Math.min(100,c.score))/100*0.55 : 0.50;
+    feldStart(document.getElementById("feld-home"),{koharenz:koh, achse:0.38});
+  }catch(e){} },40);
 }
 
 // =====================================================================

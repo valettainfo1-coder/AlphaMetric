@@ -1535,7 +1535,46 @@ darunter gedämpft — zu wenig ist nicht gefährlich —, darüber Achtung.
 
 Ergebnis: **vier abstrakte Signale vor 33 Detailgrafiken** statt sofort Detail.
 
-Version aktuell **v46** — Nutzer bekommen Updates beim nächsten Besuch
+## §67 — Das Feld: eine Szene für Landing und Heute
+
+Wunsch: beide ersten Begegnungen sollen herausstechen — die Landing-Page für
+Neukunden, der Heute-Tab für Bestandskunden. „In 4K Ultra HD."
+
+**Zum 4K, ehrlich gesagt:** ein Bild dieser Größe kann das Paket nicht tragen
+(es liegt bei 1,9 MB gesamt). Eine generative Szene schon — und sie ist die
+bessere Antwort: gezeichnet wird in der ECHTEN Pixeldichte des Geräts
+(devicePixelRatio bis 3×). Gemessen auf dem iPhone 13: **1.146 × 1.866 echte
+Pixel** auf 390 × 635 CSS-Punkten. Auf einem 4K-Monitor sind es volle 3.840 —
+ein festes Bild wäre dort bereits interpoliert. Kosten: rund zwei Kilobyte Code.
+
+**Das Feld ist die These der Seite als Bild.** „Rate nicht, ob dein Training
+wirkt. Wisse es." — außen driften die Punkte im Rauschen, zur Fokusachse hin
+richten sie sich zu einer glatten Welle. Rauschen wird Signal. Geordnete Punkte
+leuchten stärker als ungeordnete, das Signal hebt sich also selbst hervor.
+
+**Auf Heute trägt die Szene Information, nicht Stimmung:** die Ordnung des
+Feldes kommt aus der Tagesform. Guter Tag, geordnete Bewegung; zäher Tag, mehr
+Streuung. Ohne Check bleibt sie neutral.
+
+**Die Partikel-Kugel ist aus dem Landing-Hero raus.** Zwei Partikelsysteme
+übereinander schwächen sich; die Kugel steht weiter als Marke in der Navigation.
+Dadurch kommt die Aussage sofort statt als drittes Element.
+
+### Zweimal denselben Fehler gemacht und beide Male korrigiert
+
+Erst lief das Feld quer durch den Fließtext — genau das, was ich an der
+Tableiste kritisiert hatte (§56: Text, der gegen den Hintergrund ankämpft).
+Beide Male mit Komposition gelöst, nicht mit Übermalen:
+- *Landing*: die geordnete Welle wanderte auf 80 % Höhe, unter die Kopie; die
+  Kopie bekam einen weichen radialen Grund, der zu den Rändern verschwindet.
+- *Heute*: eine Maske hält das Feld dort stark, wo der Ring steht, und blendet
+  es über der Begrüßung und unter der Überschrift aus.
+
+Rücksichten: pausiert außerhalb des Sichtfelds und bei verborgenem Tab; bei
+`prefers-reduced-motion` wird ein ruhiges Standbild komponiert und angehalten —
+die Szene bleibt, die Bewegung nicht.
+
+Version aktuell **v47** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
