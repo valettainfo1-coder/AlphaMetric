@@ -213,6 +213,45 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Gruppenkopf — die oberste Gliederungsebene eines Screens. Muss sich deutlich
      von einem Etikett INNERHALB einer Gruppe abheben, sonst stehen zwei Ebenen
      gleich stark da und die Gliederung hilft nicht. Linie trägt das Auge weiter. */
+  /* ══════════ KORRIDOR ════════════════════════════════════════════════════
+     Das abstrakte Signal über jeder Analytics-Gruppe. Oura führt mit Ring oder
+     Ampel und legt die Detailgrafik darunter — hier standen 29 Detailgrafiken
+     gegen 6 Ringe, der Blick bekam keine Antwort, bevor er las.
+     Statt Ringe zu kopieren: der Korridor. In dieser App IST das die wahre Form —
+     MEV–MRV ist ein Band, ein Kalorienziel ist ein Band, Erholung hat einen
+     persönlichen Bereich. Ein Wert, sein Band, sein Verlauf, seine Zustandsfarbe.
+     Die Farbe signalisiert, sie schmückt nicht: im Band ruhig, darunter gedämpft
+     (zu wenig ist nicht gefährlich), darüber Achtung.
+     ────────────────────────────────────────────────────────────────────── */
+  .kor{--kor:var(--hl); margin:12px 0 0;}
+  .kor.unter{--kor:#7C8896;}
+  .kor.ueber{--kor:var(--warn);}
+  .kor-scale{position:relative; height:26px; margin-bottom:3px; padding-top:4px;}
+  .kor-track{position:absolute; left:0; right:0; top:18px; height:2px; border-radius:2px;
+    background:var(--hairline);}
+  /* Das Band trägt IMMER die Akzentfarbe, nie den Zustand: der Korridor wechselt
+     nicht die Farbe, nur weil man gerade darunter liegt. Das Ziel bleibt das Ziel;
+     den Zustand trägt allein die Marke. */
+  .kor-zone{position:absolute; top:15px; height:8px; border-radius:var(--r-xs);
+    background:rgba(143,184,220,.24);
+    box-shadow:inset 0 0 0 1px rgba(143,184,220,.36);}
+  .kor-tick{position:absolute; top:9px; width:2px; height:5px; border-radius:1px;
+    background:var(--t3); opacity:.45;}
+  .kor-mark{position:absolute; top:6px; width:2px; height:20px; background:var(--kor);
+    border-radius:1px; transform:translateX(-1px);
+    animation:korIn .78s cubic-bezier(.22,1,.36,1) both;}
+  .kor-mark::before{content:""; position:absolute; left:50%; top:-4px; width:7px; height:7px;
+    border-radius:50%; background:var(--kor); transform:translateX(-50%);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--kor) 20%, transparent);}
+  @keyframes korIn{from{opacity:0; transform:translateX(-1px) scaleY(.3)}to{opacity:1; transform:translateX(-1px) scaleY(1)}}
+  .kor-bounds{position:relative; height:13px;}
+  .kor-bounds span{position:absolute; top:0; font-family:var(--font-mono); font-size:var(--fs-micro);
+    color:var(--t3); font-variant-numeric:tabular-nums; white-space:nowrap; transform:translateX(-50%);}
+  .kor-read{font-size:var(--fs-sm); color:var(--t2); margin:5px 0 0; line-height:1.4;}
+  .kor-read b{color:var(--t1); font-weight:650; font-variant-numeric:tabular-nums;}
+  .kor-read i{font-style:normal; color:var(--kor); font-weight:600;}
+  @media (prefers-reduced-motion:reduce){ .kor-mark{animation:none} }
+
   /* Aufklappbare Gruppe: der Kopf bleibt sichtbar, der Inhalt folgt auf Wunsch. */
   .an-grp{margin-bottom:var(--sp-6);}
   .an-sum{display:flex; align-items:center; gap:10px; cursor:pointer; list-style:none;
@@ -9617,6 +9656,44 @@ const STATUS_CARDS=[
   ["stress","brain","Stress","entspannt","gestresst"],
   ["sore","activity","Muskelkater","keiner","stark"],
 ];
+/* Korridor-Bauteil. Erwartet echte Werte — fehlt eine Grundlage, gibt es kein Band
+   und damit keine Anzeige. Lieber nichts als eine erfundene Spanne.
+     wert   Zahl, die markiert wird
+     lo,hi  Grenzen des guten Bereichs (echte Korridore, keine geschätzten)
+     max    Skalenende; ohne Angabe aus Wert und Band abgeleitet
+     verlauf  frühere Werte, als feine Striche hinter der Skala
+     einheit, wortIm/wortUnter/wortUeber  Klartext für den Zustand */
+function korridor(cfg){
+  try{
+    const {wert,lo,hi}=cfg;
+    if(!isFinite(wert)||!isFinite(lo)||!isFinite(hi)||hi<=lo) return "";
+    // Skala mit Luft: das Band soll nie den Rand berühren, sonst wirkt „darüber" abgeschnitten.
+    const spanne=hi-lo;
+    const von=Math.min(cfg.min!=null?cfg.min:0, wert-spanne*0.15);
+    const bis=Math.max(cfg.max!=null?cfg.max:hi+spanne*0.6, wert+spanne*0.15);
+    const p=(v)=>Math.max(0,Math.min(100,(v-von)/(bis-von)*100));
+    const zustand = wert<lo?"unter" : wert>hi?"ueber" : "im";
+    const wort = zustand==="im"?(cfg.wortIm||"im Korridor")
+               : zustand==="unter"?(cfg.wortUnter||"unter dem Korridor")
+               : (cfg.wortUeber||"über dem Korridor");
+    const ticks=(cfg.verlauf||[]).filter(v=>isFinite(v)).slice(-6)
+      .map(v=>`<span class="kor-tick" style="left:${p(v).toFixed(1)}%"></span>`).join("");
+    const zahl = cfg.format?cfg.format(wert):nfi.format(Math.round(wert));
+    return `<div class="kor ${zustand==="im"?"":zustand}">
+      <div class="kor-scale">
+        <span class="kor-track"></span>
+        <span class="kor-zone" style="left:${p(lo).toFixed(1)}%;width:${(p(hi)-p(lo)).toFixed(1)}%"></span>
+        ${ticks}
+        <span class="kor-mark" style="left:${p(wert).toFixed(1)}%"></span>
+      </div>
+      <div class="kor-bounds">
+        <span style="left:${p(lo).toFixed(1)}%">${cfg.formatGrenze?cfg.formatGrenze(lo):nfi.format(Math.round(lo))}</span>
+        <span style="left:${p(hi).toFixed(1)}%">${cfg.formatGrenze?cfg.formatGrenze(hi):nfi.format(Math.round(hi))}</span>
+      </div>
+      <p class="kor-read"><b>${zahl}</b>${cfg.einheit?" "+cfg.einheit:""} · <i>${wort}</i>${cfg.zusatz?` · ${cfg.zusatz}`:""}</p>
+    </div>`;
+  }catch(e){ return ""; }
+}
 function renderSection(label,content){return `<div class="section"><span class="label sect-h">${label}</span>${content}</div>`;}
 /* Dieselbe Gruppe, aber aufklappbar — für Abschnitte, die erklären statt zu
    handeln. Sie bleiben erreichbar, liegen aber nicht dauerhaft auf dem Tisch.
@@ -14027,6 +14104,55 @@ function renderAnalytics(){
   /* Kennzahl je Gruppe: damit auch eine zugeklappte Gruppe ihre Substanz zeigt
      und nicht nur eine Überschrift mit Pfeil. Jede Zahl kommt aus echten Daten;
      fehlen sie, bleibt die Zeile weg statt zu raten. */
+  /* Das abstrakte Signal je Gruppe. Jedes Band kommt aus echten Werten:
+       Training  — Summe der MEV–MRV-Korridore der trainierten Muskeln (Israetel 2017)
+       Erholung  — dein eigener Bereich aus den letzten Erholungs-Checks (Mittel ± Streuung)
+       Ernährung — dein Tagesziel mit ±10 % Toleranz
+       Verlauf   — Planerfüllung; 80–100 % ist das Ziel, nicht mehr
+     Fehlt die Grundlage, gibt es kein Band statt eines geschätzten. */
+  const _signal=(label)=>{ try{
+    if(label==="Dein Training"){
+      const jetzt=weeklyMuscleSets(0), muskeln=Object.keys(jetzt);
+      if(!muskeln.length) return "";
+      const summe=Object.values(jetzt).reduce((a,b)=>a+b,0);
+      let lo=0, hi=0;
+      for(const m of muskeln){ const b=VOL_BANDS[m]; if(b){ lo+=b[0]; hi+=b[1]; } }
+      if(!hi) return "";
+      const verlauf=[1,2,3,4].map(w=>Object.values(weeklyMuscleSets(w)).reduce((a,b)=>a+b,0)).filter(x=>x>0).reverse();
+      return korridor({wert:summe, lo, hi, verlauf, einheit:"Sätze diese Woche",
+        wortIm:"im Wachstums-Korridor", wortUnter:"unter dem Reizminimum", wortUeber:"über dem Erholbaren",
+        zusatz:`${muskeln.length} Muskelgruppen`});
+    }
+    if(label==="Körper & Erholung"){
+      const h=(S.readinessHistory||[]).map(r=>r.score).filter(x=>isFinite(x));
+      if(h.length<4) return "";
+      const m=h.reduce((a,b)=>a+b,0)/h.length;
+      const sd=Math.sqrt(h.reduce((a,b)=>a+(b-m)*(b-m),0)/h.length)||4;
+      return korridor({wert:h[h.length-1], lo:Math.round(m-sd), hi:Math.round(m+sd), min:0, max:100,
+        verlauf:h.slice(0,-1), einheit:"Erholung heute",
+        wortIm:"in deinem üblichen Bereich", wortUnter:"unter deinem Schnitt", wortUeber:"über deinem Schnitt",
+        zusatz:`dein Mittel ${Math.round(m)} aus ${h.length} Checks`});
+    }
+    if(label==="Ernährung"){
+      const tage=Object.entries(S.nutritionLog||{}).filter(([,l])=>(l.meals||[]).length)
+        .map(([d,l])=>({d, k:(l.meals||[]).reduce((a,m)=>a+(m.k||0),0)}))
+        .sort((a,b)=>a.d<b.d?-1:1);
+      if(!tage.length||!p.tg) return "";
+      const ziel=p.tg.train.kcal;
+      const letzte=tage[tage.length-1].k;
+      return korridor({wert:letzte, lo:Math.round(ziel*0.9), hi:Math.round(ziel*1.1),
+        verlauf:tage.slice(-7,-1).map(x=>x.k), einheit:"kcal zuletzt",
+        wortIm:"im Zielfenster", wortUnter:"unter dem Ziel", wortUeber:"über dem Ziel",
+        zusatz:`Ziel ${nfi.format(ziel)} kcal`});
+    }
+    if(label==="Verlauf"){
+      if(!isFinite(consistency)) return "";
+      return korridor({wert:consistency, lo:80, hi:100, min:0, max:100, einheit:"% Planerfüllung",
+        wortIm:"auf Kurs", wortUnter:"unter dem Plan", wortUeber:"über dem Plan",
+        zusatz:`${(S.trainingHistory||[]).length} Einheiten gesamt`});
+    }
+    return "";
+  }catch(e){ return ""; } };
   const _kennzahl=(label)=>{ try{
     if(label==="Dein Training"){
       const s7=wkSetsNow||0; const n=Object.keys(S.liftLog||{}).length;
@@ -14061,7 +14187,11 @@ function renderAnalytics(){
     // Auf dem Screen, dessen ZWECK diese Analyse ist, ist das der falsche Tausch.
     // Zuklappen bleibt möglich und wird gemerkt, für alle, die es kompakt wollen.
     const offen=(S.anOpen[label]!==undefined)?S.anOpen[label]:true;
-    const kz=_kennzahl(label);
+    /* Wo ein Korridor steht, IST er die Zusammenfassung — die Kennzahl daneben
+       wiederholte sonst dieselbe Zahl zwei Zeilen später („6 Sätze diese Woche"
+       über „6 Sätze diese Woche · unter dem Reizminimum"). */
+    const sig=_signal(label);
+    const kz=sig?"":_kennzahl(label);
     return `<details class="an-grp"${offen?" open":""} ontoggle="A.anToggle('${label.replace(/'/g,"\\'")}',this.open)">
       <summary class="an-sum">
         <span style="flex:1;min-width:0">
@@ -14069,6 +14199,7 @@ function renderAnalytics(){
           ${kz?`<span class="an-kz">${kz}</span>`:""}
         </span>
         <span class="an-chev" aria-hidden="true">${icon("chevron",16)}</span></summary>
+      ${sig}
       <div class="an-body">${inner}</div>
     </details>`;
   }).join("");

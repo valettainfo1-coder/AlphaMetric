@@ -1495,7 +1495,47 @@ Text:
 Außerdem das `＋` im Tagesform-Ring: das Vollbreiten-Zeichen fehlt im Font und
 fiel auf Arial zurück — jetzt ein normales Plus in der Hausschrift.
 
-Version aktuell **v45** — Nutzer bekommen Updates beim nächsten Besuch
+## §66 — Der Korridor: das abstrakte Signal über jeder Gruppe
+
+Aus der Oura-Prüfung (§Bericht) war Priorität 1: Ouras drei Darstellungsebenen
+lauten **abstrakt → fokussiert → explorativ**. METRICGYM stand umgekehrt da —
+gemessen 6 Ringe gegen 29 Detailgrafiken. Der Blick bekam keine Antwort, bevor
+er zu lesen anfing.
+
+**Nicht Ringe kopiert.** In dieser App ist die wahre Form das *Band*: MEV–MRV
+ist ein Korridor, ein Kalorienziel ist ein Korridor, Erholung hat einen
+persönlichen Bereich. Ein Bauteil, vier Gruppen — Wert, Band, Verlauf,
+Zustandsfarbe. Damit fällt Priorität 2 (Referenzbereiche) im selben Zug mit an:
+jede Zahl steht ab jetzt in ihrem Bezugsrahmen statt allein.
+
+Jedes Band kommt aus echten Werten, keines ist geschätzt:
+
+| Gruppe | Band | Quelle |
+|---|---|---|
+| Dein Training | Summe der MEV–MRV-Korridore der trainierten Muskeln | Israetel 2017 |
+| Körper & Erholung | dein Mittel ± Streuung aus den Erholungs-Checks | eigene Historie |
+| Ernährung | Tagesziel ± 10 % | eigenes Ziel |
+| Verlauf | 80–100 % Planerfüllung | eigener Plan |
+
+Fehlt die Grundlage, erscheint **kein** Band — lieber nichts als eine erfundene
+Spanne. Der Verlauf der letzten sechs Werte steht als feine Striche hinter der
+Skala: Drift ohne Diagramm.
+
+**Farbe signalisiert, sie schmückt nicht** (Ouras zweite Säule): im Band ruhig,
+darunter gedämpft — zu wenig ist nicht gefährlich —, darüber Achtung.
+
+### Zwei eigene Korrekturen beim Bauen
+
+1. *Dopplung.* Der Gruppenkopf trug seine Kennzahl UND darunter den Korridor:
+   „6 Sätze diese Woche" stand zwei Zeilen später nochmal. Wo ein Korridor
+   steht, ist er die Zusammenfassung; die Kennzahl entfällt dort.
+2. *Falsche Semantik.* Das Band nahm die Zustandsfarbe an — der Korridor wechselt
+   aber nicht die Farbe, nur weil man gerade darunter liegt. Das Ziel bleibt das
+   Ziel; den Zustand trägt allein die Marke.
+
+Ergebnis: **vier abstrakte Signale vor 33 Detailgrafiken** statt sofort Detail.
+
+Version aktuell **v46** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
