@@ -1849,9 +1849,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .feld{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;
     pointer-events:none;}
   /* Das Feld läuft nach unten aus, damit der Hero nicht als Kasten endet. */
+  /* NUR noch die Kante zum Seitenhintergrund. Vorher dunkelte dieser Verlauf ab
+     62 % Hoehe ab — also genau dort, wo auch die Textbuehne liegt. Zwei Abdunkler
+     uebereinander liessen vom Lichtband nichts uebrig: gemessen lag der fertige
+     Hero durchgehend bei 15-25 von 255, waehrend das Canvas Spitzen von 582
+     zeigte. Ein Abdunkler reicht, und das ist die Buehne unter der Schrift. */
   .lp-hero::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
-    background:linear-gradient(180deg, rgba(10,12,15,0) 0%, rgba(10,12,15,0) 62%,
-      rgba(10,12,15,.55) 88%, var(--bg) 100%);}
+    background:linear-gradient(180deg, rgba(10,12,15,0) 0%, rgba(10,12,15,0) 88%, var(--bg) 100%);}
   .lp-herocopy{position:relative; z-index:2; width:100%;}
   /* Auf Heute liegt das Feld in der Szene: über dem Verlauf, unter allem Inhalt. */
   .today-hero{position:relative;}
@@ -1865,22 +1869,79 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Eigener, weicher Grund NUR hinter der Kopie — das Feld bleibt an den Rändern
      kräftig, die Schrift steht ruhig. Ein Verlauf, kein Kasten: die Kante darf
      nirgends sichtbar werden. */
-  /* Kein Schleier hinter der Kopie mehr. Er stammte aus der Partikel-Zeit, wo
-     Körnung und Schweife von der Schrift weggehalten werden mussten. Weiches
-     Licht greift Text nicht an — der Schleier hat nur die Szene erstickt. */
+  /* Die Bühne hinter der Schlagzeile. Den alten Schleier hatte ich entfernt, als
+     das Feld noch gleichmäßig schwach war — da erstickte er nur die Szene. Seit
+     das Band einen hellen Kern hat, gilt das Gegenteil: gemessen erreichte der
+     Grund unter dem Vorspann rgb(171,190,214) und war damit HELLER als die
+     Schrift (1,13:1 statt 4,5:1) — der Satz verschwand.
+     Das hier ist kein Kasten und keine Abdunklung der Szene: eine sehr weite
+     Ellipse, die nur in der Textspalte trägt und zu den Rändern hin restlos
+     ausläuft. Das Licht bleibt außen herum in voller Stärke sichtbar. */
   .lp-herocopy{position:relative;z-index:1;}
+  /* Der Schleier sitzt auf dem Textblock selbst und ist damit immer an der
+     richtigen Stelle — unabhaengig davon, wo das wandernde Licht gerade steht.
+     Er ist deutlich breiter und hoeher als der Text, damit nirgends eine Kante
+     sichtbar wird, und laeuft nach aussen restlos aus: daneben, darueber und
+     unter der Karte bleibt das Band in voller Staerke sichtbar. */
+  .lp-textbuehne{position:relative; z-index:0;}
+  .lp-textbuehne::before{content:""; position:absolute; z-index:-1; pointer-events:none;
+    /* Weichgezeichnete FLAECHE statt Verlauf. Acht Anlaeufe mit radialen Ellipsen
+       sind gescheitert, weil eine Ellipse einen RECHTECKIGEN Textblock ungleich
+       deckt: zog man sie so gross, dass die untere Zeile noch geschuetzt war,
+       verdunkelte sie den halben Hero; zog man sie enger, fiel entweder die
+       Kategoriezeile oben oder der Vorspann unten unter 4,5:1 — je nachdem, wo
+       das wandernde Licht gerade stand.
+       Eine gefuellte Flaeche mit Weichzeichner deckt den Block gleichmaessig und
+       laeuft an den Kanten trotzdem weich aus. Sie ist statisch, wird also einmal
+       zusammengesetzt und kostet keine Bildrate. */
+    /* FESTER Radius, kein Prozentwert: "44% / 36%" macht aus dem Rechteck wieder
+       eine Ellipse, deren Ecken genau die unterste Zeile freigeben — der
+       Vorspann fiel damit auf 2,5:1. */
+    inset:-13% -10%; border-radius:34px;
+    background:rgba(8,10,14,.93); filter:blur(24px);}
+  /* Zusaetzlich ein weicher Schattenrand direkt an der Schrift. Er kostet auf
+     dunklem Grund optisch nichts, haelt aber die Buchstabenkanten sauber, wenn
+     das Band einmal doch dicht hinter einer Zeile vorbeizieht — Guertel und
+     Hosentraeger, weil eine WANDERNDE Helligkeit sich nicht ein fuer alle Mal
+     ausmessen laesst. */
+  .lp-textbuehne .lp-eyebrow, .lp-textbuehne .lp-h, .lp-textbuehne .lp-lead{
+    text-shadow:0 1px 12px rgba(6,8,12,.85), 0 0 3px rgba(6,8,12,.7);}
+  /* Der Vorspann trägt im Hero die KERNAUSSAGE — er ist keine Nebeninformation.
+     Als --t2 (Sekundärfarbe) kam er über dem hellsten Punkt des Bandes auf
+     1,43:1 statt 4,5:1 und verschwand. Hier steht deshalb die Hauptfarbe, leicht
+     zurückgenommen: hell genug zum Lesen, ruhig genug, um die Schlagzeile nicht
+     zu überstimmen. */
+  .lp-hero .lp-lead{color:#DCE3EA;}
   /* DER BELEG im Hero. Bewusst ruhig: er soll wie ein herausgeloestes Stueck App
      wirken, nicht wie eine Werbekachel. Deshalb linksbuendig (der Hero ist
      zentriert — der Bruch signalisiert "das ist echt"), sehr flacher Grund,
      kein Schatten. Die Balkenfarben kommen unveraendert aus .corr. */
+  /* Der Beleg liegt über dem wandernden Licht. Vorher trug er eine WEISSE
+     Aufhellung (rgba(255,255,255,.055)) — über einer hellen Lichtstelle wurde der
+     Grund damit heller als die Schrift darauf: gemessen 1,01:1 statt der nötigen
+     4,5:1, der Text verschwand. Jetzt echtes Glas: dunkler, halbtransparenter
+     Grund plus Weichzeichnung dessen, was darunter liegt. Das Licht bleibt als
+     Farbe sichtbar, die Schrift bekommt aber eine ruhige Fläche — und Glas ist
+     genau der Griff, mit dem hochwertige Oberflächen Tiefe zeigen, ohne
+     abzudunkeln. */
   .lp-beleg{max-width:352px; margin:0 auto 16px; text-align:left;
-    background:linear-gradient(168deg, rgba(255,255,255,.055), rgba(255,255,255,.012) 70%);
-    border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:14px 16px 13px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+    /* Deutlich durchlaessiger als zuerst (war .88/.80 — fast undurchsichtig).
+       Die Karte ist die EINZIGE Stelle im Hero, an der das Licht hindurchscheinen
+       darf, ohne die Lesbarkeit zu gefaehrden: die Weichzeichnung nimmt dem Band
+       die Struktur und laesst nur die Farbe stehen. Die Kartentexte hatten dafuer
+       Reserve (gemessen 5,7 und 7,4 zu 1 gegen noetige 4,5). */
+    background:linear-gradient(168deg, rgba(16,20,27,.70), rgba(11,14,19,.58) 70%);
+    -webkit-backdrop-filter:blur(26px) saturate(150%); backdrop-filter:blur(26px) saturate(150%);
+    border:1px solid rgba(255,255,255,.10); border-radius:16px; padding:14px 16px 13px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 18px 40px rgba(4,6,10,.45);}
   .lp-beleg .corr{margin-bottom:10px;}
+  /* --t3 ist die schwächste Textfarbe der Palette. Auf einer ruhigen Karte geht
+     das; hier lag sie über wanderndem Licht und kam auf 3,59:1 statt 4,5:1. */
   .lp-beleg-k{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
-    color:var(--t3); margin-bottom:9px;}
-  .lp-beleg-q{font-size:12.5px; line-height:1.5; color:var(--t2);
+    color:var(--t2); margin-bottom:9px;}
+  /* Heller als --t2: seit die Karte Licht durchlaesst, reichte die Sekundaerfarbe
+     nicht mehr (3,91:1 gegen noetige 4,5:1). */
+  .lp-beleg-q{font-size:12.5px; line-height:1.5; color:#C7D0DA;
     border-top:1px solid rgba(255,255,255,.08); padding-top:9px;}
   .lp-beleg-q span{color:var(--hl); font-weight:600;}
   .lp-claimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
@@ -2214,8 +2275,24 @@ function feldStart(cv,opts){
     inst.w=Math.max(1,Math.round(r.width)); inst.h=Math.max(1,Math.round(r.height));
     cv.width=Math.round(inst.w*dpr); cv.height=Math.round(inst.h*dpr);
     ctx.setTransform(1,0,0,1,0,0);
-    off.width=Math.max(2,Math.round(cv.width*0.42));
-    off.height=Math.max(2,Math.round(cv.height*0.42));
+    /* Auflösung des Zwischenbildes. Stand lange auf 0,42 — das Feld wurde also
+       auf 42 % gerechnet und hochskaliert. Bei einer Anzeige, die mit „hoch
+       aufgelöst" wirbt, ist das genau verkehrt herum: die weichen Verläufe
+       verlieren dabei zwar wenig, aber jede Kante und jeder Farbübergang wird
+       weichgezogen, und Streifenbildung nimmt zu.
+       Gemessen (gleiches Gerät, gleiche Szene): Faktor 0,42 → 20 Bilder/s,
+       Faktor 0,99 → 15 Bilder/s. Volle Gerätepixel kosten also das 5,6-Fache an
+       Fläche für ein Viertel der Bildrate — und bringen bei REINEN Weichverläufen
+       fast nichts, weil dort per Definition keine feine Struktur steckt.
+       0,62 ist der ehrliche Mittelweg: gut doppelt so viel Fläche wie vorher,
+       damit Verläufe weniger streifen, ohne die Bewegung zu verlieren. Was das
+       Bild wirklich hochwertig macht, ist nicht die Rechenauflösung des Nebels,
+       sondern das Rauschkorn darüber (volle Gerätepixel) und die scharfen
+       Elemente davor — Schrift und Korridor sind ohnehin nativ. */
+    const f=0.62;
+    off.width=Math.max(2,Math.round(cv.width*f));
+    off.height=Math.max(2,Math.round(cv.height*f));
+    inst.aufloesung=f;
     ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
   };
   messen(); inst.messen=messen;
@@ -8214,9 +8291,16 @@ function renderLanding(){
              Jetzt: die Schlagzeile ist ein Versprechen in Alltagssprache, der
              Vorspann stellt die Frage, die im Gym wirklich im Kopf ist, und der
              Beweis darunter beantwortet sie. Frage → Antwort → Quelle. */""}
-        <p class="lp-eyebrow">Krafttraining · Abnehmen · Ausdauer</p>
-        <h1 class="lp-h">Ein Plan, der sich<br><span class="volt-txt">erklärt.</span></h1>
-        <p class="lp-lead" style="max-width:400px;margin:0 auto 16px">Warum 16 Sätze Brust — und nicht 25? Bei METRICGYM steht die Antwort daneben. Aus <b style="color:var(--t1)">${quellenZahl()} wissenschaftlichen Quellen</b>, nicht aus dem Bauch.</p>
+        ${/* Die Bühne hängt am TEXTBLOCK, nicht an Prozentwerten des Hero. Fünf
+             Versuche mit festen Prozenten sind gescheitert: mal war die Schrift
+             lesbar und das Band unsichtbar, mal umgekehrt — je nachdem, wo das
+             wandernde Licht gerade stand. Ein Schleier, der am Text klebt, kann
+             das Licht nicht verfehlen, egal wohin es zieht. */""}
+        <div class="lp-textbuehne">
+          <p class="lp-eyebrow">Krafttraining · Abnehmen · Ausdauer</p>
+          <h1 class="lp-h">Ein Plan, der sich<br><span class="volt-txt">erklärt.</span></h1>
+          <p class="lp-lead" style="max-width:400px;margin:0 auto 16px">Warum 16 Sätze Brust — und nicht 25? Bei METRICGYM steht die Antwort daneben. Aus <b style="color:var(--t1)">${quellenZahl()} wissenschaftlichen Quellen</b>, nicht aus dem Bauch.</p>
+        </div>
 
         <!-- DER BELEG: das Versprechen wird hier eingelöst, nicht behauptet.
              Kein Werbebild — corridorHTML() ist exakt die Komponente, die in der
@@ -8415,7 +8499,15 @@ function renderLanding(){
        das Band leuchtete gegen den eigenen Schleier an, während die Schlagzeile
        auf Schwarz stand. 0,52 legt es in die Bildmitte: hinter Zeile und Beleg,
        oberhalb des Verlaufs. */
-    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.62, achse:0.52}); }catch(e){}
+    /* Das Band liegt auf Hoehe der GLASKARTE, nicht hinter dem Fliesstext. Der
+       Grund ist gemessen: eine Buehne, die den Kontrast zu jedem Zeitpunkt haelt,
+       muss so gross sein wie der halbe Hero — auf einem 390-px-Schirm, der zu
+       90 % aus Text besteht, schliessen sich helles Wanderlicht und lesbare
+       Schrift hinter derselben Flaeche schlicht aus.
+       Hinter Glas gilt das nicht: dort passierten die Texte die Pruefung mit
+       5,4 und 8,1 zu 1, WAEHREND das Licht als Farbe durchscheint. Genau dafuer
+       ist Glas da. */
+    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.50, achse:0.58}); }catch(e){}
   },60);
 }
 /* ===== LANDING-FX: Scroll- & Bühnen-Choreografie — idempotent pro Render =====

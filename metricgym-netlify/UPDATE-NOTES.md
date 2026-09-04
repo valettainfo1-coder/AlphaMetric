@@ -1813,7 +1813,58 @@ auf Heute den Knopf „Tages-Check starten" um **5 × 53 px**, und in diesem Str
 gewann *sie* den Klick (`elementFromPoint` → `fab`). Wer rechts auf den Knopf zielte,
 landete im Coach. Ein Ziel, ein Weg.
 
-Version aktuell **v52** — Nutzer bekommen Updates beim nächsten Besuch
+## §73 — Lesbarkeit über bewegtem Licht: was messbar war und was nicht ging
+
+**Der Befund war eindeutig und mein Fehler.** Gemessen nach WCAG, über einen
+ganzen Lichtzyklus, mit ausgeblendeter Schrift (sonst ist das hellste Pixel in
+der Textbox die Schrift selbst und man misst immer 1,00:1):
+
+| | vorher | nötig | jetzt |
+|---|---|---|---|
+| Kategoriezeile | 6,2:1 | 4,5 | **9,3:1** |
+| Schlagzeile | 4,2:1 | 3,0 | **17,4:1** |
+| **Vorspann** | **1,13:1** | 4,5 | **10,6:1** |
+| Beleg-Kleinzeile | 1,01:1 | 4,5 | **5,7:1** |
+| Beleg-Text | 1,04:1 | 4,5 | **5,8:1** |
+
+1,13:1 heißt: der hellste Grund unter dem Satz war **heller als die Schrift**.
+Entstanden aus drei eigenen Runden — heller Kern (a 0,78), Band in die Bildmitte
+(achse 0,52) und der Schleier, den ich zwei Runden vorher entfernt hatte.
+
+**Acht Anläufe, und die Erkenntnis war strukturell.** Radiale Ellipsen scheiterten
+alle am selben Punkt: zog man sie groß genug, dass die unterste Zeile geschützt
+war, verdunkelten sie den halben Hero; zog man sie enger, fiel je nach Stand des
+wandernden Lichts entweder die Kategoriezeile oder der Vorspann durch. Der Grund:
+eine Ellipse deckt einen **rechteckigen** Textblock ungleich. Gelöst mit einer
+weichgezeichneten Fläche und **festem** Eckradius — `44% / 36%` machte daraus
+wieder eine Ellipse, deren Ecken genau die unterste Zeile freigaben (2,5:1).
+
+**Die ehrliche Grenze:** Auf einem 390-px-Hero, der zu ~90 % aus Text besteht,
+schließen sich helles Wanderlicht und WCAG-lesbare Schrift hinter derselben
+Fläche geometrisch aus. Gemessen: jede Einstellung, die das Licht dramatisch
+machte, drückte Text unter 4,5:1; jede, die den Kontrast rettete, ließ vom Band
+15–25 von 255 übrig. Deshalb liegt das Band jetzt auf **Höhe der Glaskarte** und
+nicht hinter dem Fließtext — dort darf Licht hindurch, weil die Weichzeichnung
+ihm die Struktur nimmt und nur die Farbe stehen lässt. Die Karte ist von 88 % auf
+70 % Deckung geöffnet worden und leuchtet jetzt sichtbar.
+
+**Zum „4K"-Wunsch, gemessen statt behauptet:** Das Feld lief auf 42 % Auflösung
+und wurde hochskaliert. Volle Gerätepixel kosten das 5,6-Fache an Fläche für ein
+Viertel der Bildrate (20 → 15 Bilder/s) und bringen bei **reinen Weichverläufen**
+fast nichts — dort steckt per Definition keine feine Struktur. Jetzt 0,62 als
+ehrlicher Mittelweg. Was ein Bild wirklich hochwertig macht, ist nicht die
+Rechenauflösung des Nebels, sondern das Korn darüber (volle Gerätepixel) und die
+scharfen Elemente davor.
+
+**Wächter (`ui-guard`, Block 7):** WCAG AA für jede Hero-Zeile. Zwei Eigenheiten,
+die den Test überhaupt erst aussagekräftig machen — die Schrift wird samt aller
+Nachkommen unsichtbar geschaltet, und der Lichtzyklus wird **deterministisch**
+abgefahren (18 Stützstellen über die längste Periode, `inst.sek` direkt gesetzt).
+Der erste Versuch mit 8 Echtzeit-Proben über 8,8 s verfehlte den schlechtesten
+Moment eines 34-s-Zyklus und blieb bei absichtlich zerstörter Bühne grün.
+Mutationsgetestet: Bühne auf 10 % → rot (1,64:1).
+
+Version aktuell **v53** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

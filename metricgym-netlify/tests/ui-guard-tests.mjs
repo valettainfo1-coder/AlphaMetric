@@ -635,6 +635,78 @@ await page.evaluate(() => { S.tab = 'home'; S.tourDone = true; save(); render();
 await page.waitForTimeout(700);
 await deutschCheck('der Heute-Schirm', () => page.evaluate(() => document.body.innerText));
 
+/* ======================= 7) LESBARKEIT ÜBER BEWEGTEM LICHT =======================
+   Rückmeldung des Betreibers: „Man kann nicht mal die Sachen lesen, weil das Licht
+   so hell ist im Hintergrund." Gemessen stimmte das: der Vorspann stand bei
+   1,13:1 gegen nötige 4,5:1 — der hellste Grund darunter war HELLER als die
+   Schrift selbst.
+
+   Zwei Dinge machen diesen Fehler tückisch und begründen diesen Block:
+     a) Der Grund BEWEGT sich. Eine Messung in einem einzigen Moment kann grün
+        sein, während die Seite zwei Sekunden später unlesbar ist. Deshalb wird
+        über einen ganzen Lichtzyklus abgetastet und der SCHLECHTESTE Wert zählt.
+     b) Misst man die Textbox naiv, ist das hellste Pixel darin die Schrift selbst
+        — das ergibt immer 1,00:1 und sagt nichts. Deshalb wird die gesamte Kopie
+        inklusive aller Nachkommen unsichtbar geschaltet und nur der Grund gemessen. */
+await page.evaluate(() => { localStorage.clear(); });
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => typeof S !== 'undefined' && typeof render === 'function', null, { timeout: 20000 });
+await page.waitForTimeout(1200);
+const LESE_SEL = ['.lp-eyebrow', '.lp-h', '.lp-lead', '.lp-beleg-k', '.lp-beleg-q'];
+const boxen = await page.evaluate((SEL) => SEL.map(s => { const e = document.querySelector(s); if (!e) return null;
+    const r = e.getBoundingClientRect(); const cs = getComputedStyle(e);
+    return { s, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height),
+      farbe: cs.color.match(/\d+/g).slice(0, 3).map(Number), px: parseFloat(cs.fontSize),
+      fett: parseInt(cs.fontWeight) >= 700 }; }).filter(Boolean), LESE_SEL);
+await page.evaluate(() => { const st = document.createElement('style');
+  st.textContent = '.lp-herocopy,.lp-herocopy *{color:transparent!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important}';
+  document.head.appendChild(st); });
+/* Den Lichtzyklus DETERMINISTISCH abfahren statt in Echtzeit zu warten. Erster
+   Versuch waren 8 Proben über 8,8 Sekunden — das verfehlte den schlechtesten
+   Moment eines 34-Sekunden-Zyklus, und eine absichtlich kaputte Bühne blieb grün.
+   Hier wird die Uhr des Feldes direkt gesetzt: 18 Punkte über die längste Periode,
+   jede Stelle wird garantiert getroffen, und es dauert Sekunden statt Minuten. */
+const cdpL = await page.context().newCDPSession(page);
+const pngs = [];
+const SCHRITTE = 18, LAENGSTE = 34;
+for (let k = 0; k < SCHRITTE; k++) {
+  await page.evaluate(({ k, SCHRITTE, LAENGSTE }) => {
+    const i = (typeof FELD !== 'undefined') && FELD.inst.find(x => x.cv.id === 'feld-lp');
+    if (i) { i.sek = (k / SCHRITTE) * LAENGSTE; i.schritt(performance.now()); }
+  }, { k, SCHRITTE, LAENGSTE });
+  const { data } = await cdpL.send('Page.captureScreenshot', { format: 'png' });
+  pngs.push(data);
+}
+const lesbar = await page.evaluate(async ({ pngs, boxen }) => {
+  const lum = (R, G, B) => { const f = c => { c /= 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); };
+    return .2126 * f(R) + .7152 * f(G) + .0722 * f(B); };
+  const kon = (a, b) => { const [h, l] = a > b ? [a, b] : [b, a]; return (h + .05) / (l + .05); };
+  const out = boxen.map(b => ({ s: b.s, px: b.px, fett: b.fett, schlecht: 99 }));
+  for (const b64 of pngs) {
+    const img = new Image(); await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + b64; });
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const sk = img.width / innerWidth;
+    boxen.forEach((b, i) => {
+      const vg = lum(...b.farbe);
+      const d = g.getImageData(Math.max(0, Math.round(b.x * sk)), Math.max(0, Math.round(b.y * sk)),
+        Math.max(1, Math.round(b.w * sk)), Math.max(1, Math.round(b.h * sk))).data;
+      let hell = 0;
+      for (let j = 0; j < d.length; j += 4 * 7) { const L = lum(d[j], d[j + 1], d[j + 2]); if (L > hell) hell = L; }
+      const k = kon(vg, hell); if (k < out[i].schlecht) out[i].schlecht = k;
+    });
+  }
+  return out;
+}, { pngs, boxen });
+const durchgefallen = lesbar.filter(x => {
+  const gross = x.px >= 24 || (x.px >= 18.66 && x.fett);
+  return x.schlecht < (gross ? 3 : 4.5);
+});
+check('Lesbarkeit: jede Hero-Zeile hält WCAG AA über den ganzen Lichtzyklus',
+  durchgefallen.length === 0,
+  durchgefallen.length ? durchgefallen.map(x => `${x.s} ${x.schlecht.toFixed(2)}:1`).join(' | ')
+                       : lesbar.map(x => `${x.s.replace('.lp-','')} ${x.schlecht.toFixed(1)}`).join(' · '));
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 
 await browser.close();
