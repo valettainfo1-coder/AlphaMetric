@@ -432,9 +432,9 @@ check('Ausdauer-Profil: Start-Übersicht spricht Ausdauer statt Sätze/Player',
   /Erste Einheit aus dem Plan/.test(runUi.steps) && /Drei Aktivitäten importieren/.test(runUi.steps)
   && !/Sätze/.test(runUi.steps), runUi.steps);
 check('Ausdauer-Profil: Fluss-Bild nennt importierte Dateien statt geloggter Sätze',
-  /Importierte Dateien/.test(runUi.flow) && !/Geloggte Sätze/.test(runUi.flow), runUi.flow);
+  /Importierte Dateien/.test(runUi.flow) && !/Eingetragene Sätze/.test(runUi.flow), runUi.flow);
 check('Ausdauer-Profil: Tagesroutine bietet die Plan-Einheit statt „Training loggen"',
-  !/Training loggen/.test(runUi.daily), runUi.daily);
+  !/Training eintragen/.test(runUi.daily), runUi.daily);
 check('Ausdauer-Profil: Heute-Tab zeigt die echte Einheit, nicht „Cardio"',
   !/\bCardio\b/.test(runUi.home) && /Woche \d+ von \d+/.test(runUi.home), '');
 check('Ausdauer-Profil: adaptive Karte erklärt Volumen & Entlastung statt Gewichte',

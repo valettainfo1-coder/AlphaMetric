@@ -1683,6 +1683,16 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @keyframes auraBreath{0%,100%{opacity:.55}50%{opacity:1}}
   /* Score-Ring zeichnet sich beim Laden */
   @keyframes ringDraw{from{stroke-dashoffset:var(--rl)}to{stroke-dashoffset:0}}
+  /* Der Ring OHNE Tagesform. Vorher stand hier ein 184-px-Kreis mit 7-px-Rand in
+     7 % Weiß — praktisch unsichtbar, und geometrisch ein anderes Objekt als der
+     gefüllte Ring (voller Kreis statt 3/4-Bogen). Der Nutzer sah morgens etwas
+     Unfertiges, das abends plötzlich anders aussah.
+     Jetzt ist es DERSELBE Bogen, nur ohne Füllung: ein kurzes Segment wandert
+     langsam die Bahn entlang und sagt „hier fehlt noch deine Eingabe", ohne zu
+     blinken. Wer Bewegung reduziert hat, sieht das Segment ruhig stehen. */
+  @keyframes ringWarten{from{stroke-dashoffset:0}to{stroke-dashoffset:var(--rw)}}
+  .ring-warten{animation:ringWarten 5.5s linear infinite;}
+  @media (prefers-reduced-motion: reduce){ .ring-warten{animation:none;} }
   /* Linien-Chart zeichnet sich live */
   .chartdraw{stroke-dasharray:1400; stroke-dashoffset:1400; animation:chartDraw 1.5s ease forwards;}
   @keyframes chartDraw{to{stroke-dashoffset:0}}
@@ -4456,7 +4466,7 @@ function openPaywall(key){
    bench:true = braucht eine Flachbank. */
 const EXDB={
   "Bankdrücken":{m:"Brust",compound:true,eq:"barbell",bench:true,tempo:"3-1-1-0",rir:"1–2",alt:"Kurzhantel-Drücken (schulterfreundlicher Winkel)",
-    why:"Höchste Pec-Aktivierung unter schweren Lasten; langsame Exzentrik maximiert mechanische Spannung (Schoenfeld, 2017)."},
+    why:"Trifft den Brustmuskel unter schwerer Last am stärksten; langsames Ablassen erhöht die Spannung zusätzlich (Schoenfeld, 2017)."},
   "Schrägbankdrücken":{m:"Brust",compound:true,eq:"barbell",bench:true,tempo:"3-1-1-0",rir:"1–2",alt:"Maschinen-Drücken",
     why:"Betont die obere Brust durch stärkere Schulterflexion (Rodríguez-Ridao, 2020)."},
   "Schulterdrücken":{m:"Schultern",compound:true,eq:"barbell",tempo:"2-0-1-0",rir:"1–2",alt:"Landmine-Press",
@@ -6337,6 +6347,30 @@ function ringSVG(score,tier,size=130){
       <span class="ring-lbl" style="font-size:${big?16:9}px;margin-top:${big?3:1}px;color:${stops[1]}">${tier}</span>
     </div></div>`;
 }
+/* Der wartende Ring — gleiche Geometrie wie ringSVG(), damit „noch nichts
+   eingetragen" und „Tagesform 82" sichtbar dasselbe Objekt sind und nicht zwei
+   verschiedene Grafiken. Nur die Füllung fehlt; an ihrer Stelle wandert ein
+   kurzes Segment die Bahn entlang. */
+function ringWartenSVG(size=184){
+  const st=Math.max(7,Math.round(size*.075)), r=(size-st)/2,
+        c=2*Math.PI*r, arc=c*.75, seg=arc*0.17;
+  const id="rw"+Math.random().toString(36).slice(2,8);
+  return `<div style="position:relative;width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(135deg);overflow:visible" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#A9C4DE" stop-opacity=".15"/>
+        <stop offset=".5" stop-color="#8FB8DC" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#A9C4DE" stop-opacity=".15"/></linearGradient></defs>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.07)"
+        stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
+      <circle class="ring-warten" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})"
+        stroke-width="${st}" stroke-dasharray="${seg} ${c}" stroke-linecap="round" style="--rw:${-arc}px"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <span style="font-size:30px;font-weight:200;line-height:1;color:var(--hl)" aria-hidden="true">+</span>
+      <span class="xs t2" style="line-height:1.5;text-align:center">Tagesform<br>eintragen</span>
+    </div></div>`;
+}
 function miniRing(label,v,t,unit,size=68){
   const pct=Math.min(1,t?v/t:0),st=5,r=(size-st)/2,c=2*Math.PI*r,id="mr"+Math.random().toString(36).slice(2,7);
   return `<div style="text-align:center"><div style="position:relative;width:${size}px;height:${size}px;margin:0 auto">
@@ -6916,7 +6950,7 @@ A.dismissBanner=(id)=>{ if(!S.dismissedBanners.includes(id))S.dismissedBanners.p
 let timerInt=null;
 function greet(){ const h=new Date().getHours(); return h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; }
 function userName(){ return S.currentUser!=null&&S.users[S.currentUser]?S.users[S.currentUser].username:"Athlet"; }
-const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Analytics",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",endurance:"Ausdauer",features:"So funktioniert's",coach:"Coach"};
+const TAB_TITLES={home:"Heute",today:"Heute",train:"Training",player:"Dein Training",summary:"Geschafft",analytics:"Auswertung",nutrition:"Ernährung",profile:"Profil",pricing:"Pläne",endurance:"Ausdauer",features:"So funktioniert's",coach:"Coach"};
 let menuOpen=false;
 
 // Lebendiges KI-Feld als persistente Ebene hinter der ganzen App (kein Neustart pro Render).
@@ -6939,7 +6973,7 @@ function installCardHTML(){
   if(isStandalone()||S.installDismissed) return "";
   return `<div class="card pad-s">
     <div class="row" style="gap:12px;margin-bottom:10px">
-      <span class="sm" style="flex:1;line-height:1.55;min-width:0"><b>Nutze METRICGYM als App.</b><br><span class="t2">Vollbild, ohne Browser-Leiste — in 10 Sekunden auf dem Homescreen.</span></span>
+      <span class="sm" style="flex:1;line-height:1.55;min-width:0"><b>Nutze METRICGYM als App.</b><br><span class="t2">Vollbild, ohne Browser-Leiste — in 10 Sekunden auf deinem Startbildschirm.</span></span>
       <span class="iconbtn" style="min-width:34px;min-height:34px;align-self:flex-start" role="button" aria-label="Hinweis ausblenden" onclick="A.installDismiss()">✕</span>
     </div>
     <button class="btn" style="min-height:42px;font-size:13.5px" onclick="A.installApp()">So geht's</button>
@@ -7428,8 +7462,8 @@ A.actDelete=()=>{ const d=_actDraft; if(!d||!d.id)return; const l=actList();
 /* Fünf Tabs. Der fünfte Platz gehört dem Coach, nicht dem Profil: Einstellungen
    öffnet man selten und sie stehen ohnehin im ☰-Menü — den Coach braucht man täglich.
    Sechs Tabs passen nicht: bei 320 px bricht die Leiste in zwei Reihen um (gemessen). */
-const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["coach","message","Coach"]];
-const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["analytics","chart","Analytics"],["nutrition","utensils","Ernährung"],["coach","message","Coach"]];
+const TABS=[["home","home","Heute"],["train","dumbbell","Training"],["analytics","chart","Auswertung"],["nutrition","utensils","Ernährung"],["coach","message","Coach"]];
+const TABS_ENDUR=[["home","home","Heute"],["endurance","bike","Ausdauer"],["analytics","chart","Auswertung"],["nutrition","utensils","Ernährung"],["coach","message","Coach"]];
 /* Ein Tab wird nach seinem ZIEL benannt, nie nach dem aktiven Profil.
    Vorher trug der zweite Tab den Profilnamen. Bei „Laufen" ging das gut — der Tab
    öffnet die Laufansicht. Bei „Abnehmen" log er: der Name ist ein ZIEL, geöffnet
@@ -7670,12 +7704,18 @@ function renderCoach(){
 
 function renderFab(){
   window["__rerender_coach-chat"]=renderFab;
-  /* Die Blase öffnet kein zweites Panel mehr, sondern den Coach-Tab — mit dem
-     Screen, aus dem sie angetippt wurde, als Kontext. Ein Coach, ein Ziel.
-     Auf dem Coach-Tab selbst wäre sie sinnlos und verdeckt nur Inhalt. */
+  /* A.coach() bleibt als Einsprung erhalten (andere Stellen springen den Coach
+     mit Herkunfts-Kontext an). Die schwebende Blase ist ERSATZLOS entfallen:
+
+     Seit der Coach einen eigenen Tab hat, führte sie an dasselbe Ziel wie die
+     immer sichtbare Tab-Leiste — ein zweiter Weg zum selben Ort. Bezahlt hat
+     das die Hauptaktion: gemessen auf „Heute" überlappte die Blase den Knopf
+     „Tages-Check starten" um 5 × 53 px, und in diesem Streifen gewann SIE den
+     Klick (elementFromPoint). Wer rechts auf den Knopf zielte, landete im Coach.
+     Dazu schwebte sie beim Scrollen dauerhaft über dem Fließtext.
+     Ein Ziel, ein Weg — der Tab. */
   A.coach=()=>{ S.coachFrom=S.tab; S.coachTopic=null; S.tab="coach"; save(); render(); };
-  if(S.tab==="coach"){ fabEl.innerHTML=""; return; }
-  fabEl.innerHTML=`<button class="fab" onclick="A.coach()" aria-label="Coach öffnen">${icon("message",22)}</button>`;
+  fabEl.innerHTML="";
 }
 
 /* KONTO-FREISCHALTUNGEN: E-Mails aus config.eliteAccounts bekommen dauerhaft ELITE —
@@ -7919,7 +7959,7 @@ function renderAuth(){
     S.liftLog=seed.liftLog; S.weightLog=seed.weightLog; S.readinessHistory=seed.readinessHistory;
     S.trainingHistory=seed.trainingHistory; S.nutritionLog=seed.nutritionLog;
     S.screen="app"; S.tab="home"; S.seenFeatures=true; save();
-    beamIntoApp(()=>{ render(); toast("Demo-Modus: 10-Wochen-Historie geladen — Analytics komplett gefüllt"); });
+    beamIntoApp(()=>{ render(); toast("Demo-Modus: 10 Wochen Verlauf geladen — die Auswertung ist komplett gefüllt"); });
   };
   A.devModeIntro=()=>{
     overlay.innerHTML="";
@@ -8204,8 +8244,8 @@ function renderLanding(){
         <!-- Antippbar: eine Behauptung, die man sofort pruefen kann, ist keine
              Behauptung mehr. Die Zahl kommt aus dem Register (quellenZahl()). -->
         <button class="lp-claim lp-rev" onclick="A.quellen()"><p class="n volt-txt"><span data-cnt="${quellenZahl()}">0</span></p><p class="l">wissenschaftliche Quellen —<br><u>alle nachlesen</u></p></button>
-        <div class="lp-claim lp-rev"><p class="n"><span data-cnt="112">0</span></p><p class="l">Übungen, die die Engine versteht</p></div>
-        <div class="lp-claim lp-rev"><p class="n"><span data-cnt="10">0</span><span style="font-size:20px">s</span></p><p class="l">vom Satz zum Log — tippen oder sprechen</p></div>
+        <div class="lp-claim lp-rev"><p class="n"><span data-cnt="112">0</span></p><p class="l">Übungen, aus denen dein Plan gebaut wird</p></div>
+        <div class="lp-claim lp-rev"><p class="n"><span data-cnt="10">0</span><span style="font-size:20px">s</span></p><p class="l">für einen Satz — tippen oder sprechen</p></div>
       </div>
     </section>
 
@@ -8213,7 +8253,7 @@ function renderLanding(){
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">${icon("sparkle",12)} Der Beweis — live</p>
       <h2 class="lp-h2">Tippe eine Übung.<br>Sieh, was in dir arbeitet.</h2>
-      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskel-Engine der App: Vorder- und Rückseite zeigen live, was jede Übung trifft.</p>
+      <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskelkarte der App: Vorder- und Rückseite zeigen sofort, was jede Übung trifft.</p>
       <div class="card pad-s" style="max-width:400px; margin:0 auto">
         <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
       </div>
@@ -8223,11 +8263,11 @@ function renderLanding(){
     <section class="lp-story" id="lp-story" data-step="0">
       <div class="lp-story-pin">
         <p class="lp-eyebrow">${icon("sparkle",12)} So entsteht dein Plan</p>
-        <h2 class="lp-h2" id="lp-story-h" style="min-height:2.4em">Fünf Antworten.<br>Den Rest rechnet sie.</h2>
+        <h2 class="lp-h2" id="lp-story-h" style="min-height:2.4em">Fünf Antworten.<br>Fertig ist dein Plan.</h2>
         <div class="lp-phone">
           <div class="lp-scene sc1">
-            <div class="chips" style="justify-content:center">${["Muskelaufbau","5 Tage","Gym · voll","75 Min","2–4 Jahre"].map((c,i)=>`<span class="chip" style="animation-delay:${i*120}ms">${c}</span>`).join("")}</div>
-            <p class="xs t2" style="text-align:center;margin-top:12px;line-height:1.55">Ziel, Level, Equipment, Zeit —<br>alles, was die Intelligenz wissen muss.</p>
+            <div class="chips" style="justify-content:center">${["Muskelaufbau","5 Tage","Gym · alle Geräte","75 Min","2–4 Jahre"].map((c,i)=>`<span class="chip" style="animation-delay:${i*120}ms">${c}</span>`).join("")}</div>
+            <p class="xs t2" style="text-align:center;margin-top:12px;line-height:1.55">Ziel, Erfahrung, Ausrüstung, Zeit —<br>mehr braucht es nicht.</p>
           </div>
           <div class="lp-scene sc2">
             <div style="display:flex;justify-content:center;margin-bottom:16px">${rauchkreis(88)}</div>
@@ -8245,8 +8285,8 @@ function renderLanding(){
     <!-- FEATURE-SHOWCASE: echte App-Ausschnitte, wischbar -->
     <section class="lp-sec" style="padding-top:6px">
       <p class="lp-eyebrow">Was drin ist</p>
-      <h2 class="lp-h2 mb4">Keine Versprechen. Ansichten.</h2>
-      <p class="sm t2 mb12">Jede Karte ist ein echtes Stück App — wisch dich durch.</p>
+      <h2 class="lp-h2 mb4">Keine Werbebilder.<br>Die echte App.</h2>
+      <p class="sm t2 mb12">Jede Karte unten ist ein Ausschnitt aus der laufenden App. Wische durch.</p>
       <div class="fh-row" style="padding-bottom:10px">
         <div class="lp-show">
           <p class="lp-show-t">${icon("activity",13)} Wissenschafts-Korridor</p>
@@ -8268,7 +8308,7 @@ function renderLanding(){
             <span class="fh-orb">${icon("zap",15)}</span>
             <span class="acc-t"><span class="acc-h">Kraft-Orakel</span><span class="acc-s">Bankdrücken stagniert — sieh deine Prognose</span></span>
           </div>
-          <p class="xs t2" style="line-height:1.55">Der Coach antwortet aus deinen Logs, nicht aus einem Skript — er kennt deine letzte Session.</p>
+          <p class="xs t2" style="line-height:1.55">Der Coach antwortet aus deinen eigenen Zahlen, nicht aus vorgefertigten Sätzen — er kennt dein letztes Training.</p>
         </div>
         <div class="lp-show">
           <p class="lp-show-t">${icon("zap",13)} Loggen in einem Zug</p>
@@ -8317,11 +8357,11 @@ function renderLanding(){
     <!-- SO FUNKTIONIERT'S -->
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">So einfach bleibt es</p>
-      <h2 class="lp-h2 mb16">Du loggst. Sie denkt.<br>Dein Plan zieht nach.</h2>
+      <h2 class="lp-h2 mb16">Du trägst ein.<br>Dein Plan zieht nach.</h2>
       <div class="lp-steps-grid">
-      ${[["Du loggst — in Sekunden","Training, Mahlzeiten, Tagesform. Tippen, sprechen oder Foto — schneller als jede Notiz-App."],
-         ["Die Intelligenz rechnet","Belastung, Erholung, Trend — aus deinen echten Daten, jede Aussage mit sichtbarer Datenbasis."],
-         ["Dein Plan zieht nach","Gewichte, Sätze, Erholungswochen passen sich automatisch an. Jede Session macht ihn präziser."]]
+      ${[["Du trägst ein — in Sekunden","Training, Mahlzeiten, Tagesform. Tippen, sprechen oder fotografieren — schneller als jede Notiz-App."],
+         ["METRICGYM rechnet","Belastung, Erholung, Trend — aus deinen eigenen Zahlen. Zu jeder Aussage siehst du, worauf sie beruht."],
+         ["Dein Plan zieht nach","Gewichte, Sätze und Erholungswochen passen sich von selbst an. Jedes Training macht ihn genauer."]]
         .map(([t,b],i)=>`<div class="lp-step"><span class="num">${i+1}</span>
           <div><p style="font-weight:600;margin-bottom:2px">${t}</p><p class="sm t2" style="line-height:1.55">${b}</p></div></div>`).join("")}
       </div>
@@ -8350,8 +8390,8 @@ function renderLanding(){
     <!-- FINAL CTA -->
     <section class="lp-sec" id="lp-final" style="text-align:center">
       <div style="display:flex;justify-content:center;margin-bottom:16px">${rauchkreis(72)}</div>
-      <h2 class="lp-h2">Ab heute trainierst du<br>mit Beweis.</h2>
-      <p class="lp-lead mb16" style="max-width:330px;margin-left:auto;margin-right:auto">Der kostenlose Plan ist ein vollständiges Produkt: Trainingsplan, Logging, Tages-Status und dein erster Insight. Kein Abo-Zwang, kein Kleingedrucktes.</p>
+      <h2 class="lp-h2">Ab heute weißt du,<br>warum du was tust.</h2>
+      <p class="lp-lead mb16" style="max-width:330px;margin-left:auto;margin-right:auto">Kostenlos heißt hier nicht Häppchen: Trainingsplan, Eintragen, Tagesform und deine erste Auswertung sind vollständig dabei. Kein Abo-Zwang, kein Kleingedrucktes.</p>
       <button class="btn volt mb8" style="max-width:320px;margin:0 auto 8px" onclick="A.toRegister()">Kostenlos starten</button>
       <button class="btn ghost" style="max-width:320px;margin:0 auto" onclick="A.devMode()">${icon("settings",15)} Erst die Demo ansehen</button>
       <div class="lp-stick"><button class="btn volt" style="box-shadow:0 12px 34px rgba(8,12,24,.45)" onclick="A.toRegister()">Kostenlos starten — 60 Sekunden</button></div>
@@ -10081,7 +10121,7 @@ function renderFold(label,content,offenStd){
   // Der Analytics-Ausschnitt auf Heute ist eine Kostprobe der Auswertung — und die
   // ist das, was Kunden am meisten interessiert. Er startet offen, die erklärenden
   // Abschnitte daneben zugeklappt.
-  const STD_OFFEN=["Analytics"];
+  const STD_OFFEN=["Auswertung"];
   const offen=(S.foldOpen[label]!==undefined)?S.foldOpen[label]:(!!offenStd||STD_OFFEN.includes(label));
   return `<details class="an-grp"${offen?" open":""} ontoggle="A.foldToggle('${label.replace(/'/g,"\\'")}',this.open)">
     <summary class="an-sum"><span class="label sect-h" style="margin:0">${label}</span>
@@ -10172,9 +10212,9 @@ function dailyChecklist(){
     {icon:"moon",label:"Status-Check",sub:"10 Sek. — füttert Erholungs-Trend & Tagesempfehlung",done:!!S.checkin,act:"A.openStatus()"},
     _eu
       ?{icon:"activity",label:restDay?"Ruhetag":"Einheit aus dem Plan",sub:restDay?"Heute nichts zu tun — Erholung ist Teil des Aufbaus":"Abhaken reicht; eine geladene Datei bringt zusätzlich NP, TSS und Zonen",done:restDay||_eOk,act:"A.q('endurance')"}
-      :{icon:"dumbbell",label:restDay?"Ruhetag":"Training loggen",sub:restDay?"Heute nichts zu tun — Erholung zählt als Training":"Füttert Kraft-Prognose, Rekorde & Belastungs-Ampel",done:restDay||trainedToday,act:"A.q('train')"},
-    {icon:"utensils",label:"Alle Mahlzeiten loggen",sub:"Füttert Ernährungs-Treue & Nährstoff-Check",done:meals>=2,act:"A.q('nutrition')"},
-    {icon:"droplet",label:"Wasser tracken",sub:"Ziel 2,5 l — Teil deines Ernährungs-Bildes",done:water>=6,act:"A.q('nutrition')"},
+      :{icon:"dumbbell",label:restDay?"Ruhetag":"Training eintragen",sub:restDay?"Heute nichts zu tun — Erholung zählt als Training":"Speist Kraft-Prognose, Rekorde und Belastungs-Ampel",done:restDay||trainedToday,act:"A.q('train')"},
+    {icon:"utensils",label:"Alle Mahlzeiten eintragen",sub:"Speist Ernährungs-Bilanz und Nährstoff-Check",done:meals>=2,act:"A.q('nutrition')"},
+    {icon:"droplet",label:"Wasser eintragen",sub:"Ziel 2,5 l — Teil deines Ernährungs-Bildes",done:water>=6,act:"A.q('nutrition')"},
     {icon:"scale",label:"Wiegen",sub:"1× pro Woche reicht — füttert Körper-Trend & Kalorienziel",done:weighed7d,act:"A.q('profile')"},
   ];
   return {items,done:items.filter(i=>i.done).length};
@@ -10196,7 +10236,7 @@ function checklistCard(){
       </span>
       <span style="color:var(--t3);display:inline-flex;flex-shrink:0">${i.done?icon("check",15):icon("chevronR",15)}</span>
     </button>`).join("")}
-    <p class="xs t2 mt8">${done===items.length?"Alles drin — deine Analytics laufen heute auf voller Datenbasis.":"Alles zusammen unter 2 Minuten — jede Zeile füttert eine eigene Analyse im Analytics-Tab."}</p>
+    <p class="xs t2 mt8">${done===items.length?"Alles drin — deine Auswertung rechnet heute auf voller Datenbasis.":"Alles zusammen unter 2 Minuten — jede Zeile speist eine eigene Analyse in der Auswertung."}</p>
   </div>`;
 }
 /* =====================================================================
@@ -10217,27 +10257,27 @@ function starterSteps(){
   try{ endur=actUi()==="endur"; eActs=window.ENDUR.activities().length; eDone=Object.keys(endurDone()).length; }catch(e){}
   const common=[
     {ic:"moon",t:"Tagesform messen",d:"Vier Fragen, zehn Sekunden — jeden Morgen.",
-     un:["Bereitschafts-Ring","Tagesempfehlung","Übertrainings-Signal"],done:!!S.checkin,act:"A.openStatus()"},
+     un:["Tagesform-Ring","Empfehlung für heute","Warnung bei Überlastung"],done:!!S.checkin,act:"A.openStatus()"},
   ];
   const mid=endur
     ? [{ic:"activity",t:"Erste Einheit aus dem Plan",d:"Der Plan-Tab sagt dir genau, was heute ansteht — mit Zielbereich in Pace oder Watt.",
         un:["Wochenfortschritt","Zonen-Steuerung"],done:eDone>0||eActs>0,act:"A.q('endurance')"},
-       {ic:"utensils",t:"Einen Tag Ernährung tracken",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
+       {ic:"utensils",t:"Einen Tag Ernährung erfassen",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
         un:["Makro-Check","Protein-Deckung","Ernährungs-Treue"],done:nut,act:"A.q('nutrition')"}]
-    : [{ic:"dumbbell",t:"Erste Einheit loggen",d:"Player starten und deine Sätze eintragen.",
+    : [{ic:"dumbbell",t:"Erstes Training eintragen",d:"Training starten und deine Sätze festhalten.",
         un:["Kraft-Prognose","Rekorde","Volumen-Ampel"],done:th>0,act:"A.q('train')"},
-       {ic:"utensils",t:"Einen Tag Ernährung tracken",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
+       {ic:"utensils",t:"Einen Tag Ernährung erfassen",d:"Scannen, sprechen oder suchen — je nachdem, was schneller geht.",
         un:["Makro-Check","Protein-Deckung","Ernährungs-Treue"],done:nut,act:"A.q('nutrition')"}];
   const tail=[
     {ic:"scale",t:"Zweimal wiegen",d:"Zwei Messungen im Abstand einiger Tage genügen.",
-     un:["Kalorien-Abgleich","Stoffwechsel-Zwilling"],done:wl>=2,act:"A.q('profile')"},
+     un:["Kalorien-Abgleich","Dein echter Verbrauch"],done:wl>=2,act:"A.q('profile')"},
     {ic:"grid",t:"Deine Aktivitäten kennen",d:"Kraft, Abnehmen, Rad, Laufen — jede mit eigenen Zielen und eigener Ansicht.",
-     un:["Profil-Umschalter","Eigene Tabs"],done:!!S.seenActs||acts>=2,act:"A.actOverview()"},
+     un:["Profil-Umschalter","Eigene Ansicht"],done:!!S.seenActs||acts>=2,act:"A.actOverview()"},
     endur
       ? {ic:"push",t:"Drei Aktivitäten importieren",d:"GPX, TCX oder FIT aus Strava, Garmin, Wahoo, Komoot oder Zwift.",
          un:["Form-Kurve","TSS & Zonenverteilung","Entkopplung"],done:eActs>=3,act:"ENDUR.pick()"}
-      : {ic:"chart",t:"Drei Einheiten geloggt",d:"Ab hier rechnet die Engine mit deinen echten Zahlen statt mit Startwerten.",
-         un:["Plan-Präzision","Analytics-Insights","Adaptive Gewichte"],done:th>=3,act:"A.q('analytics')"},
+      : {ic:"chart",t:"Drei Trainings eingetragen",d:"Ab hier rechnet METRICGYM mit deinen echten Zahlen statt mit Startwerten.",
+         un:["Genauerer Plan","Tiefere Auswertung","Gewichte passen sich an"],done:th>=3,act:"A.q('analytics')"},
   ];
   return common.concat(mid,tail);
 }
@@ -10247,7 +10287,7 @@ function systemFlow(){
   return [
     ["moon","Tages-Check","Bereitschaft · Tagesempfehlung · Erholungswoche"],
     endur?["push","Importierte Dateien","NP · IF · TSS · Zonenverteilung · Form"]
-         :["dumbbell","Geloggte Sätze","Progression · Kraft-Orakel · Volumen-Ampel · Rekorde"],
+         :["dumbbell","Eingetragene Sätze","Fortschritt · Kraft-Prognose · Volumen-Ampel · Rekorde"],
     ["utensils","Mahlzeiten","Makros · Protein-Deckung · Ernährungs-Treue"],
     ["scale","Gewichtskurve","Adaptiver Kalorien-Abgleich · Stoffwechsel-Zwilling"],
   ];
@@ -10259,7 +10299,7 @@ function systemFlowHTML(){
       <span class="sf-in">${icon(ic,14)}<span>${inp}</span></span>
       <span class="sf-arrow" aria-hidden="true">→</span>
       <span class="sf-out">${out}</span></div>`).join("")}
-    <p class="sf-foot">${icon("chart",12)} Alles zusammen läuft in <b>Analytics</b> und den <b>Wochenrückblick</b> — je mehr Zeilen du fütterst, desto genauer wird jede Empfehlung.</p>
+    <p class="sf-foot">${icon("chart",12)} Alles zusammen fließt in deine <b>Auswertung</b> und den <b>Wochenrückblick</b> — je mehr du einträgst, desto genauer wird jede Empfehlung.</p>
   </div>`;
 }
 function starterCard(){
@@ -10538,7 +10578,7 @@ function renderHome(){
         </div>
         <div class="row" style="gap:10px;margin-bottom:14px">
           <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="hero-num" style="font-size:26px">${rr?rr.score:"–"}</p><p class="xs t2">Bereitschaft</p></div>
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--hl)">${streak}</p><p class="xs t2">Streak</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--hl)">${streak}</p><p class="xs t2">Serie</p></div>
           <div style="flex:1;background:var(--s2);border-radius:14px;padding:12px;text-align:center"><p class="metric" style="font-size:15px">${tType==="rest"?"Erholung":focusLbl}</p><p class="xs t2">Heute</p></div>
         </div>
         ${hookTxt?`<p class="sm t2" style="line-height:1.55;margin-bottom:14px">${icon("calendar",13)} ${hookTxt}</p>`:""}
@@ -10552,7 +10592,7 @@ function renderHome(){
         <span class="sm" style="flex:1;line-height:1.55"><b style="color:var(--hl)">${icon("calendar",13)} Briefing gelesen.</b> <span class="t2">${hookTxt}</span></span><span class="t2">→</span></button>`:"")
     : `<button class="card brief-sealed" onclick="A.openBriefing()">
         <div class="brief-orb">${icon("sparkle",22)}</div>
-        <div style="flex:1"><p class="sm" style="font-weight:600">Dein Tages-Briefing wartet</p>
+        <div style="flex:1"><p class="sm" style="font-weight:600">Dein Überblick für heute wartet</p>
           <p class="xs t2" style="line-height:1.55">Eine Erkenntnis, dein Status & dein Plan für heute — in 10 Sekunden.</p></div>
         <span class="brief-dot"></span></button>`;
   // Trial-Countdown (Endowment/Verlustangst) — dezent, verstärkt zum Ende hin.
@@ -10605,13 +10645,13 @@ function renderHome(){
     ${(()=>{
       const isRest=_es?_es.kind==="rest":tType==="rest";
       const tLabel=_es?_es.ses.headline:((TYPE_META[tType]||{}).label||"Training");
-      const headline=r?(r.score>=80?"Du bist heute voll belastbar.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Deine Tagesform — in 10 Sek.";
+      const headline=r?(r.score>=80?"Du bist heute voll belastbar.":r.score>=60?"Solide Basis für heute.":r.score>=40?"Geh es heute kontrolliert an.":"Heute zählt Erholung."):"Wie geht es dir heute?";
       const sub=isRest?"Dein Plan gibt dir heute frei — Erholung ist Teil des Fortschritts."
         :r?(r.score>=80?`Dein Körper ist bereit — heute steht <b style="color:var(--t1)">${tLabel}</b> an. Geh an die obere Range deiner Sätze.`
               :r.score>=60?`Heute steht <b style="color:var(--t1)">${tLabel}</b> an — trainier wie geplant.`
               :r.score>=40?`Heute <b style="color:var(--t1)">${tLabel}</b>, aber gedrosselt — RPE 7 als Deckel.`
               :`Heute wäre <b style="color:var(--t1)">${tLabel}</b> — halte es leicht oder verschieb auf morgen.`)
-        :`Mach den 10-Sekunden-Check — dein <b style="color:var(--t1)">${tLabel}</b>-Plan passt sich deiner Tagesform an.`;
+        :`Vier Fragen, zehn Sekunden. Danach passt sich dein Plan für <b style="color:var(--t1)">${tLabel}</b> an deine Tagesform an.`;
       const cta=_eu
         ?`<button class="btn volt th-cta" onclick="A.q('endurance')">${icon("calendar",15)} ${isRest?"Plan ansehen":"Einheit ansehen"}</button>`
         :isRest?`<button class="btn volt th-cta" onclick="A.q('train')">${icon("calendar",15)} Plan ansehen</button>`
@@ -10624,17 +10664,14 @@ function renderHome(){
         <p class="sm" style="color:var(--t2);margin-bottom:10px">${greet()}, ${userName()}${S.devMode?' · <span class="volt-txt">Dev</span>':""}</p>
         <div class="th-metrics">
           ${metric(_eu?"activity":"dumbbell",isRest?"Frei":tLabel,"Heute",_eu?"A.q('endurance')":"A.q('train')")}
-          ${metric("flame",streak,"Streak")}
-          ${metric("zap",eng.level,"Level")}
+          ${metric("flame",streak,"Serie")}
+          ${metric("zap",eng.level,"Stufe")}
         </div>
         <div class="th-ring">
           <div class="hero-aura" aria-hidden="true"></div>
           ${r?(()=>{const tier=r.tier||(r.score>=78?"Stark":r.score>=58?"Gut":r.score>=40?"Mäßig":"Erholung");
             return `<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Bereitschaft ${r.score} — ${tier}">${ringSVG(r.score,tier,184)}</button>`;})()
-            :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Status-Check starten">
-                <div style="width:184px;height:184px;border-radius:50%;border:7px solid var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-                  <span style="font-size:33px;font-weight:300;line-height:1;color:var(--hl)" aria-hidden="true">+</span><span class="xs t2" style="line-height:1.55">Tagesform<br>messen</span>
-                </div></button>`}
+            :`<button style="background:none;border:none;cursor:pointer;padding:0" onclick="A.openStatus()" aria-label="Tagesform eintragen — vier Fragen, zehn Sekunden">${ringWartenSVG(184)}</button>`}
         </div>
         <p class="th-lbl">${r?"Bereitschaft":"Tages-Check"}</p>
         <p class="th-headline serif">${headline}</p>
@@ -10651,7 +10688,7 @@ function renderHome(){
         toastAction("Session verworfen","Rückgängig",()=>{ S.logged=bak.lg; S.exIdx=bak.ix; S.playerType=bak.pt; save(); render(); }); };
       return `<button class="card row" data-tone="hl" style="width:100%; cursor:pointer; font-family:inherit; color:var(--t1); text-align:left" onclick="S.tab='player';save();render()">
         <span class="brief-orb" style="background:radial-gradient(circle at 35% 30%,#A9C4DE,#8FB8DC 70%);box-shadow:0 0 18px rgba(143,184,220,.5)">${icon("play",20)}</span>
-        <span class="sm" style="flex:1;line-height:1.55"><b>${d.label} fortsetzen</b><br><span class="t2">${S.logged.length} von ${tot} Sätzen geloggt — genau da weiter, wo du warst.</span></span>
+        <span class="sm" style="flex:1;line-height:1.55"><b>${d.label} fortsetzen</b><br><span class="t2">${S.logged.length} von ${tot} Sätzen eingetragen — genau da weiter, wo du warst.</span></span>
         <span class="iconbtn" style="min-width:36px;min-height:36px" role="button" aria-label="Session verwerfen" onclick="event.stopPropagation();A.discardSess()">✕</span></button>`;})():""}
     ${(()=>{ if(S.actAuto) return ""; if(S.actNagDay===todayKey()) return "";
       let sg=null; try{ sg=actSuggestToday(); }catch(e){}
@@ -10674,7 +10711,7 @@ function renderHome(){
     ${starterCard()}
     ${!S.seenCatalog?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.menuGo('features')">
       <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
-      <span class="sm" style="flex:1;line-height:1.55"><b>Entdecke, was METRICGYM alles kann.</b><br><span class="t2">KI-Coach, Reiz-Beweis, Autoregulation, Analytics & mehr — in 60 Sekunden.</span></span>
+      <span class="sm" style="flex:1;line-height:1.55"><b>Entdecke, was METRICGYM alles kann.</b><br><span class="t2">KI-Coach, Reiz-Beweis, Autoregulation, Auswertung und mehr — in 60 Sekunden.</span></span>
       <span class="t2" style="align-self:center">→</span></button>`:""}
     ${streakRisk}
     ${trialNudge}
@@ -10767,7 +10804,7 @@ function renderHome(){
       if(S.currentWeek===4)adaptions.push(`Diese Woche ist deine ${LABELS.deload} — der Plan hat Sätze und Gewichte automatisch reduziert.`);
       if(Object.values(S.soreMode).some(Boolean))adaptions.push("Wegen Muskelkater hat dein Plan schonende Alternativen eingewechselt.");
       if(overtrain)adaptions.push("Deine Intensität läuft heiß — der Plan schlägt dir eine Erholungswoche vor.");
-      if(!adaptions.length&&Object.values(S.liftLog).some(x=>x.length>0))adaptions.push("Deine Gewichtsempfehlungen kommen aus deinen letzten Sessions — kein Tabellenwert, dein echter Verlauf.");
+      if(!adaptions.length&&Object.values(S.liftLog).some(x=>x.length>0))adaptions.push("Deine Gewichtsempfehlungen kommen aus deinen letzten Trainings — kein Tabellenwert, dein echter Verlauf.");
       const precision=Math.min(10,S.trainingHistory.length);
       return `<div class="card">
         <p class="sm mb8" style="line-height:1.55">${adaptions.length?adaptions[0]:"Dein Plan passt Gewichte, Sätze und Erholung an das an, was du loggst — er wächst mit dir."}</p>
@@ -10820,9 +10857,9 @@ function renderHome(){
         <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</span> Protein</p>
       </button>`)}
 
-    ${renderFold("Analytics",
-      `<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('analytics')" aria-label="Zu Analytics">
-        <span class="sm">${visIns.length?`${visIns.length===1?"1 neuer Insight":visIns.length+" Insights"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt deine ersten Daten"}</span>
+    ${renderFold("Auswertung",
+      `<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('analytics')" aria-label="Zur Auswertung">
+        <span class="sm">${visIns.length?`${visIns.length===1?"1 neue Erkenntnis":visIns.length+" Erkenntnisse"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt deine ersten Daten"}</span>
         <span class="t2">→</span></button>`)}
   `;
   /* Das Feld hinter dem Tageskopf. Seine Ordnung kommt aus der Tagesform: ein

@@ -337,7 +337,7 @@ check('Differenz: Profilwechsel ändert Oberfläche und Tab-Leiste', diff.actDif
    ZIEL und öffnete einen Trainingsplan („Oberkörper A."). Die Regel lautet
    deshalb: die Beschriftung benennt das Ziel des Tabs, nicht die Absicht des
    Nutzers. Geprüft wird gegen eine Positivliste erlaubter Ziel-Wörter. */
-const ZIEL_WOERTER = ['Heute', 'Training', 'Ausdauer', 'Analytics', 'Ernährung', 'Coach'];
+const ZIEL_WOERTER = ['Heute', 'Training', 'Ausdauer', 'Auswertung', 'Ernährung', 'Coach'];
 const tabTruth = await page.evaluate(async (erlaubt) => {
   const out = { schlecht: [], geprueft: 0 };
   for (const typ of ['gym', 'loss', 'running', 'cycling']) {
@@ -595,6 +595,45 @@ const hart = await page.evaluate(() => {
 });
 check('USP: keine zweite, von Hand gepflegte Studienzahl auf der Seite',
   hart.length === 0, hart.join(' | ').slice(0, 180));
+
+/* ======================= 6) DEUTSCH, NICHT ÜBERSETZT =======================
+   Rückmeldung des Betreibers: „Teils nicht verständlich, da übersetzt aus dem
+   Englischen?" — gemessen stimmte das: auf Landing und Heute standen 34 sichtbare
+   Anglizismen („vom Satz zum Log", „Analytics-Insights", „Player starten",
+   „STREAK", „LEVEL", „Einen Tag Ernährung tracken"). Entwicklersprache sickert
+   beim Bauen ganz von selbst in die Oberfläche; ohne Prüfung kommt sie zurück.
+   Geprüft wird NUR der sichtbare Text der beiden Kundenschirme — Code-Bezeichner
+   (S.logged, TABS-Schlüssel „analytics", renderFab) sind ausdrücklich erlaubt.
+   Bewusste Ausnahme: „Tracking" im Datenschutzsatz ist etabliertes Deutsch. */
+const ENGLISCH = [
+  ['Log/loggen', /\b[Ll]og(?:gen|ge|gst|st|t|s)?\b/],
+  ['Logging', /Logging/], ['Insight', /Insights?\b/], ['Engine', /\bEngine\b/],
+  ['Level', /\bLevel\b/], ['Equipment', /\bEquipment\b/], ['Streak', /\bStreak\b/],
+  ['Player', /\bPlayer\b/], ['Analytics', /\bAnalytics\b/], ['Session', /\bSessions?\b/],
+  ['tracken', /\btrack(?:en|st|t)\b/], ['Homescreen', /Homescreen/],
+  ['Briefing', /Briefing/], ['Tabs', /\bTabs\b/], ['Pec', /\bPec\b/],
+];
+const deutschCheck = async (wo, hol) => {
+  const txt = await hol();
+  const treffer = ENGLISCH.filter(([, re]) => re.test(txt))
+    .map(([n, re]) => { const m = txt.match(new RegExp('[^\\n]*' + re.source + '[^\\n]*'));
+      return `${n}: „${(m ? m[0] : '').trim().slice(0, 40)}"`; });
+  check(`Sprache: ${wo} kommt ohne Anglizismen aus`, treffer.length === 0,
+    treffer.length ? treffer.join(' | ').slice(0, 200) : 'geprüft auf ' + ENGLISCH.length + ' Begriffe');
+};
+await page.evaluate(() => { localStorage.clear(); });
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => typeof S !== 'undefined' && typeof render === 'function', null, { timeout: 20000 });
+await page.waitForTimeout(1200);
+await deutschCheck('die Landing-Page', () => page.evaluate(() => document.body.innerText));
+await page.evaluate(() => { A.devMode(); });
+await page.waitForTimeout(400);
+await page.evaluate(() => { A.devModeMenu(); });
+await page.waitForTimeout(2200);
+await page.evaluate(() => { S.tab = 'home'; S.tourDone = true; save(); render();
+  document.querySelectorAll('#root .an-grp').forEach(d => d.open = true); });
+await page.waitForTimeout(700);
+await deutschCheck('der Heute-Schirm', () => page.evaluate(() => document.body.innerText));
 
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 

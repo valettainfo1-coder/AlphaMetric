@@ -1765,7 +1765,55 @@ wer bereits doppelte IDs gespeichert hat, bekommt sie einmalig getrennt — sons
 bliebe sein Umschalten für immer kaputt. Zwei neue Tests sichern das ab; beide
 sind gegen den alten Code rot.
 
-Version aktuell **v51** — Nutzer bekommen Updates beim nächsten Besuch
+## §72 — Deutsch statt Übersetzung; der wartende Ring; ein Knopf, der Klicks stahl
+
+**Der Vorwurf „klingt übersetzt" war messbar richtig.** Gezählt im *gerenderten*
+Text der beiden Kundenschirme — nicht im Code, wo englische Bezeichner in Ordnung
+sind: **34 sichtbare Anglizismen**, 17 auf der Landing, 17 auf Heute.
+„vom Satz zum Log", „Übungen, die die Engine versteht", „Ziel, Level, Equipment",
+„Player starten", „Analytics-Insights", „Einen Tag Ernährung tracken", „STREAK",
+„LEVEL", „Tages-Briefing", „Homescreen". Entwicklersprache sickert beim Bauen von
+selbst in die Oberfläche.
+
+Dazu drei Konstruktionen, die im Deutschen schlicht nicht funktionierten:
+- **„Den Rest rechnet sie."** und **„Du loggst. Sie denkt."** — „sie" hatte kein
+  Bezugswort. Der Leser weiß nicht, wer da denkt.
+- **„alles, was die Intelligenz wissen muss"** — „die Intelligenz" als handelnde
+  Person ist keine deutsche Wendung.
+- **„Keine Versprechen. Ansichten."** — „Ansichten" heißt Meinungen *oder*
+  Bildschirme. Beides gemeint, nichts verstanden.
+
+Und ein **Template-Fehler**, kein Tippfehler: `${tLabel}` + `"-Plan"` erzeugte auf
+Heute wörtlich **„Training-Plan"**. Der Bindestrich stammte aus dem Code, nicht
+aus der Sprache.
+
+Bewusst *nicht* geändert: **„Tracking"** im Datenschutzsatz — das ist etabliertes
+Deutsch, keine Übersetzungsspur. Und **„Gym"** ist im Sprachgebrauch angekommen.
+
+Der Tab heißt jetzt **Auswertung** statt Analytics (der Schlüssel `analytics` im
+Code bleibt), „Arbeiten" heißt überall **Quellen** — korrekt, weil auch Fachbücher
+dabei sind, und für jeden verständlich.
+
+**Wächter (`ui-guard`, Block 6):** 15 Begriffe, geprüft am sichtbaren Text beider
+Schirme. Er hat sich sofort bezahlt gemacht — **fünf weitere Stellen**, die ich
+von Hand übersehen hatte, wurden nacheinander rot: „Analytics-Tab", „letzten
+Sessions", der Funktions-Hinweis, der Demo-Hinweis und der Checklisten-Fuß.
+
+**Der wartende Ring.** Ohne Tagesform stand auf Heute ein 184-px-Kreis mit 7-px-Rand
+in 7 % Weiß — praktisch unsichtbar, und geometrisch ein *anderes* Objekt als der
+gefüllte Ring (voller Kreis statt 3/4-Bogen). Morgens sah man etwas Unfertiges,
+abends plötzlich etwas anderes. Jetzt ist es derselbe Bogen mit derselben Bahn,
+nur ohne Füllung; ein kurzes Segment wandert langsam entlang und sagt „hier fehlt
+deine Eingabe", ohne zu blinken. Bei reduzierter Bewegung steht es still.
+
+**Der Knopf, der Klicks stahl.** Die schwebende Coach-Blase ist ersatzlos entfallen.
+Seit der Coach einen eigenen Tab hat, führte sie an dasselbe Ziel wie die immer
+sichtbare Tab-Leiste — und bezahlt hat das die Hauptaktion: gemessen überlappte sie
+auf Heute den Knopf „Tages-Check starten" um **5 × 53 px**, und in diesem Streifen
+gewann *sie* den Klick (`elementFromPoint` → `fab`). Wer rechts auf den Knopf zielte,
+landete im Coach. Ein Ziel, ein Weg.
+
+Version aktuell **v52** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
