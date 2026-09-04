@@ -612,6 +612,11 @@ const ENGLISCH = [
   ['Player', /\bPlayer\b/], ['Analytics', /\bAnalytics\b/], ['Session', /\bSessions?\b/],
   ['tracken', /\btrack(?:en|st|t)\b/], ['Homescreen', /Homescreen/],
   ['Briefing', /Briefing/], ['Tabs', /\bTabs\b/], ['Pec', /\bPec\b/],
+  ['Recap', /\bRecap\b/], ['Cashflow', /Cashflow/], ['Workout', /\bWorkouts?\b/],
+  // Fachlatein: verstanden nur, wer es studiert hat.
+  ['Adhärenz', /Adhärenz/], ['Konfidenz', /Konfidenz/], ['Adaptation', /Adaptation/],
+  // Erfundene Metaphern, die sich nicht selbst erklaeren.
+  ['Alchemist', /Alchemist/], ['Zwilling', /Zwilling/], ['Orakel', /Orakel/],
 ];
 const deutschCheck = async (wo, hol) => {
   const txt = await hol();
@@ -630,10 +635,19 @@ await page.evaluate(() => { A.devMode(); });
 await page.waitForTimeout(400);
 await page.evaluate(() => { A.devModeMenu(); });
 await page.waitForTimeout(2200);
-await page.evaluate(() => { S.tab = 'home'; S.tourDone = true; save(); render();
-  document.querySelectorAll('#root .an-grp').forEach(d => d.open = true); });
-await page.waitForTimeout(700);
-await deutschCheck('der Heute-Schirm', () => page.evaluate(() => document.body.innerText));
+await page.evaluate(() => { S.tier = 'elite'; S.tourDone = true; S.seenCatalog = true; S.seenHub = true; save(); });
+/* JEDER Schirm, nicht nur Landing und Heute. Der Betreiber hat die Sprache des
+   Heros ausdruecklich fuer die ganze App gewollt — dann muss sie auch ueberall
+   geprueft werden, sonst driften die hinteren Schirme wieder ab. Genau dort
+   standen "Protein-Adhaerenz", "Konfidenz steigt mit jeder Session",
+   "Rezept-Alchemist" und "Stoffwechsel-Zwilling". */
+for (const t of ['home', 'train', 'analytics', 'nutrition', 'coach', 'profile', 'pricing', 'features']) {
+  await page.evaluate((t) => { S.tab = t; save(); render();
+    document.querySelectorAll('#root .an-grp').forEach(d => d.open = true); }, t);
+  await page.waitForTimeout(600);
+  await deutschCheck(`der Schirm „${t}"`, () => page.evaluate(() => {
+    const r = document.getElementById('root'); return r ? (r.innerText || '') : ''; }));
+}
 
 /* ======================= 7) LESBARKEIT ÜBER BEWEGTEM LICHT =======================
    Rückmeldung des Betreibers: „Man kann nicht mal die Sachen lesen, weil das Licht

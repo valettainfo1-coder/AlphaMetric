@@ -16,17 +16,17 @@
      wird dort aus dem Quellen-Register gerechnet (quellenZahl()). Eine zweite,
      hier eingefrorene Zahl driftet vom Register weg — und die falsche wäre dann
      ausgerechnet die, die in Google und in der Link-Vorschau steht. -->
-<meta name="description" content="METRICGYM zeigt dir bei jeder Zahl deines Trainingsplans, warum sie so lautet — und aus welcher Arbeit sie stammt. Nachprüfbar in der App: Volumen-Korridor je Muskel, Ernährung in 10 Sekunden, anatomische Muskel-Engine.">
+<meta name="description" content="METRICGYM zeigt dir bei jeder Zahl deines Trainingsplans, warum sie so lautet — und aus welcher Arbeit sie stammt. Nachprüfbar in der App: Volumen-Korridor je Muskel, Ernährung in 10 Sekunden, anatomische Muskelkarte.">
 <!-- Open Graph / Link-Vorschau (Product-led Growth): geteilte Links zeigen eine attraktive Vorschau -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.">
-<meta property="og:description" content="Die Trainings-Intelligenz, die ihre Rechnung offenlegt: jede Zahl nennt ihre Quelle, jeder Fortschritt steht schwarz auf weiß — mit anatomischer Muskel-Engine.">
+<meta property="og:description" content="Die Trainings-Intelligenz, die ihre Rechnung offenlegt: jede Zahl nennt ihre Quelle, jeder Fortschritt steht schwarz auf weiß — mit anatomischer Muskelkarte.">
 <meta property="og:image" content="og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="METRICGYM — Rate nicht, ob dein Training wirkt. Wisse es.">
-<meta name="twitter:description" content="Die Trainings-Intelligenz, die ihre Rechnung offenlegt: jede Zahl nennt ihre Quelle, jeder Fortschritt steht schwarz auf weiß — mit anatomischer Muskel-Engine.">
+<meta name="twitter:description" content="Die Trainings-Intelligenz, die ihre Rechnung offenlegt: jede Zahl nennt ihre Quelle, jeder Fortschritt steht schwarz auf weiß — mit anatomischer Muskelkarte.">
 <meta name="twitter:image" content="og-image.png">
 <!-- Optionale lokale Konfiguration (z. B. KI-Key). NICHT im Repo — liegt nur im Deploy-Ordner.
      Achtung: bei öffentlichem Deploy ist diese Datei abrufbar; für Produktion Server-Proxy nutzen. -->
@@ -4500,7 +4500,7 @@ const TEASER_TEXT={
   micro:{t:"Bekommt dein Körper, was er braucht?",b:"Die Schätzung deiner Vitamine & Mineralstoffe aus geloggten Lebensmitteln ist Teil von PERFORMANCE."},
   deload:{t:"Automatische Erholungswochen",b:"Erkennt Übertrainings-Signale und schlägt dir rechtzeitig eine Erholungswoche vor — Teil von PERFORMANCE."},
   trajectory:{t:"Multi-Lift-Trajectory",b:"Kraftprognosen für alle getrackten Übungen sind Teil von PERFORMANCE."},
-  recap:{t:"Vollständiger Wochen-Recap",b:"Der komplette Recap mit Adhärenz und Status-Schnitt ist Teil von PERFORMANCE."},
+  recap:{t:"Vollständiger Wochenrückblick",b:"Der komplette Rückblick — wie oft du deine Ziele getroffen hast und wie deine Tagesform lag — gehört zu PERFORMANCE."},
   snapshots:{t:"Profil-Snapshots",b:"Gespeicherte Profil-Stände zum Vorher/Nachher-Vergleich sind Teil von ELITE."},
   coach_history:{t:"Erweiterter Coach-Verlauf",b:"20 statt 6 sichtbare Coach-Nachrichten sind Teil von ELITE."},
 };
@@ -6028,7 +6028,7 @@ function buildInsights(){
     const recent=S.trainingHistory.slice(Math.floor(S.trainingHistory.length/2));
     const avgO=old.reduce((s,t)=>s+t.volume,0)/old.length, avgR=recent.reduce((s,t)=>s+t.volume,0)/recent.length;
     const d=Math.round((avgR-avgO)/avgO*100);
-    if(Math.abs(d)>=5) out.push({t:`Dein Trainingsvolumen hat sich um ${d>0?"+":""}${d} % verändert (Ø ${nfi.format(avgR)} kg/Session).`,n:S.trainingHistory.length,nUnit:"Sessions",conf:Math.min(95,55+S.trainingHistory.length*2)});
+    if(Math.abs(d)>=5) out.push({t:`Dein Trainingsvolumen hat sich um ${d>0?"+":""}${d} % verändert (Ø ${nfi.format(avgR)} kg pro Training).`,n:S.trainingHistory.length,nUnit:"Trainings",conf:Math.min(95,55+S.trainingHistory.length*2)});
   }
   // Gewicht × Protein
   if(S.weightLog.length>=8&&Object.keys(S.nutritionLog).length>=5){
@@ -6036,7 +6036,7 @@ function buildInsights(){
     const dW=Math.round((w[w.length-1].v-w[0].v)*10)/10;
     const protDays=Object.values(S.nutritionLog).filter(l=>(l.meals||[]).reduce((s,m)=>s+m.p,0)>=p.tg.train.p).length;
     const protPct=Math.round(protDays/Object.keys(S.nutritionLog).length*100);
-    out.push({t:`Gewicht ${dW>0?"+":""}${nf.format(dW)} kg im Zeitraum — Protein-Adhärenz lag bei ${protPct} %.`,n:S.weightLog.length,nUnit:"Wiegungen",conf:Math.min(90,40+S.weightLog.length)});
+    out.push({t:`Gewicht ${dW>0?"+":""}${nf.format(dW)} kg im Zeitraum — an ${protPct} % der Tage hast du dein Proteinziel erreicht.`,n:S.weightLog.length,nUnit:"Wiegungen",conf:Math.min(90,40+S.weightLog.length)});
   }
   // Stagnation × Recovery
   const bench=e1Series("Bankdrücken");
@@ -6050,7 +6050,7 @@ function buildInsights(){
   const rpes=th14.map(t=>t.avgRpe).filter(Boolean);
   if(rpes.length>=4){
     const avg=rpes.reduce((a,b)=>a+b,0)/rpes.length;
-    if(avg>8.6) out.push({t:`Übertrainings-Risiko erhöht: deine Anstrengung lag im Schnitt bei ${nf.format(Math.round(avg*10)/10)}/10 über 14 Tage. Empfehlung: 1 Satz pro Übung streichen.`,n:rpes.length,nUnit:"Sessions",conf:75,risk:true});
+    if(avg>8.6) out.push({t:`Übertrainings-Risiko erhöht: deine Anstrengung lag im Schnitt bei ${nf.format(Math.round(avg*10)/10)}/10 über 14 Tage. Empfehlung: 1 Satz pro Übung streichen.`,n:rpes.length,nUnit:"Trainings",conf:75,risk:true});
   }
   // Risk: Adhärenz
   const plannedPerWeek=schedule().filter(t=>t!=="rest").length||p.a.days;
@@ -6066,8 +6066,8 @@ function buildInsights(){
     const w0=weeklyMuscleSets(0), w1=weeklyMuscleSets(1);
     for(const [m,band] of Object.entries(VOL_BANDS)){
       const a0=w0[m]||0, a1=w1[m]||0;
-      if(a0>band[1]&&a1>band[1]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen über deinem belastbaren Maximum (${a0} Sätze/Woche, optimal sind ${band[0]}–${band[1]}) — deine Erholung kommt nicht hinterher (Fachbegriff: MRV).`,n:S.trainingHistory.length,nUnit:"Sessions",conf:70,risk:true});
-      else if(a0>0&&a1>0&&a0<band[0]&&a1<band[0]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen zu niedrig für spürbares Wachstum (${a0} Sätze/Woche) — peile mindestens ${band[0]} Sätze an (Fachbegriff: MEV).`,n:S.trainingHistory.length,nUnit:"Sessions",conf:65});
+      if(a0>band[1]&&a1>band[1]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen über deinem belastbaren Maximum (${a0} Sätze/Woche, optimal sind ${band[0]}–${band[1]}) — deine Erholung kommt nicht hinterher (Fachbegriff: MRV).`,n:S.trainingHistory.length,nUnit:"Trainings",conf:70,risk:true});
+      else if(a0>0&&a1>0&&a0<band[0]&&a1<band[0]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen zu niedrig für spürbares Wachstum (${a0} Sätze/Woche) — peile mindestens ${band[0]} Sätze an (Fachbegriff: MEV).`,n:S.trainingHistory.length,nUnit:"Trainings",conf:65});
     }
   }
   // Diet-Adherence-Score (min 3 Tage — sonst kein Output)
@@ -6444,6 +6444,10 @@ function addFood(food,gram){
 }
 
 // ---------- SVG ----------
+/* Ein Satz, zwei Sätze. Ohne diesen Helfer stand auf der Muskelkarte woertlich
+   "1 Sätze" — an zwei Stellen, seit es die Karte gibt. Zahl und Wort gehoeren
+   zusammen, deshalb liefert der Helfer beides. */
+function saetze(n){ return `${n} ${n===1?"Satz":"Sätze"}`; }
 function ringSVG(score,tier,size=130){
   // Premium-Gradient-Ring (Oura-Stil): leuchtender 3/4-Bogen mit Glow + Verlauf,
   // feiner Bahn dahinter. Gradient/Glow je nach Zustand (gut=Amber, mittel=Blau, niedrig=Rot).
@@ -7736,7 +7740,7 @@ function coachContext(topic){
     return {chips:["Erkläre meinen Trend","Wo ist mein größtes Risiko?","Was soll ich diese Woche ändern?"],
       answers:{
         "Erkläre meinen Trend":ins.length?ins[0].t+` (${evidenceTag(ins[0])})`:"Noch nicht genug Daten für eine Trend-Analyse — logge weiter, ab ~7 Tagen wird es belastbar.",
-        "Wo ist mein größtes Risiko?":(ins.find(i=>i.risk)||{t:"Aktuell kein erhöhtes Risiko erkennbar — Intensität und Adhärenz liegen im grünen Bereich."}).t,
+        "Wo ist mein größtes Risiko?":(ins.find(i=>i.risk)||{t:"Aktuell kein erhöhtes Risiko: Belastung und Zielerreichung liegen beide im grünen Bereich."}).t,
         "Was soll ich diese Woche ändern?":ins.length>1?ins[1].t:"Halte den Kurs: konsistente Sessions schlagen jede Optimierung.",
       }};
   }
@@ -7891,10 +7895,10 @@ function renderFeatureOverview(){
   /* Aktionen sind echte Funktionen (kein new Function/eval): per Index dispatcht. */
   const groups=[
     ["Training, das mitdenkt","dumbbell",[
-      ["dumbbell","Dein wissenschaftlicher Plan","Jeder Muskel 2×/Woche, Volumen im optimalen Korridor — automatisch auf Ziel, Level & Equipment berechnet.",()=>A.menuGo('train')],
+      ["dumbbell","Dein wissenschaftlicher Plan","Jeder Muskel 2×/Woche, Volumen im optimalen Korridor — berechnet auf dein Ziel, deine Erfahrung und deine Ausrüstung.",()=>A.menuGo('train')],
       ["flame","Reiz-Status — nachvollziehbar","Sieh schwarz auf weiß, wie nah dein Plan am erholbaren Volumen-Korridor (MEV–MRV, Israetel) liegt. Teilbar.",()=>{A.menuGo('train');setTimeout(()=>{try{openMaxStatus()}catch(e){}},250);}],
       ["activity","Autoregulation","Schlechte Nacht? Die App senkt heute automatisch das Volumen (HRV, Ruhepuls, Status-Check) — schützt vor Übertraining.",()=>A.menuGo('home')],
-      ["play","Übungs-Anleitung + Muskelkarte","Tippe eine Übung: Schritt-für-Schritt-Ausführung, Muskel-Map und passende Alternativen.",()=>A.menuGo('train')],
+      ["play","Übungs-Anleitung + Muskelkarte","Tippe eine Übung: Schritt-für-Schritt-Ausführung, Muskelkarte und passende Alternativen.",()=>A.menuGo('train')],
       ["zap","Mobility & Cardio","Echte Mobilitäts-Routinen und polarisiertes Ausdauertraining (Zone 2 + Intervalle) — wenn deine Ziele es brauchen.",()=>A.menuGo('train')],
     ]],
     ["Ernährung ohne Aufwand","utensils",[
@@ -8030,7 +8034,7 @@ function quickLogField(placeholder,handler,hideMic){
     <button class="btn volt quicklog-submit" onclick="${handler}()">Analysieren</button>
   </div>
   <p class="ql-live"><i></i>Ich höre zu — sprich einfach alles rein. Tipp aufs Mikro = fertig &amp; automatisch eintragen.</p>
-  <p class="xs t2 mt8" style="text-align:center">Tippen oder einsprechen — Tippfehler versteht die Engine trotzdem</p>`;
+  <p class="xs t2 mt8" style="text-align:center">Tippen oder einsprechen — Tippfehler versteht METRICGYM trotzdem</p>`;
 }
 
 // =====================================================================
@@ -8342,7 +8346,7 @@ function renderLanding(){
              das Licht nicht verfehlen, egal wohin es zieht. */""}
         <div class="lp-textbuehne">
           <p class="lp-eyebrow">Krafttraining · Abnehmen · Ausdauer</p>
-          <h1 class="lp-h">Ein Plan, der sich<br><span class="volt-txt">erklärt.</span></h1>
+          <h1 class="lp-h">Jede Zahl hat<br><span class="volt-txt">einen Grund.</span></h1>
           <p class="lp-lead" style="max-width:400px;margin:0 auto 16px">Warum 16 Sätze Brust — und nicht 25? Bei METRICGYM steht die Antwort daneben. Aus <b style="color:var(--t1)">${quellenZahl()} wissenschaftlichen Quellen</b>, nicht aus dem Bauch.</p>
         </div>
 
@@ -8434,7 +8438,7 @@ function renderLanding(){
           <p class="lp-show-t">${icon("sparkle",13)} Eine KI, die dich liest</p>
           <div class="fh-sug" style="pointer-events:none;margin:4px 0 8px">
             <span class="fh-orb">${icon("zap",15)}</span>
-            <span class="acc-t"><span class="acc-h">Kraft-Orakel</span><span class="acc-s">Bankdrücken stagniert — sieh deine Prognose</span></span>
+            <span class="acc-t"><span class="acc-h">Kraft-Prognose</span><span class="acc-s">Bankdrücken stagniert — sieh deine Prognose</span></span>
           </div>
           <p class="xs t2" style="line-height:1.55">Der Coach antwortet aus deinen eigenen Zahlen, nicht aus vorgefertigten Sätzen — er kennt dein letztes Training.</p>
         </div>
@@ -10427,7 +10431,7 @@ function systemFlow(){
     endur?["push","Importierte Dateien","NP · IF · TSS · Zonenverteilung · Form"]
          :["dumbbell","Eingetragene Sätze","Fortschritt · Kraft-Prognose · Volumen-Ampel · Rekorde"],
     ["utensils","Mahlzeiten","Makros · Protein-Deckung · Ernährungs-Treue"],
-    ["scale","Gewichtskurve","Adaptiver Kalorien-Abgleich · Stoffwechsel-Zwilling"],
+    ["scale","Gewichtskurve","Kalorienziel zieht nach · Verbrauch hochgerechnet"],
   ];
 }
 function systemFlowHTML(){
@@ -10656,7 +10660,7 @@ function renderHome(){
     S.liftLog={}; S.readinessHistory=[]; S.trainingHistory=[]; S.nutritionLog={};
     S.weightLog=p?[{t:Date.now(),v:p.a.weight}]:[]; S.checkin=null; S.checkinDate=null; S.sampleData=false;
     save(); render(); toast("Beispieldaten entfernt — sauberer Start"); };
-  A.twinInfo=()=>modal(`<p class="ct">${icon("sparkle",14)} So rechnet dein Stoffwechsel-Zwilling</p>
+  A.twinInfo=()=>modal(`<p class="ct">${icon("sparkle",14)} So rechnet METRICGYM deinen Verbrauch</p>
     ${[["Erhaltungsbedarf","Dein Tagesumsatz aus Katch-McArdle (bei bekanntem Körperfett) bzw. Mifflin-St Jeor, plus Alltags- und Trainingsverbrauch."],
        ["Energiebilanz","Deine gemittelte Aufnahme der letzten Tage minus Erhaltungsbedarf. 1 kg Fettmasse ≈ 7.700 kcal."],
        ["Gewichts-Projektion","Bevorzugt aus deiner echten Gewichtskurve (Regression), sonst aus der Energiebilanz — über 6 Wochen fortgeschrieben."],
@@ -10665,7 +10669,7 @@ function renderHome(){
     <p class="xs t3" style="line-height:1.55">Die Projektion ändert sich, sobald sich dein Verhalten ändert — sie zeigt die Bahn, auf der du <i>gerade</i> bist, nicht ein fixes Schicksal.</p>`);
   A.howItWorks=()=>modal(`<p class="ct">${icon("brain",14)} So funktioniert METRICGYM</p>
     ${[["1. Du loggst — kurz und ehrlich","Training, Mahlzeiten und dein Tages-Status. Per Tippen, Sprechen oder Foto — keine 10 Sekunden."],
-       ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt — berechnet aus deinen echten Daten, mit Konfidenz pro Aussage."],
+       ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt — aus deinen echten Zahlen. Zu jeder Aussage steht dabei, wie sicher sie ist."],
        ["3. Dein Plan passt sich an","Gewichte, Sätze und Erholungswochen ändern sich automatisch — dein Plan wird mit jeder Session präziser."]]
       .map(([t,b])=>`<p class="sm mb4" style="font-weight:600">${t}</p><p class="sm t2 mb12" style="line-height:1.55">${b}</p>`).join("")}
     <button class="btn ghost" style="min-height:36px" onclick="overlay.innerHTML='';S.tab='features';save();render();">Alle Funktionen ansehen</button>`);
@@ -10862,7 +10866,7 @@ function renderHome(){
       const sgn=v=>(v>0?"+":v<0?"−":"±")+Math.abs(v).toFixed(1).replace(".",","); // dt. Komma
       const bal=(tw.balance>0?"+":tw.balance<0?"−":"±")+nfi.format(Math.abs(tw.balance));
       return `<div class="card oracle-reveal" data-tone="dyn" style="--tone:${cfg.a};--tone-wash:${cfg.a}1f;--tone-edge:${cfg.a}55">
-        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:2px">${icon("sparkle",13)} Stoffwechsel-Zwilling</p>
+        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:2px">${icon("sparkle",13)} Dein Verbrauch, hochgerechnet</p>
         <div class="twin-stage">
           <div class="twin-aura" style="background:radial-gradient(circle,${cfg.b},${cfg.a} 42%,transparent 74%)"></div>
           <div class="twin-orbit"><i></i></div><div class="twin-orbit r2"><i></i></div>
@@ -10882,14 +10886,14 @@ function renderHome(){
               <p class="xs t2" style="margin-top:2px">${l}</p><p class="xs t3" style="font-size:9.5px">${s}</p></div>`).join("")}
         </div>
         <p class="xs t2" style="margin-top:10px;line-height:1.55">Erhaltung ≈ ${nfi.format(tw.maint)} · Aufnahme ≈ ${nfi.format(tw.intake)} kcal${tw.usingTrend?" · kalibriert an deiner echten Gewichtskurve":""}</p>
-        <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px" onclick="A.twinInfo()">${icon("info",13)} So rechnet dein Zwilling</button>
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px" onclick="A.twinInfo()">${icon("info",13)} So rechnet METRICGYM deinen Verbrauch</button>
       </div>`;})()}
 
     ${(()=>{const o=strengthOracle(); if(!o)return "";
       const dstr=o.when.toLocaleDateString("de-DE",{day:"numeric",month:"long"});
       const wk=Math.max(1,Math.round(o.days/7));
       return `<div class="card oracle-reveal" data-tone="hl">
-        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px">${icon("sparkle",13)} Kraft-Orakel</p>
+        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px">${icon("sparkle",13)} Kraft-Prognose</p>
         <p class="sm" style="line-height:1.55">Bei deinem aktuellen Tempo knackst du <b style="color:var(--t1)">${o.target} kg ${esc(o.name)}</b> voraussichtlich am <b style="color:var(--hl)"><span class="oracle-date">${dstr}</span></b> — in etwa ${wk} ${wk===1?"Woche":"Wochen"}.</p>
         <p class="xs t2" style="margin-top:8px">Jetzt ${o.cur} kg geschätzte Maximalkraft · Trend +${o.perWeek} kg/Woche · aus ${o.n} echten Sätzen</p>
       </div>`;})()}
@@ -11036,11 +11040,11 @@ const FEATURE_INDEX=[
   {c:"Training",ic:"moon",t:"Erholungswoche einlegen",d:"Sofort auf Deload schalten — bewusst leichter",k:"deload erholung leicht woche muede",need:1,tab:"train",fn:"earlyDeload"},
   {c:"Training",ic:"activity",t:"Muskelkater-Modus",d:"Schonende Alternativen für einen Tag",k:"muskelkater soreness schonen alternative",
     modal:`<p class="ct">Muskelkater-Modus</p><p class="sm t2 mt8" style="line-height:1.55">Öffne eine Trainingseinheit und tippe oben auf <b style="color:var(--t1)">„Muskelkater?"</b> — die Session tauscht belastende Übungen gegen schonende Alternativen, nur für diesen Tag.</p>`},
-  {c:"Magie",ic:"zap",t:"Kraft-Orakel",d:"Deine Kraft-Prognose aus echten Logs",k:"orakel prognose zukunft kraft e1rm vorhersage",need:1,fn:"strengthOracle",empty:"Das Orakel braucht ~2 Wochen Trainings-Logs — logg ein paar Sessions, dann sieht es deine Zukunft"},
-  {c:"Magie",ic:"user",t:"Stoffwechsel-Zwilling",d:"Dein Körper als Simulation — was wäre wenn",k:"zwilling stoffwechsel simulation kalorien was waere wenn",need:1,fn:"metabolicTwin"},
-  {c:"Magie",ic:"utensils",t:"Rezept-Alchemist",d:"Aus deinen Makro-Lücken wird ein Rezept",k:"rezept alchemist kochen makros luecke abendessen",need:1,fn:"recipeAlchemist"},
+  {c:"Magie",ic:"zap",t:"Kraft-Prognose",d:"Deine Kraft-Prognose aus echten Logs",k:"orakel prognose zukunft kraft e1rm vorhersage",need:1,fn:"strengthOracle",empty:"Das Orakel braucht ~2 Wochen Trainings-Logs — logg ein paar Sessions, dann sieht es deine Zukunft"},
+  {c:"Magie",ic:"user",t:"Dein Verbrauch, hochgerechnet",d:"Was passiert, wenn du so weitermachst",k:"zwilling stoffwechsel simulation kalorien was waere wenn",need:1,fn:"metabolicTwin"},
+  {c:"Magie",ic:"utensils",t:"Passende Mahlzeit",d:"Aus dem, was dir heute noch fehlt",k:"rezept alchemist kochen makros luecke abendessen",need:1,fn:"recipeAlchemist"},
   {c:"Magie",ic:"moon",t:"Rest-Snack-Retter",d:"Später Hunger? Der Snack, der noch ins Budget passt",k:"snack abend hunger spaet budget retter",need:1,fn:"restSnack"},
-  {c:"Ernährung",ic:"mic",t:"Magic-Log — sprechen statt tippen",d:"Sag, was du gegessen hast — die KI rechnet",k:"sprechen voice diktieren essen loggen mikrofon",tab:"nutrition",hint:"Unten im Ernährungs-Tab: Mikro halten & sprechen"},
+  {c:"Ernährung",ic:"mic",t:"Sprechen statt tippen",d:"Sag, was du gegessen hast — die KI rechnet",k:"sprechen voice diktieren essen loggen mikrofon",tab:"nutrition",hint:"Unten im Ernährungs-Tab: Mikro halten & sprechen"},
   {c:"Ernährung",ic:"utensils",t:"Ernährung heute",d:"Kalorien, Makros, Mahlzeiten",k:"essen kalorien makros protein log",tab:"nutrition"},
   {c:"Analyse",ic:"chart",t:"Analytics & Trends",d:"Kraftkurven, Volumen, Konsistenz-Kalender",k:"statistik trends charts fortschritt kurven heatmap",tab:"analytics"},
   {c:"Analyse",ic:"camera",t:"Fortschritts-Fotos",d:"Visueller Verlauf, privat gespeichert",k:"fotos bilder verlauf transformation",tab:"analytics",hint:"Im Analytics-Tab: Bereich Fortschritts-Fotos"},
@@ -11061,12 +11065,12 @@ function fhSuggestions(){
   if(S.profile&&S.currentWeek===4) add("Neuen Trainingsblock generieren","Erholungswoche läuft — Zeit für Block "+((S.blockNum||1)+1),100);
   if(S.profile&&tt&&tt!=="rest"&&tt!=="cardio"&&!trainedToday){ const pk=parseTypeKey(tt);
     add("Heute trainieren","Heute steht "+(((TYPE_META[pk.base]||{}).label)||"deine Einheit")+(pk.variant?" "+pk.variant:"")+" an",90); }
-  try{ const an=blockAnalysis(); if(an.stagnant.length) add("Kraft-Orakel",an.stagnant[0]+" stagniert — sieh deine Prognose",80); }catch(e){}
+  try{ const an=blockAnalysis(); if(an.stagnant.length) add("Kraft-Prognose",an.stagnant[0]+" stagniert — sieh deine Prognose",80); }catch(e){}
   if(S.profile&&trainedToday) add("Analytics & Trends","Einheit erledigt — sieh, was sie bewirkt hat",70);
   if(h>=17) add("Rest-Snack-Retter","Abend: Was passt noch in dein Kalorienbudget?",62);
-  else if(h>=11) add("Rezept-Alchemist","Was kochen? Aus deinen Makro-Lücken berechnet",55);
+  else if(h>=11) add("Passende Mahlzeit","Was kochen? Aus deinem Restbudget gerechnet",55);
   if(S.profile&&(tt==="rest"||tt==="cardio")&&!trainedToday) add("Warum dieser Plan? (Bio-Beweis)","Ruhiger Tag — versteh dein System in 60 Sekunden",50);
-  add("Magic-Log — sprechen statt tippen","Essen loggen in 10 Sekunden — einfach sprechen",40);
+  add("Sprechen statt tippen","Essen eintragen in 10 Sekunden — einfach sprechen",40);
   sug.sort((a,b)=>b.score-a.score);
   const seen=new Set(),out=[];
   for(const x of sug){ if(seen.has(x.i))continue; seen.add(x.i); out.push(x); if(out.length>=3)break; }
@@ -11084,10 +11088,10 @@ function fhLive(f){
     if(f.t==="Neuen Trainingsblock generieren")return S.currentWeek===4?"Bereit — Erholungswoche läuft":"Wird in Woche 4 empfohlen · jetzt möglich";
     if(f.t==="Ernährung heute"){ const l=S.nutritionLog[todayKey()]; const k=Math.round(((l&&l.meals)||[]).reduce((a,m)=>a+(m.k||0),0));
       const tgt=S.profile&&S.profile.tg?S.profile.tg.train.kcal:0;
-      return k?(tgt?("Noch "+Math.max(0,tgt-k)+" kcal frei · "+((l.meals||[]).length)+" Mahlzeiten"):k+" kcal geloggt"):"Noch nichts geloggt — Magic-Log?"; }
+      return k?(tgt?("Noch "+Math.max(0,tgt-k)+" kcal frei · "+((l.meals||[]).length)+" Mahlzeiten"):k+" kcal eingetragen"):"Noch nichts eingetragen — sprich es einfach ein"; }
     if(f.t==="Analytics & Trends"){ const wk=(S.trainingHistory||[]).filter(t=>{const d=new Date(t.date);return (Date.now()-d)/864e5<7&&t.type!=="cardio";}).length;
       return wk?wk+" Einheit"+(wk>1?"en":"")+" diese Woche · Trends live":"Kraftkurven, Volumen, Konsistenz"; }
-    if(f.t==="Kraft-Orakel"){ const n=Object.keys(S.liftLog||{}).length; return n?n+(n===1?" Übung":" Übungen")+" im Log — Prognose bereit":"Braucht ~2 Wochen Logs"; }
+    if(f.t==="Kraft-Prognose"){ const n=Object.keys(S.liftLog||{}).length; return n?n+(n===1?" Übung":" Übungen")+" im Log — Prognose bereit":"Braucht ~2 Wochen Logs"; }
     if(f.t==="Plan-Editor & Bio-Check"){ const t=todayType(); if(t&&t!=="rest"&&t!=="cardio")return sessionDef(t).main.length+" Übungen heute · Volumen-Check live"; }
   }catch(e){}
   return f.d;
@@ -12027,7 +12031,7 @@ function muscleHeatBody(){
   }
   const col=(id)=>r2c[id]||MG_BODY;
   const rows=Object.entries(status).map(([g,o])=>`<div class="row" style="padding:4px 0"><span class="sm">${g}</span>
-    <span class="metric xs ${o.st==="optimal"?"volt-txt":o.st==="zu viel"?"danger-txt":"t2"}">${o.n} Sätze · ${o.st}</span></div>`).join("");
+    <span class="metric xs ${o.st==="optimal"?"volt-txt":o.st==="zu viel"?"danger-txt":"t2"}">${saetze(o.n)} · ${o.st}</span></div>`).join("");
   return `${body3d(col,{h:270})}
     <div class="row" style="justify-content:center;gap:12px;margin:8px 0 4px;flex-wrap:wrap">
       <span class="xs t2" style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:6px;background:rgba(143,184,220,.30);display:inline-block"></span>zu wenig</span>
@@ -12863,7 +12867,7 @@ function openMaxStatus(){
         <div style="position:absolute;left:${Math.round(100*m.mev/m.mrv)}%;top:0;bottom:0;width:2px;background:var(--t3);opacity:.6"></div>
         <div style="height:100%;width:${Math.min(100,m.pct)}%;background:${m.st==="over"?"var(--warn)":"linear-gradient(90deg,#A9C4DE,#6E93B8)"};border-radius:999px"></div>
       </div>
-      <p class="xs t2" style="margin-top:4px">${m.v} Sätze/Woche — dein Wachstums-Fenster: ${m.mev}–${m.mrv}</p></div>`;}).join("");
+      <p class="xs t2" style="margin-top:4px">${saetze(m.v)} pro Woche — dein Wachstums-Fenster: ${m.mev}–${m.mrv}</p></div>`;}).join("");
   const head = st.state==="optimal"
     ? `<p class="sm" style="line-height:1.55;margin:8px 0 12px"><b style="color:#7FA98F">✓ Voll ausgereizt.</b> Alle Muskeln liegen exakt im wissenschaftlichen Wachstums-Korridor (MEV–MRV, Israetel 2017) — du holst <b style="color:var(--t1)">${st.util} % deines erholbaren Maximums</b> raus. Mehr wäre Übertraining.</p>`
     : `<p class="sm" style="line-height:1.55;margin:8px 0 12px"><b style="color:var(--warn)">${st.over||st.under} ${(st.over||st.under)===1?"Muskel":"Muskeln"} ${st.state==="over"?"über dem Maximum":"unter dem optimalen Reiz"}.</b> Durch deine Anpassungen ist der Plan nicht mehr perfekt dosiert.</p>
@@ -13324,7 +13328,7 @@ function renderTrain(){
             <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
             <button class="btn volt" onclick="A.voiceApprove()">Übernehmen</button></div></div>`:""}
           <details class="acc" style="margin-top:12px;background:var(--s2);border:1px solid var(--border)">
-            <summary style="font-size:13.5px;padding:12px 14px;color:var(--t1);font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("settings",14)} Anpassen, verstehen & schnell loggen</span><span class="chev t2">${icon("chevron",15)}</span></summary>
+            <summary style="font-size:13.5px;padding:12px 14px;color:var(--t1);font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("settings",14)} Anpassen, verstehen und schnell eintragen</span><span class="chev t2">${icon("chevron",15)}</span></summary>
             <div class="accbody">
               <button class="btn ghost" style="min-height:38px;font-size:13.5px;justify-content:flex-start;padding-left:0" onclick="explainSession('${focusType}')">${icon("info",14)} Warum genau diese Übungen & diese Länge?</button>
               <button class="btn mt8" onclick="A.aiAdjust('${focusType}')">${icon("sparkle",15)} Mit KI anpassen${aiActive()?'<span class="badge volt" style="font-size:9.5px;margin-left:4px">KI</span>':""}</button>
@@ -14310,7 +14314,7 @@ function metabolismCard(){
     <p class="hero-num ${c||''}" style="font-size:20px">${v}</p><p class="xs t2" style="margin-top:2px">${l}</p></div>`;
   const adjTxt = adj===0?"noch keine Korrektur" : (adj<0?`−${Math.abs(adj)} kcal`:`+${adj} kcal`);
   const note = obsKgWk!=null
-    ? `Dein Gewicht ändert sich aktuell <b style="color:var(--t1)">${obsKgWk>=0?"+":""}${obsKgWk.toFixed(2).replace(".",",")} kg/Woche</b>. Die Engine gleicht dein Ziel automatisch mit deiner echten Kurve ab${adj!==0?` (bereits ${adjTxt} angepasst)`:""} — so wird es Woche für Woche genauer.`
+    ? `Dein Gewicht ändert sich aktuell <b style="color:var(--t1)">${obsKgWk>=0?"+":""}${obsKgWk.toFixed(2).replace(".",",")} kg/Woche</b>. METRICGYM gleicht dein Ziel automatisch mit deiner echten Kurve ab${adj!==0?` (bereits ${adjTxt} angepasst)`:""} — so wird es Woche für Woche genauer.`
     : `Sobald du dich ~2 Wochen regelmäßig wiegst, gleicht die Engine dein Kalorienziel automatisch mit deiner echten Gewichtskurve ab — und korrigiert die Schätzung auf deinen realen Stoffwechsel.`;
   return `<div class="card"><p class="ct">${icon("activity",14)} Dein Stoffwechsel · selbstlernend</p>
     <div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px">
@@ -14391,7 +14395,7 @@ function renderAnalytics(){
     if(arr.length>=2&&arr[arr.length-1].t-arr[0].t>=7*dayMs&&arr[0].v>0) kTrend=Math.round((arr[arr.length-1].v-arr[0].v)/arr[0].v*100); }
   const wkSetsNow=Object.values(weeklyMuscleSets(0)).reduce((s,v)=>s+v,0);
   html0=tabHero("analytics","Dein Fortschritt",
-    (kTrend!=null&&kTrend>0)?"Du wirst messbar stärker.":(consistency>=70?"Konstanz. Deine stärkste Waffe.":"Dein Fortschritt bekommt Kontur."),
+    (kTrend!=null&&kTrend>0)?"Du wirst messbar stärker.":(consistency>=70?"Dranbleiben zahlt sich aus.":"Dein Fortschritt bekommt Kontur."),
     "Gemessen, nicht geschätzt — jede Zahl kommt aus deinem Training.",
     [[kTrend==null?"—":(kTrend>0?"+":"")+kTrend+"<em> %</em>","Kraft 4 Wo."],
      [consistency+"<em> %</em>","Konstanz"],
@@ -14419,7 +14423,7 @@ function renderAnalytics(){
         <div class="barrow"><span class="blbl">${l}</span>
         <div class="btrack"><div class="bfill" style="width:${v/7*100}%;background:${v>=5?"var(--volt)":v>=3?"var(--info)":"var(--t3)"}"></div></div>
         <span class="bval metric">${v} / 7 Tage</span></div>`).join("")}
-      <p class="xs t2 mt8">Deine Analytics schärfen sich mit jedem Tag, den du loggst.</p></div>`:""}
+      <p class="xs t2 mt8">Deine Auswertung wird mit jedem Tag schärfer, den du einträgst.</p></div>`:""}
 
     ${today?`<div class="card row" style="justify-content:flex-start;gap:20px">${ringSVG(today.score,today.tier)}
       <div><p class="ct" style="margin-bottom:4px">Status</p><p class="xs t2">Aktueller Erholungszustand.</p></div></div>`
@@ -14436,7 +14440,7 @@ function renderAnalytics(){
       const s=e1Series(n), fc=forecast12w(s);
       return `<p class="sm mb8" style="font-weight:500">${n}</p>${lineChart(s,fc)}
         ${fc?`<p class="sm volt-txt metric mt8">Prognose: ${fmtKg(fc[2].v)} bis ${fmtD(new Date(s[s.length-1].t+84*dayMs))} <span class="conf">· ${esc(evidence(s.length).label)} · beruht auf ${s.length} Kraftwerten</span></p>`:""}
-        <p class="xs t2 mt8 mb16">Konfidenz steigt mit jeder Session: aktuell ${s.length} Datenpunkte — ab 12 wird die Prognose deutlich stabiler.</p>`;
+        <p class="xs t2 mt8 mb16">Die Prognose wird mit jedem Training sicherer: aktuell ${s.length} Messwerte — ab 12 steht sie deutlich fester.</p>`;
     }).join("")}
     ${lockedLifts>0?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${lockedLifts} weitere ${lockedLifts===1?"Übung":"Übungen"} mit Prognose (z. B. ${sorted[1]}) — Teil von PERFORMANCE.</p>
       <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.showTeaser('trajectory')">Freischalten</button></div>`:""}</div>`;
@@ -14482,7 +14486,7 @@ function renderAnalytics(){
       const maxW=Math.max(...wks,1);
       const volWhy=S.currentWeek===4
         ?`Grund: geplante ${LABELS.deload} (Woche 4 von 4) — bewusst weniger Sätze, kein Trainingsausfall.`
-        :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Sessions prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
+        :(wks[2]>0&&wks[3]<wks[2]*0.7?"Aktuelle Woche liegt deutlich unter der Vorwoche — geplante Trainings prüfen.":wks[2]>0&&wks[3]>wks[2]*1.3?"Volumen-Sprung ggü. Vorwoche — Steigerungen über +30 %/Woche erhöhen das Verletzungsrisiko (Gabbett, 2016).":"Volumen stabil zur Vorwoche — gute Basis für Progression.");
       html+=`<div class="card"><p class="ct" style="margin-bottom:14px">Dein Trainingsvolumen diese Woche</p>
         <div style="display:flex;align-items:flex-end;gap:10px;height:80px;padding:0 8px">
           ${wks.map((v,i)=>`<div class="volbar" style="flex:1;height:${Math.max(3,v/maxW*76)}px;background:${i===3?"linear-gradient(180deg,#A9C4DE,#6E93B8)":"linear-gradient(180deg,#3A4154,#262A36)"};${i===3?"box-shadow:0 0 14px rgba(110,147,184,.45)":""};animation-delay:${i*0.08}s"></div>`).join("")}
@@ -14506,9 +14510,9 @@ function renderAnalytics(){
           ${groups.map(m=>{
             const v=w0[m]||0, [lo,hi]=VOL_BANDS[m];
             const scale=Math.max(hi,v)*1.1;
-            const status=v<lo?["zu niedrig","var(--info)"]:v>hi?["zu hoch","var(--danger)"]:["optimal","var(--volt)"];
+            const status=v<lo?["zu wenig","var(--info)"]:v>hi?["zu viel","var(--danger)"]:["optimal","var(--volt)"];
             return `<div class="mb12"><div class="row mb4"><span class="sm" style="font-weight:600">${m}</span>
-              <span class="metric xs ${v<lo?"":v>hi?"danger-txt":"volt-txt"}">${v} Sätze · ${status[0]}</span></div>
+              <span class="metric xs ${v<lo?"":v>hi?"danger-txt":"volt-txt"}">${saetze(v)} · ${status[0]}</span></div>
               <div style="position:relative;height:14px;background:var(--s3);border-radius:6px;overflow:hidden">
                 <div style="position:absolute;left:${lo/scale*100}%;width:${(hi-lo)/scale*100}%;top:0;bottom:0;background:rgba(143,184,220,.16)"></div>
                 <div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100,v/scale*100)}%;background:${status[1]};opacity:.8;border-radius:6px"></div>
@@ -14837,7 +14841,7 @@ function nutritionStats(sum){
   for(let d=0;;d++){const key=dkey(new Date(Date.now()-d*dayMs));const l=S.nutritionLog[key];
     if(!l||!(l.meals||[]).length){if(d===0)continue;break;}
     if(l.meals.reduce((s,m)=>s+m.p,0)>=p.tg.train.p*0.9)streak++;else break;}
-  return [["metric",ppkg.toString().replace(".",","),"g/kg Protein-Ziel"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Streak"]];
+  return [["metric",ppkg.toString().replace(".",","),"g/kg Protein-Ziel"],["metric",avgK?nfi.format(avgK):"—","Ø kcal · 7 T"],["",streak+(streak===1?" Tag":" Tage"),"Protein-Serie"]];
 }
 // 🍳 REZEPT-ALCHEMIST (Magie B) — komponiert aus echten Lebensmitteln die Mahlzeit, die dein
 // Restbudget (kcal + Protein) heute am besten trifft: Protein-Anker + Kohlenhydrat-Quelle +
@@ -14960,10 +14964,10 @@ function nutritionWeekInsights(){
         <span class="metric sm" style="color:${fbAvg>=30?"var(--hl)":"var(--t1)"}">Ø ${fbAvg} g / Tag</span></div>
         <p class="xs t2" style="margin-top:4px">Referenz: 30 g (DGE) — aus ${fbDays.length} ${fbDays.length===1?"Tag":"Tagen"} mit Produktdaten.</p>`
       :`<div class="row"><span class="sm">Ballaststoffe ${infoBtn("fiber")}</span><span class="xs t2">noch keine Daten</span></div>
-        <p class="xs t2" style="margin-top:4px">Logge per Online-Suche — dann rechnet die Engine deinen Ballaststoff-Schnitt mit echten Produktwerten.</p>`)}
+        <p class="xs t2" style="margin-top:4px">Trag deine Lebensmittel über die Online-Suche ein — dann rechnet METRICGYM deinen Ballaststoff-Schnitt mit echten Produktwerten.</p>`)}
     ${row(`<div class="row"><span class="sm">Dein ehrlichster Tag ${infoBtn("honestDay")}</span>
       <span class="metric sm">${WDs[honest.d.getDay()]} · ${honest.sum.n} ${honest.sum.n===1?"Eintrag":"Einträge"}</span></div>
-      <p class="xs t2" style="margin-top:4px">${nfi.format(honest.sum.k)} kcal · ${nfi.format(Math.round(honest.sum.p))} g Protein — so sieht dein bestes Logging aus.</p>`)}
+      <p class="xs t2" style="margin-top:4px">${nfi.format(honest.sum.k)} kcal · ${nfi.format(Math.round(honest.sum.p))} g Protein — so sieht dein bester Tag aus.</p>`)}
     ${base()}</div>`;
 }
 function renderNutrition(){
@@ -15289,7 +15293,7 @@ function renderNutrition(){
     if(f&&!favChips.some(x=>x.row[0]===n))favChips.push({key:"f:"+n,row:f}); });
   const waterGlasses=log.water||0, waterMl=waterGlasses*250;
   root.innerHTML=`
-    ${tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Sag, was du gegessen hast — die Engine macht Zahlen daraus.",
+    ${tabHero("nutrition","Ernährung","Gegessen. Gerechnet.","Sag, was du gegessen hast — METRICGYM macht Zahlen daraus.",
         [[nfi.format(sum.k),"kcal heute"],[tg?nfi.format(tg.kcal):"—","Tagesziel"],[nfi.format(sum.p)+"<em> g</em>","Protein"]])}
     <div class="section"><span class="label sect-h">Dein Tag heute</span>
     <div class="card">
@@ -15322,7 +15326,7 @@ function renderNutrition(){
 
     ${(()=>{const r=recipeAlchemist(); if(!r)return "";
       return `<div class="card" data-tone="hl">
-        <p class="ct" style="display:flex;align-items:center;gap:6px">${icon("sparkle",14)} Rezept-Alchemist</p>
+        <p class="ct" style="display:flex;align-items:center;gap:6px">${icon("sparkle",14)} Passende Mahlzeit</p>
         <p class="xs t2 mb12" style="line-height:1.55">Restbudget heute: <b style="color:var(--t1)">${nfi.format(r.remK)} kcal</b> · <b style="color:var(--hl)">${r.remP} g Protein</b>. Deine nächste Mahlzeit dafür:</p>
         <div>${r.items.map(it=>`<div class="alch-row row" style="padding:8px 0;border-bottom:1px solid var(--hairline)">
           <span class="sm" style="flex:1">${esc(it.name)} <span class="t2">· ${it.g} g</span></span>
@@ -15330,7 +15334,7 @@ function renderNutrition(){
         <div class="row mt12 mb4"><span class="xs t2">Treffer aufs Restbudget</span><span class="metric xs">${r.match} %</span></div>
         <div class="progress" style="height:8px"><div style="width:${r.match}%;animation:barGrowX 1.1s ease both"></div></div>
         <p class="sm mt8" style="text-align:center">Ergibt <b>${nfi.format(r.tot.k)} kcal</b> · <b>${r.tot.p} g Protein</b></p>
-        <button class="btn volt mt8" onclick="A.addRecipe()">${icon("utensils",15)} Rezept loggen</button>
+        <button class="btn volt mt8" onclick="A.addRecipe()">${icon("utensils",15)} Rezept eintragen</button>
       </div>`;})()}
 
     ${(()=>{const s=restSnack(); if(!s)return "";
@@ -15344,8 +15348,8 @@ function renderNutrition(){
     <div class="section"><span class="label sect-h">Eintragen</span>
     <!-- SMART-LOG HERO: KI-Natursprache als HAUPT-Methode (immersiv, Mic-Orb + Live-Waveform) -->
     <div class="card smartlog oracle-reveal">
-      <p class="smartlog-h">${icon("sparkle",16)} <span class="magic-title">Magic-Log</span>${aiActive()?'<span class="badge volt" style="font-size:9.5px;margin-left:4px">KI aktiv</span>':""}</p>
-      <p class="smartlog-sub">Sprich oder tippe, was du gegessen hast — auch mehrere Sachen, mit Tippfehlern. Die Engine erkennt alles, rechnet Kalorien & Makros und trägt es ein.</p>
+      <p class="smartlog-h">${icon("sparkle",16)} <span class="magic-title">Sprechen statt tippen</span>${aiActive()?'<span class="badge volt" style="font-size:9.5px;margin-left:4px">KI aktiv</span>':""}</p>
+      <p class="smartlog-sub">Sprich oder tippe, was du gegessen hast — auch mehreres auf einmal, Tippfehler egal. METRICGYM erkennt alles, rechnet Kalorien und Makros und trägt es ein.</p>
       <div class="mic-orb-wrap">
         <i class="dust" style="left:42%"></i><i class="dust" style="left:50%;animation-delay:.7s"></i><i class="dust" style="left:58%;animation-delay:1.4s"></i><i class="dust" style="left:46%;animation-delay:2.1s"></i><i class="dust" style="left:54%;animation-delay:2.8s"></i>
         <button class="mic-orb" id="ql-mic" onclick="A.qlMic('A.parseFood')" aria-label="Essen einsprechen">${icon("mic",30)}</button>
@@ -15446,9 +15450,9 @@ function renderNutrition(){
 function renderPricing(){
   track("paywall_view"); // D3
   const feats={
-    free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Voice-/Foto-Logging unlimitiert","Status-Check + Streak","1 Engine-Insight pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
-    pro:["Alles aus START, plus:","Bis zu 3 gewichtete Ziele (Multi-Goal-Engine)","Alle Engine-Insights (Fortschrittstempo, Ernährungs-Treue, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Vitamin- & Mineralstoff-Schätzung aus deinem Essen","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
-    elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Insights inkl. Kombi-Analysen","Early Access auf neue Engine-Module"],
+    free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Eintragen per Sprache und Foto, unbegrenzt","Tages-Check + Serie","1 Erkenntnis pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
+    pro:["Alles aus START, plus:","Bis zu 3 Ziele gleichzeitig, nach Wichtigkeit gewichtet","Alle Erkenntnisse (Fortschrittstempo, Ernährungs-Bilanz, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Vitamin- & Mineralstoff-Schätzung aus deinem Essen","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
+    elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Erkenntnisse, auch aus kombinierten Daten","Neue Funktionen zuerst"],
   };
   const b=S.billing||"yearly"; // Jahres-Anker als Default (Anchoring)
   A.billing=(x)=>{S.billing=x;save();render();};
@@ -15478,8 +15482,8 @@ function renderPricing(){
     <div><p class="sm" style="font-weight:600">${TIER_LABEL[S.trialTier]}-Test aktiv · noch ${trialDaysLeft()} Tage</p>
       <p class="xs t2">Voller Zugriff. Du behältst alles, wenn du bis dahin bleibst.</p></div></div>`:"";
   root.innerHTML=`
-    <div class="heroband"><h2>Hol das Maximum aus deinem Training</h2>
-      <p class="sm t2" style="max-width:310px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Die höheren Pläne schalten frei, wie genau die Engine dich versteht — und wie weit sie dich bringt.</p></div>
+    <div class="heroband"><h2>Mehr Plan. Weniger Raten.</h2>
+      <p class="sm t2" style="max-width:310px;margin:8px auto 0">START bleibt dauerhaft kostenlos und voll trainierbar. Die höheren Pläne schalten frei, wie genau METRICGYM dich versteht — und wie weit es dich bringt.</p></div>
     ${trialBanner}${founding}
     <div class="row mb16" style="background:var(--s2);border-radius:999px;padding:4px;border:1px solid var(--border)">
       <button class="btn ${b==="monthly"?"volt":"ghost"}" style="min-height:40px;flex:1;white-space:nowrap" onclick="A.billing('monthly')">Monatlich</button>
@@ -16062,7 +16066,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
         <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Als ${rank.name}-Botschafter teilen</button>
         <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
           <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
-        <p class="xs t2 mt8" style="line-height:1.55"><b style="color:var(--t1)">Cashflow-sicher:</b> Du bekommst einen Anteil der Zahlung deines Freundes — ausgezahlt erst nach Ablauf der 14-Tage-Widerrufsfrist, finanziert aus seiner Zahlung.</p>
+        <p class="xs t2 mt8" style="line-height:1.55"><b style="color:var(--t1)">So sicher ist das:</b> Du bekommst einen Anteil der Zahlung deines Freundes — ausgezahlt erst nach Ablauf der 14-Tage-Widerrufsfrist, finanziert aus seiner Zahlung.</p>
         <button class="btn ghost" style="min-height:34px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="A.legalReferral()">${icon("info",13)} Echtes Guthaben — so funktioniert's</button>
         ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen zählt dein Cloud-Konto — dafür Supabase aktivieren.</p>`}
       </div>
@@ -16166,7 +16170,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
       <button class="btn danger" style="color:var(--danger)" onclick="A.wipe()">${icon("x",14)} Konto & Daten endgültig löschen</button>
       <p class="xs t2 mt8">DSGVO Art. 17 / 20 · Alle Daten liegen lokal auf diesem Gerät.</p>`)}
     </div>
-    <p class="xs" style="color:var(--t3);text-align:center;margin-top:16px">METRICGYM V4 · Performance Intelligence</p>`;
+    <p class="xs" style="color:var(--t3);text-align:center;margin-top:16px">METRICGYM V4 · Training mit Begründung</p>`;
   // Foto-Thumbnails asynchron aus IndexedDB nachladen
   S.photos.slice(-8).forEach(async(p)=>{const d=await PDB.get(p.id);const el=document.getElementById("thumb-"+p.id);if(el&&d)el.style.backgroundImage=`url(${d})`;});
 }

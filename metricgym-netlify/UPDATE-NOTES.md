@@ -1893,7 +1893,40 @@ hingelegt, und genau so sah es aus.
 2. Alle sechs Textrollen der Tafel geprüft, über zehn Momente des Scheins:
    5,75 · 5,39 · 4,88 · 6,88 · 5,24 · 5,30 — alle über der Schwelle.
 
-Version aktuell **v54** — Nutzer bekommen Updates beim nächsten Besuch
+## §75 — Die Sprache des Heros durch die ganze App
+
+**Neue Schlagzeile.** „Ein Plan, der sich erklärt" beschrieb eine *Eigenschaft der
+Software*, während der Vorspann darunter die *Frage des Nutzers* stellt — deshalb
+brach es. Jetzt: **„Jede Zahl hat einen Grund."** Behauptung oben, konkrete Frage
+darunter („Warum 16 Sätze Brust — und nicht 25?"), Beweis in der Karte.
+
+**Zwei echte Fehler, gefunden beim Durchgehen:**
+1. **„1 Sätze"** — an zwei Stellen der Muskelkarte, seit es sie gibt. Behoben mit
+   einem Helfer `saetze(n)`, der Zahl und Wort zusammen liefert.
+2. **Zwei Vokabulare für dieselben drei Zustände**, beide auf demselben Schirm
+   sichtbar: „zu niedrig / zu hoch" neben „zu wenig / zu viel". Vereinheitlicht.
+
+**Fachlatein raus.** „Protein-**Adhärenz** lag bei 50 %" → „an 50 % der Tage hast
+du dein Proteinziel erreicht". „**Konfidenz** steigt mit jeder Session" → „Die
+Prognose wird mit jedem Training sicherer". Dazu „Recap", „Adaptation",
+„Cashflow-sicher", „Performance Intelligence".
+
+**Erfundene Metaphern raus.** „**Stoffwechsel-Zwilling**" → „Dein Verbrauch,
+hochgerechnet". „**Rezept-Alchemist**" → „Passende Mahlzeit". „**Kraft-Orakel**"
+→ „Kraft-Prognose". „**Magic-Log**" → „Sprechen statt tippen". Ein Name, der
+erklärt werden muss, ist kein guter Name.
+
+**Klischees raus.** „Konstanz. Deine **stärkste Waffe**." → „Dranbleiben zahlt
+sich aus." „**Hol das Maximum** aus deinem Training" → „Mehr Plan. Weniger Raten."
+
+**Der Wächter deckt jetzt alle neun Schirme**, nicht mehr nur Landing und Heute —
+24 Begriffe statt 15. Er hat die Arbeit in vier Runden getrieben: nach jeder
+Korrektur meldete er die nächste Schicht, die von Hand nicht auffiel — „Deine
+Analytics schärfen sich", „beruht auf 33 Sessions", „Protein-Streak", „Voice-/
+Foto-Logging", „Early Access auf neue Engine-Module", „Level & Equipment". Ohne
+die Prüfung über ALLE Tabs wären genau die hinteren Schirme wieder abgedriftet.
+
+Version aktuell **v55** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
