@@ -713,6 +713,31 @@ check('Automatik: eindeutiger Fall wird vorgeschlagen',
 check('Automatik: bei mehreren Kandidaten schweigt die App',
   keep.many >= 2 && keep.ambiguous === null, JSON.stringify({ kandidaten: keep.many, vorschlag: keep.ambiguous }));
 
+/* Profil-IDs müssen eindeutig sein, auch wenn zwei Profile in derselben
+   Millisekunde entstehen. Der alte Generator war "a"+Date.now().toString(36)
+   ohne Zufallsanteil — als einziger der Datei. Zwei gleiche IDs bedeuten:
+   actCurrent() findet das erste, der Nutzer legt "Laufen" an und bekommt
+   "Krafttraining" aktiviert, und das Umschalten bleibt kaputt. Genau dieser
+   Fall hat den Ausdauer-Block hier unregelmäßig rot gemacht — die Suite hat
+   den Bug also gefunden, bevor ein Kunde ihn gefunden hat.
+   Der Test friert die Uhr ein und erzwingt damit die Kollision. */
+const kollision = await page.evaluate(() => {
+  const echt = Date.now, t = echt(); Date.now = () => t;
+  try {
+    S.acts = null; S.actId = null; save();
+    actList();                                   // Standardprofil
+    A.actNew(); A.actField('type', 'running'); A.actField('name', 'Laufen'); A.actSave();
+    try { A.closeModal(); } catch (e) {}
+    const ids = S.acts.map(x => x.id);
+    return { ids, eindeutig: new Set(ids).size === ids.length,
+             aktiv: (actCurrent() || {}).type, anzahl: S.acts.length };
+  } finally { Date.now = echt; }
+});
+check('Profile: zwei in derselben Millisekunde angelegte Profile haben verschiedene IDs',
+  kollision.eindeutig && kollision.anzahl === 2, JSON.stringify(kollision.ids));
+check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
+  kollision.aktiv === 'running', `aktiv=${kollision.aktiv}`);
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

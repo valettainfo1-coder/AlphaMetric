@@ -1703,7 +1703,69 @@ entfernter Menüeintrag und geschmuggeltes „über 90 Studien" werden alle drei
 rot. Die Umlaute im Register waren zuerst als `ae/oe/ue` geschrieben — 63
 Stellen korrigiert.
 
-Version aktuell **v50** — Nutzer bekommen Updates beim nächsten Besuch
+## §71 — Animation, Sprache, Abstand. Und ein Bug, den die Flakiness verdeckt hat
+
+**Die Animation war messbar tot, nicht Geschmackssache.** Die alten Lichter
+liefen auf Lissajous-Bahnen mit `fx` zwischen 0,04 und 0,11 — nachgerechnet
+sind das **95 bis 260 Sekunden für eine volle Runde**. Wer acht Sekunden auf
+die Seite schaut, sieht davon 30 Grad Bahn. Gemessen am Canvas: nach 8 s lag
+die größte Pixeländerung bei **21/255**, im Mittel 2,2. Das liegt unter der
+Wahrnehmungsschwelle für weiche Verläufe. Der Fehler steckte in der Periode,
+nicht in Farbe oder Dichte — beides hatte ich vorher zweimal falsch verstellt.
+
+Neu: **ein Lichtband** statt runder Flecken.
+- Periode steht in **Sekunden** im Code (13–34 s) — sie kann nicht mehr
+  unbemerkt ins Unsichtbare rutschen, man liest sie ab.
+- Zeit läuft in **echten Sekunden**, nicht in Frames. Auf 120 Hz lief das alte
+  Feld doppelt so schnell wie auf 60 Hz.
+- **Hell-Dunkel statt mehr Farbe:** die Marke ist ausdrücklich „kühl &
+  hochwertig", mehr Sättigung würde sie brechen. Zwei sehr große dunkle Massen
+  tragen das Band, darin sitzt EIN kleiner heller Kern. Fünf gleich helle
+  Flecken ergaben vorher Dunst.
+- Achse von 0,80 auf 0,52: das Band lag vorher genau dort, wo `.lp-hero::after`
+  abdunkelt — es leuchtete gegen den eigenen Schleier an, während die
+  Schlagzeile auf Schwarz stand.
+
+Ergebnis gemessen: nach 8 s **14,1 mittlere / 98 maximale** Änderung statt
+2,2 / 21 — **6,4× mehr Bewegung**. Helligkeitsspanne im Feld 36 → 564 von 765.
+
+**Sprache: zwei eigene Schnitzer.** „Trainingsplan mit **offener Rechnung**"
+heißt im Alltagsdeutsch *ungetilgte Schuld*, nicht Transparenz. Und „jede Zahl
+hat einen **Beleg**" hört ein normaler Mensch als **Kassenbon**. Ich hatte wie
+ein Ingenieur geschrieben, der sein System rechtfertigt. Jetzt aus Kundensicht:
+
+> KRAFTTRAINING · ABNEHMEN · AUSDAUER
+> **Ein Plan, der sich erklärt.**
+> Warum 16 Sätze Brust — und nicht 25? Bei METRICGYM steht die Antwort
+> daneben. Aus 57 wissenschaftlichen Quellen, nicht aus dem Bauch.
+
+Frage → Antwort → Quelle, in drei Blicken; der Beweis darunter beantwortet die
+Frage sofort. „Arbeiten" (Fachjargon) heißt überall „Quellen" — korrekt, weil
+auch Fachbücher dabei sind, und für jeden verständlich.
+
+**Abstand:** `.lp-sec` hatte 46 px oben UND unten — bei neun Abschnitten 830 px
+reines Polster. Einheitlich auf 34 px.
+
+**Der Bug, den die Flakiness verdeckt hat.** Der Ausdauer-Block der App-Suite
+war seit Wochen unregelmäßig rot. Ich habe zuerst falsch geschlossen, meine
+Änderungen seien schuld (je ein Lauf pro Seite — zu wenig). Drei weitere Läufe
+zeigten: es ist die Flakiness. Die Ursache war aber kein Testartefakt:
+
+`"a"+Date.now().toString(36)` war der **einzige ID-Generator der Datei ohne
+Zufallsanteil** — alle anderen hängen `Math.random()` an. Zwei Profile, die in
+derselben Millisekunde entstehen, bekommen dieselbe ID. `actCurrent()` findet
+dann das erste: **der Nutzer legt „Laufen" an und bekommt „Krafttraining"
+aktiviert**, und das Umschalten zwischen beiden bleibt dauerhaft kaputt.
+Bewiesen mit eingefrorener Uhr — vorher `["amtmjz2j8","amtmjz2j8"]`, aktiv
+„Krafttraining"; nachher getrennte IDs, aktiv „Laufen".
+
+Behoben in beiden Profil-Generatoren, dazu dieselbe Härtung bei eigenen
+Übungen (`cx`) und Mahlzeit-Vorlagen (`tp`). **Selbstheilung** in `actList()`:
+wer bereits doppelte IDs gespeichert hat, bekommt sie einmalig getrennt — sonst
+bliebe sein Umschalten für immer kaputt. Zwei neue Tests sichern das ab; beide
+sind gegen den alten Code rot.
+
+Version aktuell **v51** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

@@ -1272,7 +1272,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @keyframes lpMarq{to{transform:translateX(-50%)}}
   /* Plan-Bühne: kompakt & selbstlaufend — ersetzt das 240vh-Scrollytelling,
      das beim Scrollen riesige leere Schwarzflächen erzeugte. */
-  .lp-story{padding:46px 20px;}
+  .lp-story{padding:34px 20px;}
   .lp-story-pin{max-width:400px; margin:0 auto; text-align:center;}
   .lp-phone{position:relative; width:100%; min-height:290px; max-width:330px; margin:14px auto 10px; padding:18px 16px; border-radius:18px; box-sizing:border-box;
     background:linear-gradient(168deg, rgba(255,255,255,.085), rgba(255,255,255,.025) 62%), rgba(19,22,30,.66);
@@ -1815,8 +1815,13 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:linear-gradient(180deg, rgba(9,11,16,.92), rgba(9,11,16,.66));
     -webkit-backdrop-filter:blur(18px) saturate(150%); backdrop-filter:blur(18px) saturate(150%);
     border-bottom:1px solid rgba(255,255,255,.05);}
-  .lp-sec{padding:46px 20px;}
-  .lp-eyebrow{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--hl);margin-bottom:14px;}
+  /* Rhythmus der Landing. Vorher 46 px oben UND unten je Abschnitt — bei neun
+     Abschnitten sind das 830 px reines Polster, die Seite maß 8,2 Bildschirme.
+     34 px halten die Abschnitte klar getrennt, ohne dass zwischen zwei Aussagen
+     ein halber Bildschirm Leere steht. Eine Zahl für alle, damit der Takt
+     gleichmäßig bleibt statt abschnittsweise zu springen. */
+  .lp-sec{padding:34px 20px;}
+  .lp-eyebrow{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--hl);margin-bottom:10px;}
   .lp-h{font-family:var(--font-serif);font-size:33px;font-weight:500;letter-spacing:-.015em;line-height:1.08;margin-bottom:16px;text-align:center;}
   .lp-h2{font-family:var(--font-serif);font-size:33px;font-weight:500;letter-spacing:-.01em;line-height:1.16;margin-bottom:11px;}
   .lp-lead{font-size:17px;line-height:1.62;color:var(--t2);}
@@ -1886,7 +1891,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lp-step .num{width:30px;height:30px;min-width:30px;border-radius:50%;background:var(--hl);color:#fff;font-weight:600;
     display:flex;align-items:center;justify-content:center;font-size:15px;}
   .lp-quote{font-family:var(--font-serif);font-size:20px;font-weight:500;line-height:1.34;letter-spacing:-.01em;}
-  .lp-dark{background:var(--accent);color:#fff;border-radius:18px;margin:0 12px;padding:34px 24px;}
+  .lp-dark{background:var(--accent);color:#fff;border-radius:18px;margin:0 12px;padding:28px 22px;}
   .lp-dark .lp-h2,.lp-dark .lp-quote{color:#fff;}
   .lp-seg{display:flex;gap:4px;background:var(--s2);border:1px solid var(--border);border-radius:999px;padding:4px;}
   .lp-seg button{flex:1;min-height:38px;border:none;border-radius:999px;background:none;color:var(--t2);font-weight:600;font-size:13.5px;
@@ -1969,7 +1974,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     .lp-hero .lp-cta-row .btn{margin:0!important;}
     .lp-h{font-size:54px; line-height:1.04;}
     .lp-lead{font-size:20px;}
-    .lp-sec{padding:56px 48px; max-width:1120px; margin:0 auto;}
+    .lp-sec{padding:44px 48px; max-width:1120px; margin:0 auto;}
     .lp-claimgrid{grid-template-columns:repeat(3,1fr);}
     .lp-deskonly{display:block;}
     .lp-pillars-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
@@ -2139,17 +2144,46 @@ function feldStart(cv,opts){
   const koh=Math.max(0,Math.min(1, opts.koharenz==null?0.62:opts.koharenz));
   const achse=opts.achse==null?0.5:opts.achse;
 
-  /* Fünf Lichter aus der Hausfarbe. Kein Regenbogen: alles liegt im blau-silbernen
-     Band der Marke, nur Helligkeit und Sättigung unterscheiden sie. */
+  /* ---- DAS LICHTBAND ----------------------------------------------------
+     Vorher: fünf RUNDE Flecken auf Lissajous-Bahnen mit fx zwischen 0,04 und
+     0,11. Nachgerechnet ergibt das 95 bis 260 Sekunden für eine volle Runde —
+     wer acht Sekunden auf die Seite schaut, sieht davon 30 Grad Bahn. Das war
+     technisch animiert und wahrnehmbar still. Der Fehler lag in der Periode,
+     nicht in Farbe oder Dichte.
+
+     Jetzt: wenige, BREITE Lichtmassen, die als Band fließen. Drei Konsequenzen
+     aus dem alten Fehler:
+       1. Die Periode steht in SEKUNDEN im Code (13–34 s). Sie kann nicht mehr
+          unbemerkt ins Unsichtbare rutschen — man liest sie ab.
+       2. Die Zeit läuft in echten Sekunden, nicht in Frames. Auf einem
+          120-Hz-Display sah das alte Feld doppelt so schnell aus wie auf 60 Hz.
+       3. Breit statt rund: ein Band ist das Bild der App selbst — der Korridor,
+          in dem du bleibst. Es ist nicht Deko, es ist dasselbe Motiv.
+     Ein warmer Akzent nimmt den Ton des Haupt-CTA auf, damit das Blau nicht
+     monochrom kippt — mehr Farbe wäre Regenbogen, weniger wäre Nebel.
+
+     Zur Farbe: die Marke ist ausdrücklich „kühl & hochwertig" — --accent #2F4A63,
+     --hl #8FB8DC, --silver #C9D2E2. Mehr Sättigung würde sie brechen, also
+     entsteht die Tiefe über HELLIGKEIT, nicht über Chroma: zwei sehr große,
+     dunkle Massen tragen das Band, darin sitzt EIN kleiner heller Kern. Der
+     Kern wirkt hell, weil ringsum wenig Licht ist — nicht weil er laut ist.
+     Fünf gleich helle Flecken ergaben vorher Dunst; das war der zweite Fehler
+     neben der Periode. */
   const LICHT=[
-    {c:[110,147,184], r:0.62, a:0.50, fx:0.07, fy:0.05, px:0.0, py:1.1},
-    {c:[143,184,220], r:0.48, a:0.42, fx:0.05, fy:0.08, px:2.1, py:0.3},
-    {c:[169,196,222], r:0.40, a:0.30, fx:0.09, fy:0.06, px:4.0, py:2.4},
-    {c:[ 92,124,158], r:0.72, a:0.34, fx:0.04, fy:0.03, px:1.2, py:3.3},
-    {c:[201,210,226], r:0.26, a:0.22, fx:0.11, fy:0.09, px:5.4, py:1.7},
+    // c: Farbe · rx/ry: Radien (Anteil der Diagonale) · periode: Sekunden je Runde
+    // hub: senkrechter Ausschlag · a: Deckkraft im Kern
+    // Träger: groß, dunkel, langsam — sie geben dem Band Körper, nicht Licht.
+    {c:[ 47, 74, 99], rx:1.25, ry:0.54, a:0.58, periode:34, phase:3.3, hub:0.14},
+    {c:[ 62, 92,124], rx:1.00, ry:0.42, a:0.52, periode:26, phase:0.0, hub:0.21},
+    // Mittelton: die Hausfarbe, hier liegt die Fläche.
+    {c:[143,184,220], rx:0.62, ry:0.26, a:0.46, periode:17, phase:2.1, hub:0.30},
+    // Der Kern: klein, hell, langsam. DIE Lichtquelle der Szene.
+    {c:[201,210,226], rx:0.30, ry:0.17, a:0.78, periode:23, phase:4.0, hub:0.26},
+    // Warmer Hauch im Ton des Haupt-CTA (--cream) — nur als Gegengewicht.
+    {c:[239,231,220], rx:0.22, ry:0.11, a:0.20, periode:19, phase:1.2, hub:0.24},
   ];
 
-  const inst={cv,ctx,grund,koh,achse,t:Math.random()*40,visible:true,reduce,frames:0};
+  const inst={cv,ctx,grund,koh,achse,sek:Math.random()*20,letzte:0,visible:true,reduce,frames:0};
 
   // Rauschkachel gegen Streifenbildung: weiche Verläufe auf dunklem Grund zeigen
   // sonst sichtbare Ringe. Ein Hauch Korn löst sie auf — das ist der Unterschied
@@ -2176,24 +2210,38 @@ function feldStart(cv,opts){
   };
   messen(); inst.messen=messen;
 
-  inst.schritt=()=>{
+  inst.schritt=(ts)=>{
     const W=off.width, H=off.height; if(!W||!H) return;
-    inst.t+=reduce?0:0.0016;
+    // Echte Sekunden statt Frames: sonst läuft das Band auf einem 120-Hz-Gerät
+    // doppelt so schnell wie auf 60 Hz. Der erste Frame und Sprünge nach einem
+    // Tab-Wechsel werden gedeckelt, damit nichts ruckt.
+    if(!reduce){
+      const dt=inst.letzte?Math.min(0.05,(ts-inst.letzte)/1000):0;
+      inst.sek+=dt;
+    }
+    inst.letzte=ts;
     octx.globalCompositeOperation="source-over";
     octx.fillStyle=inst.grund; octx.fillRect(0,0,W,H);
     octx.globalCompositeOperation="lighter";
-    const D=Math.max(W,H);
+    const D=Math.max(W,H), s=inst.sek;
     for(const l of LICHT){
-      // langsame Lissajous-Bahn; Kohärenz zieht die Lichter zur Achse zusammen
-      const x=(0.5+Math.sin(inst.t*l.fx*6.283+l.px)*0.34*(1.25-inst.koh*0.5))*W;
-      const y=(inst.achse+Math.cos(inst.t*l.fy*6.283+l.py)*0.30*(1.25-inst.koh*0.5))*H;
-      const rad=D*l.r*(0.86+Math.sin(inst.t*2.4+l.px)*0.14);
-      const g=octx.createRadialGradient(x,y,0,x,y,rad);
-      const [R,G,B]=l.c, a=l.a*(0.55+inst.koh*0.55);
+      // Waagerechter Zug über die volle Breite; die Senkrechte schwingt
+      // langsamer (0,61×) — dadurch wiederholt sich die Bahn nicht sichtbar.
+      // Kohärenz zieht das Band zur Achse zusammen: ein guter Tag sammelt es.
+      const ph=(s/l.periode+l.phase)*6.283;
+      const eng=1.2-inst.koh*0.38;
+      const x=(0.5+Math.sin(ph)*0.46*eng)*W;
+      const y=(inst.achse+Math.sin(ph*0.61+l.phase)*l.hub*eng)*H;
+      const rad=D*l.rx*(0.90+Math.sin(s*0.45+l.phase)*0.10);
+      const [R,G,B]=l.c, a=l.a*(0.62+inst.koh*0.48);
+      // Breit statt rund: der Kreis wird senkrecht gestaucht (ry/rx).
+      octx.save(); octx.translate(x,y); octx.scale(1,l.ry/l.rx);
+      const g=octx.createRadialGradient(0,0,0,0,0,rad);
       g.addColorStop(0,   `rgba(${R},${G},${B},${(a).toFixed(3)})`);
       g.addColorStop(0.42,`rgba(${R},${G},${B},${(a*0.34).toFixed(3)})`);
       g.addColorStop(1,   `rgba(${R},${G},${B},0)`);
-      octx.fillStyle=g; octx.beginPath(); octx.arc(x,y,rad,0,6.283); octx.fill();
+      octx.fillStyle=g; octx.beginPath(); octx.arc(0,0,rad,0,6.283); octx.fill();
+      octx.restore();
     }
     // hochskalieren, dann Korn darüber
     ctx.globalCompositeOperation="source-over";
@@ -2206,13 +2254,13 @@ function feldStart(cv,opts){
   FELD.inst.push(inst);
   try{ new IntersectionObserver((es)=>{es.forEach(e=>{inst.visible=e.isIntersecting;});}).observe(cv); }catch(e){}
   if(!FELD.loop){
-    const tick=()=>{
+    const tick=(ts)=>{
       FELD.inst=FELD.inst.filter(i=>i.cv.isConnected);
       if(!FELD.inst.length){ FELD.loop=null; return; }
       if(!document.hidden) for(const i of FELD.inst){
         if(!i.visible) continue;
         if(i.reduce && i.frames>2) continue;   // Standbild: einmal komponieren, dann ruhen
-        i.schritt();
+        i.schritt(ts||performance.now());
       }
       FELD.loop=requestAnimationFrame(tick);
     };
@@ -7007,7 +7055,7 @@ function renderAppbar(){
     ${/* Das Register gehoert in die App, nicht nur auf die Landing: dort steht
           "nachpruefbar, in der App" — ohne diesen Eintrag waere das eine leere
           Zusage fuer jeden, der schon angemeldet ist. */""}
-    ${item("activity",`Quellen — ${quellenZahl()} Arbeiten`,"Worauf jede Zahl deines Plans sich stützt","A.quellen()")}
+    ${item("activity",`Quellen — ${quellenZahl()} Stück`,"Worauf jede Zahl deines Plans sich stützt","A.quellen()")}
     ${item("settings","Einstellungen","Profil, Daten, Export","A.profileTab()")}
     ${item("info","Rechtliches & Datenschutz","Impressum · AGB · Datenschutz","openLegalIndex()")}
     <div class="menu-divider"></div>
@@ -7037,13 +7085,26 @@ const ACT_TYPES={
 const ACT_KEYS=["mode","goals","days","split","equipment","focus","sessionTime","loss_rate",
   "endur_disc","cyc_goal","run_goal","schedule_pref","recovery_profile","act"];
 function actPick(a){ const o={}; for(const k of ACT_KEYS) if(a&&a[k]!==undefined) o[k]=a[k]; return o; }
+/* Profil-ID. Vorher: "a"+Date.now().toString(36) — OHNE Zufallsanteil, als
+   einziger ID-Generator der Datei (alle anderen haengen Math.random an). Zwei
+   Profile, die in derselben Millisekunde entstehen, bekamen damit dieselbe ID.
+   Folge: actCurrent() findet das ERSTE Profil mit der ID, das Umschalten
+   zwischen beiden ist dauerhaft kaputt und der Nutzer sieht die Daten des
+   falschen Profils. Genau das hat den Ausdauer-Block der Testsuite unregelmaessig
+   rot gemacht — sichtbar wurde ein Kraft-Profil, wo ein Laufprofil stehen sollte. */
+function actNeueId(){ return "a"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function actList(){
   if(!Array.isArray(S.acts)||!S.acts.length){
     // Migration: Das bestehende Setup wird das erste Profil — niemand verliert etwas.
     const a=(S.profile&&S.profile.a)||{}; const m=ACT_TYPES[a.mode]?a.mode:"gym";
-    S.acts=[{id:"a"+Date.now().toString(36),name:ACT_TYPES[m].label,type:m,cfg:actPick(a)}];
+    S.acts=[{id:actNeueId(),name:ACT_TYPES[m].label,type:m,cfg:actPick(a)}];
     S.actId=S.acts[0].id;
   }
+  // Selbstheilung: Wer schon Profile mit doppelter ID gespeichert hat, bekommt
+  // sie hier einmalig getrennt — sonst bliebe sein Umschalten fuer immer kaputt.
+  {const seen=new Set(); let fix=false;
+   for(const x of S.acts){ if(seen.has(x.id)){ x.id=actNeueId(); fix=true; } seen.add(x.id); }
+   if(fix) save();}
   if(!S.actId||!S.acts.some(x=>x.id===S.actId)) S.actId=S.acts[0].id;
   return S.acts;
 }
@@ -7352,7 +7413,7 @@ A.actSave=()=>{
       x.name=d.name; x.type=d.type;
       x.cfg=Object.assign({},x.cfg,{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment});
       if(structural) delete x.st; } }
-  else { const id="a"+Date.now().toString(36);
+  else { const id=actNeueId();
     l.push({id,name:d.name,type:d.type,cfg:{mode:d.type,goals:d.goals.slice(),days:d.days,equipment:d.equipment,
       split:"auto",focus:[],schedule_pref:"consistent",recovery_profile:"average",act:(S.profile&&S.profile.a.act)||"light"}});
     d.id=id; }
@@ -8065,8 +8126,8 @@ function quellenZahl(){
 function renderQuellen(){
   const n=quellenZahl();
   return `<p class="lp-eyebrow" style="margin-top:0">Quellen-Register</p>
-    <h2 class="lp-h2 mb8" style="font-size:26px">${n} Arbeiten.<br>Und wo jede wirkt.</h2>
-    <p class="sm t2 mb16" style="line-height:1.6">Links steht, was die Regel in der App tut — rechts, worauf sie sich stützt. Wenn eine Zeile dich nicht überzeugt, weißt du genau, welche Zahl du hinterfragen musst. Das ist der Punkt.</p>
+    <h2 class="lp-h2 mb8" style="font-size:26px">${n} Quellen.<br>Und was sie bewirken.</h2>
+    <p class="sm t2 mb16" style="line-height:1.6">Links steht, was dein Plan konkret macht — rechts, worauf das beruht. Du musst hier nichts lesen. Es steht hier, damit du es kannst.</p>
     ${QUELLEN.map(grp=>`<div style="margin-bottom:22px">
       <p class="xs" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--hl);margin-bottom:8px">${grp.g}</p>
       ${grp.items.map(([was,cite])=>`<div style="padding:11px 0;border-top:1px solid var(--hairline)">
@@ -8074,7 +8135,7 @@ function renderQuellen(){
         <p class="xs" style="color:var(--t3);line-height:1.5">${cite}</p></div>`).join("")}
     </div>`).join("")}
     <p class="xs t3" style="line-height:1.55;border-top:1px solid var(--hairline);padding-top:12px">
-      METRICGYM ist kein Medizinprodukt und ersetzt keine ärztliche Beratung. Die genannten Arbeiten begründen die Trainings- und Ernährungslogik der App — sie sind keine Zusage eines individuellen Ergebnisses.</p>`;
+      METRICGYM ist kein Medizinprodukt und ersetzt keine ärztliche Beratung. Die genannten Quellen begründen die Trainings- und Ernährungslogik der App — sie sind keine Zusage eines individuellen Ergebnisses.</p>`;
 }
 A.quellen=()=>{ modal(`<div style="max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch">${renderQuellen()}</div>`); };
 
@@ -8103,18 +8164,28 @@ function renderLanding(){
     <section class="lp-hero" style="--par:0px">
       <canvas class="feld" id="feld-lp" aria-hidden="true"></canvas>
       <div class="lp-herocopy">
-        <p class="lp-eyebrow">Jede Zahl nennt ihre Quelle</p>
-        <h1 class="lp-h">Rate nicht, ob dein<br>Training wirkt. <span class="volt-txt">Wisse es.</span></h1>
-        <p class="lp-lead" style="max-width:392px;margin:0 auto 16px">Andere Apps sagen dir, <i>was</i>. METRICGYM zeigt bei jeder Zahl das <b style="color:var(--t1)">warum</b> — und die Arbeit dahinter.</p>
+        ${/* Wording aus KUNDENSICHT, nicht aus Entwicklersicht. Zwei Fassungen
+             sind vorher gescheitert:
+               "Rate nicht, ob dein Training wirkt" — eine Wirkung, die jede App
+               verspricht; der Unterschied blieb unausgesprochen.
+               "Jede Zahl hat einen Beleg" / "mit offener Rechnung" — beides im
+               Alltagsdeutsch falsch besetzt: ein "Beleg" ist der Kassenbon, eine
+               "offene Rechnung" eine ungetilgte Schuld. Sprache aus der Buchhaltung.
+             Jetzt: die Schlagzeile ist ein Versprechen in Alltagssprache, der
+             Vorspann stellt die Frage, die im Gym wirklich im Kopf ist, und der
+             Beweis darunter beantwortet sie. Frage → Antwort → Quelle. */""}
+        <p class="lp-eyebrow">Krafttraining · Abnehmen · Ausdauer</p>
+        <h1 class="lp-h">Ein Plan, der sich<br><span class="volt-txt">erklärt.</span></h1>
+        <p class="lp-lead" style="max-width:400px;margin:0 auto 16px">Warum 16 Sätze Brust — und nicht 25? Bei METRICGYM steht die Antwort daneben. Aus <b style="color:var(--t1)">${quellenZahl()} wissenschaftlichen Quellen</b>, nicht aus dem Bauch.</p>
 
         <!-- DER BELEG: das Versprechen wird hier eingelöst, nicht behauptet.
              Kein Werbebild — corridorHTML() ist exakt die Komponente, die in der
              App über deinem Trainingsplan steht. Ein Blick: Zahl, Korridor,
              Quelle. Genau das kann kein Wettbewerber per Textzeile kopieren. -->
         <div class="lp-beleg">
-          <p class="lp-beleg-k">So sieht das aus</p>
+          <p class="lp-beleg-k">So steht es in der App</p>
           ${corridorHTML([{g:"Brust · deine Woche",tot:16,mev:10,mrv:20}])}
-          <p class="lp-beleg-q">Warum 16? Unter 10 fehlt der Reiz, über 20 kommt die Erholung nicht nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor</span></p>
+          <p class="lp-beleg-q">Unter 10 Sätzen fehlt der Wachstumsreiz, über 20 kommt die Erholung nicht mehr nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor</span></p>
         </div>
 
         <div class="lp-cta-row" style="display:flex;flex-direction:column;gap:8px;align-items:center">
@@ -8132,7 +8203,7 @@ function renderLanding(){
       <div class="lp-claimgrid">
         <!-- Antippbar: eine Behauptung, die man sofort pruefen kann, ist keine
              Behauptung mehr. Die Zahl kommt aus dem Register (quellenZahl()). -->
-        <button class="lp-claim lp-rev" onclick="A.quellen()"><p class="n volt-txt"><span data-cnt="${quellenZahl()}">0</span></p><p class="l">Arbeiten tragen den Plan —<br><u>alle einsehen</u></p></button>
+        <button class="lp-claim lp-rev" onclick="A.quellen()"><p class="n volt-txt"><span data-cnt="${quellenZahl()}">0</span></p><p class="l">wissenschaftliche Quellen —<br><u>alle nachlesen</u></p></button>
         <div class="lp-claim lp-rev"><p class="n"><span data-cnt="112">0</span></p><p class="l">Übungen, die die Engine versteht</p></div>
         <div class="lp-claim lp-rev"><p class="n"><span data-cnt="10">0</span><span style="font-size:20px">s</span></p><p class="l">vom Satz zum Log — tippen oder sprechen</p></div>
       </div>
@@ -8259,9 +8330,9 @@ function renderLanding(){
     <!-- WISSENSCHAFT: Fundament + Belege in EINER Sektion -->
     <section class="lp-sec" style="padding-top:0">
       <div class="lp-dark">
-        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Der Unterschied</p>
+        <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Warum diese App</p>
         <p class="lp-quote mb8">„Wissenschaftlich"<br>sagen alle.</p>
-        <p class="sm mb16" style="color:rgba(255,255,255,.72);line-height:1.6">Der Satz kostet nichts — jede Fitness-App schreibt ihn hin. Nachprüfbar macht ihn erst, wer die Rechnung offenlegt: <b style="color:#fff">Bei METRICGYM trägt jede Zahl ihre Quelle bei sich.</b> Warum <i>diese</i> Satzzahl, <i>dieses</i> Proteinziel, <i>diese</i> Pause — steht direkt daneben, nicht im Kleingedruckten.</p>
+        <p class="sm mb16" style="color:rgba(255,255,255,.72);line-height:1.6">Der Satz kostet nichts, und jede Fitness-App schreibt ihn hin. Der Unterschied fängt da an, wo du nachfragen kannst: <b style="color:#fff">Warum diese Satzzahl? Warum dieses Proteinziel? Warum heute Pause?</b> Bei METRICGYM steht die Antwort direkt daneben — und dahinter die Quelle. Du musst uns nicht glauben. Du kannst es nachlesen.</p>
         ${[["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
            ["Progressive Überladung & Volumen-Dosis","Schoenfeld 2017 · Pelland 2025"],
            ["RIR-gesteuerte Progression","Helms 2016 · Robinson 2024"],
@@ -8272,7 +8343,7 @@ function renderLanding(){
             <span class="sm" style="color:#fff;font-weight:600">${t}</span><span class="xs" style="color:rgba(255,255,255,.55);text-align:right">${c}</span></div>`).join("")}
         ${/* Kontur per inset-Schatten, nicht per border-color: `.btn` traegt appweit
              `border:none`, eine Rahmenfarbe zeichnete hier nie. */""}
-        <button class="btn ghost mt16" style="box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);color:#fff" onclick="A.quellen()">Alle ${quellenZahl()} Arbeiten ansehen</button>
+        <button class="btn ghost mt16" style="box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);color:#fff" onclick="A.quellen()">Alle ${quellenZahl()} Quellen nachlesen</button>
       </div>
     </section>
 
@@ -8300,7 +8371,11 @@ function renderLanding(){
   // Sphären mountet der MutationObserver (GEIST) — hier nur Zahlen & Choreografie.
   setTimeout(()=>{ lpAnimateResult(); lpFX();
     // Das Feld hinter dem Hero: hohe Ordnung, damit die Welle deutlich trägt.
-    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.78, achse:0.80}); }catch(e){}
+    /* achse 0,80 lag genau dort, wo `.lp-hero::after` nach unten abdunkelt —
+       das Band leuchtete gegen den eigenen Schleier an, während die Schlagzeile
+       auf Schwarz stand. 0,52 legt es in die Bildmitte: hinter Zeile und Beleg,
+       oberhalb des Verlaufs. */
+    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.62, achse:0.52}); }catch(e){}
   },60);
 }
 /* ===== LANDING-FX: Scroll- & Bühnen-Choreografie — idempotent pro Render =====
@@ -12825,7 +12900,7 @@ function openCreateExercise(fromKey){
     if((S.customExercises||[]).some(x=>x.name.toLowerCase()===n.toLowerCase())){ toast("Du hast schon eine Übung mit diesem Namen"); return; }
     if(!cxDraft.p.length){ toast("Tippe mindestens einen Muskel als primär an"); return; }
     const eqEl=document.getElementById("cx-eq"), patEl=document.getElementById("cx-pat");
-    const ce={id:"cx"+Date.now().toString(36),name:n,equipment:(eqEl&&eqEl.value)||cxDraft.equipment,
+    const ce={id:"cx"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:n,equipment:(eqEl&&eqEl.value)||cxDraft.equipment,
       pattern:(patEl&&patEl.value)||cxDraft.pattern,p:cxDraft.p.slice(),s:cxDraft.s.slice(),createdAt:Date.now()};
     S.customExercises.push(ce); registerCustomExercises(); save();
     const ret=cxDraft.ret; cxDraft=null;
@@ -14986,7 +15061,7 @@ function renderNutrition(){
     if(!name){toast("Gib der Mahlzeit einen Namen");return;}
     // Gramm-Suffix aus dem Namen lösen — beim Loggen wird die DANN gewählte Menge angehängt.
     const items=nlogToday().meals.map(m=>({n:String(m.n||"").replace(/ \(\d+ g\)$/,""),g:m.g||0,k:m.k||0,p:m.p||0,c:m.c||0,f:m.f||0}));
-    S.mealTemplates.push({id:"tp"+Date.now().toString(36),name:name.slice(0,30),items,createdAt:Date.now()});
+    S.mealTemplates.push({id:"tp"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:name.slice(0,30),items,createdAt:Date.now()});
     save(); A.closeModal(); toast(`✓ Vorlage „${name}" gespeichert`); renderNutrition();
   };
   A.useTemplate=(id)=>{

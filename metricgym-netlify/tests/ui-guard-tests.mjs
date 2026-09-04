@@ -587,7 +587,9 @@ const hart = await page.evaluate(() => {
   const s = document.documentElement.outerHTML;
   const n = (typeof quellenZahl === 'function') ? quellenZahl() : -1;
   const treffer = [];
-  for (const m of s.matchAll(/(?:über|ueber|mehr als|alle)\s*(\d{2,3})\s*(?:\+\s*)?(?:Studien|Arbeiten|Quellen)/gi))
+  // Auch Formen mit Adjektiv dazwischen ("aus 57 wissenschaftlichen Quellen"),
+  // sonst schlüpft genau die Marketing-Zeile durch, um die es hier geht.
+  for (const m of s.matchAll(/\b(\d{2,3})\s*(?:\+\s*)?(?:[a-zäöüß]+en?\s+)?(?:Studien|Arbeiten|Quellen)\b/gi))
     if (parseInt(m[1]) !== n) treffer.push(m[0]);
   return treffer;
 });
