@@ -1962,8 +1962,52 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lp-step .num{width:30px;height:30px;min-width:30px;border-radius:50%;background:var(--hl);color:#fff;font-weight:600;
     display:flex;align-items:center;justify-content:center;font-size:15px;}
   .lp-quote{font-family:var(--font-serif);font-size:20px;font-weight:500;line-height:1.34;letter-spacing:-.01em;}
-  .lp-dark{background:var(--accent);color:#fff;border-radius:18px;margin:0 12px;padding:28px 22px;}
+  /* ===== Die Belegtafel =====
+     Vorher: `background:var(--accent)` — EINE flache Farbe, darin eine Liste aus
+     generischen .row-Zeilen. Kein Aufbau, keine Tiefe, keine Bewegung. Neben
+     einem Hero mit Lichtfeld und Glaskarte wirkte das wie hingelegt, und das war
+     es auch: diese Sektion hat als einzige nie eine Gestaltungsrunde bekommen.
+
+     Jetzt eine Tafel mit Tiefe — Verlauf statt Fläche, Lichtkante oben, Schatten
+     nach außen, damit sie AUF der Seite liegt statt aufgeklebt zu sein. Und ein
+     langsam wandernder Schein, der ihr Leben gibt, ohne Text anzugreifen: er
+     läuft hinter dem Inhalt, ist großflächig weich und bleibt in der Hausfarbe. */
+  .lp-dark{position:relative; overflow:hidden; isolation:isolate;
+    background:linear-gradient(168deg,#2C4459 0%,#1C2B3C 48%,#141E2B 100%);
+    color:#fff; border-radius:22px; margin:0 12px; padding:30px 22px 26px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.11), 0 26px 60px rgba(4,7,12,.5);}
+  .lp-dark::before{content:""; position:absolute; z-index:-1; inset:-40%;
+    pointer-events:none;
+    background:radial-gradient(closest-side, rgba(150,192,230,.46), rgba(143,184,220,.14) 50%, transparent 76%);
+    animation:tafelSchein 26s ease-in-out infinite;}
+  /* Bahn bewusst RECHTS und OBEN: zuerst lief der Schein quer über die
+     Nummernspalte links, und die laufende Nummer fiel damit auf 3,81:1 gegen
+     nötige 4,5. Statt die Nummer weiß zu machen — und den blauen Akzent zu
+     verlieren — bleibt das Licht auf der Seite, wo nur Fließtext steht. */
+  @keyframes tafelSchein{
+    0%   {transform:translate3d(  6%,-16%,0) scale(1.00);}
+    50%  {transform:translate3d( 30%,  2%,0) scale(1.20);}
+    100% {transform:translate3d(  6%,-16%,0) scale(1.00);}}
+  @media (prefers-reduced-motion: reduce){ .lp-dark::before{animation:none;} }
   .lp-dark .lp-h2,.lp-dark .lp-quote{color:#fff;}
+
+  /* Zeilen als EINTRÄGE, nicht als Tabellenzeilen: laufende Nummer, Regel,
+     darunter die Arbeit. Auf 390 px war das alte Nebeneinander aus Regel links
+     und Zitat rechts beidseitig gequetscht — untereinander bekommt beides Luft
+     und liest sich wie ein Registereintrag. */
+  .lp-eintrag{display:grid; grid-template-columns:30px 1fr; gap:2px 10px;
+    padding:14px 0 13px; position:relative;}
+  .lp-eintrag + .lp-eintrag{border-top:1px solid rgba(255,255,255,.10);}
+  .lp-eintrag .nr{grid-row:1 / span 2; font-size:11px; font-weight:700;
+    letter-spacing:.04em; color:#B6CEE6; font-variant-numeric:tabular-nums;
+    padding-top:2px;}
+  .lp-eintrag .was{font-size:14.5px; font-weight:620; line-height:1.34; color:#fff;}
+  .lp-eintrag .wer{font-size:11.5px; line-height:1.45; color:rgba(255,255,255,.66);
+    font-variant-numeric:tabular-nums;}
+  /* Gestaffeltes Einblenden: die Einträge laufen nacheinander ein, wenn die Tafel
+     ins Bild kommt. Das ist die Bewegung, die der Sektion gefehlt hat — und sie
+     erzählt etwas (ein Register wird aufgeschlagen), statt nur zu zappeln. */
+  .lp-eintrag.lp-rev{transition-delay:calc(var(--i,0) * 90ms);}
   .lp-seg{display:flex;gap:4px;background:var(--s2);border:1px solid var(--border);border-radius:999px;padding:4px;}
   .lp-seg button{flex:1;min-height:38px;border:none;border-radius:999px;background:none;color:var(--t2);font-weight:600;font-size:13.5px;
     font-family:inherit;cursor:pointer;padding:0 6px;}
@@ -8463,8 +8507,10 @@ function renderLanding(){
            ["Training in gedehnter Position","Wolf et al. 2024 · Maeo 2023"],
            ["Protein & Körperkomposition","Morton et al. 2018 · Helms 2014"],
            ["Abnehmtempo & Muskelschutz","Garthe et al. 2011"]]
-          .map(([t,c])=>`<div class="row" style="padding:10px 0;border-top:1px solid rgba(255,255,255,.12)">
-            <span class="sm" style="color:#fff;font-weight:600">${t}</span><span class="xs" style="color:rgba(255,255,255,.55);text-align:right">${c}</span></div>`).join("")}
+          .map(([t,c],i)=>`<div class="lp-eintrag lp-rev" style="--i:${i}">
+            <span class="nr">${String(i+1).padStart(2,"0")}</span>
+            <span class="was">${t}</span>
+            <span class="wer">${c}</span></div>`).join("")}
         ${/* Kontur per inset-Schatten, nicht per border-color: `.btn` traegt appweit
              `border:none`, eine Rahmenfarbe zeichnete hier nie. */""}
         <button class="btn ghost mt16" style="box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);color:#fff" onclick="A.quellen()">Alle ${quellenZahl()} Quellen nachlesen</button>

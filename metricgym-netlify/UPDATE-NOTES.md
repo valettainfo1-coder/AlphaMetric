@@ -1864,7 +1864,36 @@ Der erste Versuch mit 8 Echtzeit-Proben über 8,8 s verfehlte den schlechtesten
 Moment eines 34-s-Zyklus und blieb bei absichtlich zerstörter Bühne grün.
 Mutationsgetestet: Bühne auf 10 % → rot (1,64:1).
 
-Version aktuell **v53** — Nutzer bekommen Updates beim nächsten Besuch
+## §74 — Die Belegtafel: die eine Sektion, die nie eine Gestaltungsrunde bekam
+
+**Berechtigter Vorwurf.** Während der Hero Lichtfeld, Glaskarte und gemessene
+Kontraste bekam, stand die Wissenschafts-Sektion unverändert da:
+`background:var(--accent)` — **eine flache Farbe**, darin eine Liste aus
+generischen `.row`-Zeilen mit Regel links und Zitat rechts, beides auf 390 px
+beidseitig gequetscht. Kein Aufbau, keine Tiefe, keine Bewegung. Als Rechteck
+hingelegt, und genau so sah es aus.
+
+**Neu — die Form sagt jetzt, was der Inhalt ist: ein Register.**
+- **Tafel mit Tiefe:** Verlauf statt Fläche (#2C4459 → #141E2B), Lichtkante oben,
+  Schatten nach außen, damit sie *auf* der Seite liegt statt aufgeklebt.
+- **Wandernder Schein:** ein großflächig weicher Lichtfleck zieht in 26 s über die
+  Tafel. Gemessen 7,9 mittlere / 33 maximale Pixeländerung — sichtbar, ohne zu
+  zappeln. Bei reduzierter Bewegung steht er still.
+- **Einträge statt Tabellenzeilen:** laufende Nummer (01–06), Regel, darunter die
+  Arbeit. Das alte Nebeneinander quetschte beide Spalten; untereinander bekommt
+  jede Zeile Luft und liest sich wie ein Registereintrag.
+- **Gestaffeltes Einblenden:** die Einträge laufen mit 90 ms Versatz ein, wenn die
+  Tafel ins Bild kommt — ein Register wird aufgeschlagen.
+
+**Zwei Messungen haben die Gestaltung korrigiert:**
+1. Der stärkere Schein zog zuerst quer über die **Nummernspalte**; die laufende
+   Nummer fiel auf 3,81:1 gegen nötige 4,5. Statt sie weiß zu machen und den
+   blauen Akzent zu verlieren, wandert das Licht jetzt rechts oben — dort steht
+   nur Fließtext. Ergebnis: Nummer 6,88:1.
+2. Alle sechs Textrollen der Tafel geprüft, über zehn Momente des Scheins:
+   5,75 · 5,39 · 4,88 · 6,88 · 5,24 · 5,30 — alle über der Schwelle.
+
+Version aktuell **v54** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
