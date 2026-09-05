@@ -2053,7 +2053,44 @@ Unten bleibt bewusst Luft: dort liegt das Band, und dort stört es nichts.
 Kontrast unverändert (Kicker 9,4 · Schlagzeile 17,6 · Vorspann 12,4), beide
 Knöpfe weiter über der Falz.
 
-Version aktuell **v60** — Nutzer bekommen Updates beim nächsten Besuch
+## §80 — Immersiver Header und Namen, die den Beweis tragen
+
+**Header.** Er war ein eigener Balken: dunkler Grund, Weichzeichnung, Trennlinie
+— er *saß* auf der Szene statt in ihr, und das Lichtfeld endete an seiner
+Unterkante. Jetzt schwebt er transparent über dem Hero, der beginnt bei y=0, und
+das Feld läuft dahinter durch. Der Glasgrund blendet erst ab 28 px Scroll ein,
+wenn Inhalt darunter durchzieht und die Schrift sonst unlesbar würde.
+
+Die kräftige Maske am oberen Feldrand aus §79 wurde zurückgenommen: sie war
+richtig, solange dort ein **leerer** Streifen lag — jetzt steht dort die Leiste,
+und das Licht hinter ihr *ist* der immersive Effekt.
+
+**Namen statt abstrakter „Wissenschaft".** Alle drei Zugehörigkeiten vor dem
+Schreiben geprüft, weil eine App mit dem Versprechen „nachprüfbar" sich hier
+keinen Fehler leisten kann:
+
+| Name | Institut | belegt |
+|---|---|---|
+| Brad Schoenfeld | Professor, Lehman College · CUNY New York | Lehman-Fakultätsseite, ResearchGate |
+| Stuart Phillips | Kinesiology, McMaster University (Tier-1 Canada Research Chair) | Autor von Morton et al. 2018, PubMed |
+| Eric Helms | Co-Direktor SPRINZ, Auckland University of Technology | AUT-Akademikerseite |
+
+**Ehrliche Einschränkung:** das sind die größten Namen *dieses Fachs*, keine
+Haushaltsnamen wie Harvard oder Oxford. Für Laien trägt deshalb eher „peer-reviewt"
+als die Institution selbst — beides steht jetzt da.
+
+**Eine Zeile, kein Klammergestrüpp.** Die erste Fassung setzte die Institute in
+Klammern in den Fließtext; der Vorspann lief damit über sechs Zeilen mit drei
+Klammerpaaren — dieselbe Dichte, die den Hero schon einmal wie ein
+Literaturverzeichnis aussehen ließ. Als eigene, ruhige Zeile unter dem Vorspann
+bekommen die Namen mehr Gewicht, nicht weniger. Jedes Paar aus Name und Institut
+bleibt beim Umbruch zusammen (`white-space:nowrap`) — vorher stand „Phillips ·"
+am Zeilenende und „McMaster" darunter, was wie zwei Angaben aussah statt wie eine.
+
+Hero unverändert sauber: eine Zahl (die 60 Sekunden im Kleingedruckten), null
+Fachkürzel, beide Knöpfe über der Falz, Kontrast 9,4 · 17,4 · 13,2.
+
+Version aktuell **v61** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
