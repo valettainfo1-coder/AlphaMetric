@@ -1971,15 +1971,6 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .lp-beleg-q{font-size:12.5px; line-height:1.5; color:#C7D0DA;
     border-top:1px solid rgba(255,255,255,.08); padding-top:9px;}
   .lp-beleg-q span{color:var(--hl); font-weight:600;}
-  /* Herkunftszeile unter dem Vorspann: klein, ruhig, aber praesent — die Namen
-     tragen den Reason to Believe, die Institute machen ihn pruefbar. */
-  .lp-herkunft{font-size:11.5px; line-height:1.6; color:var(--t3); letter-spacing:.01em;
-    max-width:360px; margin:0 auto 20px;}
-  .lp-herkunft b{color:var(--t2); font-weight:650;}
-  /* Jedes Paar aus Name und Institut bleibt zusammen. Ohne das brach die Zeile
-     mitten hinein ("Phillips ·" oben, "McMaster" unten) — was wie zwei
-     verschiedene Angaben aussah statt wie eine. */
-  .lp-herkunft i{font-style:normal; white-space:nowrap; display:inline-block; margin:0 4px;}
   .lp-claimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   /* Mobile: Landing bewusst kurz — textlastige Sektionen nur auf Desktop */
   .lp-deskonly{display:none;}
@@ -8423,23 +8414,19 @@ function renderLanding(){
              die Herkunft in Alltagssprache und die genaue Zahl eine Kachel
              tiefer, wo sie antippbar und pruefbar ist. Ein Guetesiegel im Hero,
              der Beleg direkt darunter. */""}
-          ${/* Namen statt abstrakter "Wissenschaft". Alle drei Zugehoerigkeiten vor dem
-             Schreiben geprueft, weil eine App mit dem Versprechen "nachpruefbar"
-             sich hier keinen Fehler leisten kann:
-               Brad Schoenfeld — Professor, Lehman College / CUNY New York
-               Stuart Phillips — Kinesiology, McMaster University (Autor von
-                                 Morton et al. 2018, dem Protein-Metaanalyse-Paper)
-               Eric Helms     — Co-Direktor SPRINZ, Auckland University of Technology
-             Ehrliche Einschraenkung: das sind die groessten Namen DIESES FACHS,
-             keine Haushaltsnamen wie Harvard. Fuer Laien traegt deshalb eher der
-             Zusatz "peer-reviewt" als die Institution selbst — beides steht da. */""}
-          <p class="lp-lead" style="max-width:400px;margin:0 auto 14px">Dein Plan entsteht aus <b style="color:var(--t1)">peer-reviewter Trainingsforschung</b>, nicht aus Bauchgefühl — zugeschnitten auf dein Ziel, deine Zeit und deine Erfahrung.</p>
-          ${/* Die Institute als EIGENE Zeile statt in Klammern im Fliesstext. In der
-               ersten Fassung lief der Vorspann ueber sechs Zeilen mit drei
-               Klammerpaaren — dieselbe Dichte, die den Hero schon einmal wie ein
-               Literaturverzeichnis aussehen liess. Als eigene, ruhige Zeile
-               bekommen die Namen mehr Gewicht, nicht weniger. */""}
-          <p class="lp-herkunft">Forschung u.&nbsp;a. von <i><b>Schoenfeld</b> · CUNY New York</i> <i><b>Phillips</b> · McMaster</i> <i><b>Helms</b> · AUT Auckland</i></p>
+        ${/* KEINE Forschernamen. Sie waren zwei Runden lang der Versuch, den Reason
+             to Believe ueber Autoritaet zu erzeugen — nur kennt Schoenfeld, Phillips
+             und Helms ausserhalb des Fachs niemand, und ein Name, den man nicht
+             kennt, ueberzeugt nicht: er verwirrt.
+
+             Der Weg, den Oura geht: der Hero ist reines VERSPRECHEN, die Wissenschaft
+             liegt eine Ebene tiefer als NACHPRUEFBARE Seite. Nicht "glaub diesem
+             Professor", sondern "sieh selbst nach". Genau diese Ebene existiert hier
+             bereits — die antippbare Quellen-Kachel direkt unter dem Hero fuehrt ins
+             Register. Der Hero muss sie nicht wiederholen; er muss nur sagen, dass es
+             sie gibt. Deshalb endet der Vorspann mit einer PRUEFBAREN Zusage statt
+             mit einer Berufung. */""}
+          <p class="lp-lead" style="max-width:400px;margin:0 auto 20px">Dein Plan entsteht aus <b style="color:var(--t1)">Trainingsforschung</b>, nicht aus Bauchgefühl — zugeschnitten auf dein Ziel, deine Zeit und deine Erfahrung. Jede Empfehlung kannst du bis zur Studie zurückverfolgen.</p>
         </div>
 
         <div class="lp-cta-row" style="display:flex;flex-direction:column;gap:8px;align-items:center">

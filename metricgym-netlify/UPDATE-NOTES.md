@@ -2090,7 +2090,34 @@ am Zeilenende und „McMaster" darunter, was wie zwei Angaben aussah statt wie e
 Hero unverändert sauber: eine Zahl (die 60 Sekunden im Kleingedruckten), null
 Fachkürzel, beide Knöpfe über der Falz, Kontrast 9,4 · 17,4 · 13,2.
 
-Version aktuell **v61** — Nutzer bekommen Updates beim nächsten Besuch
+## §81 — Forschernamen raus: wie Oura es macht
+
+**Die Namen sind wieder raus.** Sie waren zwei Runden lang der Versuch, den Reason
+to Believe über **Autorität** zu erzeugen. Nur kennt Schoenfeld, Phillips und
+Helms außerhalb des Fachs niemand — und ein Name, den man nicht kennt, überzeugt
+nicht, er verwirrt. (Die Einschränkung stand schon in §80 im Code; hier ist die
+Konsequenz daraus gezogen.)
+
+**Was Oura stattdessen tut:** Oura nennt nie Forscher. Der Hero ist reines
+**Versprechen**; die Wissenschaft liegt eine Ebene tiefer als *nachprüfbare*
+Seite. Der Unterschied ist keine Formulierung, sondern eine Haltung — nicht
+„glaub diesem Professor", sondern **„sieh selbst nach"**.
+
+Diese Ebene existiert hier bereits: die antippbare Quellen-Kachel direkt unter dem
+Hero führt ins vollständige Register. Der Hero muss sie nicht wiederholen; er muss
+nur sagen, dass es sie gibt. Der Vorspann endet deshalb mit einer **prüfbaren
+Zusage** statt mit einer Berufung:
+
+> Dein Plan entsteht aus **Trainingsforschung**, nicht aus Bauchgefühl —
+> zugeschnitten auf dein Ziel, deine Zeit und deine Erfahrung.
+> **Jede Empfehlung kannst du bis zur Studie zurückverfolgen.**
+
+Der Aufbau ist damit sauber gestaffelt: **Versprechen** (Hero) → **Beleg,
+antippbar** (Kachel, direkt an der Falz sichtbar) → **Register** (vollständig,
+57 Arbeiten). Ungenutztes CSS der Herkunftszeile entfernt. Hero 624 → 601 px,
+weiterhin eine Zahl und null Fachkürzel.
+
+Version aktuell **v62** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
