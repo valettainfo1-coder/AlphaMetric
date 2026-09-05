@@ -641,6 +641,18 @@ await page.evaluate(() => { S.tier = 'elite'; S.tourDone = true; S.seenCatalog =
    geprueft werden, sonst driften die hinteren Schirme wieder ab. Genau dort
    standen "Protein-Adhaerenz", "Konfidenz steigt mit jeder Session",
    "Rezept-Alchemist" und "Stoffwechsel-Zwilling". */
+/* Der Trichter gehoert dazu. Er war bis hierher NIE geprueft — und genau dort
+   stand noch "Deine Engine rechnet · Stoffwechsel-Engine laeuft", also im ersten
+   Bildschirm, den ein Neukunde ueberhaupt sieht. Ein Waechter, der nur die
+   Schirme nach der Anmeldung kennt, prueft die Sprache am falschen Ende. */
+await page.evaluate(() => {
+  S.currentUser = 't@t.de'; S.tier = 'pro'; S.screen = 'onboarding'; S.step = 0; S.a = {};
+  S.profile = null; S.acts = null; S.actId = null; save(); render();
+});
+await page.waitForTimeout(500);
+await deutschCheck('der Trichter (erster Schritt)', () => page.evaluate(() => document.body.innerText));
+await page.evaluate(() => { S.screen = 'app'; save(); render(); });
+await page.waitForTimeout(400);
 for (const t of ['home', 'train', 'analytics', 'nutrition', 'coach', 'profile', 'pricing', 'features']) {
   await page.evaluate((t) => { S.tab = t; save(); render();
     document.querySelectorAll('#root .an-grp').forEach(d => d.open = true); }, t);

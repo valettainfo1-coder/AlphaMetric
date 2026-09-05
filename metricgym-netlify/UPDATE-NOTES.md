@@ -1926,7 +1926,7 @@ Analytics schärfen sich", „beruht auf 33 Sessions", „Protein-Streak", „Vo
 Foto-Logging", „Early Access auf neue Engine-Module", „Level & Equipment". Ohne
 die Prüfung über ALLE Tabs wären genau die hinteren Schirme wieder abgedriftet.
 
-Version aktuell **v55** — Nutzer bekommen Updates beim nächsten Besuch
+Version aktuell **v56** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

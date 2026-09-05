@@ -9013,7 +9013,7 @@ const STEPS=[
   {id:"injury",q:"Verletzungen oder Einschränkungen?",hint:"Optional — riskante Übungen werden im Plan markiert und Alternativen vorgeschlagen.",type:"multi",key:"injuries",max:3,skip:true,
    opts:[["knee","Knie",""],["back","Rücken / LWS",""],["shoulder","Schulter",""]]},
   {id:"days",q:"Trainingstage pro Woche",hint:"Wie viele Tage pro Woche willst du trainieren?",type:"cells",key:"days",opts:[2,3,4,5,6],unit:"Tage"},
-  {id:"split",q:"Wie soll dein Plan aufgeteilt sein?",hint:"Wähl deinen Split — oder lass die Engine die beste Aufteilung für dich finden.",type:"single",key:"split",
+  {id:"split",q:"Wie soll dein Plan aufgeteilt sein?",hint:"Wähl deine Aufteilung — oder lass METRICGYM die beste für dich finden.",type:"single",key:"split",
    opts:[["auto","Für mich optimieren ★","Empfohlen — beste Aufteilung für deine Tage, Ziele & Erholung"],["full","Ganzkörper","Jede Einheit trifft den ganzen Körper. Top für 2–3 Tage & Einsteiger — hohe Frequenz, viel Erholung"],["ul","Ober- / Unterkörper","Bester Allrounder: jede Muskelgruppe 2×/Woche. Ideal bei 4 Tagen — der Sweet Spot für Muskelaufbau"],["ppl","Push / Pull / Beine","Drücken · Ziehen · Beine klar getrennt. Viel Volumen pro Gruppe — ideal bei 5–6 Tagen"],["arnold","Arnold-Split","Brust & Rücken · Schultern & Arme · Beine. Antagonisten gepaart = mehr Pump. Ab 3 Tagen"],["bro","Bro-Split","Eine Muskelgruppe pro Tag = maximaler Fokus & Volumen. Klassisch & motivierend. Ab 5 Tagen"]]},
   {id:"time",q:"Wie viel Zeit pro Einheit?",hint:"Bestimmt mit, wie viele Übungen sinnvoll in deine Session passen — mehr Zeit = mehr Volumen, weniger Zeit = kompakter & effizienter.",type:"cells",key:"sessionTime",opts:[30,45,60,75,90],unit:"Min"},
   {id:"equipment",q:"Wo trainierst du?",hint:"Dein Plan enthält nur Übungen, die du wirklich machen kannst.",type:"single",key:"equipment",
@@ -10669,7 +10669,7 @@ function renderHome(){
     <p class="xs t3" style="line-height:1.55">Die Projektion ändert sich, sobald sich dein Verhalten ändert — sie zeigt die Bahn, auf der du <i>gerade</i> bist, nicht ein fixes Schicksal.</p>`);
   A.howItWorks=()=>modal(`<p class="ct">${icon("brain",14)} So funktioniert METRICGYM</p>
     ${[["1. Du loggst — kurz und ehrlich","Training, Mahlzeiten und dein Tages-Status. Per Tippen, Sprechen oder Foto — keine 10 Sekunden."],
-       ["2. Die Engine rechnet","Belastung, Erholung und Fortschritt — aus deinen echten Zahlen. Zu jeder Aussage steht dabei, wie sicher sie ist."],
+       ["2. METRICGYM rechnet","Belastung, Erholung und Fortschritt — aus deinen echten Zahlen. Zu jeder Aussage steht dabei, wie sicher sie ist."],
        ["3. Dein Plan passt sich an","Gewichte, Sätze und Erholungswochen ändern sich automatisch — dein Plan wird mit jeder Session präziser."]]
       .map(([t,b])=>`<p class="sm mb4" style="font-weight:600">${t}</p><p class="sm t2 mb12" style="line-height:1.55">${b}</p>`).join("")}
     <button class="btn ghost" style="min-height:36px" onclick="overlay.innerHTML='';S.tab='features';save();render();">Alle Funktionen ansehen</button>`);
@@ -12245,10 +12245,10 @@ function firstGenesis(run){
   const a=S.a||{};
   const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const lanes=[
-    ["activity","Stoffwechsel-Engine", "Grundumsatz, Aktivität, Zielkalorien", 1900],
-    ["dumbbell","Trainings-Engine",    "112 Übungen · "+(EQ_LABEL[a.equipment]||"Gym")+" · "+(a.days||4)+" Tage", 2600],
-    ["chart",   "Volumen-Engine",      "MEV–MRV je Muskelgruppe kalibriert", 2250],
-    ["utensils","Ernährungs-Engine",   "Makros auf dein Ziel gerechnet", 1600],
+    ["activity","Stoffwechsel", "Grundumsatz, Aktivität, Zielkalorien", 1900],
+    ["dumbbell","Trainingsplan",    "112 Übungen · "+(EQ_LABEL[a.equipment]||"Gym")+" · "+(a.days||4)+" Tage", 2600],
+    ["chart",   "Volumen-Korridor",      "MEV–MRV je Muskelgruppe kalibriert", 2250],
+    ["utensils","Ernährung",   "Makros auf dein Ziel gerechnet", 1600],
   ];
   // Echte Belege — genau die, auf die sich die Engine stützt.
   const QUELLEN=[
@@ -12267,7 +12267,7 @@ function firstGenesis(run){
 
   overlay.innerHTML=`<div class="genesis" id="${gid}" role="status" aria-live="polite">
     <div class="gn-orb" aria-hidden="true">${rauchkreis(104)}</div>
-    <p class="gn-title">Deine Engine rechnet</p>
+    <p class="gn-title">METRICGYM rechnet</p>
     <div class="gn-lanes">
       ${lanes.map(([ic,nm,sub,ms],i)=>`<div class="gn-lane" style="animation-delay:${i*130}ms">
         <div class="row"><span class="nm">${icon(ic,13)} ${nm}</span><span class="pct">läuft</span></div>
@@ -12360,7 +12360,7 @@ function newTrainingBlock(){
 }
 A.newBlock=()=>{ let info="Alle Übungen im Fortschritt — Auswahl bleibt";
   try{ const an=blockAnalysis(); if(an.stagnant.length)info=an.stagnant.length+" Übung"+(an.stagnant.length>1?"en":"")+" stagniert → wird getauscht"; if(an.medRpe>=9)info+=" · RPE hoch → Start leichter"; }catch(e){}
-  planGenesis(newTrainingBlock,{title:"Engine baut Block "+((S.blockNum||1)+1),blockInfo:info}); };
+  planGenesis(newTrainingBlock,{title:"Block wird gebaut "+((S.blockNum||1)+1),blockInfo:info}); };
 // Long-Press-Tausch: gedrückt halten öffnet das Alternativen-Menü, kurzer Tap die Details.
 A.lpStart=(key,idx)=>{ lpFired=false; clearTimeout(lpTimer); lpTimer=setTimeout(()=>{lpFired=true; openSwapSheet(key,idx);},500); };
 A.lpEnd=()=>clearTimeout(lpTimer);
