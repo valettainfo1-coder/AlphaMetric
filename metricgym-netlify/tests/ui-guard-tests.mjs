@@ -678,7 +678,12 @@ await page.evaluate(() => { localStorage.clear(); });
 await page.reload({ waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => typeof S !== 'undefined' && typeof render === 'function', null, { timeout: 20000 });
 await page.waitForTimeout(1200);
-const LESE_SEL = ['.lp-eyebrow', '.lp-h', '.lp-lead', '.lp-beleg-k', '.lp-beleg-q'];
+/* Nur noch HERO-Elemente. Der Beweis-Block ist aus dem Hero heraus in den
+   Abschnitt „So funktioniert das" gewandert; seine Selektoren treffen jetzt
+   Elemente weit unterhalb der Falz, deren Koordinaten bei Scroll 0 nichts mit
+   dem zu tun haben, was der Nutzer sieht. Ein Test, der ins Leere misst, ist
+   schlimmer als keiner. */
+const LESE_SEL = ['.lp-hero .lp-eyebrow', '.lp-hero .lp-h', '.lp-hero .lp-lead'];
 const boxen = await page.evaluate((SEL) => SEL.map(s => { const e = document.querySelector(s); if (!e) return null;
     const r = e.getBoundingClientRect(); const cs = getComputedStyle(e);
     return { s, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height),

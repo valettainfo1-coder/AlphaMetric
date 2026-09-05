@@ -1897,7 +1897,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     /* FESTER Radius, kein Prozentwert: "44% / 36%" macht aus dem Rechteck wieder
        eine Ellipse, deren Ecken genau die unterste Zeile freigeben — der
        Vorspann fiel damit auf 2,5:1. */
-    inset:-13% -10%; border-radius:34px;
+    inset:-16% -10%; border-radius:34px;
     background:rgba(8,10,14,.93); filter:blur(24px);}
   /* Zusaetzlich ein weicher Schattenrand direkt an der Schrift. Er kostet auf
      dunklem Grund optisch nichts, haelt aber die Buchstabenkanten sauber, wenn
@@ -8363,42 +8363,25 @@ function renderLanding(){
     <section class="lp-hero" style="--par:0px">
       <canvas class="feld" id="feld-lp" aria-hidden="true"></canvas>
       <div class="lp-herocopy">
-        ${/* Wording aus KUNDENSICHT, nicht aus Entwicklersicht. Zwei Fassungen
-             sind vorher gescheitert:
-               "Rate nicht, ob dein Training wirkt" — eine Wirkung, die jede App
-               verspricht; der Unterschied blieb unausgesprochen.
-               "Jede Zahl hat einen Beleg" / "mit offener Rechnung" — beides im
-               Alltagsdeutsch falsch besetzt: ein "Beleg" ist der Kassenbon, eine
-               "offene Rechnung" eine ungetilgte Schuld. Sprache aus der Buchhaltung.
-             Jetzt: die Schlagzeile ist ein Versprechen in Alltagssprache, der
-             Vorspann stellt die Frage, die im Gym wirklich im Kopf ist, und der
-             Beweis darunter beantwortet sie. Frage → Antwort → Quelle. */""}
-        ${/* Die Bühne hängt am TEXTBLOCK, nicht an Prozentwerten des Hero. Fünf
-             Versuche mit festen Prozenten sind gescheitert: mal war die Schrift
-             lesbar und das Band unsichtbar, mal umgekehrt — je nachdem, wo das
-             wandernde Licht gerade stand. Ein Schleier, der am Text klebt, kann
-             das Licht nicht verfehlen, egal wohin es zieht. */""}
+        ${/* KEINE ZAHL IM HERO. Das ist die Korrektur eines Denkfehlers, nicht
+             eine weitere Textrunde:
+
+             Auf die Frage "was ist der USP?" lautete die Antwort "die Zahlen sind
+             nachpruefbar" — und danach wurde GENAU DIESER SATZ optimiert. Nur ist
+             Nachpruefbarkeit ein Reason to Believe, kein Produkt. Die Seite
+             handelte damit von Erkenntnistheorie ("woher weisst du, dass das
+             stimmt?") fuer ein Produkt, das Menschen wegen Veraenderung kaufen.
+             Im Hero standen zuletzt 16, 25, 57, 12, 2-4, 16/20, MEV 10, MRV 20
+             und eine Jahreszahl. Das liest sich wie ein Rechenwerkzeug.
+
+             Die Wissenschaft ist ab jetzt VERFUEGBAR, nicht VORANGESTELLT: der
+             Beweis-Block samt "Warum 16 Saetze" steht im Abschnitt "So
+             funktioniert das", also dort, wo jemand die Frage wirklich stellt —
+             nachdem er weiss, was er davon hat. */""}
         <div class="lp-textbuehne">
           <p class="lp-eyebrow">Krafttraining · Abnehmen · Ausdauer</p>
-          <h1 class="lp-h">Jede Zahl hat<br><span class="volt-txt">einen Grund.</span></h1>
-          ${/* ERGEBNIS zuerst, Mechanismus danach. Vorher stand im Hero kein einziges
-     Ergebnis — kein Kilo, keine Kraftzahl, kein Zeitraum. Damit verkaufte die
-     Seite den BEWEIS ("jede Zahl hat einen Grund") statt den NUTZEN, und
-     niemand wacht morgens auf und will Zitate.
-     Die Spanne stammt aus derselben Rechnung wie der Rechner weiter unten
-     (Magermasse-Aufbau in 12 Wochen, nach Trainingserfahrung gestaffelt) und
-     traegt deshalb das Wort "realistisch" statt eines Versprechens. */""}
-        <p class="lp-lead" style="max-width:400px;margin:0 auto 16px"><b style="color:var(--t1)">Realistisch sind +2–4 kg Muskeln in 12 Wochen.</b> Warum dafür 16 Sätze Brust — und nicht 25? Die Antwort steht daneben. Aus ${quellenZahl()} wissenschaftlichen Quellen, nicht aus dem Bauch.</p>
-        </div>
-
-        <!-- DER BELEG: das Versprechen wird hier eingelöst, nicht behauptet.
-             Kein Werbebild — corridorHTML() ist exakt die Komponente, die in der
-             App über deinem Trainingsplan steht. Ein Blick: Zahl, Korridor,
-             Quelle. Genau das kann kein Wettbewerber per Textzeile kopieren. -->
-        <div class="lp-beleg">
-          <p class="lp-beleg-k">So steht es in der App</p>
-          ${corridorHTML([{g:"Brust · deine Woche",tot:16,mev:10,mrv:20}])}
-          <p class="lp-beleg-q">Unter 10 Sätzen fehlt der Wachstumsreiz, über 20 kommt die Erholung nicht mehr nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor</span></p>
+          <h1 class="lp-h">Trainiere mit Plan.<br><span class="volt-txt">Nicht mit Hoffnung.</span></h1>
+          <p class="lp-lead" style="max-width:392px;margin:0 auto 20px">METRICGYM baut deinen Trainingsplan aus dem, was zu dir passt — Ziel, Zeit, Erfahrung. Und zieht ihn Woche für Woche nach, während du dich veränderst.</p>
         </div>
 
         <div class="lp-cta-row" style="display:flex;flex-direction:column;gap:8px;align-items:center">
@@ -8434,6 +8417,23 @@ function renderLanding(){
     </section>
 
     <!-- (Analytics-Vorschau entfernt — doppelte sich mit dem Feature-Showcase; Landing-Straffung) -->
+
+    ${/* HIER gehoert der Beweis hin, nicht in den Hero. Wer bis hier gescrollt
+         hat, kennt sein moegliches Ergebnis aus dem Rechner darueber — jetzt
+         kommt die Frage "und warum soll ausgerechnet das funktionieren?" von
+         selbst. Dieselbe Karte, dieselbe Zeile, 800 Pixel spaeter: aus einer
+         Behauptung, die niemand bestellt hat, wird eine Antwort auf eine Frage,
+         die der Leser gerade hat. */""}
+    <section class="lp-sec" style="padding-top:0">
+      <p class="lp-eyebrow">So funktioniert das</p>
+      <h2 class="lp-h2 mb8">Warum 16 Sätze Brust —<br>und nicht 25?</h2>
+      <p class="sm t2 mb16" style="line-height:1.6">Weil dein Körper eine Spanne hat, in der er wächst. Darunter passiert zu wenig, darüber kommt die Erholung nicht mehr nach. METRICGYM hält jeden Muskel in dieser Spanne — und sagt dir bei jeder Zahl, worauf sie beruht.</p>
+      <div class="lp-beleg" style="margin-left:0">
+        <p class="lp-beleg-k">So steht es in der App</p>
+        ${corridorHTML([{g:"Brust · deine Woche",tot:16,mev:10,mrv:20}])}
+        <p class="lp-beleg-q">Unter 10 Sätzen fehlt der Wachstumsreiz, über 20 kommt die Erholung nicht mehr nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor</span></p>
+      </div>
+    </section>
 
     ${renderStimmen()}
 
@@ -8564,7 +8564,7 @@ function renderLanding(){
        Hinter Glas gilt das nicht: dort passierten die Texte die Pruefung mit
        5,4 und 8,1 zu 1, WAEHREND das Licht als Farbe durchscheint. Genau dafuer
        ist Glas da. */
-    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.50, achse:0.58}); }catch(e){}
+    try{ feldStart(document.getElementById("feld-lp"),{koharenz:0.50, achse:0.72}); }catch(e){}
   },60);
 }
 /* ===== LANDING-FX: Scroll- & Bühnen-Choreografie — idempotent pro Render =====

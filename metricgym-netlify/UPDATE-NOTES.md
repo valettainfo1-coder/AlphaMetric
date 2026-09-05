@@ -1964,7 +1964,48 @@ Cloud-Sync), Stripe ist eine Attrappe („Kein echtes Payment" steht so im Code)
 `[BETREIBER]`-Platzhalter im Impressum. Das Produkt kann derzeit kein Geld
 annehmen und keine Daten über Geräte halten.
 
-Version aktuell **v57** — Nutzer bekommen Updates beim nächsten Besuch
+## §77 — Der Denkfehler hinter dem Wording
+
+**Rückmeldung: „Man denkt, es ist eine Mathematik-App."** Gemessen im Hero vor
+dieser Runde: 16, 25, 57, 12, 2–4, 16/20, MEV 10, MRV 20, 2017 — plus ein
+Balkendiagramm und ein Literaturzitat. Der Vorwurf war nicht Geschmack.
+
+**Die Ursache lag Runden zurück.** Auf die Frage „was ist der USP?" lautete die
+Antwort „die Zahlen sind nachprüfbar" — und danach wurde genau *dieser Satz*
+optimiert, Runde um Runde. Nur ist Nachprüfbarkeit ein **Reason to Believe**,
+kein Produkt. Ich hatte den Beweisapparat zur Marke gemacht.
+
+Ergebnis: eine Seite über **Erkenntnistheorie** („woher weißt du, dass das
+stimmt?") für ein Produkt, das Menschen wegen **Veränderung** kaufen. Niemand
+will wissen, warum 16 Sätze. Man will den Körper. Das *Warum* ist Rückversicherung
+— es wirkt erst, wenn jemand das Ergebnis schon will.
+
+Oura führt nie mit „unser Sensor tastet mit 250 Hz gegen Polysomnografie
+validiert ab". Die Wissenschaft ist dort **verfügbar**, nicht **vorangestellt**.
+
+**Der Hero trägt jetzt keine einzige Fachzahl:**
+
+> KRAFTTRAINING · ABNEHMEN · AUSDAUER
+> **Trainiere mit Plan. Nicht mit Hoffnung.**
+> METRICGYM baut deinen Trainingsplan aus dem, was zu dir passt — Ziel, Zeit,
+> Erfahrung. Und zieht ihn Woche für Woche nach, während du dich veränderst.
+
+Gemessen: **eine** Zahl im ganzen Hero (die 60 Sekunden im Kleingedruckten),
+**null** Fachkürzel. Hero 759 → **584 px**, damit sind erstmals *beide* Knöpfe
+über der Falz.
+
+**Die Lieblingszeile wurde nicht gelöscht, sondern versetzt.** „Warum 16 Sätze
+Brust — und nicht 25?" ist jetzt die Überschrift des Abschnitts *So funktioniert
+das*, direkt hinter dem Rechner. Dieselbe Karte, dieselbe Zeile, 800 Pixel
+später: aus einer Behauptung, die niemand bestellt hat, wird die Antwort auf eine
+Frage, die der Leser an dieser Stelle wirklich hat.
+
+**Zwei Nachjustierungen, die daraus folgten:** das Lichtband liegt jetzt auf 0,72
+statt 0,58 (die Karte, um die es herumlief, ist weg), und der Lesbarkeits-Wächter
+prüft nur noch Hero-Elemente — seine alten Selektoren trafen nach dem Umbau
+Elemente weit unterhalb der Falz und hätten ins Leere gemessen.
+
+Version aktuell **v58** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
