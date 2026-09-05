@@ -2005,7 +2005,29 @@ statt 0,58 (die Karte, um die es herumlief, ist weg), und der Lesbarkeits-Wächt
 prüft nur noch Hero-Elemente — seine alten Selektoren trafen nach dem Umbau
 Elemente weit unterhalb der Falz und hätten ins Leere gemessen.
 
-Version aktuell **v58** — Nutzer bekommen Updates beim nächsten Besuch
+## §78 — Die Wissenschaft zurück in den Vorspann, ohne die Zahlendichte
+
+Der Vorspann war nach §77 rein funktional („Ziel, Zeit, Erfahrung") und ließ die
+Herkunft weg. Jetzt greift er sie auf — als **Qualität**, nicht als Rechnung:
+
+> **Trainiere mit Plan. Nicht mit Hoffnung.**
+> Dein Plan entsteht aus **belegter Trainingsforschung**, nicht aus Bauchgefühl
+> — zugeschnitten auf dein Ziel, deine Zeit und deine Erfahrung. Und er zieht
+> mit, während du dich veränderst.
+
+**Der Unterschied zur verworfenen Fassung ist die Dichte, nicht das Thema.**
+Vorher standen neun Zahlen und zwei Fachkürzel im Hero. Jetzt steht die Herkunft
+in Alltagssprache, und die genaue Zahl (57 Quellen) sitzt eine Kachel tiefer, wo
+sie antippbar ist und ins Register führt: **Gütesiegel im Hero, Beleg direkt
+darunter.** Gemessen unverändert: eine Zahl im ganzen Hero (die 60 Sekunden im
+Kleingedruckten), null Fachkürzel, beide Knöpfe über der Falz.
+
+**Eigentor unterwegs korrigiert:** die erste Fassung begann mit „**Er** entsteht
+aus…". Bezugswort wäre „Plan" aus der Schlagzeile — dort steht es aber adverbial
+(„mit Plan"), also ohne sauberen Bezug. Genau die Sorte loses Pronomen, die in
+§75 an „Den Rest rechnet sie" bemängelt wurde. Ausgeschrieben zu „Dein Plan".
+
+Version aktuell **v59** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
