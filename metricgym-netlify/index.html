@@ -1844,10 +1844,23 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Haupt-CTA trotzdem ueber der Falz bleiben (gemessen auf iPhone 13, 664 px
      sichtbare Hoehe). Ein Beweis, der den Startknopf verdraengt, kostet mehr
      als er bringt. */
-  .lp-hero{padding:64px 20px 56px; text-align:center; position:relative; overflow:hidden;
+  /* Polster oben deutlich knapper: seit der Hero ohne Beweis-Karte auskommt, ist
+     sein Inhalt 175 px kuerzer — die 64 px oben liessen dadurch 77 px Leere
+     zwischen Navigation und Kickerzeile stehen, in der nichts passiert ausser
+     wanderndem Licht. Unten darf mehr Luft bleiben: dort liegt das Band. */
+  .lp-hero{padding:22px 20px 56px; text-align:center; position:relative; overflow:hidden;
     min-height:min(88vh,720px); display:flex; align-items:center; justify-content:center;}
   .feld{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;
     pointer-events:none;}
+  /* Der obere Rand des Feldes wird ausgeblendet. Rueckmeldung: "ueber der
+     Ueberschrift zu viel Platz, da passiert buntes" — und genau so war es: seit
+     der Hero kuerzer ist, steht zwischen Navigation und Kickerzeile ein leeres
+     Band, in dem nur noch wanderndes Licht zu sehen war. Licht ohne Inhalt
+     darunter liest sich nicht als Atmosphaere, sondern als Stoerung.
+     Die Maske laesst es erst dort beginnen, wo auch Text steht. */
+  .lp-hero .feld{
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 9%, #000 22%);
+    mask-image:linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 9%, #000 22%);}
   /* Das Feld läuft nach unten aus, damit der Hero nicht als Kasten endet. */
   /* NUR noch die Kante zum Seitenhintergrund. Vorher dunkelte dieser Verlauf ab
      62 % Hoehe ab — also genau dort, wo auch die Textbuehne liegt. Zwei Abdunkler

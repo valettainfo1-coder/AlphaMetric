@@ -2027,7 +2027,33 @@ aus…". Bezugswort wäre „Plan" aus der Schlagzeile — dort steht es aber ad
 („mit Plan"), also ohne sauberen Bezug. Genau die Sorte loses Pronomen, die in
 §75 an „Den Rest rechnet sie" bemängelt wurde. Ausgeschrieben zu „Dein Plan".
 
-Version aktuell **v59** — Nutzer bekommen Updates beim nächsten Besuch
+## §79 — Der leere Streifen über der Schlagzeile
+
+Rückmeldung: „Über der Überschrift zu viel Platz, da passiert buntes." Beides
+stimmte, und beides hatte dieselbe Ursache: seit der Beweis-Block den Hero
+verlassen hat (§77), ist dessen Inhalt **175 px kürzer** — das Polster von 64 px
+stammte aber noch aus der Zeit davor.
+
+**Gemessen:** zwischen Unterkante Navigation (65 px) und Kickerzeile (142 px)
+standen **77 px Leere**. Darin passierte genau eine Sache: das wandernde Licht.
+Licht ohne Inhalt darunter liest sich nicht als Atmosphäre, sondern als Störung
+— der zweite Teil der Rückmeldung war also kein Nebensatz, sondern der eigentliche
+Punkt.
+
+**Zwei Eingriffe:**
+- Polster oben **64 → 22 px**. Weniger als erwartet kam an: die Flex-Zentrierung
+  im Hero verteilt den freigewordenen Platz zur Hälfte wieder nach oben. Von
+  77 px blieben so **56 px** — das ist für einen Hero unter einer 65-px-Leiste
+  ein normales Maß, nicht mehr ein leeres Feld.
+- **Maske auf dem Lichtfeld:** das Band beginnt jetzt erst dort, wo auch Text
+  steht (Ausblendung über die obersten 22 % des Heros). Der Streifen zwischen
+  Navigation und Kickerzeile ist damit ruhig schwarz.
+
+Unten bleibt bewusst Luft: dort liegt das Band, und dort stört es nichts.
+Kontrast unverändert (Kicker 9,4 · Schlagzeile 17,6 · Vorspann 12,4), beide
+Knöpfe weiter über der Falz.
+
+Version aktuell **v60** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
