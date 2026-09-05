@@ -22,8 +22,26 @@ Posten ist nicht Arbeit, sondern Stripes Identitätsprüfung.
 **Wer:** Betreiber · **Dauer:** ~30 Min · **Blockiert:** alles Weitere
 
 Das bisherige Projekt (`nsdziafvhhzuuhrctozl.supabase.co`) ist nicht erreichbar.
-Neu anlegen, dann `SUPABASE_SETUP.md` Abschnitte **2, 3, 4, 6, 7, 8** im
-SQL-Editor ausführen. Danach in `config.js`:
+Neu anlegen, dann **eine einzige Datei** einfügen:
+
+> Supabase → SQL-Editor → Inhalt von **`supabase/schema.sql`** einfügen → Run
+
+Diese Datei ersetzt das Zusammensuchen aus `SUPABASE_SETUP.md` (dort standen die
+Blöcke über zehn Abschnitte verteilt — jede Auslassung war ein stiller Fehler).
+Sie ist gegen PostgreSQL 16 geprüft, nicht nur gelesen:
+
+* läuft aus einer leeren Datenbank fehlerfrei durch
+* `my_tier()` in **8 Fällen** korrekt: kein Abo · aktiv · Testphase · gekündigt ·
+  Zeitraum abgelaufen · **ohne Enddatum** (deckt Stripes API-Änderung ab) ·
+  Gründerkonto · Gründerkonto in Großbuchstaben
+* **5 Angriffe abgewehrt:** fremde Daten lesen, sich selbst ELITE eintragen,
+  bestehendes Abo hochstufen, Gründerliste lesen, sich dort eintragen
+
+Am Ende druckt sie **14 Kontrollzeilen**. Steht überall ✓, ist der Schritt fertig
+— du musst nichts von Hand nachsehen. Vergiss den auskommentierten Block **4b**
+nicht: dort trägst du deine eigene E-Mail als dauerhaftes ELITE-Konto ein.
+
+Danach in `config.js`:
 
 ```js
 supabaseUrl: "https://DEINPROJEKT.supabase.co",
