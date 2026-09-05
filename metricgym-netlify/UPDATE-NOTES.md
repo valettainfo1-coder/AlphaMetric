@@ -1926,7 +1926,45 @@ Analytics schärfen sich", „beruht auf 33 Sessions", „Protein-Streak", „Vo
 Foto-Logging", „Early Access auf neue Engine-Module", „Level & Equipment". Ohne
 die Prüfung über ALLE Tabs wären genau die hinteren Schirme wieder abgedriftet.
 
-Version aktuell **v56** — Nutzer bekommen Updates beim nächsten Besuch
+## §76 — Die Produktkritik abgearbeitet
+
+**1. Ergebnis vor Beweis.** Im Hero stand kein einziges Ergebnis — kein Kilo,
+keine Kraftzahl, kein Zeitraum. Die Seite verkaufte den *Reason to Believe*
+(„jede Zahl hat einen Grund") statt den *Reason to Buy*. Jetzt führt der
+Vorspann mit **„Realistisch sind +2–4 kg Muskeln in 12 Wochen"** — dieselbe
+Spanne, die der Rechner weiter unten ausgibt, und deshalb mit „realistisch"
+statt als Versprechen. Reihenfolge jetzt: Ergebnis → Mechanismus → Beweis.
+
+**2. Landing von 10 auf 7 Abschnitte.** Gemessen: 8,3 → **6,8 Bildschirme**,
+690 → 599 Wörter. Entfallen sind „So entsteht dein Plan" und „So funktioniert's"
+— beide erzählten denselben Prozess wie der Feature-Abschnitt, nur abstrakter.
+Jeder zusätzliche Abschnitt ist eine Ausstiegsgelegenheit.
+
+**3. Der Rechner von Platz 6 auf Platz 3.** „Dein Potenzial" macht das Ergebnis
+persönlich und konkret — das stärkste Stück der Seite lag fünf Bildschirme tief.
+
+**4. Sozialbeweis: Platz gebaut, absichtlich leer.** Die Seite hatte null
+Kundenstimmen, null Nutzerzahl, null Bewertung — die gesamte Beweisführung waren
+57 Quellen. Die belegen, dass die METHODE stimmt, nicht dass sie BEI MIR wirkt.
+`STIMMEN` ist verdrahtet und erscheint automatisch ab zwei echten Einträgen.
+**Erfunden wird hier nichts:** eine App, die mit Nachprüfbarkeit wirbt, darf ihre
+wichtigste Behauptung nicht fälschen. Die Regeln stehen im Code daneben.
+
+**5. ELITE ehrlich positioniert.** Die Liste las sich wie ein halbherziges 2×
+(Snapshots, längerer Verlauf, 8 statt 5 Erkenntnisse). Statt Wert zu erfinden
+sagt sie jetzt, für wen der Tarif ist: *„Für alle, die tief reingehen — und das
+Projekt tragen."* PERFORMANCE bleibt die hervorgehobene Wahl.
+
+**6. Empfehlungsprogramm nach hinten.** Es war die zweite Sektion im Profil,
+direkt nach dem eigenen Konto. Eine Empfehlungsschleife braucht aber zuerst
+Nutzer, die etwas zu empfehlen haben — vor dem Start belegt sie nur Platz.
+
+**Nicht behoben, weil nicht von mir lösbar:** Supabase tot (keine KI, kein
+Cloud-Sync), Stripe ist eine Attrappe („Kein echtes Payment" steht so im Code),
+`[BETREIBER]`-Platzhalter im Impressum. Das Produkt kann derzeit kein Geld
+annehmen und keine Daten über Geräte halten.
+
+Version aktuell **v57** — Nutzer bekommen Updates beim nächsten Besuch
 automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,

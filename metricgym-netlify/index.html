@@ -8304,6 +8304,40 @@ function renderQuellen(){
 }
 A.quellen=()=>{ modal(`<div style="max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch">${renderQuellen()}</div>`); };
 
+/* ============================ ECHTE ERGEBNISSE ============================
+   Die Landing hat null Sozialbeweis: keine Kundenstimme, keine Nutzerzahl,
+   keine Bewertung. Die gesamte Beweisfuehrung sind 57 wissenschaftliche
+   Quellen — die belegen aber, dass die METHODE stimmt, nicht dass sie BEI MIR
+   wirkt. Im Consumer-Bereich schlaegt Ergebnisbeweis den Autoritaetsbeweis.
+
+   Dieser Abschnitt bleibt ABSICHTLICH leer ausgeliefert. Erfundene Stimmen
+   waeren genau die Sorte Beleg, die das ganze USP-Fundament zerstoert, sobald
+   sie auffliegt — eine App, die mit Nachpruefbarkeit wirbt, darf ihre
+   wichtigste Behauptung nicht faelschen.
+
+   ZUM AKTIVIEREN: echte Eintraege hier ergaenzen. Der Abschnitt erscheint
+   automatisch, sobald mindestens zwei drinstehen.
+     { name:"Lukas M.", dauer:"14 Wochen", zahl:"+3,1 kg",
+       label:"Magermasse", text:"...", beleg:"gemessen per Caliper" }
+   Regeln fuer die Eintraege: nur Personen, die zugestimmt haben; nur Zahlen,
+   die aus der App oder einer echten Messung stammen; kein Vorher/Nachher ohne
+   Einwilligung. Ohne diese drei Punkte lieber leer lassen. */
+const STIMMEN=[];
+function renderStimmen(){
+  if(!Array.isArray(STIMMEN)||STIMMEN.length<2) return "";
+  return `<section class="lp-sec" style="padding-top:0">
+    <p class="lp-eyebrow">Was dabei herauskam</p>
+    <h2 class="lp-h2 mb4">Nicht unsere Zahlen.<br>Ihre.</h2>
+    <p class="sm t2 mb12">Jede Zahl unten ist gemessen, nicht geschätzt.</p>
+    <div class="fh-row" style="padding-bottom:10px">
+      ${STIMMEN.map(x=>`<div class="lp-show">
+        <p class="hero-num" style="font-size:30px;line-height:1;color:var(--hl)">${x.zahl}</p>
+        <p class="xs t2" style="margin:2px 0 10px">${x.label} · ${x.dauer}</p>
+        <p class="sm" style="line-height:1.5">„${x.text}"</p>
+        <p class="xs t3" style="margin-top:8px">${x.name} · ${x.beleg}</p>
+      </div>`).join("")}
+    </div></section>`;
+}
 function renderLanding(){
   A.lpSet=(k,v)=>{
     LP[k]=(k==="days")?parseInt(v):v;
@@ -8347,7 +8381,14 @@ function renderLanding(){
         <div class="lp-textbuehne">
           <p class="lp-eyebrow">Krafttraining · Abnehmen · Ausdauer</p>
           <h1 class="lp-h">Jede Zahl hat<br><span class="volt-txt">einen Grund.</span></h1>
-          <p class="lp-lead" style="max-width:400px;margin:0 auto 16px">Warum 16 Sätze Brust — und nicht 25? Bei METRICGYM steht die Antwort daneben. Aus <b style="color:var(--t1)">${quellenZahl()} wissenschaftlichen Quellen</b>, nicht aus dem Bauch.</p>
+          ${/* ERGEBNIS zuerst, Mechanismus danach. Vorher stand im Hero kein einziges
+     Ergebnis — kein Kilo, keine Kraftzahl, kein Zeitraum. Damit verkaufte die
+     Seite den BEWEIS ("jede Zahl hat einen Grund") statt den NUTZEN, und
+     niemand wacht morgens auf und will Zitate.
+     Die Spanne stammt aus derselben Rechnung wie der Rechner weiter unten
+     (Magermasse-Aufbau in 12 Wochen, nach Trainingserfahrung gestaffelt) und
+     traegt deshalb das Wort "realistisch" statt eines Versprechens. */""}
+        <p class="lp-lead" style="max-width:400px;margin:0 auto 16px"><b style="color:var(--t1)">Realistisch sind +2–4 kg Muskeln in 12 Wochen.</b> Warum dafür 16 Sätze Brust — und nicht 25? Die Antwort steht daneben. Aus ${quellenZahl()} wissenschaftlichen Quellen, nicht aus dem Bauch.</p>
         </div>
 
         <!-- DER BELEG: das Versprechen wird hier eingelöst, nicht behauptet.
@@ -8381,6 +8422,21 @@ function renderLanding(){
       </div>
     </section>
 
+    <!-- INTERAKTIVER ZIEL-RECHNER -->
+    <section class="lp-sec" style="padding-top:0">
+      <div class="card" data-tone="hl">
+        <p class="lp-eyebrow" style="margin-bottom:8px">${icon("sparkle",13)} Dein Potenzial</p>
+        <h2 class="lp-h2" style="font-size:20px">Was in dir steckt — rechne nach.</h2>
+        <p class="sm t2 mb16">Stell Ziel, Tage und Erfahrung ein. Die Projektion reagiert live — ehrliche Bereiche aus Studien, keine Fantasiezahlen.</p>
+        <div id="lp-calc">${lpCalcInner()}</div>
+        <button class="btn volt mt16" onclick="A.toRegister()">Genau diesen Plan bekommen — kostenlos</button>
+      </div>
+    </section>
+
+    <!-- (Analytics-Vorschau entfernt — doppelte sich mit dem Feature-Showcase; Landing-Straffung) -->
+
+    ${renderStimmen()}
+
     <!-- LIVE-DEMO: die echte Muskel-Engine (Vorder-/Rückansicht) -->
     <section class="lp-sec" style="padding-top:0">
       <p class="lp-eyebrow">${icon("sparkle",12)} Der Beweis — live</p>
@@ -8388,29 +8444,6 @@ function renderLanding(){
       <p class="sm t2 mb12" style="max-width:340px;margin-left:auto;margin-right:auto">Kein Werbebild — das ist die echte Muskelkarte der App: Vorder- und Rückseite zeigen sofort, was jede Übung trifft.</p>
       <div class="card pad-s" style="max-width:400px; margin:0 auto">
         <div id="lp-anat">${lpAnatInner("Bankdrücken")}</div>
-      </div>
-    </section>
-
-    <!-- PLAN-BÜHNE: kompakt, läuft von selbst (ersetzt das leere Scroll-Pinning) -->
-    <section class="lp-story" id="lp-story" data-step="0">
-      <div class="lp-story-pin">
-        <p class="lp-eyebrow">${icon("sparkle",12)} So entsteht dein Plan</p>
-        <h2 class="lp-h2" id="lp-story-h" style="min-height:2.4em">Fünf Antworten.<br>Fertig ist dein Plan.</h2>
-        <div class="lp-phone">
-          <div class="lp-scene sc1">
-            <div class="chips" style="justify-content:center">${["Muskelaufbau","5 Tage","Gym · alle Geräte","75 Min","2–4 Jahre"].map((c,i)=>`<span class="chip" style="animation-delay:${i*120}ms">${c}</span>`).join("")}</div>
-            <p class="xs t2" style="text-align:center;margin-top:12px;line-height:1.55">Ziel, Erfahrung, Ausrüstung, Zeit —<br>mehr braucht es nicht.</p>
-          </div>
-          <div class="lp-scene sc2">
-            <div style="display:flex;justify-content:center;margin-bottom:16px">${rauchkreis(88)}</div>
-            ${[["grid","112 Übungen gescannt"],["activity","Volumen je Muskel kalibriert"],["undo","Schwer-/Volumen-Rotation gesetzt"]].map(([ic,t])=>`<div class="gn-step mini"><span class="gn-ic">${icon(ic,13)}</span><span class="gn-tx"><b>${t}</b></span><span class="gn-tick">✓</span></div>`).join("")}
-          </div>
-          <div class="lp-scene sc3">
-            ${[["Bankdrücken","4 × 6–10 · 150 s"],["Arnold Press","3 × 8–12"],["Kabel-Seitheben","2 × 12–20 · ⚡ Partials"]].map(([n,d])=>`<div class="gn-step mini"><span class="gn-tx"><b>${n}</b><i>${d}</i></span></div>`).join("")}
-            ${corridorHTML([{g:"Brust",tot:16,mev:10,mrv:20}])}
-          </div>
-        </div>
-        <div class="lp-dots"><button aria-label="Schritt 1" onclick="A.lpStep(0)"></button><button aria-label="Schritt 2" onclick="A.lpStep(1)"></button><button aria-label="Schritt 3" onclick="A.lpStep(2)"></button></div>
       </div>
     </section>
 
@@ -8470,32 +8503,6 @@ function renderLanding(){
          ["utensils","Ernährung in zehn Sekunden","Sprich oder tipp ganze Sätze — die Engine versteht „500 g Hähnchen und Reis“ samt Tippfehlern und rechnet Kalorien und Protein sofort."]]
         .map(([ic,t,b])=>`<div class="lp-pillar"><span class="ic">${icon(ic,22)}</span>
           <div><p style="font-weight:600;font-size:17px;margin-bottom:4px">${t}</p><p class="sm t2" style="line-height:1.55">${b}</p></div></div>`).join("")}
-      </div>
-    </section>
-
-    <!-- INTERAKTIVER ZIEL-RECHNER -->
-    <section class="lp-sec" style="padding-top:0">
-      <div class="card" data-tone="hl">
-        <p class="lp-eyebrow" style="margin-bottom:8px">${icon("sparkle",13)} Dein Potenzial</p>
-        <h2 class="lp-h2" style="font-size:20px">Was in dir steckt — rechne nach.</h2>
-        <p class="sm t2 mb16">Stell Ziel, Tage und Erfahrung ein. Die Projektion reagiert live — ehrliche Bereiche aus Studien, keine Fantasiezahlen.</p>
-        <div id="lp-calc">${lpCalcInner()}</div>
-        <button class="btn volt mt16" onclick="A.toRegister()">Genau diesen Plan bekommen — kostenlos</button>
-      </div>
-    </section>
-
-    <!-- (Analytics-Vorschau entfernt — doppelte sich mit dem Feature-Showcase; Landing-Straffung) -->
-
-    <!-- SO FUNKTIONIERT'S -->
-    <section class="lp-sec" style="padding-top:0">
-      <p class="lp-eyebrow">So einfach bleibt es</p>
-      <h2 class="lp-h2 mb16">Du trägst ein.<br>Dein Plan zieht nach.</h2>
-      <div class="lp-steps-grid">
-      ${[["Du trägst ein — in Sekunden","Training, Mahlzeiten, Tagesform. Tippen, sprechen oder fotografieren — schneller als jede Notiz-App."],
-         ["METRICGYM rechnet","Belastung, Erholung, Trend — aus deinen eigenen Zahlen. Zu jeder Aussage siehst du, worauf sie beruht."],
-         ["Dein Plan zieht nach","Gewichte, Sätze und Erholungswochen passen sich von selbst an. Jedes Training macht ihn genauer."]]
-        .map(([t,b],i)=>`<div class="lp-step"><span class="num">${i+1}</span>
-          <div><p style="font-weight:600;margin-bottom:2px">${t}</p><p class="sm t2" style="line-height:1.55">${b}</p></div></div>`).join("")}
       </div>
     </section>
 
@@ -15411,7 +15418,7 @@ function renderNutrition(){
         <div class="grid2 mt8"><button class="btn" onclick="A.manualCancel()">Abbrechen</button>
         <button class="btn volt" onclick="A.manualSave()">Speichern</button></div></div>`:""}</div></details>
     </div>
-    <div class="section"><span class="label sect-h">Was du heute geloggt hast</span>
+    <div class="section"><span class="label sect-h">Was du heute eingetragen hast</span>
 
     <div class="card"><div class="row mb8"><p class="ct" style="margin:0">${icon("droplet",14)} Wasser</p>
       <span class="metric sm ${waterMl>=2500?"volt-txt":"t2"}">${nf.format(waterMl/1000)} / 2,5 l</span></div>
@@ -15452,7 +15459,7 @@ function renderPricing(){
   const feats={
     free:["1 aktives Trainingsziel","Voller Trainingsplan + Wochenplan-Editor","Eintragen per Sprache und Foto, unbegrenzt","Tages-Check + Serie","1 Erkenntnis pro Tag","Dein Kraftfortschritt (1 Übung)","Datenexport (DSGVO) — immer inklusive"],
     pro:["Alles aus START, plus:","Bis zu 3 Ziele gleichzeitig, nach Wichtigkeit gewichtet","Alle Erkenntnisse (Fortschrittstempo, Ernährungs-Bilanz, Trainingsbelastung)","12-Wochen-Kraftprognose für alle Übungen","Vitamin- & Mineralstoff-Schätzung aus deinem Essen","Automatische Erholungswochen-Vorschläge","Vollständiger Wochenrückblick"],
-    elite:["Alles aus PERFORMANCE, plus:","Profil-Snapshots (Vorher/Nachher)","Erweiterter Coach-Verlauf (20 Nachrichten)","Bis zu 8 Erkenntnisse, auch aus kombinierten Daten","Neue Funktionen zuerst"],
+    elite:["Für alle, die tief reingehen — und das Projekt tragen","Alles aus PERFORMANCE","Bis zu 8 Erkenntnisse statt 5, auch aus kombinierten Daten","Vorher/Nachher-Aufnahmen im Profil","Coach erinnert sich an 20 statt 6 Nachrichten","Neue Funktionen zuerst"],
   };
   const b=S.billing||"yearly"; // Jahres-Anker als Default (Anchoring)
   A.billing=(x)=>{S.billing=x;save();render();};
@@ -16019,68 +16026,6 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
       <button class="btn mt8" style="white-space:nowrap" onclick="A.confirmRedoQuiz()">${icon("sparkle",15)} Quiz neu starten</button>
       <p class="xs t2 mt8" style="line-height:1.55">Ganzen Fragebogen erneut durchlaufen (Ziele, Equipment, Tage …) — der Plan wird komplett neu berechnet, deine Verläufe bleiben.</p>`):""}
     </div>
-    <div class="section"><span class="label sect-h">Empfehlen &amp; verdienen</span>
-
-    ${(()=>{
-      const cnt=S.referralCount||0, w=S.wallet||{available:0,pending:0,ledger:[],lifetimeEarned:0};
-      const rank=referralRank(cnt), next=nextReferralRank();
-      const span=next?(next.min-rank.min):1, prog=next?Math.min(100,Math.round((cnt-rank.min)/span*100)):100;
-      // Netzwerk-Visual: wachsender Kreis aus DIREKTEN Werbungen (einstufig — kein Downline-Verdienst).
-      const orbs=[...Array(Math.min(cnt,18))].map((_,i)=>`<span style="width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#A9C4DE,#6E93B8);box-shadow:0 0 7px rgba(110,147,184,.5);display:inline-block"></span>`).join("");
-      const ranks=REFERRAL_RANKS.map(r=>{
-        const at=cnt>=r.min, isCur=r.name===rank.name;
-        return `<div class="row" style="padding:10px 0;border-top:1px solid var(--hairline);align-items:center">
-          <span style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${at?r.color+"22":"var(--s3)"};border:1.5px solid ${at?r.color:"transparent"};color:${at?r.color:"var(--t2)"};font-size:12px;font-weight:650">${at?"★":r.min}</span>
-          <span class="sm" style="flex:1;margin-left:10px">${r.name}${isCur?' <span class="xs volt-txt">· dein Rang</span>':""}<br><span class="xs t2">ab ${r.min} Freunden · ${Math.round(r.pct*100)} % pro Werbung</span></span>
-          ${at?`<span class="xs" style="color:${r.color}">erreicht</span>`:`<span class="xs t2">${r.min-cnt} fehlen</span>`}</div>`;
-      }).join("");
-      const led=(w.ledger||[]).slice(0,4).map(e=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--hairline)">
-        <span class="xs t2" style="flex:1">${e.note}</span><span class="metric xs ${e.amount<0?"t2":"volt-txt"}">${e.amount<0?"−":"+"}${fmtEUR(Math.abs(e.amount))}</span></div>`).join("");
-      return `<div class="card" data-tone="dyn" style="--tone:${rank.color};--tone-wash:${rank.color}1f;--tone-edge:${rank.color}55">
-        <p class="ct">${icon("send",14)} Botschafter-Programm — verdiene echtes Guthaben</p>
-        <div class="row" style="align-items:center;gap:12px;margin:4px 0 12px">
-          <span style="width:48px;height:48px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${rank.color}22;border:2px solid ${rank.color};color:${rank.color}">${icon("star",24)}</span>
-          <div style="flex:1"><p class="sm" style="font-weight:600">${rank.name}-Botschafter</p>
-            <p class="xs t2">Aktuell <b style="color:var(--t1)">${Math.round(refPct(cnt)*100)} %</b> Guthaben je geworbenem Freund${S.tier==="elite"?' <span class="badge volt" style="font-size:9.5px">Elite +5%</span>':""} · ≈ ${fmtEUR(round2(refPct(cnt)*TIER_PRICE.pro.yearly))} Pro-Guthaben bei einem Jahres-Abo</p></div>
-          <div style="text-align:right"><p class="metric" style="font-size:15px;color:var(--good)" data-count-dec="${w.lifetimeEarned||0}" data-eur>${fmtEUR(w.lifetimeEarned||0)}</p><p class="xs t2">gesamt verdient</p></div>
-        </div>
-        ${next?`<div class="row mb4"><span class="xs t2">Noch ${next.min-cnt} bis ${next.name} (${Math.round(next.pct*100)} %/Werbung)</span><span class="metric xs">${cnt}/${next.min}</span></div>
-          <div class="progress mb12" style="height:8px"><div style="width:${prog}%;background:${next.color}"></div></div>`
-          :`<p class="xs volt-txt mb12">Höchster Rang erreicht — ${Math.round(rank.pct*100)} % pro Werbung. Respekt.</p>`}
-        ${cnt>0?`<p class="label" style="margin:0 0 6px">Dein Netzwerk · ${cnt}</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${orbs}${cnt>18?`<span class="xs t2" style="align-self:center">+${cnt-18}</span>`:""}</div>`:""}
-        <div class="row" style="gap:8px;margin-bottom:12px">
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px 6px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--good)" data-count-dec="${w.available||0}" data-eur>${fmtEUR(w.available||0)}</p><p class="xs t2">verfügbar</p></div>
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px 6px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--hl)" data-count-dec="${w.pending||0}" data-eur>${fmtEUR(w.pending||0)}</p><p class="xs t2">ausstehend</p></div>
-          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px 6px;text-align:center"><p class="hero-num" style="font-size:26px" data-count-dec="${w.paidOut||0}" data-eur>${fmtEUR(w.paidOut||0)}</p><p class="xs t2">ausgezahlt</p></div>
-        </div>
-        <button class="btn ${(w.available||0)>=MIN_PAYOUT?"volt":""} mb8" ${(w.available||0)>=MIN_PAYOUT?"":'disabled style="opacity:.5"'} onclick="A.cashOut()">${icon("send",15)} ${fmtEUR(w.available||0)} aufs Konto auszahlen</button>
-        <div class="row" style="gap:8px;margin-bottom:8px">
-          <button class="btn ghost" style="min-height:38px;font-size:13.5px;flex:1" onclick="A.redeemWallet()">Sofort als Pro-Zeit einlösen</button>
-          ${S.wallet.payoutMethod?`<button class="btn ghost" style="min-height:38px;font-size:13.5px;width:auto;padding:0 12px" onclick="A.payoutSetup()">Konto ändern</button>`:""}
-        </div>
-        <p class="xs t2" style="text-align:center;margin:-2px 0 12px">Mindestauszahlung ${fmtEUR(MIN_PAYOUT)} · Guthaben entsteht aus dem echten Abo deines Freundes${PAYOUTS_LIVE?" · Auszahlung in 1–3 Werktagen":" · Konto-Auszahlung wird beim Launch freigeschaltet (jederzeit als Pro-Zeit einlösbar)"}</p>
-        <p class="label" style="margin:0 0 4px">Rang-Leiter</p>
-        <div style="background:var(--s2);border-radius:14px;padding:4px 14px 10px;margin-bottom:12px">${ranks}</div>
-        ${led?`<p class="label" style="margin:4px 0 2px">Letzte Buchungen</p><div style="background:var(--s2);border-radius:14px;padding:4px 14px 8px;margin-bottom:12px">${led}</div>`:""}
-        <p class="metric mb8" style="text-align:center">Dein Code: <span style="color:var(--hl)">${S.refCode}</span></p>
-        <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Als ${rank.name}-Botschafter teilen</button>
-        <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
-          <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
-        <p class="xs t2 mt8" style="line-height:1.55"><b style="color:var(--t1)">So sicher ist das:</b> Du bekommst einen Anteil der Zahlung deines Freundes — ausgezahlt erst nach Ablauf der 14-Tage-Widerrufsfrist, finanziert aus seiner Zahlung.</p>
-        <button class="btn ghost" style="min-height:34px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="A.legalReferral()">${icon("info",13)} Echtes Guthaben — so funktioniert's</button>
-        ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen zählt dein Cloud-Konto — dafür Supabase aktivieren.</p>`}
-      </div>
-
-      <details class="acc card pad-0"><summary style="padding:16px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("star",14)} Cashback bei Partnern <span class="badge mute" style="font-size:9.5px">bald</span></span><span class="t2 chev">${icon("chevron",16)}</span></summary>
-        <div class="accbody" style="padding:0 16px 14px">
-        <p class="sm t2 mb8" style="line-height:1.55">Kaufst du Supplements, Equipment oder Sportkleidung über deinen METRICGYM-Link, fließt ein Teil als <b style="color:var(--t1)">echtes Guthaben</b> zurück — <b style="color:var(--t1)">bezahlt von der Marke</b>, nicht von dir. Reiner Bonus, kein Aufpreis.</p>
-        <div class="chips">${["Supplements","Equipment","Sportkleidung","Wearables"].map(c=>`<span class="badge mute">${c}</span>`).join("")}</div>
-        <p class="xs t2 mt8">Aktiv, sobald die Partnerprogramme angebunden sind.</p>
-        </div>
-      </details>`;
-    })()}
-
-    </div>
     <div class="section"><span class="label sect-h">Werkzeuge &amp; Fortschritt</span>
     ${acc("brain","Coach (KI)",aiActive()?'<span class="badge volt" style="font-size:9.5px">aktiv</span>':"",`
       ${aiActive()
@@ -16148,6 +16093,73 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
       <p class="xs t2 mb8">Synthetische 10-Wochen-Historie zum Testen aller Analytics-Module. Nur im Developer-Modus sichtbar — echte Konten starten immer leer.</p>
       <div class="grid2"><button class="btn" onclick="A.loadDemoData()">Demo-Daten laden</button>
         <button class="btn" onclick="A.clearDemoData()">Historie leeren</button></div>`):""}
+
+    </div>
+    ${/* Das Empfehlungsprogramm steht jetzt HINTER den Werkzeugen statt davor.
+         Es war die zweite Sektion im Profil — direkt nach dem eigenen Konto — und
+         damit an der prominentesten Stelle. Eine Empfehlungsschleife braucht aber
+         zuerst Nutzer, die etwas zu empfehlen haben; vor dem Start belegt sie nur
+         Platz, den Funktionen brauchen, die heute schon Nutzen stiften. */""}
+    <div class="section"><span class="label sect-h">Empfehlen &amp; verdienen</span>
+
+    ${(()=>{
+      const cnt=S.referralCount||0, w=S.wallet||{available:0,pending:0,ledger:[],lifetimeEarned:0};
+      const rank=referralRank(cnt), next=nextReferralRank();
+      const span=next?(next.min-rank.min):1, prog=next?Math.min(100,Math.round((cnt-rank.min)/span*100)):100;
+      // Netzwerk-Visual: wachsender Kreis aus DIREKTEN Werbungen (einstufig — kein Downline-Verdienst).
+      const orbs=[...Array(Math.min(cnt,18))].map((_,i)=>`<span style="width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#A9C4DE,#6E93B8);box-shadow:0 0 7px rgba(110,147,184,.5);display:inline-block"></span>`).join("");
+      const ranks=REFERRAL_RANKS.map(r=>{
+        const at=cnt>=r.min, isCur=r.name===rank.name;
+        return `<div class="row" style="padding:10px 0;border-top:1px solid var(--hairline);align-items:center">
+          <span style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${at?r.color+"22":"var(--s3)"};border:1.5px solid ${at?r.color:"transparent"};color:${at?r.color:"var(--t2)"};font-size:12px;font-weight:650">${at?"★":r.min}</span>
+          <span class="sm" style="flex:1;margin-left:10px">${r.name}${isCur?' <span class="xs volt-txt">· dein Rang</span>':""}<br><span class="xs t2">ab ${r.min} Freunden · ${Math.round(r.pct*100)} % pro Werbung</span></span>
+          ${at?`<span class="xs" style="color:${r.color}">erreicht</span>`:`<span class="xs t2">${r.min-cnt} fehlen</span>`}</div>`;
+      }).join("");
+      const led=(w.ledger||[]).slice(0,4).map(e=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--hairline)">
+        <span class="xs t2" style="flex:1">${e.note}</span><span class="metric xs ${e.amount<0?"t2":"volt-txt"}">${e.amount<0?"−":"+"}${fmtEUR(Math.abs(e.amount))}</span></div>`).join("");
+      return `<div class="card" data-tone="dyn" style="--tone:${rank.color};--tone-wash:${rank.color}1f;--tone-edge:${rank.color}55">
+        <p class="ct">${icon("send",14)} Botschafter-Programm — verdiene echtes Guthaben</p>
+        <div class="row" style="align-items:center;gap:12px;margin:4px 0 12px">
+          <span style="width:48px;height:48px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${rank.color}22;border:2px solid ${rank.color};color:${rank.color}">${icon("star",24)}</span>
+          <div style="flex:1"><p class="sm" style="font-weight:600">${rank.name}-Botschafter</p>
+            <p class="xs t2">Aktuell <b style="color:var(--t1)">${Math.round(refPct(cnt)*100)} %</b> Guthaben je geworbenem Freund${S.tier==="elite"?' <span class="badge volt" style="font-size:9.5px">Elite +5%</span>':""} · ≈ ${fmtEUR(round2(refPct(cnt)*TIER_PRICE.pro.yearly))} Pro-Guthaben bei einem Jahres-Abo</p></div>
+          <div style="text-align:right"><p class="metric" style="font-size:15px;color:var(--good)" data-count-dec="${w.lifetimeEarned||0}" data-eur>${fmtEUR(w.lifetimeEarned||0)}</p><p class="xs t2">gesamt verdient</p></div>
+        </div>
+        ${next?`<div class="row mb4"><span class="xs t2">Noch ${next.min-cnt} bis ${next.name} (${Math.round(next.pct*100)} %/Werbung)</span><span class="metric xs">${cnt}/${next.min}</span></div>
+          <div class="progress mb12" style="height:8px"><div style="width:${prog}%;background:${next.color}"></div></div>`
+          :`<p class="xs volt-txt mb12">Höchster Rang erreicht — ${Math.round(rank.pct*100)} % pro Werbung. Respekt.</p>`}
+        ${cnt>0?`<p class="label" style="margin:0 0 6px">Dein Netzwerk · ${cnt}</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${orbs}${cnt>18?`<span class="xs t2" style="align-self:center">+${cnt-18}</span>`:""}</div>`:""}
+        <div class="row" style="gap:8px;margin-bottom:12px">
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px 6px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--good)" data-count-dec="${w.available||0}" data-eur>${fmtEUR(w.available||0)}</p><p class="xs t2">verfügbar</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px 6px;text-align:center"><p class="hero-num" style="font-size:26px;color:var(--hl)" data-count-dec="${w.pending||0}" data-eur>${fmtEUR(w.pending||0)}</p><p class="xs t2">ausstehend</p></div>
+          <div style="flex:1;background:var(--s2);border-radius:14px;padding:14px 6px;text-align:center"><p class="hero-num" style="font-size:26px" data-count-dec="${w.paidOut||0}" data-eur>${fmtEUR(w.paidOut||0)}</p><p class="xs t2">ausgezahlt</p></div>
+        </div>
+        <button class="btn ${(w.available||0)>=MIN_PAYOUT?"volt":""} mb8" ${(w.available||0)>=MIN_PAYOUT?"":'disabled style="opacity:.5"'} onclick="A.cashOut()">${icon("send",15)} ${fmtEUR(w.available||0)} aufs Konto auszahlen</button>
+        <div class="row" style="gap:8px;margin-bottom:8px">
+          <button class="btn ghost" style="min-height:38px;font-size:13.5px;flex:1" onclick="A.redeemWallet()">Sofort als Pro-Zeit einlösen</button>
+          ${S.wallet.payoutMethod?`<button class="btn ghost" style="min-height:38px;font-size:13.5px;width:auto;padding:0 12px" onclick="A.payoutSetup()">Konto ändern</button>`:""}
+        </div>
+        <p class="xs t2" style="text-align:center;margin:-2px 0 12px">Mindestauszahlung ${fmtEUR(MIN_PAYOUT)} · Guthaben entsteht aus dem echten Abo deines Freundes${PAYOUTS_LIVE?" · Auszahlung in 1–3 Werktagen":" · Konto-Auszahlung wird beim Launch freigeschaltet (jederzeit als Pro-Zeit einlösbar)"}</p>
+        <p class="label" style="margin:0 0 4px">Rang-Leiter</p>
+        <div style="background:var(--s2);border-radius:14px;padding:4px 14px 10px;margin-bottom:12px">${ranks}</div>
+        ${led?`<p class="label" style="margin:4px 0 2px">Letzte Buchungen</p><div style="background:var(--s2);border-radius:14px;padding:4px 14px 8px;margin-bottom:12px">${led}</div>`:""}
+        <p class="metric mb8" style="text-align:center">Dein Code: <span style="color:var(--hl)">${S.refCode}</span></p>
+        <button class="btn volt mb8" onclick="A.invite()">${icon("send",15)} Als ${rank.name}-Botschafter teilen</button>
+        <div class="row"><input type="text" id="redeem-in" placeholder="Freundes-Code einlösen" style="flex:1" autocomplete="off">
+          <button class="btn" style="width:auto;padding:0 16px" onclick="A.redeem()">Einlösen</button></div>
+        <p class="xs t2 mt8" style="line-height:1.55"><b style="color:var(--t1)">So sicher ist das:</b> Du bekommst einen Anteil der Zahlung deines Freundes — ausgezahlt erst nach Ablauf der 14-Tage-Widerrufsfrist, finanziert aus seiner Zahlung.</p>
+        <button class="btn ghost" style="min-height:34px;font-size:12px;justify-content:flex-start;padding-left:0" onclick="A.legalReferral()">${icon("info",13)} Echtes Guthaben — so funktioniert's</button>
+        ${SB.enabled()?"":`<p class="xs t2 mt4">Hinweis: Bestätigte Einladungen zählt dein Cloud-Konto — dafür Supabase aktivieren.</p>`}
+      </div>
+
+      <details class="acc card pad-0"><summary style="padding:16px 16px;font-weight:600"><span style="display:flex;align-items:center;gap:8px">${icon("star",14)} Cashback bei Partnern <span class="badge mute" style="font-size:9.5px">bald</span></span><span class="t2 chev">${icon("chevron",16)}</span></summary>
+        <div class="accbody" style="padding:0 16px 14px">
+        <p class="sm t2 mb8" style="line-height:1.55">Kaufst du Supplements, Equipment oder Sportkleidung über deinen METRICGYM-Link, fließt ein Teil als <b style="color:var(--t1)">echtes Guthaben</b> zurück — <b style="color:var(--t1)">bezahlt von der Marke</b>, nicht von dir. Reiner Bonus, kein Aufpreis.</p>
+        <div class="chips">${["Supplements","Equipment","Sportkleidung","Wearables"].map(c=>`<span class="badge mute">${c}</span>`).join("")}</div>
+        <p class="xs t2 mt8">Aktiv, sobald die Partnerprogramme angebunden sind.</p>
+        </div>
+      </details>`;
+    })()}
 
     </div>
     <div class="section"><span class="label sect-h">Daten &amp; Sicherheit</span>
