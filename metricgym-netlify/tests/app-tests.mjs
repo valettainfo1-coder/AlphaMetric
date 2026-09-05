@@ -22,6 +22,27 @@ const page = await ctx.newPage();
 const errs = [];
 page.on('pageerror', e => errs.push(String(e).slice(0, 200)));
 
+/* ===================== DIE UHR ANHALTEN =====================
+   Diese Suite hing am echten Kalender. `actTodayKind()` liest
+   `new Date().getDay()`, und ob ein Rad-Plan HEUTE eine Einheit hat, haengt
+   damit vom Wochentag ab. Gemessen ueber alle sieben Tage mit gefaelschtem
+   Datum: der Vorschlag existiert Mo, Di, Mi, Do und So — an Fr und Sa nicht.
+   Der Block „Automatik" fiel also an zwei von sieben Tagen durch, ohne dass
+   sich eine Zeile Code geaendert hatte. Genau so ist er hier aufgefallen: an
+   einem Samstag, nachdem er an den Commit-Tagen davor gruen gemeldet hatte.
+
+   Das ist ein Fehler im TEST, nicht in der App — ein Radplan darf freitags
+   ruhen. Die Uhr steht deshalb fest auf Montag, den 07.09.2026: die Suite
+   prueft ab jetzt jeden Tag dasselbe. */
+await page.addInitScript(`{
+  const E = Date, FIX = new E(2026, 8, 7, 10, 0, 0).getTime();
+  class D extends E {
+    constructor(...a) { if (!a.length) super(FIX); else super(...a); }
+    static now() { return FIX; }
+  }
+  window.Date = D;
+}`);
+
 // ---------- 1) Landing rendert fehlerfrei ----------
 await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(3200);
