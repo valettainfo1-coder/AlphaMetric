@@ -33,7 +33,14 @@ Deno.serve(async (req) => {
     return json({ error: { message: "Kein aktives Abo gefunden — es gibt nichts zu kündigen." } }, 404);
 
   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
-  const appUrl = Deno.env.get("APP_URL") ?? "https://metricgym.netlify.app";
+  /* Gleiche Falle wie in create-checkout: die fest verdrahtete Adresse ist von
+     einer anderen App belegt. Wer sein Abo kuendigen will, landete nach dem
+     Kundenportal auf einer fremden Seite — und §312k BGB verlangt, dass
+     Kuendigen so einfach ist wie Abschliessen. */
+  const appUrl = Deno.env.get("APP_URL");
+  if (!appUrl || !/^https:\/\/.+/.test(appUrl)) {
+    return json({ error: { message: "Kundenportal noch nicht eingerichtet — bitte Betreiber kontaktieren." } }, 503);
+  }
   const portal = await stripe.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
     return_url: appUrl,

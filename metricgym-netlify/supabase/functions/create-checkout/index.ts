@@ -39,7 +39,16 @@ Deno.serve(async (req) => {
   if (!price) return json({ error: { message: `Preis fehlt serverseitig (${priceEnv}) — Betreiber kontaktieren.` } }, 500);
 
   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
-  const appUrl = Deno.env.get("APP_URL") ?? "https://metricgym.netlify.app";
+  /* KEIN stiller Rückfall auf eine fest verdrahtete Adresse. Hier stand
+     "https://metricgym.netlify.app" — diese Adresse ist aber von einer ANDEREN
+     App belegt (geprüft: liefert "RECOMP.LAB v6"). Wer bezahlt hätte, wäre nach
+     dem Kauf auf einer fremden Seite gelandet: Geld weg, Kunde ratlos, und im
+     Log kein Fehler, weil technisch alles "funktioniert" hat.
+     Eine fehlende Konfiguration muss laut scheitern, nicht falsch weiterleiten. */
+  const appUrl = Deno.env.get("APP_URL");
+  if (!appUrl || !/^https:\/\/.+/.test(appUrl)) {
+    return json({ error: { message: "Kasse noch nicht eingerichtet — bitte später erneut versuchen." } }, 503);
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
