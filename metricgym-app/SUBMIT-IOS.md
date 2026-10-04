@@ -205,6 +205,74 @@ Der letzte Satz ist der wichtigste — er beantwortet Richtlinie 4.2
 
 ---
 
+## 5b · Vier Dinge, die heute noch blockieren (geprüft, nicht vermutet)
+
+### 1 · Das Supabase-Projekt antwortet nicht
+
+`curl https://nsdziafvhhzuuhrctozl.supabase.co/auth/v1/health` → **HTTP 000**,
+also gar keine Verbindung. Folge, nachgestellt mit blockiertem Server:
+
+> Prüfer öffnet die App → Demo läuft, Plan wird gebaut (die App ist
+> local-first, das funktioniert) → Bezahlschranke erscheint → „Auf
+> PERFORMANCE upgraden" → **„Konto nötig"** → „Anmelden" → Anmeldung
+> schlägt fehl, weil der Server tot ist.
+
+**Der Kauf ist damit nicht erreichbar.** Das ist eine Ablehnung nach
+Richtlinie 2.1 („feature did not work"). Ohne Supabase gibt es außerdem
+keinen KI-Coach (der Proxy liegt dort) und keine Synchronisierung.
+
+### 2 · Impressum und Datenschutzerklärung sind nicht ausgefüllt
+
+10 von 11 Feldern in `config.js → legal` sind leer. Was in der App steht:
+
+> IMPRESSUM · Angaben gemäß § 5 DDG · **[bitte ausfüllen]** ·
+> **[bitte ausfüllen]** · **[bitte ausfüllen]** · Deutschland ·
+> E-Mail: **[bitte ausfüllen]** …
+
+Fünfmal in der Impressumsseite, viermal in der Datenschutzerklärung. Apple
+verlangt eine Datenschutzerklärung (Richtlinie 5.1.1); eine, die keinen
+Verantwortlichen nennt, ist keine. In Deutschland ist ein leeres Impressum
+zusätzlich abmahnfähig. **Das ist der billigste Blocker von allen** — zehn
+Felder ausfüllen.
+
+Die Texte selbst sind in Ordnung: der Gesundheitshinweis ist vorhanden und
+deutlich, die AGB setzen ein Mindestalter von 16, die Datenschutzerklärung
+behandelt Gesundheitsdaten als besondere Kategorie nach Art. 9 DSGVO.
+
+### 3 · Es gibt keine öffentliche Adresse für die Datenschutzerklärung
+
+App Store Connect verlangt eine **URL**, nicht nur den Text in der App.
+`metricgym.netlify.app` liefert eine andere App („RECOMP.LAB v6"). Also:
+erst das Netlify-Paket unter einer eigenen Adresse veröffentlichen, dann
+diese Adresse eintragen.
+
+### 4 · Die Gründerkonten stehen öffentlich in `config.js`
+
+```
+eliteAccounts: ["lovisstumpfe@icloud.com", "aerion.online@gmail.com"]
+```
+
+`config.js` wird beim Deploy **öffentlich ausgeliefert** und liegt zusätzlich
+im öffentlichen GitHub-Repository. Zwei Dinge daran:
+
+* **Zwei echte E-Mail-Adressen sind veröffentlicht.**
+* **Freier ELITE-Zugang für jeden.** Nachgestellt: ein lokales Konto mit einer
+  dieser Adressen anlegen — `applyAccountGrants()` setzt die Stufe ohne
+  Passwort und ohne Server auf `elite`. Kein Kauf nötig.
+
+Dein eigenes `schema.sql` sagt dazu schon: *„config.js → eliteAccounts wird
+NICHT mehr gelesen (dort war es öffentlich einsehbar und damit keine echte
+Absicherung)"* — der Code widerspricht also der eigenen Dokumentation. Die
+Tabelle `elite_accounts` in der Datenbank macht dasselbe richtig, weil sie nur
+mit angemeldetem Cloud-Konto greift.
+
+**Die Behebung braucht eine Entscheidung von dir:** entfernt man die
+clientseitige Liste, verlieren deine eigenen Geräte den ELITE-Zugang, bis
+Block 4b aus `schema.sql` ausgeführt ist (dort gehören die Adressen hinein).
+Sag Bescheid — es sind zwei kleine Änderungen.
+
+---
+
 ## 6 · Zwei Dinge, die du bewusst entscheiden solltest
 
 ### Die Demo zeigt die Vollversion
