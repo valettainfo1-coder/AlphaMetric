@@ -213,16 +213,24 @@ const lauf = async () => {
     grund: GRUND, schein: Math.round(1024 * 0.95), ohneAlpha: true, messen: true,
   });
 
-  /* --- iOS Startbild --- */
+  /* --- iOS Startbild ---
+     Das Asset-Verzeichnis kennt 1x, 2x und 3x. Capacitors Vorlage legt in alle
+     drei dasselbe 2732er Bild — 3 x 2,8 MB fuer ein Bild, das eine Zehntel-
+     sekunde zu sehen ist. Richtig sind drei echte Groessen; die App wird damit
+     rund 6 MB kleiner, ohne dass man auf irgendeinem Geraet einen Unterschied
+     sieht (dunkler Verlauf mit kleiner Kugel). */
   console.log("iOS Startbild");
-  const ios1 = await schuss({
-    datei: path.join(IOS, "Splash.imageset", "splash-2732x2732.png"),
-    breite: 2732, hoehe: 2732, kugel: svgGroesse(2732, 0.26),
-    grund: GRUND, schein: Math.round(2732 * 0.6), ohneAlpha: true, messen: true,
-  });
-  for (const n of ["splash-2732x2732-1.png", "splash-2732x2732-2.png"]) {
-    fs.writeFileSync(path.join(IOS, "Splash.imageset", n), ios1);
-    console.log(`  Kopie  ${n}`);
+  for (const [datei, kante] of [
+    ["splash-2732x2732-2.png", 911],    // 1x
+    ["splash-2732x2732-1.png", 1366],   // 2x
+    ["splash-2732x2732.png", 2732],     // 3x
+  ]) {
+    await schuss({
+      datei: path.join(IOS, "Splash.imageset", datei),
+      breite: kante, hoehe: kante, kugel: svgGroesse(kante, 0.26),
+      grund: GRUND, schein: Math.round(kante * 0.6), ohneAlpha: true,
+      messen: kante === 2732,
+    });
   }
 
   /* --- Android: klassische Icons (vor API 26) --- */

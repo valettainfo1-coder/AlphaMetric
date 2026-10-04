@@ -5,3 +5,5 @@ data/users.json
 
 # Deploy-Pakete sind Bauartefakte, kein Quellcode
 metricgym-netlify-v*.zip
+A-metricgym-netlify-v*.zip
+B-METRICGYM-iOS-*.zip
