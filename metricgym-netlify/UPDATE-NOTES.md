@@ -2262,3 +2262,49 @@ Messfehler.
 
 Gesamt **285 Zusicherungen**, alle grün. Version **v63**. Der Einreichungsweg
 Schritt für Schritt steht in `metricgym-app/SUBMIT-IOS.md`.
+
+---
+
+## §84 — Die Hintertür in der öffentlich ausgelieferten Datei
+
+In `config.js` stand eine Liste von E-Mail-Adressen, die dauerhaft ELITE
+bekamen. Zwei Dinge daran waren falsch, und beide sind nachgestellt, nicht
+vermutet:
+
+**Die Adressen waren veröffentlicht.** `config.js` wird beim Deploy an jeden
+Browser ausgeliefert und liegt zusätzlich im öffentlichen Repository. Zwei
+echte Privatadressen standen damit im Netz.
+
+**Und es war eine Freischaltung ohne Prüfung.** Nachgestellt mit totem
+Supabase: ein *lokales* Konto mit einer der Adressen anlegen —
+`applyAccountGrants()` setzte die Stufe auf `elite`. Kein Passwort, kein
+Server, kein Kauf. Wer die Datei lesen konnte, hatte ELITE umsonst, und lesen
+konnte sie jeder.
+
+Die Funktion bleibt als leerer Haken stehen, damit die Stelle sichtbar bleibt,
+an der früher etwas Falsches passierte. Dauerhafte Freischaltungen vergibt
+jetzt ausschließlich der Server: `my_tier()` prüft die Tabelle
+`elite_accounts` gegen die E-Mail im **angemeldeten Token**. Das lässt sich
+nicht fälschen, und die Adressen stehen nirgends öffentlich — eingetragen
+werden sie einmalig im SQL-Editor, nicht in einer Datei im Repository
+(`schema.sql` §4b sagt das jetzt ausdrücklich).
+
+**Ein bestehender Test hing an genau dieser Hintertür.** Er prüfte, dass ein
+„freigeschaltetes Konto" ELITE bekommt — also, dass die Lücke funktioniert.
+Er prüft jetzt das Gegenteil: dass eine E-Mail in `config.js` *nichts*
+freischaltet. Dazu drei neue DSGVO-Prüfungen: keine E-Mail-Adresse in der
+ausgelieferten `config.js`, keine Stufe allein aus einer Adresse, und
+`eliteAccounts` bleibt leer.
+
+### Und ein Skript, damit „nach jedem Update zwei Pakete" nicht am Gedächtnis hängt
+
+`./pakete.sh` baut beide Auslieferungen: das Netlify-Paket und die
+iPhone-App. Es läuft vorher alle sechs Suiten und **bricht ab, wenn eine rot
+ist** — ein rotes Paket wird gar nicht erst geschnürt. Danach prüft es jedes
+Paket noch einmal gegen die Fehler, die in dieser Sitzung wirklich passiert
+sind: fehlendes Kaufmodul in `www/`, Schlüssel im Deploy, E-Mail-Adressen in
+`config.js`, ein zerschossenes Xcode-Projekt, auseinanderlaufende
+Produkt-Kennungen zwischen App und Server. Beim ersten Lauf hat es sofort
+die Regression gefangen, die der Umbau oben ausgelöst hatte.
+
+Zusammen **289 Zusicherungen**, alle grün. Version **v64**.

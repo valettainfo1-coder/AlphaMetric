@@ -614,12 +614,19 @@ const ov = await page.evaluate(() => {
   const paywallShown = /Aktivitäts-Profile/i.test(document.body.innerText) && !document.getElementById('act-name');
   const nAfter = actList().length;
   A.closeModal();
-  // ELITE über Konto-Freischaltung
+  /* Konto-Freischaltung per E-Mail GIBT ES NICHT MEHR — sie war eine
+     Hintertuer: config.js wird oeffentlich ausgeliefert, und ein lokales
+     Konto mit einer gelisteten Adresse bekam ELITE ohne Passwort und ohne
+     Server. Hier wird jetzt geprueft, dass genau das NICHT passiert.
+     Dauerhafte Freischaltungen vergibt der Server ueber elite_accounts. */
   S.tier = 'free'; S.users[S.currentUser].email = 'aerion.online@gmail.com';
   window.METRICGYM_CONFIG = Object.assign({}, window.METRICGYM_CONFIG, { eliteAccounts: ['aerion.online@gmail.com'] });
   S.tab = 'home'; save(); render();
-  const granted = { tier: S.tier, max: actMax() };
-  return { proMax, cards, addFree, endurLine, gymLine, switched, freeMax, lockedCard, nBefore, nAfter, paywallShown, granted };
+  const keineHintertuer = { tier: S.tier, max: actMax() };
+  // ELITE, wie der Server es vergibt: die Stufe kommt gesetzt an
+  S.tier = 'elite'; save(); render();
+  const elite = { tier: S.tier, max: actMax() };
+  return { proMax, cards, addFree, endurLine, gymLine, switched, freeMax, lockedCard, nBefore, nAfter, paywallShown, keineHintertuer, elite };
 });
 check('Übersicht: listet alle Profile mit ihrer je eigenen Kennzahl',
   ov.cards === 2 && ov.endurLine && ov.gymLine, JSON.stringify({ karten: ov.cards, ausdauer: ov.endurLine, kraft: ov.gymLine }));
@@ -629,8 +636,11 @@ check('Paywall: kostenloser Zugang bekommt genau ein Profil',
   ov.freeMax === 1 && ov.lockedCard && ov.nBefore === 1, JSON.stringify({ max: ov.freeMax, gesperrt: ov.lockedCard }));
 check('Paywall: „Aktivität hinzufügen" zeigt die Paywall statt des Editors — kein Profil entsteht',
   ov.paywallShown && ov.nAfter === ov.nBefore, JSON.stringify({ paywall: ov.paywallShown, vorher: ov.nBefore, nachher: ov.nAfter }));
-check('Paywall: PERFORMANCE gibt 3 Plätze, freigeschaltetes Konto bekommt ELITE',
-  ov.proMax === 3 && ov.granted.tier === 'elite' && ov.granted.max === 8, JSON.stringify({ pro: ov.proMax, konto: ov.granted }));
+check('Paywall: PERFORMANCE gibt 3 Plätze, ELITE gibt 8',
+  ov.proMax === 3 && ov.elite.max === 8, JSON.stringify({ pro: ov.proMax, elite: ov.elite }));
+check('Paywall: eine E-Mail in config.js schaltet NICHTS frei (geschlossene Hintertür)',
+  ov.keineHintertuer.tier === 'free' && ov.keineHintertuer.max === 1,
+  JSON.stringify(ov.keineHintertuer));
 
 // ---------- 20) Übungs-Detail: Varianten wirken, nichts wird abgeschnitten ----------
 const exd = await page.evaluate(() => {

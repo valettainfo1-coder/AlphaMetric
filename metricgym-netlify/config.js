@@ -24,9 +24,17 @@ window.METRICGYM_CONFIG = {
   openrouterModel: "openai/gpt-4o-mini",
   groqKey: "",
 
-  /* Konten mit dauerhaftem ELITE-Zugang (z. B. Gründer, Familie, Presse).
-     Wird beim Login/App-Start geprüft — Klein-/Großschreibung egal. */
-  eliteAccounts: ["lovisstumpfe@icloud.com", "aerion.online@gmail.com"],
+  /* ===== GRÜNDERKONTEN — BEWUSST LEER, NICHT VERGESSEN =====
+     Hier standen zwei echte E-Mail-Adressen. Diese Datei wird beim Deploy
+     ÖFFENTLICH ausgeliefert: die Adressen waren damit im Netz, und wer ein
+     lokales Konto mit einer davon anlegte, bekam ELITE ohne Passwort, ohne
+     Server und ohne Kauf.
+     Dauerhafter ELITE-Zugang gehört in die Tabelle `elite_accounts` in
+     Supabase — my_tier() prüft sie gegen die E-Mail im angemeldeten Token.
+     Einzutragen einmalig im SQL-Editor, siehe supabase/schema.sql §4b.
+     Dieses Feld wird nicht mehr gelesen; es steht nur noch hier, damit
+     niemand die alte Liste aus einer Sicherung zurückholt. */
+  eliteAccounts: [],
 
   /* Cloud-Sync pro Konto. anon-Key ist öffentlich – Schutz erfolgt über RLS. */
   supabaseUrl: "https://nsdziafvhhzuuhrctozl.supabase.co",

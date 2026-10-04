@@ -133,6 +133,32 @@ const c5 = await page.evaluate(() => ({
 }));
 check('Löschung: lokal leer + Abschieds-Screen', c5.screen === 'landing' && c5.users === 0 && c5.lift === 0 && c5.bye);
 
+// ---------- 6) Nichts Persönliches in der öffentlich ausgelieferten config.js ----------
+/* config.js wird beim Deploy an jeden Browser ausgeliefert und liegt im
+   öffentlichen Repository. Dort standen zwei echte E-Mail-Adressen von
+   Gründerkonten — veröffentlicht, UND als Hintertür: ein lokales Konto mit
+   einer dieser Adressen bekam ELITE ohne Passwort, ohne Server, ohne Kauf.
+   Beides darf nicht zurückkommen; dauerhafte Freischaltungen gehören in die
+   Tabelle elite_accounts, die my_tier() gegen das angemeldete Token prüft. */
+{
+  const quelle = await (await fetch(BASE + '/config.js')).text();
+  const adressen = quelle.match(/["'][^"'\s@]+@[^"'\s@]+\.[a-z]{2,}["']/gi) || [];
+  check('config.js enthält keine E-Mail-Adressen', adressen.length === 0,
+    adressen.length ? adressen.join(', ') : 'keine gefunden');
+
+  const hintertuer = await page.evaluate(async () => {
+    S.users = [{ username: 'Fremder', email: 'lovisstumpfe@icloud.com', pwHash: '' }];
+    S.currentUser = 0; S.tier = 'free'; save();
+    try { applyAccountGrants(); } catch (e) {}
+    await new Promise(r => setTimeout(r, 200));
+    return { tier: S.tier, liste: (window.METRICGYM_CONFIG || {}).eliteAccounts || [] };
+  });
+  check('Eine E-Mail allein schaltet keine bezahlte Stufe frei',
+    hintertuer.tier === 'free', `Stufe: ${hintertuer.tier}`);
+  check('config.eliteAccounts wird nicht mehr befüllt',
+    hintertuer.liste.length === 0, JSON.stringify(hintertuer.liste));
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 120));
 
 await browser.close();

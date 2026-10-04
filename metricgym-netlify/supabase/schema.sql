@@ -157,13 +157,22 @@ create policy "consent_select_own" on consent_log
   for select using (auth.uid() = user_id);
 
 -- ============ 4b · Deine dauerhaften ELITE-Konten ============
--- Bewusst auskommentiert: hier gehören DEINE Adressen hinein, nicht meine.
--- Diese Konten bekommen dauerhaft ELITE, ohne Abo — für dich, Familie, Presse.
--- config.js → eliteAccounts wird NICHT mehr gelesen (dort war es öffentlich
--- einsehbar und damit keine echte Absicherung).
+-- HIER gehören die Gründer-, Familien- und Pressekonten hinein — und nirgends
+-- sonst. In config.js standen sie bis zuletzt im Klartext; diese Datei wird
+-- beim Deploy öffentlich ausgeliefert, und ein lokales Konto mit einer dieser
+-- Adressen bekam ELITE ohne Passwort und ohne Server. Beides ist behoben:
+-- config.eliteAccounts ist leer und wird vom Client nicht mehr gelesen.
+--
+-- Diese Tabelle ist die sichere Stelle: my_tier() prüft sie gegen die E-Mail
+-- im ANGEMELDETEN Token (auth.jwt()), Groß-/Kleinschreibung egal. Nur die
+-- Service-Role liest sie — kein Client sieht je, wer darin steht.
+--
+-- Trage deine Adressen DIREKT IM SQL-EDITOR ein, nicht hier in der Datei:
+-- diese Datei liegt im öffentlichen Repository.
 --
 -- insert into elite_accounts (email, note) values
---   ('deine@adresse.de', 'Gründer')
+--   ('deine@adresse.de',    'Gründer'),
+--   ('familie@adresse.de',  'Familie')
 -- on conflict (email) do nothing;
 
 -- ============ 5 · Kontrolle: hat alles geklappt? ============

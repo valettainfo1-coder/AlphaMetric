@@ -8184,19 +8184,26 @@ function renderFab(){
   fabEl.innerHTML="";
 }
 
-/* KONTO-FREISCHALTUNGEN: E-Mails aus config.eliteAccounts bekommen dauerhaft ELITE —
-   greift bei Login, Registrierung und jedem App-Start (idempotent). */
-function applyAccountGrants(){
-  try{
-    const list=((window.METRICGYM_CONFIG||{}).eliteAccounts||[]).map(x=>String(x).toLowerCase().trim());
-    if(!list.length) return;
-    const em=currentEmail()||((typeof SB!=="undefined"&&SB.user&&SB.user.email)||"").toLowerCase().trim();
-    if(em&&list.includes(em)&&S.tier!=="elite"){
-      S.tier="elite"; save();
-      setTimeout(()=>toast("✦ ELITE ist aktiv — willkommen."),400);
-    }
-  }catch(e){}
-}
+/* KONTO-FREISCHALTUNGEN — ABSICHTLICH LEER.
+   -----------------------------------------------------------------------
+   Hier stand eine Liste von E-Mail-Adressen aus config.js, die dauerhaft
+   ELITE bekamen. Zwei Gruende, warum das weg ist:
+
+   1. config.js wird beim Deploy OEFFENTLICH ausgeliefert. Die Adressen
+      standen damit im Netz und im oeffentlichen Repository.
+   2. Es war eine Hintertuer. Nachgestellt: ein LOKALES Konto mit einer
+      dieser Adressen anlegen — ohne Passwort, ohne Server — und diese
+      Funktion setzte die Stufe auf 'elite'. Wer die Datei lesen konnte,
+      hatte ELITE umsonst.
+
+   Richtig macht es der Server: my_tier() prueft die Tabelle elite_accounts
+   gegen die E-Mail im ANGEMELDETEN Token. Das laesst sich nicht faelschen,
+   und die Adressen stehen nirgends oeffentlich. Eingetragen werden sie
+   einmalig im SQL-Editor (supabase/schema.sql, Abschnitt 4b).
+
+   Die Funktion bleibt als leerer Haken stehen, weil renderApp() sie ruft —
+   so bleibt die Stelle sichtbar, an der frueher etwas Falsches passierte. */
+function applyAccountGrants(){ /* Stufen vergibt ausschliesslich der Server. */ }
 function renderApp(){
   if(!S.profile){ S.screen="onboarding"; save(); render(); return; }
   applyAccountGrants();
