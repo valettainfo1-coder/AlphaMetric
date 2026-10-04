@@ -186,25 +186,31 @@ Zwei Einschränkungen, die ich nicht verschweigen will:
 
 ---
 
-## Der echte Rest: In-App-Kauf einbauen
+## Der In-App-Kauf ist gebaut
 
-Hier bin ich ehrlich: **das ist noch nicht gebaut, und es ist kein Nachmittag.**
-Die App rechnet heute mit Stripe-Abos über Supabase. Für iOS kommt ein zweiter,
-unabhängiger Kaufweg dazu:
+**Korrektur zu meiner früheren Fassung dieses Abschnitts:** dort stand als
+Plugin-Vorschlag `@capacitor-community/in-app-purchases`. **Dieses Paket
+existiert nicht** — der Name kam aus meinem Gedächtnis, nicht aus der
+Registry. Verwendet wird `capacitor-plugin-cdv-purchase` (13.18.0, Juli 2026,
+StoreKit 2, Capacitor 7). Was es kann, steht in
+`SUBMIT-IOS.md`; dort ist auch jeder Einreichungsschritt beschrieben.
 
-1. **StoreKit-Plugin** einbinden (z. B. `@capacitor-community/in-app-purchases`)
-   und die beiden Stufen als Produkte in App Store Connect anlegen
-2. **Belegprüfung serverseitig** — eine neue Edge Function, die Apples
-   Kaufbeleg gegen Apples Server verifiziert. Ohne das kann jeder mit einem
-   gefälschten Beleg ELITE freischalten.
-3. **`my_tier()` erweitern**, damit ein Apple-Abo denselben Rang ergibt wie ein
-   Stripe-Abo — heute kennt die Funktion nur Stripe.
-4. **Apples Server-Benachrichtigungen** (Kündigung, Rückerstattung,
-   Zahlungsproblem) entgegennehmen, sonst behält ein gekündigtes Abo seinen Rang.
-5. **Wiederherstellen-Knopf** — Apple verlangt ihn, sonst Ablehnung.
+Gebaut und geprüft ist:
 
-Schätzung: ein guter Arbeitstag für den glücklichen Pfad, plus Testkäufe in der
-Sandbox. Sag Bescheid, wenn ich das angehen soll.
+| | wo |
+|---|---|
+| Kauf, Wiederherstellen, Apple-Abo-Verwaltung | `index.html` (Modul `IAP`) |
+| Belegprüfung mit vollständiger Zertifikatskette | `supabase/functions/_shared/apple.ts` |
+| Einlösen nach dem Kauf | `supabase/functions/apple-verify` |
+| Apples Meldungen (Kündigung, Ablauf, Rückerstattung) | `supabase/functions/apple-notify` |
+| Abos aus zwei Kassen nebeneinander | `supabase/schema.sql` |
+
+**Was ich NICHT testen konnte:** den Kauf selbst. Dafür braucht es einen Mac,
+ein Apple-Entwicklerkonto und ein Sandbox-Gerät. Testbar war die Entscheidung
+davor (27 Zusicherungen in `tests/ios-tests.mjs`, mit nachgebauter
+Capacitor-Umgebung) und die Kryptografie der Belegprüfung (31 Zusicherungen in
+`supabase/functions/_shared/apple.test.mjs`, gegen eine echte, selbst gebaute
+Zertifikatskette). Die Sandbox-Testkäufe bleiben dein Schritt.
 
 ### Richtlinie 4.2 — „nur eine Webseite"
 

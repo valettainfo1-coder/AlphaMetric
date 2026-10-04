@@ -29,20 +29,31 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  /* onConflict MUSS (user_id, source) sein: der Schlüssel der Tabelle ist seit
+     dem Apple-Kaufweg zweispaltig. Mit "user_id" allein wirft Postgres einen
+     Fehler, und der blieb hier früher unbemerkt — siehe `pruefen` unten. */
   const upsert = (row: Record<string, unknown>) =>
-    admin.from("subscriptions").upsert(row, { onConflict: "user_id" });
+    admin.from("subscriptions").upsert({ source: "stripe", ...row }, { onConflict: "user_id,source" });
+
+  /* Jeder Schreibfehler MUSS 5xx ergeben, damit Stripe erneut zustellt.
+     Vorher wurde das Ergebnis gar nicht angesehen: ein gescheiterter Schreib-
+     vorgang sah für Stripe wie Erfolg aus und wurde nie wiederholt. */
+  const pruefen = (res: { error: unknown }) => {
+    if (res.error) throw new Error(String((res.error as { message?: string }).message ?? res.error));
+  };
 
   try {
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
       const userId = s.client_reference_id ?? s.metadata?.user_id;
       if (userId) {
-        await upsert({
+        pruefen(await upsert({
           user_id: userId,
           tier: s.metadata?.tier === "elite" ? "elite" : "pro",
           status: "active",
           stripe_customer_id: typeof s.customer === "string" ? s.customer : s.customer?.id ?? null,
-        });
+        }));
       }
     } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
@@ -50,14 +61,23 @@ Deno.serve(async (req) => {
       const userId = sub.metadata?.user_id;
       const ended = event.type === "customer.subscription.deleted"
         || ["canceled", "unpaid", "incomplete_expired"].includes(sub.status);
+
+      /* Hier stand `tier: ended ? "free" : …`. Die Tabelle erlaubt aber nur
+         'pro' und 'elite' — gegen echtes Postgres geprüft: die Zeile wurde
+         abgewiesen, der Kunde behielt `pro / active` und damit seinen bezahlten
+         Rang nach der Kündigung dauerhaft. Die Stufe bleibt deshalb stehen;
+         beendet wird über `status`, und genau danach fragt my_tier(). */
       const row = {
-        tier: ended ? "free" : (sub.metadata?.tier === "elite" ? "elite" : "pro"),
+        tier: sub.metadata?.tier === "elite" ? "elite" : "pro",
         status: ended ? "canceled" : sub.status,               // active | trialing | past_due …
         current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
         stripe_customer_id: customerId ?? null,
       };
-      if (userId) await upsert({ user_id: userId, ...row });
-      else if (customerId) await admin.from("subscriptions").update(row).eq("stripe_customer_id", customerId);
+      if (userId) pruefen(await upsert({ user_id: userId, ...row }));
+      else if (customerId) {
+        pruefen(await admin.from("subscriptions").update(row)
+          .eq("stripe_customer_id", customerId).eq("source", "stripe"));
+      }
     }
   } catch (e) {
     return json({ error: "Verarbeitung fehlgeschlagen", detail: String(e).slice(0, 120) }, 500);

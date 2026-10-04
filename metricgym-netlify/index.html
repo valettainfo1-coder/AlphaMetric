@@ -2676,6 +2676,11 @@ const MEM={};
    (Capacitor Preferences), und beim Start wird von dort zurueckgeholt, falls
    localStorage leer ist. Im Browser passiert nichts davon. */
 const NATIV=()=>!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Preferences);
+/* Nur die iOS-App: dort gilt Apples Kasse und dort steht „Bei Apple anmelden"
+   oben. Bewusst HIER definiert, bei den anderen Plattform-Helfern — weiter
+   unten wäre es eine TDZ-Falle für alles, was früher im Skript steht. */
+const IOS_APP=()=>{ try{ return !!(window.Capacitor&&typeof window.Capacitor.getPlatform==="function"
+  &&window.Capacitor.getPlatform()==="ios"); }catch(e){ return false; } };
 const store={
   get(k){ try{ return localStorage.getItem(k); }catch{ return MEM[k]??null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch{ MEM[k]=v; }
@@ -2749,6 +2754,32 @@ const SB={
   async signOut(){ try{ if(SB.client)await SB.client.auth.signOut(); }catch(e){} SB.user=null; SB.token=null; },
   async signInOAuth(provider){
     await SB.init();
+    /* ---- Native App: Systembrowser + eigenes URL-Schema ----
+       Zwei Gründe, warum der Weg in der App ein anderer sein MUSS.
+
+       Erstens ist `location.protocol` hier `capacitor:`. Der alte Code hat
+       `redirectTo` dann weggelassen — Supabase nimmt in dem Fall die
+       Projekt-Adresse, und der Nutzer landet nach der Anmeldung auf der
+       WEBSITE statt in der App. Angemeldet im Browser, abgemeldet in der App.
+
+       Zweitens lehnt Google OAuth in eingebetteten WebViews ausdrücklich ab
+       ("disallowed_useragent"). Der Anmeldedialog muss in den Systembrowser.
+
+       Deshalb: URL holen statt weiterleiten, im Systembrowser öffnen, Rückkehr
+       über de.metricgym.app://auth-callback. Den Code tauscht
+       `nativeAuthCallback()` unten gegen eine Sitzung. */
+    if(NATIV()){
+      const {data,error}=await SB.client.auth.signInWithOAuth({provider,
+        options:{ redirectTo:"de.metricgym.app://auth-callback", skipBrowserRedirect:true,
+                  queryParams:{prompt:"select_account"} }});
+      if(error) throw error;
+      const url=data&&data.url;
+      if(!url) throw new Error("Anmelde-Adresse fehlt");
+      const B=window.Capacitor.Plugins.Browser;
+      if(!B) throw new Error("Systembrowser nicht verfügbar");
+      await B.open({url,presentationStyle:"popover"});
+      return;
+    }
     // Exakte Seite als Rückkehrziel (Origin + Pfad) — muss in Supabase unter
     // Auth → URL Configuration → Redirect URLs eingetragen sein.
     const redirectTo=(location.protocol==="http:"||location.protocol==="https:")?(location.origin+location.pathname):undefined;
@@ -4440,8 +4471,19 @@ const TIER_PRICE={free:{monthly:0,yearly:0},pro:{monthly:9.99,yearly:79.99},elit
 const eurFmt=new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtEUR=(v)=>v===0?"€0":"€"+eurFmt.format(v);
 const tierPriceLabel=(t,billing)=>{
-  const p=TIER_PRICE[t][billing||"monthly"];
-  return p===0?"€0":(billing==="yearly"?`${fmtEUR(p)} / Jahr`:`${fmtEUR(p)} / Monat`);
+  const b=billing||"monthly";
+  /* In der iOS-App gilt der Preis aus dem App Store. Apple verlangt, dass der
+     angezeigte Preis dem entspricht, was abgebucht wird — und rechnet Währung
+     und Landespreise selbst um. Solange das Produkt noch nicht geladen ist,
+     steht der hinterlegte Euro-Preis da. */
+  try{
+    if(typeof IAP!=="undefined"&&IAP.aktiv()){
+      const ladenpreis=IAP.preis[t+":"+b];
+      if(ladenpreis) return b==="yearly"?`${ladenpreis} / Jahr`:`${ladenpreis} / Monat`;
+    }
+  }catch(e){}
+  const p=TIER_PRICE[t][b];
+  return p===0?"€0":(b==="yearly"?`${fmtEUR(p)} / Jahr`:`${fmtEUR(p)} / Monat`);
 };
 const yearlySaving=(t)=>Math.round(TIER_PRICE[t].monthly*12-TIER_PRICE[t].yearly);
 function tierAtLeast(t){ return TIER_RANK[S.tier]>=TIER_RANK[t]; }
@@ -6995,12 +7037,27 @@ A.oauth=async(p)=>{ if(!SB.enabled()){toast("Cloud-Login nicht konfiguriert");re
     else toast(name+"-Login fehlgeschlagen: "+String(e&&e.message||e).slice(0,60));
   } };
 // Wiederverwendbarer OAuth-Block (nur sichtbar, wenn Cloud-Sync konfiguriert ist).
+/* „Bei Apple anmelden" ist nicht Kosmetik, sondern Pflicht: Richtlinie 4.8
+   verlangt, dass eine App, die einen Fremdanbieter-Login anbietet (hier
+   Google), auch einen datensparsamen gleichwertigen Weg anbietet — einen, der
+   nur Name und E-Mail verlangt, das Verbergen der Adresse erlaubt und nicht
+   zu Werbezwecken verfolgt. Sign in with Apple erfüllt das.
+   In der iOS-App steht Apple deshalb OBEN: dort ist es der erwartete Weg. */
+function appleLoginButton(label){
+  return `<button class="btn oauth-btn" onclick="A.oauth('apple')" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none" fill="currentColor"><path d="M17.05 12.54c.02 2.73 2.39 3.64 2.42 3.65-.02.06-.38 1.3-1.26 2.57-.76 1.1-1.55 2.2-2.8 2.22-1.22.02-1.62-.72-3.02-.72-1.4 0-1.84.7-3 .74-1.2.04-2.11-1.18-2.88-2.28-1.66-2.4-2.93-6.79-1.22-9.75.84-1.47 2.35-2.4 3.99-2.43 1.18-.02 2.29.79 3.02.79.72 0 2.08-.98 3.5-.84.6.03 2.28.22 3.36 1.81-.09.06-2.01 1.17-1.99 3.5M14.69 4.2c.65-.79 1.09-1.88.97-2.97-.96.04-2.13.64-2.81 1.43-.6.7-1.13 1.82-.99 2.89 1.07.08 2.17-.55 2.83-1.35"/></svg>
+      <span>${label||"Mit Apple fortfahren"}</span></button>`;
+}
 function oauthButtons(label){
   if(!SB.enabled()) return "";
-  return `<button class="btn oauth-btn" onclick="A.oauth('google')" type="button">
+  const apple=appleLoginButton(label?label.replace(/Google/,"Apple"):null);
+  const google=`<button class="btn oauth-btn" onclick="A.oauth('google')" type="button">
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" style="flex:none"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.5l-6.6-5.6C29.6 34.6 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.6 39.7 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.6 5.6C41.6 35.5 44 30.2 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
-      <span>${label||"Mit Google fortfahren"}</span></button>
-    <div class="lp-or"><span>oder mit E-Mail</span></div>`;
+      <span>${label||"Mit Google fortfahren"}</span></button>`;
+  /* In der iOS-App zuerst Apple, sonst zuerst Google — jeweils der Weg, den
+     der Nutzer dort erwartet. Beide sind immer beide da. */
+  return (IOS_APP()? apple+google : google+apple)
+    + `<div class="lp-or"><span>oder mit E-Mail</span></div>`;
 }
 // Elegante Warp-Transition „ins Programm gebeamt" — Screen-Wechsel passiert hinter dem Flash.
 function beamIntoApp(cb){
@@ -7064,12 +7121,189 @@ A.upgrade=(t)=>{
       <div><p class="metric" style="font-size:26px">${tierPriceLabel(t,b)}</p>
         <p class="xs volt-txt">${perDayLabel(t,b)}${b==="yearly"?` · ${freeMonths(t)} Monate geschenkt`:""}</p></div></div>
     ${b==="yearly"?`<p class="xs volt-txt">Du sparst ${fmtEUR(yearlySaving(t))} gegenüber monatlicher Zahlung.</p>`:""}
-    <p class="xs t2 mt8" style="line-height:1.55">Sichere Zahlung über Stripe · jederzeit kündbar · keine versteckten Kosten.</p>
+    <p class="xs t2 mt8" style="line-height:1.55">${IAP.aktiv()
+      ? "Abrechnung über deine Apple-ID · jederzeit in den iPhone-Einstellungen kündbar · keine versteckten Kosten."
+      : "Sichere Zahlung über Stripe · jederzeit kündbar · keine versteckten Kosten."}</p>
     <button class="btn volt mt16" onclick="A.confirmUpgrade('${t}')">Jetzt aktivieren</button>`);
 };
 /* D4: echter Kauf über Stripe Checkout — Preis-IDs & Keys nur serverseitig.
    stripeEnabled=false → ehrlicher Hinweis statt Schein-Kauf (wie bisher). */
 const stripeOn=()=>{ try{ return !!(window.METRICGYM_CONFIG&&window.METRICGYM_CONFIG.stripeEnabled); }catch(e){ return false; } };
+/* ===== Kauf über Apple (nur in der iOS-App) =====
+   Apple verlangt für digitale Abos den In-App-Kauf. Ein Stripe-Checkout in der
+   App führt zur Ablehnung (App-Review-Richtlinie 3.1.1) — ein Hinweis auf die
+   Website ebenfalls. Auf iOS läuft der Kauf deshalb über StoreKit 2; Web und
+   Android bleiben bei Stripe.
+
+   Die Stufe vergibt wie bisher AUSSCHLIESSLICH der Server: die App schickt
+   Apples signierten Beleg an die Edge Function apple-verify und fragt danach
+   my_tier() neu. S.tier wird hier nie selbst gesetzt — ein Client, der seine
+   eigene Stufe bestimmt, ist keine Bezahlschranke. */
+/* Diese Kennungen müssen in App Store Connect GENAU so angelegt sein. Dieselbe
+   Liste steht serverseitig in supabase/functions/_shared/apple.ts — weicht eine
+   ab, schaltet der Server nichts frei. */
+const IAP_ID={ pro:{monthly:"de.metricgym.pro.monthly", yearly:"de.metricgym.pro.yearly"},
+               elite:{monthly:"de.metricgym.elite.monthly", yearly:"de.metricgym.elite.yearly"} };
+
+const IAP={
+  bereit:false, laedt:null, fehler:"", preis:{},
+  aktiv(){ return IOS_APP(); },
+  id(t,b){ return (IAP_ID[t]||{})[b==="yearly"?"yearly":"monthly"]||""; },
+
+  /* Das Kaufmodul ist ~500 KB. Es wird deshalb NUR in der iOS-App geladen und
+     erst dann, wenn der Kauf wirklich ansteht — im Browser nie. */
+  skriptLaden(){
+    if(this.laedt) return this.laedt;
+    this.laedt=new Promise((ok,nein)=>{
+      if(window.CdvPurchase) return ok();
+      const s=document.createElement("script");
+      s.src="vendor/cdv-purchase.js"; s.async=true;
+      s.onload=()=>window.CdvPurchase?ok():nein(new Error("Kaufmodul unvollständig"));
+      s.onerror=()=>nein(new Error("Kaufmodul nicht gefunden"));
+      document.head.appendChild(s);
+    });
+    return this.laedt;
+  },
+
+  async start(){
+    if(!this.aktiv()) return false;
+    if(this.bereit) return true;
+    await this.skriptLaden();
+    /* Die Markierung sagt dem Kaufmodul, dass die nativen Brücken über
+       Capacitor erreichbar sind. Ohne sie sucht es nach Cordova und findet
+       nichts. */
+    window.CdvPurchaseCapacitor={installed:true};
+    const CP=window.CdvPurchase, store=CP.store;
+
+    /* Apple trägt diesen Wert als `appAccountToken` in den Kaufbeleg ein —
+       damit weiß der Server auch bei einer späteren Meldung von Apple, zu
+       welchem Konto der Kauf gehört.
+       `obfuscator="disabled"` ist PFLICHT: voreingestellt verwandelt das
+       Kaufmodul den Namen in md5toUUID(name). Das ist zwar eine gültige UUID,
+       aber nicht mehr die Supabase-Nutzer-ID — der Server würde jeden Kauf als
+       „gehört einem anderen Konto" abweisen. Die Nutzer-ID ist eine
+       zufällige UUID ohne Personenbezug, Verschleiern bringt hier nichts. */
+    store.obfuscator="disabled";
+    store.applicationUsername=()=>{ try{ return (SB.user&&SB.user.id)||undefined; }catch(e){ return undefined; } };
+
+    const liste=[];
+    for(const t of ["pro","elite"]) for(const b of ["monthly","yearly"])
+      liste.push({id:IAP_ID[t][b], type:CP.ProductType.PAID_SUBSCRIPTION, platform:CP.Platform.APPLE_APPSTORE});
+    store.register(liste);
+
+    store.when()
+      .approved((t)=>IAP.belegEinloesen(t))
+      .productUpdated(()=>{ IAP.preiseLesen(); try{ if(S.tab==="plan") render(); }catch(e){} });
+    store.error((e)=>{ IAP.fehler=String((e&&e.message)||e||""); });
+
+    await store.initialize([CP.Platform.APPLE_APPSTORE]);
+    this.bereit=true; this.preiseLesen();
+    return true;
+  },
+
+  /* Apple schreibt vor, dass der angezeigte Preis dem entspricht, was StoreKit
+     abbucht. Deshalb gilt in der App der Preis aus dem Store, nicht der fest
+     eingetragene — Apple rechnet Währung und Landespreise selbst um. */
+  preiseLesen(){
+    try{
+      const CP=window.CdvPurchase; if(!CP) return;
+      for(const t of ["pro","elite"]) for(const b of ["monthly","yearly"]){
+        const p=CP.store.get(IAP_ID[t][b], CP.Platform.APPLE_APPSTORE);
+        const pr=p&&p.pricing&&p.pricing.price;
+        if(pr) IAP.preis[t+":"+b]=pr;
+      }
+    }catch(e){}
+  },
+
+  /* Beleg einlösen: an den Server, Stufe neu holen, DANN abschließen.
+     Die Reihenfolge ist wichtig. `finish()` sagt Apple „erledigt" — wer das
+     vor der Serverbestätigung ruft, verliert den Kauf, wenn der Server gerade
+     nicht erreichbar ist. Unabgeschlossene Käufe liefert StoreKit beim
+     nächsten Start erneut; genau das ist das Sicherheitsnetz. */
+  async belegEinloesen(t){
+    const jws=t&&t.jwsRepresentation;
+    if(!jws){ IAP.fehler="Beleg ohne Signatur"; return; }
+    if(!(typeof SB!=="undefined"&&SB.enabled()&&SB.user)){
+      /* Nicht angemeldet: NICHT abschließen. Der Kauf bleibt bei Apple offen
+         und wird nach der Anmeldung automatisch erneut geliefert. */
+      toast("Melde dich an, damit dein Kauf deinem Konto zugeordnet wird");
+      return;
+    }
+    try{
+      const res=await SB.withTimeout(SB.client.functions.invoke("apple-verify",{body:{jws}}),20000);
+      if(res&&res.error) throw res.error;
+      await SB.syncTier(true);
+      try{ await t.finish(); }catch(e){}
+      A.closeModal();
+      const stufe=TIER_LABEL[S.tier]||"Pro";
+      confetti();
+      modal(`<p class="ct">${stufe} ist freigeschaltet</p>
+        <p class="sm t2" style="line-height:1.55">Die Abrechnung läuft über deine Apple-ID.
+        Kündigen kannst du jederzeit in den iPhone-Einstellungen — der Knopf dafür steht
+        unter „Plan verwalten".</p>
+        <button class="btn volt mt16" onclick="A.closeModal()">Weiter</button>`);
+    }catch(e){
+      /* Beleg NICHT abschließen — beim nächsten Start versucht es die App erneut. */
+      A.closeModal();
+      const m=String((e&&e.message)||e||"");
+      toast(m.includes("anderen Konto")
+        ? "Dieser Kauf gehört zu einem anderen Konto"
+        : "Kauf geprüft, aber noch nicht gutgeschrieben — wir versuchen es automatisch erneut");
+    }
+  },
+
+  async kaufen(tier,billing){
+    const id=this.id(tier,billing);
+    modal(`<div style="text-align:center;padding:8px 0"><div class="spin" style="margin:0 auto 12px"></div>
+      <p class="sm t2">App Store wird geöffnet …</p></div>`);
+    try{
+      await this.start();
+      const CP=window.CdvPurchase;
+      const p=CP.store.get(id, CP.Platform.APPLE_APPSTORE);
+      const angebot=p&&typeof p.getOffer==="function"&&p.getOffer();
+      if(!angebot) throw new Error("Produkt im App Store nicht verfügbar");
+      this.fehler="";
+      await angebot.order();
+      /* Ab hier übernimmt Apples Dialog. Geht der Kauf durch, ruft das
+         Kaufmodul `approved` → belegEinloesen(). Bricht der Nutzer ab,
+         passiert nichts weiter. */
+      if(this.fehler && !/cancel/i.test(this.fehler)) throw new Error(this.fehler);
+      setTimeout(()=>{ try{ if(overlay.querySelector(".spin")) A.closeModal(); }catch(e){} }, 1500);
+    }catch(e){
+      A.closeModal();
+      const m=String((e&&e.message)||e||"");
+      if(/cancel/i.test(m)) return;                       // abgebrochen ist kein Fehler
+      toast(m.includes("verfügbar")
+        ? "Dieses Abo ist im App Store gerade nicht verfügbar"
+        : "Kauf nicht möglich — versuch es gleich noch einmal");
+    }
+  },
+
+  /* Von Apple verlangt (Richtlinie 3.1.1): wer die App neu installiert oder das
+     Gerät wechselt, muss seinen Kauf ohne erneute Zahlung zurückbekommen. */
+  async wiederherstellen(){
+    modal(`<div style="text-align:center;padding:8px 0"><div class="spin" style="margin:0 auto 12px"></div>
+      <p class="sm t2">Käufe werden gesucht …</p></div>`);
+    try{
+      await this.start();
+      await window.CdvPurchase.store.restorePurchases();
+      await SB.syncTier(true);
+      A.closeModal();
+      if(S.tier==="free") modal(`<p class="ct">Kein Kauf gefunden</p>
+        <p class="sm t2" style="line-height:1.55">Unter dieser Apple-ID liegt kein laufendes
+        METRICGYM-Abo. Prüfe, ob du im App Store mit der richtigen Apple-ID angemeldet bist.</p>`);
+      else toast(`✓ ${TIER_LABEL[S.tier]} wiederhergestellt`);
+    }catch(e){ A.closeModal(); toast("Wiederherstellen gerade nicht möglich — später erneut versuchen"); }
+  },
+
+  /* Kündigen und Zahlungsweg ändern gehören bei Apple ins System — eine eigene
+     Kündigungsseite darf die App dafür nicht anbieten. */
+  async verwalten(){
+    try{ await this.start(); await window.CdvPurchase.store.manageSubscriptions(); }
+    catch(e){ toast("Einstellungen konnten nicht geöffnet werden — iPhone-Einstellungen › Apple-ID › Abonnements"); }
+  },
+};
+
 A.startCheckout=async(t)=>{
   modal(`<div style="text-align:center;padding:8px 0"><div class="spin" style="margin:0 auto 12px"></div><p class="sm t2">Sichere Kasse wird geöffnet …</p></div>`);
   try{
@@ -7082,6 +7316,17 @@ A.startCheckout=async(t)=>{
 };
 // §312k BGB: Verträge müssen SO einfach kündbar sein wie der Abschluss.
 A.manageSub=async()=>{
+  /* In der iOS-App verwaltet Apple das Abo. Eine eigene Kündigungsseite wäre
+     hier nicht nur unnötig, sondern nach Richtlinie 3.1.1 unzulässig. */
+  if(IAP.aktiv()){
+    modal(`<p class="ct">Abo verwalten &amp; kündigen</p>
+      <p class="sm t2" style="line-height:1.55">Dein Abo läuft über deine Apple-ID. Kündigen,
+      Stufe wechseln und Zahlungsweg änderst du in den iPhone-Einstellungen — der Knopf
+      öffnet sie direkt.</p>
+      <button class="btn volt mt16" onclick="A.closeModal();IAP.verwalten()">Abonnements öffnen</button>
+      <button class="btn mt8" onclick="A.closeModal();IAP.wiederherstellen()">Käufe wiederherstellen</button>`);
+    return;
+  }
   if(!(typeof SB!=="undefined"&&SB.enabled()&&SB.user&&stripeOn())){
     modal(`<p class="ct">Abo verwalten &amp; kündigen</p><p class="sm t2" style="line-height:1.55">${S.tier==="free"?"Du hast aktuell kein laufendes Abo — es gibt nichts zu kündigen.":"Dein Zugang läuft ohne Zahlungsanbieter (lokal/Aktion) — es gibt kein Abo, das gekündigt werden müsste."}</p>`);
     return;
@@ -7099,9 +7344,24 @@ A.confirmUpgrade=(t)=>{
   track("checkout",{tier:t}); // D3: Funnel-Endpunkt
   // Cloud-Konten: Tier vergibt der SERVER (subscriptions) — kein Demo-Umschalten.
   if(typeof SB!=="undefined"&&SB.enabled()&&SB.user&&!S.devMode){
+    /* iOS zuerst: in der App-Fassung ist Apples Kasse der einzige erlaubte Weg. */
+    if(IAP.aktiv()){ IAP.kaufen(t,S.billing||"monthly"); return; }
     if(stripeOn()){ A.startCheckout(t); return; }
     overlay.innerHTML="";
     modal(`<p class="ct">Fast bereit</p><p class="sm t2" style="line-height:1.55">Die Bezahlfunktion wird gerade angeschlossen. Dein Plan bleibt bis dahin <b>${TIER_LABEL[S.tier]}</b> — der 7-Tage-Test steht dir trotzdem offen.</p>`);
+    return;
+  }
+  /* In der iOS-App darf hier NICHTS lokal freigeschaltet werden: ein Kauf
+     braucht ein Konto, an das Apples Beleg gebunden wird (appAccountToken),
+     und eine Freischaltung ohne Kauf wäre ein Weg an Apples Kasse vorbei.
+     Im Demo-Modus (S.devMode) greift dieser Zweig gar nicht — dort ist der
+     Vollzugriff gewollt und kostet nichts. */
+  if(IAP.aktiv()&&!S.devMode){
+    overlay.innerHTML="";
+    modal(`<p class="ct">Konto nötig</p>
+      <p class="sm t2" style="line-height:1.55">Damit dein Abo deinem Konto zugeordnet wird — und
+      auf jedem Gerät gilt — melde dich bitte einmal an. Danach kannst du direkt abonnieren.</p>
+      <button class="btn volt mt16" onclick="A.closeModal();S.screen='login';save();render()">Anmelden</button>`);
     return;
   }
   S.tier=t; save(); overlay.innerHTML=""; render();
@@ -7110,6 +7370,12 @@ A.confirmUpgrade=(t)=>{
 // Gratis-Test starten: Endowment-Effekt (Vollzugriff besitzen) + Risk-Reversal (keine Zahlung).
 A.startTrial=(t)=>{
   if(S.trialUsed){ A.upgrade(t); return; }
+  /* In der iOS-App vergibt APPLE die Gratiszeit, nicht die App: die Abos haben
+     in App Store Connect ein Einführungsangebot „7 Tage gratis". Wer hier lokal
+     freischaltet, gibt bezahlte Funktionen an Apples Kasse vorbei — genau das
+     verbietet Richtlinie 3.1.1. Der Nutzer sieht denselben Ablauf, nur dass
+     Apples Dialog „7 Tage gratis, danach …" anzeigt. */
+  if(IAP.aktiv()){ A.confirmUpgrade(t); return; }
   S.trialUsed=true; S.trialTier=t; S.trialUntil=Date.now()+TRIAL_DAYS*dayMs; S.tier=t;
   save(); overlay.innerHTML="";
   confetti();
@@ -7121,6 +7387,18 @@ A.startTrial=(t)=>{
 };
 A.manageTier=()=>{
   const cur=S.tier;
+  /* In der App-Fassung führt alles zu Apple: kaufen, kündigen, wiederherstellen.
+     Ein eigener „zurückstufen"-Knopf würde dort nur eine Kündigung vortäuschen,
+     die Apple gar nicht mitbekommt. */
+  if(IAP.aktiv()){
+    modal(`<p class="ct">Plan verwalten</p>
+      <p class="sm t2 mb16">Du bist aktuell auf <b style="color:var(--t1)">${TIER_LABEL[cur]}</b>.</p>
+      ${cur!=="elite"?`<button class="btn volt mb8" onclick="A.confirmUpgrade('${cur==="free"?"pro":"elite"}')">Auf ${TIER_LABEL[cur==="free"?"pro":"elite"]} upgraden</button>`:""}
+      <button class="btn mb8" onclick="A.closeModal();IAP.verwalten()">Abo &amp; Kündigung bei Apple</button>
+      <button class="btn mb8" onclick="A.closeModal();IAP.wiederherstellen()">Käufe wiederherstellen</button>
+      <p class="xs t2">Abrechnung, Stufenwechsel und Kündigung laufen über deine Apple-ID. Deine Daten bleiben in jedem Fall vollständig erhalten.</p>`);
+    return;
+  }
   modal(`<p class="ct">Plan verwalten</p>
     <p class="sm t2 mb16">Du bist aktuell auf <b style="color:var(--t1)">${TIER_LABEL[cur]}</b>.</p>
     ${cur!=="elite"?`<button class="btn volt mb8" onclick="A.confirmUpgrade('${cur==="free"?"pro":"elite"}')">Auf ${TIER_LABEL[cur==="free"?"pro":"elite"]} upgraden</button>`:""}
@@ -7138,7 +7416,12 @@ let menuOpen=false;
 
 // Lebendiges KI-Feld als persistente Ebene hinter der ganzen App (kein Neustart pro Render).
 /* ===== Als echte App aufs iPhone/Android: Standalone-Erkennung + Install-Anleitung ===== */
-function isStandalone(){ try{ return (window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true; }catch(e){ return false; } }
+/* NATIV() gehört hier dazu: im WKWebView der App ist display-mode "browser"
+   und navigator.standalone undefiniert — ohne diese Prüfung zeigt die
+   fertige App einen Banner, der zum Installieren aus dem Browser auffordert.
+   In einer App aus dem App Store ist das nicht nur sinnlos, sondern ein
+   Verweis auf einen Vertriebsweg außerhalb des Stores. */
+function isStandalone(){ try{ return NATIV()||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true; }catch(e){ return false; } }
 window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); window._bip=e; });
 A.installApp=()=>{
   if(window._bip){ try{ window._bip.prompt(); }catch(e){} return; }
@@ -8881,7 +9164,14 @@ function renderRegister(){
       if(!(await localSignup())) return;
     }
     S.devMode=false; S.tier="free";
-    if(S.invitedBy){ S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs; setTimeout(()=>toast("Willkommensbonus: 14 Tage PERFORMANCE aktiv"),600); }
+    /* Der Willkommensbonus schaltet 14 Tage PERFORMANCE frei. In der iOS-App
+       bleibt das aus: eine bezahlte Stufe über einen eigenen Code zu vergeben
+       ist genau der „eigene Mechanismus", den Richtlinie 3.1.1 untersagt.
+       Die Werbung wird trotzdem gezählt — der Werber bekommt sein Guthaben,
+       sobald der Freund zahlt. Wer den Bonus auch auf iOS geben will, legt ihn
+       in App Store Connect als Angebotscode an; das ist der dafür vorgesehene
+       Weg und als nächster Schritt im README beschrieben. */
+    if(S.invitedBy&&!IAP.aktiv()){ S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs; setTimeout(()=>toast("Willkommensbonus: 14 Tage PERFORMANCE aktiv"),600); }
     // Garantiert leerer Start: keine synthetischen Daten außerhalb des Demo-Zugangs.
     S.liftLog={}; S.weightLog=[]; S.readinessHistory=[]; S.trainingHistory=[];
     S.nutritionLog={}; S.chat=[]; S.schedule=null; S.plan=null; S.checkin=null; S.checkinDate=null;
@@ -15580,8 +15870,11 @@ function renderPricing(){
       <p class="sm" style="font-weight:600;line-height:1.55">Risikofrei testen</p>
       <p class="xs t2" style="line-height:1.55;margin-top:4px">${upTo?`${TRIAL_DAYS} Tage voller Zugriff, keine Zahlung im Voraus. `:""}Jederzeit mit einem Tipp kündbar. Dein Datenexport (DSGVO) ist in jedem Plan inklusive — du bist nie eingesperrt.</p>
       <button class="btn ghost mt8" style="min-height:42px;font-size:13.5px" onclick="A.manageSub()">Verträge hier kündigen · Abo verwalten</button>
+      ${IAP.aktiv()?`<button class="btn ghost mt8" style="min-height:42px;font-size:13.5px" onclick="IAP.wiederherstellen()">Käufe wiederherstellen</button>`:""}
     </div>
-    <p class="xs t2" style="text-align:center;line-height:1.55">Sichere Zahlung über Stripe (Anbindung folgt vor Launch).</p>`;
+    <p class="xs t2" style="text-align:center;line-height:1.55">${IAP.aktiv()
+      ? "Abrechnung über deine Apple-ID. Kündigen jederzeit in den iPhone-Einstellungen."
+      : "Sichere Zahlung über Stripe (Anbindung folgt vor Launch)."}</p>`;
 }
 
 /* =====================================================================
@@ -15868,8 +16161,14 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
     const el=document.getElementById("redeem-in"); const code=(el&&el.value.trim().toUpperCase())||"";
     if(!code){toast("Code eingeben");return;}
     if(code===S.refCode){toast("Das ist dein eigener Code");return;}
-    S.invitedBy=code; S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs;
-    save(); render(); toast("✓ 14 Tage PERFORMANCE aktiviert");
+    S.invitedBy=code;
+    if(IAP.aktiv()){
+      save(); render();
+      toast("✓ Empfehlung gespeichert — dein Freund bekommt sein Guthaben, sobald du abonnierst");
+    } else {
+      S.tier="pro"; S.proBonusUntil=Date.now()+14*dayMs;
+      save(); render(); toast("✓ 14 Tage PERFORMANCE aktiviert");
+    }
   };
   // Verfügbares Guthaben auf das eigene Abo anrechnen (1 € = 1 € Rabatt).
   A.redeemWallet=()=>{
@@ -16214,7 +16513,7 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
         </div>
         <button class="btn ${(w.available||0)>=MIN_PAYOUT?"volt":""} mb8" ${(w.available||0)>=MIN_PAYOUT?"":'disabled style="opacity:.5"'} onclick="A.cashOut()">${icon("send",15)} ${fmtEUR(w.available||0)} aufs Konto auszahlen</button>
         <div class="row" style="gap:8px;margin-bottom:8px">
-          <button class="btn ghost" style="min-height:38px;font-size:13.5px;flex:1" onclick="A.redeemWallet()">Sofort als Pro-Zeit einlösen</button>
+          ${IAP.aktiv()?"":`<button class="btn ghost" style="min-height:38px;font-size:13.5px;flex:1" onclick="A.redeemWallet()">Sofort als Pro-Zeit einlösen</button>`}
           ${S.wallet.payoutMethod?`<button class="btn ghost" style="min-height:38px;font-size:13.5px;width:auto;padding:0 12px" onclick="A.payoutSetup()">Konto ändern</button>`:""}
         </div>
         <p class="xs t2" style="text-align:center;margin:-2px 0 12px">Mindestauszahlung ${fmtEUR(MIN_PAYOUT)} · Guthaben entsteht aus dem echten Abo deines Freundes${PAYOUTS_LIVE?" · Auszahlung in 1–3 Werktagen":" · Konto-Auszahlung wird beim Launch freigeschaltet (jederzeit als Pro-Zeit einlösbar)"}</p>
@@ -16359,6 +16658,76 @@ try{ render(); }catch(err){ root.innerHTML=_recover(err&&(err.message||err)); }
   if(sessionStorage.getItem("mg_restore_done")) return;   // kein Neustart-Kreislauf
   const geholt=await nativStartwiederherstellung(KEY);
   if(geholt){ sessionStorage.setItem("mg_restore_done","1"); location.reload(); }
+}catch(e){} })();
+/* NATIVE APP: Rückkehr aus dem Systembrowser nach der Anmeldung.
+   Apple und Google schicken den Nutzer auf de.metricgym.app://auth-callback
+   zurück. Capacitor liefert diese Adresse als `appUrlOpen`; daraus wird die
+   Sitzung gebaut. Supabase schickt je nach Einstellung einen `code`
+   (PKCE, Standard) oder Token im Fragment — beides wird behandelt, damit die
+   Anmeldung nicht an einer Projekteinstellung scheitert. */
+async function nativeAuthCallback(url){
+  try{
+    if(!url||String(url).indexOf("de.metricgym.app://")!==0) return false;
+    if(!SB.enabled()) return false;
+    await SB.init();
+    const u=new URL(String(url).replace("de.metricgym.app://","https://metricgym.local/"));
+    const frag=new URLSearchParams((u.hash||"").replace(/^#/,""));
+    const code=u.searchParams.get("code");
+    const fehler=u.searchParams.get("error_description")||frag.get("error_description");
+    if(fehler){ toast(String(fehler).slice(0,80)); return true; }
+
+    let sess=null;
+    if(code){
+      const {data,error}=await SB.withTimeout(SB.client.auth.exchangeCodeForSession(code),15000);
+      if(error) throw error; sess=data&&data.session;
+    } else if(frag.get("access_token")){
+      const {data,error}=await SB.withTimeout(SB.client.auth.setSession({
+        access_token:frag.get("access_token"), refresh_token:frag.get("refresh_token")||""}),15000);
+      if(error) throw error; sess=data&&data.session;
+    }
+    if(!sess) return true;
+
+    try{ const B=window.Capacitor.Plugins.Browser; if(B) await B.close(); }catch(e){}
+    SB.user=sess.user; SB.token=sess.access_token;
+    let cloud=null; try{ cloud=await SB.pull(); }catch(e){}
+    if(cloud) SB.hydrate(cloud);
+    migrateState();
+    const fname=(SB.user.user_metadata&&SB.user.user_metadata.first_name)
+      ||(SB.user.user_metadata&&SB.user.user_metadata.full_name)
+      ||((SB.user.email||"").split("@")[0]);
+    if(!S.users||!S.users.length) S.users=[{username:fname,email:SB.user.email,pwHash:""}];
+    S.currentUser=0;
+    try{ SB.recordReferralIfNeeded(); }catch(e){}
+    if(["landing","login","register"].includes(S.screen)||S.currentUser==null){
+      S.screen=S.profile?"app":"onboarding"; S.tab=S.tab||"home";
+    }
+    save(); render(); SB.syncTier(true);
+    return true;
+  }catch(e){ toast("Anmeldung fehlgeschlagen — bitte erneut versuchen"); return true; }
+}
+(async()=>{ try{
+  if(!NATIV()) return;
+  const App=window.Capacitor.Plugins.App; if(!App) return;
+  App.addListener("appUrlOpen",(ev)=>{ nativeAuthCallback(ev&&ev.url); });
+  /* Wurde die App DURCH den Rücksprung gestartet, ist das Ereignis schon
+     durch, bevor der Zuhörer steht — deshalb zusätzlich den Startzustand
+     abfragen. */
+  try{ const l=await App.getLaunchUrl(); if(l&&l.url) nativeAuthCallback(l.url); }catch(e){}
+}catch(e){} })();
+/* IOS-APP: Kaufmodul beim Start hochfahren.
+   Zwei Gruende, beide wichtig. Erstens liefert StoreKit hier alle Kaeufe
+   nach, die beim letzten Mal nicht bis zur Serverbestaetigung kamen — ohne
+   das waere ein Kauf verloren, dessen Gutschrift an einem Netzausfall
+   gescheitert ist. Zweitens stehen danach die echten App-Store-Preise bereit,
+   sodass die Bezahlschranke nicht erst den hinterlegten Euro-Preis zeigt und
+   ihn dann austauscht.
+   Erst NACH dem Supabase-Block, damit `SB.user` schon steht: der Beleg wird
+   sonst ohne Konto-Zuordnung eingeloest und bleibt offen liegen. */
+(async()=>{ try{
+  if(!IAP.aktiv()) return;
+  for(let i=0;i<40 && !(typeof SB!=="undefined"&&SB.enabled()&&SB.user);i++)
+    await new Promise(r=>setTimeout(r,250));          // bis zu 10 s auf die Anmeldung warten
+  await IAP.start();
 }catch(e){} })();
 // C2: Rechtstexte aktualisiert? → Re-Consent-Sheet nach dem Boot (einmal pro Sitzung)
 setTimeout(()=>{ try{ if(S.currentUser!=null&&S.screen==="app"&&consentOutdated())showReConsent(); }catch(e){} },900);

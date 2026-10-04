@@ -51,15 +51,52 @@ $$;
 grant execute on function count_referrals(text) to anon, authenticated;
 
 -- ============ 3 · Abos, Gründerkonten, KI-Limit, Tier-Wahrheit ============
--- Abos (wird später vom Stripe-Webhook befüllt; bis dahin manuell pflegbar)
+-- Abos. Es gibt ZWEI Kassen: Stripe (Web und Android) und Apple (iOS, weil
+-- Apple den In-App-Kauf verlangt). Deshalb ist der Schlüssel (user_id, source)
+-- und nicht user_id allein: wer im Web abonniert und später am iPhone noch
+-- einmal kauft, hätte sonst eine der beiden Zahlungen stillschweigend
+-- überschrieben — Geld gezahlt, Beleg weg.
 create table if not exists subscriptions (
-  user_id            uuid primary key references auth.users(id) on delete cascade,
+  user_id            uuid not null references auth.users(id) on delete cascade,
+  source             text not null default 'stripe' check (source in ('stripe','apple')),
   tier               text not null check (tier in ('pro','elite')),
   status             text not null default 'active',   -- active | trialing | canceled | past_due
   current_period_end timestamptz,
   stripe_customer_id text,
-  updated_at         timestamptz not null default now()
+  -- Apples dauerhafte Abo-Kennung. Bleibt über Verlängerungen hinweg gleich und
+  -- ist der einzige verlässliche Weg, eine Benachrichtigung von Apple dem
+  -- richtigen Konto zuzuordnen.
+  apple_original_transaction_id text,
+  updated_at         timestamptz not null default now(),
+  primary key (user_id, source)
 );
+
+-- Nachrüsten, falls die Tabelle schon aus einer früheren Fassung existiert
+-- (dort war user_id allein der Schlüssel und source gab es nicht).
+alter table subscriptions add column if not exists source text not null default 'stripe';
+alter table subscriptions add column if not exists apple_original_transaction_id text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'subscriptions_source_check') then
+    alter table subscriptions add constraint subscriptions_source_check
+      check (source in ('stripe','apple'));
+  end if;
+  -- Schlüssel von (user_id) auf (user_id, source) umstellen
+  if exists (
+    select 1 from pg_index i
+    join pg_class c on c.oid = i.indrelid
+    where c.relname = 'subscriptions' and i.indisprimary and i.indnatts = 1
+  ) then
+    alter table subscriptions drop constraint subscriptions_pkey;
+    alter table subscriptions add primary key (user_id, source);
+  end if;
+end $$;
+
+-- Eine Apple-Abo-Kennung darf nur EINEM Konto gehören. Ohne diesen Index
+-- könnte derselbe Kaufbeleg mehreren Konten Zugang verschaffen.
+create unique index if not exists subscriptions_apple_otid
+  on subscriptions (apple_original_transaction_id)
+  where apple_original_transaction_id is not null;
+
 alter table subscriptions enable row level security;
 create policy "subscriptions_read_own" on subscriptions for select using (auth.uid() = user_id);
 -- KEINE insert/update-Policy für Clients: schreiben darf nur der Server (Service-Role/Webhook).
@@ -89,10 +126,13 @@ language sql security definer set search_path = public as $$
     (select 'elite' from elite_accounts
       where lower(email) = lower(coalesce(auth.jwt()->>'email',''))
       limit 1),
+    -- Bei zwei Kassen kann es zwei gültige Zeilen geben. Dann gilt die HÖHERE
+    -- Stufe — wer doppelt gezahlt hat, darf nicht die kleinere bekommen.
     (select tier from subscriptions
       where user_id = auth.uid()
         and status in ('active','trialing')
         and (current_period_end is null or current_period_end > now())
+      order by case tier when 'elite' then 2 when 'pro' then 1 else 0 end desc
       limit 1),
     'free');
 $$;

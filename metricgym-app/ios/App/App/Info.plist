@@ -60,6 +60,22 @@
 	<string>Damit du deine Auswertung als Bild in deinen Fotos speichern kannst.</string>
 	<!-- Spart die Ausfuhr-Erklaerung bei JEDEM Upload. Die App nutzt nur HTTPS,
 	     also Standard-Verschluesselung des Systems — keine eigene Kryptografie. -->
+	<!-- Rueckweg aus dem Systembrowser nach der Anmeldung. Google verbietet
+	     OAuth in eingebetteten WebViews, der Dialog muss also nach draussen —
+	     und ohne dieses Schema findet der Browser nicht zurueck in die App.
+	     Dieselbe Adresse muss in Supabase unter Auth → URL Configuration →
+	     Redirect URLs stehen: de.metricgym.app://auth-callback -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>de.metricgym.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>de.metricgym.app</string>
+			</array>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

@@ -5,9 +5,12 @@
   "description": "METRICGYM als native Hülle (Capacitor) — Android/iOS-Store-Variante",
   "dependencies": {
     "@capacitor/android": "^7.6.9",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/browser": "^7.0.5",
     "@capacitor/cli": "^7.6.9",
     "@capacitor/core": "^7.6.9",
     "@capacitor/ios": "^7.6.9",
-    "@capacitor/preferences": "^7.0.4"
+    "@capacitor/preferences": "^7.0.4",
+    "capacitor-plugin-cdv-purchase": "^13.18.0"
   }
 }

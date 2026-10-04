@@ -10,5 +10,10 @@ cd "$(dirname "$0")"
 mkdir -p www
 cp ../metricgym-netlify/index.html ../metricgym-netlify/config.js \
    ../metricgym-netlify/manifest.webmanifest ../metricgym-netlify/*.png www/
+# vendor/ MUSS mit: dort liegt das Kaufmodul (cdv-purchase.js), das die App auf
+# iOS nachlaedt. Ohne diesen Ordner endet jeder Kaufversuch in einem 404 —
+# einmal passiert, deshalb steht es hier ausdruecklich.
+rm -rf www/vendor
+cp -r ../metricgym-netlify/vendor www/
 npx cap sync
 echo "✓ www/ aktualisiert und mit allen eingerichteten Plattformen synchronisiert"

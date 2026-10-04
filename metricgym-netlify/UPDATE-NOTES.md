@@ -2174,3 +2174,91 @@ und führt sie ab. Rechnung, Quellen und der noch offene StoreKit-Teil stehen in
 
 Keine Änderung an der Weboberfläche — `index.html` ist unberührt, alle 227 Tests
 bleiben grün, Version weiterhin **v62**.
+
+---
+
+## §83 — App-Store-tauglich: Apples Kasse, Apples Anmeldung, Apples Regeln
+
+Der harte Blocker war der Bezahlweg: Apple lehnt digitale Abos ab, die nicht
+über den In-App-Kauf laufen. Das ist jetzt gebaut — Web und Android bleiben bei
+Stripe, iOS geht über StoreKit 2.
+
+**Die Stufe vergibt weiterhin ausschließlich der Server.** Die App schickt
+Apples signierten Beleg an eine neue Edge Function, die ihn vollständig prüft:
+Wurzelzertifikat gegen Apples echtes Apple Root CA - G3 (fest eingebaut, nicht
+zur Laufzeit geholt), Zwischenstelle von der Wurzel signiert, Blatt von der
+Zwischenstelle, alle drei zeitlich gültig, dann die Signatur der Nutzlast. Wer
+die Nutzlast nur dekodiert, schaltet jedem ELITE frei, der sich ein JSON
+zusammenschreibt — die Signatur IST der Kaufnachweis.
+
+Dafür steht eine eigene DER/X.509-Zerlegung in `_shared/apple.ts`. Eine fremde
+Bibliothek in den Kaufweg zu setzen wäre der schlechtere Tausch gewesen.
+Geprüft mit einer echten, selbst gebauten Zertifikatskette (`tests/apple-kette.sh`):
+dieselbe Kette wird angenommen, wenn ihre Wurzel vertraut ist, und abgelehnt,
+sobald Apples echte Wurzel verlangt wird — erst damit ist gezeigt, dass die
+Kette wirklich geprüft wird. Dazu veränderte Nutzlast, fremde CA, fehlende
+Zwischenstelle, fremder Schlüssel, `"alg":"none"`, abgelaufenes Zertifikat.
+**31 Zusicherungen.**
+
+### Vier Fehler, die vorher da waren und jetzt weg sind
+
+**Der gekündigte Kunde behielt seinen Rang — für immer.** Der Stripe-Webhook
+schrieb bei einer Kündigung `tier:"free"`. Die Tabelle erlaubt aber nur `pro`
+und `elite`. Gegen echtes PostgreSQL geprüft: die Zeile wird abgewiesen, die
+Zeile bleibt auf `pro / active` stehen. Der Fehler wurde im Code nie angesehen
+(`await upsert(...)` ohne Prüfung), für Stripe sah alles nach Erfolg aus, also
+wurde nie erneut zugestellt. Jetzt bleibt die Stufe stehen und `status` beendet
+das Abo — und jeder Schreibfehler ergibt 5xx, damit Stripe es wiederholt.
+
+**Der Google-Login führte in der App ins Leere.** `redirectTo` wurde nur für
+`http`/`https` gesetzt; in der App ist `location.protocol` aber `capacitor:`.
+Der Nutzer wäre nach der Anmeldung auf der *Website* gelandet — angemeldet im
+Browser, abgemeldet in der App. Dazu lehnt Google OAuth in eingebetteten
+WebViews ausdrücklich ab. Jetzt: Systembrowser, Rückkehr über
+`de.metricgym.app://auth-callback`, Code-Tausch in der App.
+
+**`appAccountToken` wäre stillschweigend nie gesetzt worden.** Das Kaufmodul
+verwandelt den Nutzernamen voreingestellt in `md5toUUID(name)` — eine gültige
+UUID, aber nicht mehr die Supabase-Nutzer-ID. Der Server hätte jeden Kauf als
+„gehört einem anderen Konto" mit 409 abgewiesen. Gefunden beim Lesen des
+Plugin-Quelltexts, nicht im Betrieb. `store.obfuscator="disabled"` behebt es.
+
+**`sync.sh` kopierte `vendor/` nicht.** Dort liegt das Kaufmodul, das die App
+auf iOS nachlädt. Jeder Kaufversuch hätte mit einem 404 geendet. Aufgefallen
+beim Nachsehen, ob die Datei wirklich im Paket liegt.
+
+### Drei Wege an Apples Kasse vorbei — geschlossen
+
+Richtlinie 3.1.1 untersagt eigene Mechanismen, die bezahlte Funktionen
+freischalten. Drei gab es:
+
+* Der **Gratis-Test** schaltete lokal frei. Auf iOS vergibt jetzt Apple die
+  Gratiszeit über ein Einführungsangebot — derselbe Ablauf für den Nutzer.
+* **Guthaben als Pro-Zeit einlösen** ist auf iOS ausgeblendet. Die
+  Barauszahlung bleibt: Geld, das rausgeht, ist kein Kaufvorgang.
+* Ein **Empfehlungscode** gab 14 Tage PERFORMANCE. Auf iOS wird die Werbung
+  weiterhin verbucht (der Werber bekommt sein Guthaben), aber keine Stufe
+  vergeben. Der vorgesehene Weg dafür wären Angebotscodes.
+
+Dazu: „Bei Apple anmelden" ist ergänzt (Richtlinie 4.8 verlangt es, sobald es
+Google-Login gibt), der Banner „auf dem Startbildschirm installieren"
+erscheint in der App nicht mehr, und ein Privatsphäre-Manifest erklärt die
+UserDefaults-Nutzung — ohne das weist App Store Connect den Upload mit
+ITMS-91053 zurück.
+
+### Was ich nicht testen konnte
+
+Den Kauf selbst. Dafür braucht es einen Mac, ein Apple-Entwicklerkonto und ein
+Sandbox-Gerät. Testbar war die Entscheidung davor: mit nachgebauter
+Capacitor-Umgebung prüfen **27 neue Zusicherungen** in `tests/ios-tests.mjs`
+jeden Punkt in BEIDEN Fassungen — auf iOS muss er zutreffen, im Web darf er es
+nicht. Eine Prüfung, die in beiden Fällen gleich ausfällt, misst nichts.
+
+Drei meiner eigenen Prüfungen waren dabei zuerst rot, ohne dass die App etwas
+falsch machte: der Tab heißt `pricing`, nicht `plan`; ohne `S.profile` rendert
+die App Onboarding statt der Bezahlschranke; und `IAP.start()` läuft schon beim
+App-Start, also wird beim Kauf nicht erneut initialisiert. Alle drei waren
+Messfehler.
+
+Gesamt **285 Zusicherungen**, alle grün. Version **v63**. Der Einreichungsweg
+Schritt für Schritt steht in `metricgym-app/SUBMIT-IOS.md`.
