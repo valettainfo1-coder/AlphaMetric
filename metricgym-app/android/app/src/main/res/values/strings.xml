@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">METRICGYM</string>
+    <string name="title_activity_main">METRICGYM</string>
+    <string name="package_name">de.metricgym.app</string>
+    <string name="custom_url_scheme">de.metricgym.app</string>
+</resources>

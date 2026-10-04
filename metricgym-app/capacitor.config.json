@@ -1,0 +1,10 @@
+{
+  "appId": "de.metricgym.app",
+  "appName": "METRICGYM",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "SplashScreen": { "backgroundColor": "#080A0F", "showSpinner": false }
+  }
+}

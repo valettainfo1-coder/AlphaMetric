@@ -35,7 +35,11 @@
 <script>
 /* PWA: Service Worker registrieren — macht die App installierbar (Android „App installieren")
    und offline-startfähig. Nur über HTTPS (oder localhost); Fehler werden still ignoriert. */
-if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){
+/* In der nativen Huelle (Capacitor) laedt die App aus dem App-Paket, nicht vom
+   Netz — ein Service Worker waere dort kein Gewinn, sondern eine zweite
+   Cache-Schicht, die nach einem App-Update die ALTE Fassung ausliefern kann.
+   Deshalb: nur im Browser registrieren. Eine Codebasis, zwei Umgebungen. */
+if("serviceWorker" in navigator && !window.Capacitor && (location.protocol==="https:"||location.hostname==="localhost")){
   window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
 }
 </script>
@@ -2662,10 +2666,32 @@ const LABELS={
 // ---------- Storage ----------
 const KEY="metricgym-v4";
 const MEM={};
+/* Speicher. localStorage bleibt die LEBENDE Ablage (synchron — der ganze
+   Zustand wird beim Start synchron gelesen, eine Umstellung auf asynchron waere
+   ein Umbau quer durch die App).
+   In der nativen Huelle kommt eine zweite Ebene dazu: iOS und Android duerfen
+   den WebView-Speicher bei Platzmangel LEEREN. Fuer eine Trainings-App heisst
+   das im schlimmsten Fall: die ganze Historie ist weg. Deshalb spiegelt
+   store.set() jeden Stand zusaetzlich in den nativen Schluesselspeicher
+   (Capacitor Preferences), und beim Start wird von dort zurueckgeholt, falls
+   localStorage leer ist. Im Browser passiert nichts davon. */
+const NATIV=()=>!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Preferences);
 const store={
   get(k){ try{ return localStorage.getItem(k); }catch{ return MEM[k]??null; } },
-  set(k,v){ try{ localStorage.setItem(k,v); }catch{ MEM[k]=v; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch{ MEM[k]=v; }
+    if(NATIV()){ try{ window.Capacitor.Plugins.Preferences.set({key:k,value:v}); }catch(e){} } },
 };
+/* Rueckholung aus dem nativen Speicher. Laeuft VOR dem ersten Lesen des
+   Zustands; im Browser faellt sie sofort durch. */
+async function nativStartwiederherstellung(k){
+  if(!NATIV()) return false;
+  try{
+    if(localStorage.getItem(k)) return false;          // lokal ist da: nichts zu tun
+    const r=await window.Capacitor.Plugins.Preferences.get({key:k});
+    if(r&&r.value){ localStorage.setItem(k,r.value); return true; }
+  }catch(e){}
+  return false;
+}
 let saveTimer=null;
 function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ store.set(KEY,JSON.stringify(S)); if(typeof SB!=="undefined"&&SB.user)SB.push(); },100); }
 
@@ -6680,7 +6706,12 @@ function modal(html){
    Rückgabe: stop()-Funktion (finalisiert sofort mit dem Gesammelten). */
 function speech(onResult,btnId,onEnd,onInterim){
   const fail=(msg)=>{ try{onEnd&&onEnd();}catch{} if(msg)toast(msg); };
+  /* Android-WebView liefert KEINE Spracherkennung (die steckt in Chrome, nicht
+     im WebView). In der nativen Huelle wuerde das Mikrofon also wirkungslos
+     bleiben — darum hier eine Meldung, die sagt was zu tun ist, statt eines
+     Knopfes, der nichts tut. */
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR&&window.Capacitor){ fail("Sprache in der App-Fassung noch nicht verfügbar — bitte tippen"); return null; }
   if(!SR){fail("Spracherkennung nicht unterstützt — bitte tippen");return null;}
   let rec; try{ rec=new SR(); }catch{ fail("Spracherkennung nicht verfügbar"); return null; }
   const finals=[]; let stopped=false, silenceT=0, hardT=0;
@@ -16315,6 +16346,20 @@ try{ render(); }catch(err){ root.innerHTML=_recover(err&&(err.message||err)); }
     SB.syncTier(true); // Boot-Resync: Tier kommt vom Server, nicht aus localStorage
   }catch(e){}
 })();
+/* NATIVE HUELLE: Zustand aus dem Schluesselspeicher zurueckholen.
+   Hat das Betriebssystem den WebView-Speicher geleert (iOS und Android duerfen
+   das bei Platzmangel), ist localStorage leer, die Spiegelung im nativen
+   Speicher aber noch da. Dann wird sie zurueckgeschrieben und die App EINMAL
+   neu gestartet — der Zustand wird beim Start synchron gelesen, ein
+   Nachladen im laufenden Betrieb waere ein Umbau quer durch die App.
+   Dieser Neustart passiert nur, wenn wirklich etwas zu retten war; im Browser
+   faellt der ganze Block sofort durch. */
+(async()=>{ try{
+  if(!NATIV()) return;
+  if(sessionStorage.getItem("mg_restore_done")) return;   // kein Neustart-Kreislauf
+  const geholt=await nativStartwiederherstellung(KEY);
+  if(geholt){ sessionStorage.setItem("mg_restore_done","1"); location.reload(); }
+}catch(e){} })();
 // C2: Rechtstexte aktualisiert? → Re-Consent-Sheet nach dem Boot (einmal pro Sitzung)
 setTimeout(()=>{ try{ if(S.currentUser!=null&&S.screen==="app"&&consentOutdated())showReConsent(); }catch(e){} },900);
 // D3: Funnel-Basis — Landing-View + 7-Tage-Aktivitäts-Meilenstein
