@@ -1,21 +1,26 @@
-# METRICGYM — iPhone-App bauen und zu TestFlight hochladen, OHNE eigenen Mac.
+# METRICGYM — iPhone-App bauen und zu TestFlight hochladen, OHNE eigenen Mac
+# und OHNE selbst Zertifikate zu basteln.
 # ============================================================================
-# Apple laesst sich iOS-Apps nur mit Xcode bauen, und Xcode gibt es nur fuer
-# macOS. Der Mac ist dabei aber nur die BAUMASCHINE, nicht das Ziel — die App
-# laeuft auf dem iPhone. GitHub stellt macOS-Maschinen bereit, und fuer
-# oeffentliche Repositories (dieses ist oeffentlich) kosten sie nichts.
+# Der Mac ist nur die BAUMASCHINE, nicht das Ziel: Apple laesst iOS-Apps nur
+# mit Xcode uebersetzen, Xcode gibt es nur fuer macOS. Die App laeuft auf dem
+# iPhone. GitHub stellt macOS-Maschinen bereit — fuer oeffentliche
+# Repositories (dieses ist eins) kostenlos.
 #
-# Dieser Workflow laeuft NUR auf Knopfdruck (Actions → "iPhone-App bauen" →
-# "Run workflow"). Automatisch bei jedem Push waere Verschwendung und wuerde
-# bei jedem Commit eine neue TestFlight-Version erzeugen.
+# WARUM ES HIER KEINE ZERTIFIKATE ZUM HOCHLADEN GIBT:
+# Seit Xcode 13 kann xcodebuild sich mit einem App-Store-Connect-Schluessel
+# selbst beim Entwicklerportal anmelden (-authenticationKey*) und fehlende
+# Zertifikate und Profile selbst anlegen (-allowProvisioningUpdates). Der
+# private Schluessel des Verteilungszertifikats bleibt dabei in Apples Cloud
+# ("Cloud Managed Distribution Certificate") — genau dafuer gemacht, dass die
+# Baumaschine bei jedem Lauf eine andere ist.
 #
-# Was du dafuer EINMALIG brauchst, alles ohne Mac erzeugbar:
-# siehe BUILD-OHNE-MAC.md im Projektstamm.
+# Du brauchst deshalb VIER Secrets statt sieben, und keinen einzigen
+# openssl-Befehl. Einrichtung: BUILD-OHNE-MAC.md
 #
-# ACHTUNG, EHRLICH: Diesen Workflow konnte ich nicht zu Ende testen — dafuer
-# braeuchte ich dein Apple-Entwicklerkonto. Geprueft ist, dass die YAML gueltig
-# ist und jeder Pfad, auf den er zeigt, existiert. Der erste Lauf ist der
-# eigentliche Test; wenn er bricht, sagt das Protokoll in welchem Schritt.
+# EHRLICH: Diesen Workflow konnte ich nicht zu Ende testen — dafuer braeuchte
+# ich dein Apple-Entwicklerkonto. Geprueft ist die YAML und dass jeder Pfad
+# existiert. Der erste Lauf ist der eigentliche Test; bricht er, sagt das
+# Protokoll in welchem Schritt.
 # ============================================================================
 name: iPhone-App bauen
 
@@ -72,51 +77,30 @@ jobs:
             || { echo "::error::index.html fehlt im iOS-Paket"; exit 1; }
           echo "✓ Weboberflaeche und Kaufmodul liegen im Paket"
 
-      # ---- 2 · Signatur einrichten ----
-      # Zertifikat und Profil kommen als Base64 aus den Repository-Secrets.
-      # In einem oeffentlichen Repo sind Secrets trotzdem geschuetzt: sie werden
-      # nie ins Protokoll geschrieben und Forks bekommen sie nicht.
-      - name: Zertifikat und Profil einspielen
+      # ---- 2 · Apple-Zugang ablegen ----
+      # Eine einzige Datei. Mehr braucht die Signatur nicht.
+      - name: App-Store-Connect-Schluessel ablegen
         env:
-          P12_B64: ${{ secrets.IOS_DIST_P12_BASE64 }}
-          P12_PASS: ${{ secrets.IOS_DIST_P12_PASSWORD }}
-          PROFIL_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          for v in P12_B64 P12_PASS PROFIL_B64; do
+          for v in KEY_ID ISSUER_ID KEY_P8 TEAM_ID; do
             [ -n "${!v:-}" ] || { echo "::error::Secret $v fehlt — siehe BUILD-OHNE-MAC.md"; exit 1; }
           done
-
-          SCHLUESSELBUND="$RUNNER_TEMP/bau.keychain-db"
-          SCHLUESSELPASS="$(uuidgen)"
-          security create-keychain -p "$SCHLUESSELPASS" "$SCHLUESSELBUND"
-          security set-keychain-settings -lut 3600 "$SCHLUESSELBUND"
-          security unlock-keychain -p "$SCHLUESSELPASS" "$SCHLUESSELBUND"
-
-          echo "$P12_B64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
-          security import "$RUNNER_TEMP/dist.p12" -k "$SCHLUESSELBUND" \
-            -P "$P12_PASS" -T /usr/bin/codesign -T /usr/bin/security
-          security set-key-partition-list -S apple-tool:,apple:,codesign: \
-            -s -k "$SCHLUESSELPASS" "$SCHLUESSELBUND" >/dev/null
-          security list-keychains -d user -s "$SCHLUESSELBUND" login.keychain-db
-
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROFIL_B64" | base64 --decode > "$RUNNER_TEMP/profil.mobileprovision"
-          UUID=$(security cms -D -i "$RUNNER_TEMP/profil.mobileprovision" \
-                 | plutil -extract UUID raw -)
-          NAME=$(security cms -D -i "$RUNNER_TEMP/profil.mobileprovision" \
-                 | plutil -extract Name raw -)
-          cp "$RUNNER_TEMP/profil.mobileprovision" \
-             ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
-          echo "PROFIL_NAME=$NAME" >> "$GITHUB_ENV"
-          echo "✓ Profil eingespielt: $NAME"
-
-          # Zum Aufraeumen am Ende
-          echo "SCHLUESSELBUND=$SCHLUESSELBUND" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/apple"
+          echo "$KEY_P8" | base64 --decode > "$RUNNER_TEMP/apple/AuthKey_$KEY_ID.p8"
+          # Formfehler sofort zeigen statt erst in einem kryptischen Xcode-Fehler
+          head -1 "$RUNNER_TEMP/apple/AuthKey_$KEY_ID.p8" | grep -q "BEGIN PRIVATE KEY" \
+            || { echo "::error::APPSTORE_API_KEY_P8_BASE64 ist keine gueltige .p8 — falsch kodiert?"; exit 1; }
+          echo "APPLE_KEY=$RUNNER_TEMP/apple/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
+          echo "✓ Schluessel $KEY_ID abgelegt"
 
       # ---- 3 · Baunummer ----
-      # Jeder Upload braucht eine HOEHERE Baunummer als der vorherige, sonst
-      # weist App Store Connect ihn ab. Die Lauf-Nummer waechst von selbst.
+      # Jeder Upload braucht eine HOEHERE Nummer als der vorherige, sonst weist
+      # App Store Connect ihn ab. Die Lauf-Nummer waechst von selbst.
       - name: Baunummer setzen
         working-directory: ${{ env.PROJEKT }}/ios/App
         run: |
@@ -128,7 +112,11 @@ jobs:
         working-directory: ${{ env.PROJEKT }}/ios/App
         run: pod install --repo-update
 
-      - name: Archivieren
+      - name: Archivieren (Xcode holt sich Zertifikat und Profil selbst)
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           xcodebuild -workspace "$WORKSPACE" \
@@ -136,12 +124,19 @@ jobs:
                      -configuration Release \
                      -destination 'generic/platform=iOS' \
                      -archivePath "$RUNNER_TEMP/METRICGYM.xcarchive" \
-                     CODE_SIGN_STYLE=Manual \
-                     PROVISIONING_PROFILE_SPECIFIER="$PROFIL_NAME" \
-                     CODE_SIGN_IDENTITY="Apple Distribution" \
+                     -allowProvisioningUpdates \
+                     -authenticationKeyPath "$APPLE_KEY" \
+                     -authenticationKeyID "$KEY_ID" \
+                     -authenticationKeyIssuerID "$ISSUER_ID" \
+                     CODE_SIGN_STYLE=Automatic \
+                     DEVELOPMENT_TEAM="$TEAM_ID" \
                      archive
 
       - name: IPA ausgeben
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/Export.plist" <<PLIST
@@ -149,26 +144,30 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
-            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
-            <key>provisioningProfiles</key>
-            <dict><key>$BUNDLE_ID</key><string>$PROFIL_NAME</string></dict>
           </dict></plist>
           PLIST
-          # Xcode 15.3 hat "app-store" in "app-store-connect" umbenannt. Statt zu
-          # raten, welche Fassung die Maschine hat: erst die neue probieren,
-          # bei Ablehnung die alte. Spart eine ganze Fehlerklasse.
-          if ! xcodebuild -exportArchive \
-                 -archivePath "$RUNNER_TEMP/METRICGYM.xcarchive" \
-                 -exportOptionsPlist "$RUNNER_TEMP/Export.plist" \
-                 -exportPath "$RUNNER_TEMP/ausgabe"; then
-            echo "::notice::Export mit 'app-store-connect' abgelehnt — versuche 'app-store'"
-            sed -i '' 's|app-store-connect|app-store|' "$RUNNER_TEMP/Export.plist"
+
+          export_versuch () {
             xcodebuild -exportArchive \
                        -archivePath "$RUNNER_TEMP/METRICGYM.xcarchive" \
                        -exportOptionsPlist "$RUNNER_TEMP/Export.plist" \
-                       -exportPath "$RUNNER_TEMP/ausgabe"
+                       -exportPath "$RUNNER_TEMP/ausgabe" \
+                       -allowProvisioningUpdates \
+                       -authenticationKeyPath "$APPLE_KEY" \
+                       -authenticationKeyID "$KEY_ID" \
+                       -authenticationKeyIssuerID "$ISSUER_ID"
+          }
+
+          # Xcode 15.3 hat "app-store" in "app-store-connect" umbenannt. Statt zu
+          # raten, welche Fassung die Maschine hat: erst die neue probieren,
+          # bei Ablehnung die alte. Spart eine ganze Fehlerklasse.
+          if ! export_versuch; then
+            echo "::notice::Export mit 'app-store-connect' abgelehnt — versuche 'app-store'"
+            sed -i '' 's|app-store-connect|app-store|' "$RUNNER_TEMP/Export.plist"
+            export_versuch
           fi
           ls -lh "$RUNNER_TEMP/ausgabe"
 
@@ -181,49 +180,40 @@ jobs:
 
       # ---- 5 · Hochladen ----
       # fastlane statt `xcrun altool`: altool ist von Apple abgekuendigt.
-      # fastlane ist auf GitHubs macOS-Maschinen vorinstalliert und nutzt den
-      # App-Store-Connect-API-Schluessel, der kein 2FA braucht.
+      # fastlane ist auf GitHubs macOS-Maschinen vorinstalliert und nutzt
+      # denselben Schluessel — kein zweiter Zugang noetig.
       - name: Zu TestFlight hochladen
         if: ${{ inputs.hochladen }}
         env:
-          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
-          API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
-          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
         run: |
           set -euo pipefail
-          for v in API_KEY_ID API_ISSUER_ID API_KEY_P8; do
-            [ -n "${!v:-}" ] || { echo "::error::Secret $v fehlt — siehe BUILD-OHNE-MAC.md"; exit 1; }
-          done
-          mkdir -p "$RUNNER_TEMP/privatschluessel"
-          echo "$API_KEY_P8" | base64 --decode > "$RUNNER_TEMP/privatschluessel/key.p8"
-
           # Den Schluessel mit Python in die JSON-Datei schreiben, die fastlane
           # erwartet. Den PEM-Block im Shell in JSON zu quetschen geht an den
           # Zeilenumbruechen schief — hier macht es ein JSON-Serialisierer.
           python3 - <<'PYTHON'
           import json, os
-          with open(os.environ["RUNNER_TEMP"] + "/privatschluessel/key.p8") as f:
+          with open(os.environ["APPLE_KEY"]) as f:
               schluessel = f.read()
-          daten = {
-              "key_id": os.environ["API_KEY_ID"],
-              "issuer_id": os.environ["API_ISSUER_ID"],
-              "key": schluessel,
-              "in_house": False,
-          }
-          with open(os.environ["RUNNER_TEMP"] + "/privatschluessel/api_key.json", "w") as f:
-              json.dump(daten, f)
+          ziel = os.environ["RUNNER_TEMP"] + "/apple/api_key.json"
+          with open(ziel, "w") as f:
+              json.dump({
+                  "key_id": os.environ["KEY_ID"],
+                  "issuer_id": os.environ["ISSUER_ID"],
+                  "key": schluessel,
+                  "in_house": False,
+              }, f)
           PYTHON
 
           IPA=$(ls "$RUNNER_TEMP"/ausgabe/*.ipa | head -1)
           echo "Lade hoch: $(basename "$IPA")"
           fastlane run upload_to_testflight \
-            api_key_path:"$RUNNER_TEMP/privatschluessel/api_key.json" \
+            api_key_path:"$RUNNER_TEMP/apple/api_key.json" \
             ipa:"$IPA" \
             skip_waiting_for_build_processing:true \
             changelog:"${{ inputs.hinweis }}"
 
       - name: Aufraeumen
         if: always()
-        run: |
-          security delete-keychain "${SCHLUESSELBUND:-}" 2>/dev/null || true
-          rm -rf "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/privatschluessel" || true
+        run: rm -rf "$RUNNER_TEMP/apple" || true
