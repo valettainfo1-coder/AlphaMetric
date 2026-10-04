@@ -2122,3 +2122,55 @@ automatisch. (`vendor/zxing/` ist entfernt; falls three.js lokal gewünscht
 ist, kann `vendor/three.min.js` hinterlegt werden, sonst lädt es vom CDN.)
 Für C4/KI-Proxy: `supabase/functions/ai-proxy` deployen + Secrets setzen,
 SQL aus `SUPABASE_SETUP.md` Abschnitt 4 ausführen ([BETREIBER]).
+
+---
+
+## §82 — iOS aktiviert, und das fremde Logo entfernt
+
+Das Xcode-Projekt steht (`metricgym-app/ios/`), mit allem, was ohne Mac
+vorbereitbar war: Berechtigungstexte, Ausfuhr-Erklärung, Hintergrundfarbe gegen
+das weiße Aufblitzen, Paket-Kennung `de.metricgym.app`, Mindest-iOS 14.
+
+**Der Fund, der wichtiger war als iOS selbst.** `npx cap add` legt eigene
+Platzhalter-Icons ab — das hellblaue Capacitor-Kreuz. Das stand in **beiden**
+Projekten, Android inklusive, und wäre so in die Stores gegangen: eine App
+namens METRICGYM mit fremdem Logo auf dem Startbildschirm. Beim Android-Projekt
+hatte ich das in §81 übersehen.
+
+`metricgym-app/marke.mjs` erzeugt jetzt alle 30 Bilder aus `logoSVG()` —
+derselben Funktion, die das Logo *in* der App zeichnet. Das Icon kann damit
+nicht mehr vom Logo abweichen.
+
+**Zwei Messungen, die eine Schätzung widerlegt haben.** Erst wollte ich die
+Kugel größer machen, weil sie im alten `icon-512.png` nur 39 % der Breite
+einnahm. Dann habe ich gemessen, *was* ich da messe: die Perspektive in
+`spherePoints` (`persp = 1/(1.85 − z·0.55)`) staucht die Sphäre auf **55 % der
+SVG-Kante**, nicht 91 %, wie der Radius `R = V·0.455` vermuten lässt. Das alte
+Icon war also nicht zu klein komponiert — mein Vergleichsmaßstab war falsch. Der
+Umrechnungsfaktor steht jetzt im Skript, damit „65 % Fläche" auch 65 % ergibt.
+
+Die Punktdichte ist an gerenderten Mustern in den Größen entschieden, in denen
+das Icon wirklich erscheint (60 / 90 / 140 px auf dem Startbildschirm), nicht an
+der 1024er-Vorschau: 160 Punkte reißen bei 140 px Löcher, 200 wirken in der
+Mitte hohl, 280 bleiben bei 60 px geschlossen und zeigen bei 140 px noch
+einzelne Punkte.
+
+**Drei stille Fehler kamen mit den Platzhaltern mit:** der Hintergrund des
+adaptiven Android-Icons war `#FFFFFF` — die leuchtende Kugel hätte auf einem
+weißen Quadrat gesessen; das iOS-App-Icon hatte einen Alphakanal, und **Apple
+weist Icons mit Alphakanal ab**, auch wenn jedes Pixel deckend ist; zwei
+Vektor-Reste von Capacitor lagen unbenutzt im Projekt (geprüft: kein Verweis
+darauf) und sind entfernt.
+
+**Und eine Zahl, die ich korrigieren musste.** Ich hatte „30 % Apple-Provision,
+bei 9,99 € bleiben 7,00 €" gesagt. Seit dem 1.10.2026 gelten in der EU neue
+Bedingungen: In-App-Kauf 15 % im Small Business Program, eigene Kasse **in** der
+App 10 % — Stripe im WebView ist also nicht mehr verboten. Nach Umsatzsteuer
+bleiben von 9,99 € in beiden Fällen 7,14 € bzw. 7,16 €. **Zwei Cent
+Unterschied**, nicht 2,40 €. Die Empfehlung kippt damit zu Apples Kasse, aber
+nicht wegen der Provision: Apple zieht die Umsatzsteuer in allen EU-Ländern ein
+und führt sie ab. Rechnung, Quellen und der noch offene StoreKit-Teil stehen in
+`metricgym-app/README.md`.
+
+Keine Änderung an der Weboberfläche — `index.html` ist unberührt, alle 227 Tests
+bleiben grün, Version weiterhin **v62**.

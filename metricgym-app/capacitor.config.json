@@ -2,6 +2,7 @@
   "appId": "de.metricgym.app",
   "appName": "METRICGYM",
   "webDir": "www",
+  "backgroundColor": "#080A0F",
   "android": { "allowMixedContent": false },
   "server": { "androidScheme": "https" },
   "plugins": {

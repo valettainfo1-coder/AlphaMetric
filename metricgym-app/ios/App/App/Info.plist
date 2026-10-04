@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+        <string>METRICGYM</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+	<!-- Berechtigungstexte. OHNE diese stuerzt iOS die App ab, sobald ein
+	     Datei-Feld die Kamera oder die Fotos oeffnet — und die Pruefung lehnt
+	     sie ab. Die App hat drei Felder mit accept="image/*" (Plan abfotografieren,
+	     Essen per Foto erfassen, Fortschrittsbild) und eines fuer Gesundheitsdaten
+	     als Datei (.xml/.csv/.json), das keine Berechtigung braucht.
+	     Der Text erscheint dem Nutzer woertlich im Systemdialog, deshalb steht
+	     hier WOFUER — nicht "Zugriff benoetigt". -->
+	<key>NSCameraUsageDescription</key>
+	<string>Damit du deinen Trainingsplan oder eine Mahlzeit direkt abfotografieren kannst, statt alles zu tippen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Damit du ein vorhandenes Foto auswählen kannst — etwa deinen Plan oder ein Fortschrittsbild.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Damit du deine Auswertung als Bild in deinen Fotos speichern kannst.</string>
+	<!-- Spart die Ausfuhr-Erklaerung bei JEDEM Upload. Die App nutzt nur HTTPS,
+	     also Standard-Verschluesselung des Systems — keine eigene Kryptografie. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

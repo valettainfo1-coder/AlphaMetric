@@ -7,6 +7,7 @@
     "@capacitor/android": "^7.6.9",
     "@capacitor/cli": "^7.6.9",
     "@capacitor/core": "^7.6.9",
+    "@capacitor/ios": "^7.6.9",
     "@capacitor/preferences": "^7.0.4"
   }
 }

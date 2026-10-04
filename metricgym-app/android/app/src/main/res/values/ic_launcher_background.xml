@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Untere Ebene des adaptiven Icons. Stand Capacitor-Vorlage: #FFFFFF —
+         die leuchtende Partikel-Kugel haette auf einem weissen Quadrat gesessen.
+         Dieser Wert ist der Grundton der App (--bg0 in index.html). -->
+    <color name="ic_launcher_background">#0B0E15</color>
 </resources>
