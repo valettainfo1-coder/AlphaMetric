@@ -38,3 +38,19 @@ jobs:
 
       - name: Ausdauer-Modul (Engine-Referenzwerte · GPX-Import)
         run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/endurance-tests.mjs
+
+      # Diese beiden fehlten hier, obwohl sie lokal mitlaufen — damit waren
+      # Layout- und App-Store-Regressionen im CI unsichtbar.
+      - name: UI-Waechter (Layout · Kontrast · Sprache)
+        run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/ui-guard-tests.mjs
+
+      - name: iOS-Waechter (Richtlinie 3.1.1 · 4.8 · Produkt-Kennungen)
+        run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/ios-tests.mjs
+
+      # Die Belegpruefung braucht weder Browser noch Server — nur eine
+      # Testzertifikatskette, die das Skript selbst erzeugt.
+      - name: Apple-Belegpruefung (Zertifikatskette · Signatur)
+        run: |
+          metricgym-netlify/tests/apple-kette.sh metricgym-netlify/supabase/.kette
+          cd metricgym-netlify/supabase/functions/_shared
+          node --experimental-strip-types apple.test.mjs ../../.kette
