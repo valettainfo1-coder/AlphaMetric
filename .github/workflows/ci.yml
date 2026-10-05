@@ -47,6 +47,12 @@ jobs:
       - name: iOS-Waechter (Richtlinie 3.1.1 · 4.8 · Produkt-Kennungen)
         run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/ios-tests.mjs
 
+      # Die App behauptet im Plan-Editor "Auf dich geeicht". Diese Suite besteht
+      # darauf, dass die Eichung aus reinem Rauschen KEINEN Trend liest — sonst
+      # waere es ein Horoskop mit Fussnoten.
+      - name: Effizienz (Saettigungskurve · individuelle Eichung · Rauschfestigkeit)
+        run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/effizienz-tests.mjs
+
       # Die Belegpruefung braucht weder Browser noch Server — nur eine
       # Testzertifikatskette, die das Skript selbst erzeugt.
       - name: Apple-Belegpruefung (Zertifikatskette · Signatur)

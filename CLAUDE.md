@@ -52,11 +52,43 @@ npx http-server metricgym-netlify -p 8896 -s &
 node metricgym-netlify/tests/<suite>.mjs
 ```
 
-Fünf Suiten (`app`, `endurance`, `ui-guard`, `dsgvo`, `ios`) plus die
-Belegprüfung unter `supabase/functions/_shared/apple.test.mjs`.
+Sechs Suiten (`app`, `endurance`, `ui-guard`, `dsgvo`, `ios`, `effizienz`)
+plus die Belegprüfung unter `supabase/functions/_shared/apple.test.mjs`.
 `CHROMIUM=/opt/pw-browsers/chromium`, `NODE_PATH=/opt/node22/lib/node_modules`.
+
+Suiten importieren Playwright über `createRequire`, nicht mit `import` —
+ESM beachtet `NODE_PATH` nicht.
 
 Messgeräte zuerst prüfen. Mehrere Prüfungen in dieser Sitzung waren rot,
 ohne dass die App etwas falsch machte — falscher Tab-Name, fehlendes Profil,
-zu kurze Wartezeit. Eine Prüfung, die in beiden Fällen gleich ausfällt, misst
-nichts.
+zu kurze Wartezeit, nicht zurückgesetzter Zustand aus der vorigen Probe. Eine
+Prüfung, die in beiden Fällen gleich ausfällt, misst nichts. Profile im Test
+auf dem echten Weg bauen (`bmrCalc`/`tdeeCalc`/`generateTrainingPlan`/
+`generateOptimalSchedule`), nicht von Hand zusammenstecken.
+
+Und: `pkill -f "http-server"` erschießt die eigene Shell, weil das Muster auf
+die eigene Kommandozeile passt. Server-PID merken und `kill $PID`.
+
+## Zitate nicht aus dem Gedächtnis schreiben
+
+```
+node metricgym-netlify/tests/zitate-pruefen.mjs           # ganzes Register
+node metricgym-netlify/tests/zitate-pruefen.mjs Morton    # eine Arbeit
+```
+
+Prüft jeden Registereintrag gegen PubMed — Erstautor, Jahr und, wo angegeben,
+Band/Heft/Seiten. Läuft **nicht** im CI-Gate, weil es Netz braucht; vor dem
+Eintragen neuer Quellen von Hand laufen lassen.
+
+Der Anlass: beim Einbau der Effizienz-Eichung waren drei von sechs neu
+geschriebenen Zitaten falsch — erfundener Erstautor („Nunes" statt
+„Lixandrão"), falsches Journal bei zwei weiteren. Alle sahen plausibel aus.
+Dazu zitierte die App durchgehend „Pelland et al. Sports Med 2025"; die Arbeit
+steht in Sports Med 2026;56(2):481–505. Hätten manche Einträge 2025 und
+andere 2026 gesagt, hätte `quellenZahl()` **eine** Arbeit als **zwei** gezählt
+— und die auf der Startseite beworbene Zahl wäre zu hoch gewesen. Genau das
+ist die Behauptung, für die es dieses Register gibt.
+
+Der UI-Wächter verbietet jede zweite, von Hand gepflegte Studienzahl auf der
+Seite. Die Spannweite einer zitierten Meta-Analyse deshalb über die
+Teilnehmerzahl angeben („1.863 Teilnehmer"), nicht über die Studienzahl.

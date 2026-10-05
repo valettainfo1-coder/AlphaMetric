@@ -4131,7 +4131,16 @@ const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Bei
 // führte dazu, dass auf Push (Trizeps) + Pull (Bizeps) zusammen sofort die Kappe
 // griff: Curls wurden auf 2 Sätze gestutzt, Übungen entfernt, und die Zielzeit
 // (z. B. 75 Min) konnte nicht mehr gefüllt werden. Getrennte Bänder beheben das.
-const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[12,22],Schultern:[8,20],Bizeps:[8,20],Trizeps:[8,20],Arme:[10,22],Core:[4,16]};
+/* An Israetels veroeffentlichte Landmarken angeglichen (geprueft 05.10.2026):
+   Brust MEV 10 (stimmte schon), Ruecken MEV 10 statt 12, Trizeps MEV 6 statt 8
+   und MRV 18 statt 20. Die App war bei Ruecken und Trizeps strenger als ihre
+   eigene Quelle — und erzwang damit Isolationsarbeit, die niemand braucht.
+   Besonders beim Trizeps: der bekommt seit der fraktionierten Zaehlung aus
+   jedem Druecken 0,5 Saetze, acht DIREKTE zu verlangen war doppelt zu viel.
+   Die MRV bleiben bewusst unter Israetels Werten (22/25 statt 20/22): seine
+   Obergrenzen gelten fuer Fortgeschrittene mit voller Erholung — deficitScaledBands()
+   skaliert ohnehin nach Trainingsalter und Energiezufuhr. */
+const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[10,22],Schultern:[8,20],Bizeps:[8,20],Trizeps:[6,18],Arme:[10,22],Core:[4,16]};
 // Feines Volumen-Mapping: Arm-Isolation zählt auf den jeweils EIGENEN Muskel, nicht
 // auf eine Sammelgruppe. So bekommt der Bizeps am Pull-Tag sein volles Volumen (inkl.
 // 2. Übung) und der Trizeps am Push-Tag — ohne sich gegenseitig zu verdrängen.
@@ -4195,7 +4204,7 @@ function deficitScaledBands(a){
    die Zeit, die sie kosten, und die Wiederholungsbereiche.
 
    BELEGT ist die Form der Dosis-Wirkungs-Beziehung. Die Meta-Regression von
-   Pelland et al. (Sports Med 2025) über 67 Studien findet: Muskelwachstum
+   Pelland et al. (Sports Med 2026;56(2):481–505) über 67 Studien findet: Muskelwachstum
    steigt mit dem Volumen weiter an, mit klar abnehmendem Ertrag, und jenseits
    von rund 31 fraktionierten Sätzen pro Woche ist kein Vorteil mehr
    nachweisbar. Für KRAFT ist der Löwenanteil schon bei rund 3 fraktionierten
@@ -4221,16 +4230,44 @@ function deficitScaledBands(a){
 /* Eichpunkte je Ziel: ab wie vielen fraktionierten Sätzen pro Woche und Muskel
    ist kein weiterer Vorteil mehr nachweisbar? Daraus k = Punkt / 3 (dort
    erreicht die Kurve 95 %). */
+/* Sättigungspunkte — ABGELEITET, nicht gesetzt.
+   Zwei Werte stammen direkt aus der Meta-Regression (Pelland et al., Sports
+   Med 2025): rund 31 fraktionierte Sätze je Muskel und Woche für Hypertrophie,
+   rund 3 für Kraft.
+   Die übrigen leiten sich aus der Erhaltungs-Literatur ab statt aus meinem
+   Bauchgefühl: Bickel et al. (2011, n=70, 32 Wochen reduziertes Training) und
+   die Übersicht von Spiering et al. (2021) zeigen, dass ein DRITTEL bis ein
+   NEUNTEL der Aufbaudosis Muskelmasse und Kraft erhält — vorausgesetzt, die
+   relative Last bleibt. Für Ziele, bei denen Erhalt und nicht Wachstum zählt,
+   ist der Sättigungspunkt deshalb ein Drittel des Wachstums-Punktes (das
+   konservativere Ende der beiden Werte).
+   WICHTIGE EINSCHRÄNKUNG aus derselben Arbeit: bei Älteren hielt die reduzierte
+   Dosis die Muskelmasse NICHT (die Kraft schon). Deshalb der Alterszuschlag. */
+const SAETTIGUNG_WACHSTUM=31;          // Pelland 2026, Hypertrophie
+const SAETTIGUNG_KRAFT=3;              // Pelland 2026, Kraft
+const ERHALT_ANTEIL=1/3;               // Bickel 2011 / Spiering 2021, konservatives Ende
 const REIZ_SAETTIGUNG={
-  muscle_gain: 31,   // Pelland 2025: Hypertrophie
-  recomp:      31,   // derselbe Reiz, nur bei knapper Energie
-  strength:     3,   // Pelland 2025: Kraft, zusätzlich häufigkeitsabhängig
-  fat_loss:    10,   // Ziel ist ERHALT, nicht Wachstum — sättigt früher
-  general:     10,   // Gesundheit/Leistungsfähigkeit sättigt früh
-  mobility:    10,
-  endurance:    8,   // Heben ist Begleitreiz
+  muscle_gain: SAETTIGUNG_WACHSTUM,
+  recomp:      SAETTIGUNG_WACHSTUM,    // derselbe Reiz, nur bei knapper Energie
+  strength:    SAETTIGUNG_KRAFT,
+  fat_loss:    Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL),   // Erhalt im Defizit
+  general:     Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL),
+  mobility:    Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL),
+  endurance:   Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL*0.8), // Heben ist Begleitreiz
 };
-const reizK=(ziel)=>(REIZ_SAETTIGUNG[ziel]||REIZ_SAETTIGUNG.muscle_gain)/3;
+/* Ab etwa 50 reicht die reduzierte Dosis für den ERHALT der Muskelmasse nicht
+   mehr (Bickel 2011: Ältere verloren Masse bei einem Drittel/Neuntel, Kraft
+   blieb). Für erhaltungsorientierte Ziele steigt der Sättigungspunkt deshalb
+   um die Hälfte — anabole Resistenz verlangt mehr Reiz für dasselbe Ergebnis.
+   Beim reinen Wachstumsziel greift der Zuschlag nicht: dort liegt der
+   Sättigungspunkt ohnehin am oberen Ende. */
+const ERHALT_ZIELE=new Set(["fat_loss","general","mobility","endurance"]);
+function saettigungFuer(ziel,a){
+  const basis=REIZ_SAETTIGUNG[ziel]||REIZ_SAETTIGUNG.muscle_gain;
+  const alt=((a||(S.profile&&S.profile.a)||{}).age)||30;
+  return (alt>=50&&ERHALT_ZIELE.has(ziel))?Math.round(basis*1.5):basis;
+}
+const reizK=(ziel,a)=>saettigungFuer(ziel,a)/3;
 /* Sättigungskurve: steigt monoton, Ertrag nimmt ab, nähert sich 1. */
 const reizKurve=(n,k)=>1-Math.exp(-Math.max(0,n)/k);
 /* Grenznutzen: was bringt der NÄCHSTE Satz noch? Das ist die Ableitung —
@@ -4273,10 +4310,182 @@ function wochenVolumenFrakt(){
   return {vol,zeit,haeufig,schwer,saetzeGes};
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   SUBSTRATGRENZE — die biochemische Seite der Rechnung.
+
+   Ein Reiz wird nicht zu Gewebe, wenn das Baumaterial fehlt. Die
+   Dosis-Wirkungs-Beziehung der Eiweißzufuhr steigt bis etwa 1,6 g je kg
+   Körpergewicht und Tag und ist darüber flach (Morton et al., Br J Sports Med
+   2018, Meta-Regression, 1 863 Menschen in 49 Einzelarbeiten). Mehr bringt nichts —
+   weniger aber messbar weniger.
+
+   Die Größe des Effekts ist der Grund, warum dieser Faktor MILD ausfällt und
+   nicht halbiert: in derselben Arbeit legte die Eiweißergänzung rund 0,3 kg
+   fettfreie Masse über etwa zehn Wochen zu — ein echter, aber kleiner Zuschlag
+   auf den Trainingseffekt, der ohne sie ebenfalls eintritt. Ein Deckel, der bei
+   null Eiweiß auf null Anpassung ginge, würde die Arbeit falsch darstellen.
+   Deshalb 0,8 + 0,2 × Deckung: am Plateau voll, ganz unten vier Fünftel. Der
+   Zuschnitt ist Modell, der Knickpunkt ist gemessen — und beides steht so in
+   der App.
+
+   Der eigentliche Nutzen dieser Zahl ist der Rat, der daraus folgt: wer unter
+   dem Plateau isst, holt mehr aus der nächsten Eiweißportion als aus dem
+   nächsten Satz. Das ist eine Effizienzaussage, und sie wäre ohne die
+   Substratseite nicht zu treffen. */
+const PROTEIN_PLATEAU=1.6;              // g/kg/Tag — Morton et al. 2018
+function proteinDeckung(a){
+  a=a||(S.profile&&S.profile.a)||{};
+  const kg=a.weight; if(!(kg>0)) return null;
+  const tage=Object.keys(S.nutritionLog||{})
+    .map(d=>({d,p:((S.nutritionLog[d]&&S.nutritionLog[d].meals)||[]).reduce((s,m)=>s+(m.p||0),0)}))
+    .filter(x=>x.p>0).slice(-14);
+  /* Unter fünf geloggten Tagen ist der Mittelwert keine Aussage über die
+     Gewohnheit — dann schweigt die Rechnung statt zu raten. */
+  if(tage.length<5) return null;
+  const mittel=tage.reduce((s,x)=>s+x.p,0)/tage.length;
+  const jeKg=mittel/kg;
+  const deckung=Math.min(1,jeKg/PROTEIN_PLATEAU);
+  return {jeKg:Math.round(jeKg*100)/100, mittel:Math.round(mittel), tage:tage.length,
+          deckung, faktor:0.8+0.2*deckung, knapp:deckung<0.9};
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   INDIVIDUELLE KALIBRIERUNG DES SÄTTIGUNGSPUNKTES
+
+   Warum überhaupt: die Streuung der Trainingsantwort ist riesig und gemessen.
+   Hubal et al. (Med Sci Sports Exerc 2005) trainierten 585 Menschen am
+   Armbeuger: der Querschnitt änderte sich zwischen −2 % und +59 %, das 1RM
+   zwischen 0 % und +250 %. Ein Bevölkerungsmittelwert von 31 Sätzen kann für
+   den Einzelnen deutlich daneben liegen.
+
+   Warum trotzdem gedämpft: ein Drittel dieser scheinbaren Streuung ist
+   Rauschen. Die methodische Arbeit zum within-individual design (Chaves et al.,
+   Front Sports Act Living 2025;7:1517190) rechnet Hubals Daten nach — beobachtete SD 9,7 %, nach
+   Abzug von Messfehler und biologischer Schwankung bleiben 6,5 % ECHTE
+   Streuung. Das Verhältnis der Varianzen ist die Verlässlichkeit der Messung:
+   6,5²/9,7² ≈ 0,45. Nur dieser Anteil einer beobachteten Abweichung darf für
+   echt genommen werden, der Rest wird zum Bevölkerungswert zurückgeschrumpft.
+   Dieselbe Arbeit sagt ausdrücklich, dass übliche „Non-Responder"-Einordnungen
+   Menschen falsch einsortieren — deshalb nennt diese App niemanden so.
+
+   Warum die Richtung so und nicht anders: Lixandrão et al. (J Appl Physiol 2024,
+   85 Ältere, ein Bein 1 Satz, das andere 4 Sätze, 10 Wochen) stuften nach dem
+   Ein-Satz-Bein 51 von 85 als Nicht-Ansprechende ein — und genau diese legten
+   am Vier-Satz-Bein signifikant an Querschnitt UND Kraft zu. Stagnation
+   unterhalb der Sättigung ist also ein Dosisproblem, kein Personenproblem.
+   Die Kalibrierung hebt dann den Sättigungspunkt an (die Kurve verläuft für
+   diesen Menschen flacher, er braucht mehr Sätze für denselben Reiz) — sie
+   senkt ihn nicht.
+
+   Was gemessen wird: der Verlauf des geschätzten 1RM je Muskelgruppe, über die
+   Übungen, die diese Gruppe laden, anteilig nach satzAnteile(). Die Rauschgrenze
+   kommt aus den eigenen Residuen dieser Regression, nicht aus einer gesetzten
+   Zahl: ein Trend gilt erst als Trend, wenn der Anstieg größer ist als das
+   Eineinhalbfache seines eigenen Standardfehlers. Reicht die Datenlage für eine
+   Gruppe nicht, gilt der über alle Gruppen gepoolte Faktor; reicht auch der
+   nicht, der Bevölkerungswert. Das ist kein Notbehelf, sondern die übliche
+   Antwort auf dünne Daten: teilweises Pooling. */
+const KALIB_VERLAESSLICH=(6.5*6.5)/(9.7*9.7);   // ≈0,449 — s. Herleitung oben
+const KALIB_MIN_WOCHEN=6;                        // kürzere Fenster messen Rauschen
+const KALIB_MIN_PUNKTE=8;
+const KALIB_SPANNE=[0.65,1.60];                  // so weit darf k vom Mittel weg
+const KALIB_SCHRITT=0.35;                        // Rohschritt, vor der Dämpfung
+const KALIB_FENSTER_TAGE=112;                    // 16 Wochen
+
+/* Anstieg MIT Standardfehler. Ohne den Fehler ist ein Anstieg keine Aussage. */
+function trendMitFehler(punkte){
+  const n=punkte.length; if(n<3) return null;
+  const t0=punkte[0].x;
+  let sx=0,sy=0,sxx=0,sxy=0;
+  for(const p of punkte){ const x=p.x-t0; sx+=x; sy+=p.y; sxx+=x*x; sxy+=x*p.y; }
+  const nenner=n*sxx-sx*sx; if(!nenner) return null;
+  const b=(n*sxy-sx*sy)/nenner, a=(sy-b*sx)/n;
+  let rss=0; for(const p of punkte){ const r=p.y-(a+b*(p.x-t0)); rss+=r*r; }
+  const s2=rss/(n-2);
+  const se=Math.sqrt(Math.max(0,s2*n/nenner));
+  if(!isFinite(b)||!isFinite(se)) return null;
+  return {b,se,n};
+}
+
+/* Fortschritt einer Muskelgruppe: relativer 1RM-Anstieg je Woche, anteilig über
+   alle Übungen gemittelt, die diese Gruppe nennenswert laden (Anteil ≥ 0,5). */
+function gruppenFortschritt(m){
+  const grenze=Date.now()-KALIB_FENSTER_TAGE*dayMs;
+  const beitraege=[]; let punkteGes=0, spanne=0;
+  for(const name of Object.keys(S.liftLog||{})){
+    const anteil=(satzAnteile(name)||{})[m]; if(!(anteil>=0.5)) continue;
+    const reihe=e1Series(name).filter(p=>p.t>=grenze&&p.v>0);
+    if(reihe.length<3) continue;
+    /* Relativ rechnen, nicht absolut: 2,5 kg auf die Kniebeuge und 2,5 kg auf
+       den Bizeps-Curl sind nicht derselbe Fortschritt. */
+    const basis=reihe[0].v||1;
+    const t=trendMitFehler(reihe.map(p=>({x:(p.t-reihe[0].t)/dayMs, y:p.v/basis})));
+    if(!t) continue;
+    beitraege.push({anteil, prozentWoche:t.b*7*100, seWoche:t.se*7*100, n:t.n});
+    punkteGes+=t.n;
+    spanne=Math.max(spanne,(reihe[reihe.length-1].t-reihe[0].t)/dayMs/7);
+  }
+  if(!beitraege.length) return null;
+  const gew=beitraege.reduce((s,b)=>s+b.anteil,0);
+  const rate=beitraege.reduce((s,b)=>s+b.prozentWoche*b.anteil,0)/gew;
+  /* Fehler gewichteter Mittel: Wurzel aus der Summe der quadrierten Anteile. */
+  const se=Math.sqrt(beitraege.reduce((s,b)=>s+Math.pow(b.seWoche*b.anteil/gew,2),0));
+  return {rate,se,punkte:punkteGes,wochen:spanne,
+          klar:(se>0&&Math.abs(rate)>1.5*se)};
+}
+
+/* Ein Kalibrierfaktor je Gruppe. >1 heißt: dieser Mensch braucht mehr Sätze
+   für denselben Reiz. <1 heißt: er holt aus jedem Satz mehr heraus. */
+function kalibFaktoren(a){
+  a=a||(S.profile&&S.profile.a)||{};
+  const ziel=primaryGoal(a);
+  const {vol}=wochenVolumenFrakt();
+  const saett=saettigungFuer(ziel,a);
+  const roh={}, belege={};
+  for(const m of Object.keys(vol)){
+    if(m==="Herz") continue;
+    const f=gruppenFortschritt(m);
+    if(!f||f.wochen<KALIB_MIN_WOCHEN||f.punkte<KALIB_MIN_PUNKTE){ belege[m]={grund:"zu wenig Daten",f}; continue; }
+    if(!f.klar){ belege[m]={grund:"kein klarer Trend",f}; continue; }
+    const n=vol[m]||0;
+    const anteilSaett=saett>0?n/saett:1;
+    let schritt=0, grund="";
+    if(f.rate<=0 && anteilSaett<0.9){
+      /* Stagnation, obwohl noch Luft zur Sättigung ist → Dosis zu klein
+         (Lixandrão 2024). Sättigungspunkt hoch. */
+      schritt=+KALIB_SCHRITT; grund="Stagnation unterhalb der Sättigung";
+    } else if(f.rate>0 && anteilSaett<0.6){
+      /* Deutlicher Fortschritt bei weniger als 60 % der Dosis → holt mehr aus
+         jedem Satz. Sättigungspunkt runter: der Plan soll keine Sätze fordern,
+         die dieser Mensch nicht braucht. */
+      schritt=-KALIB_SCHRITT; grund="Fortschritt bei geringer Dosis";
+    } else if(f.rate<=0 && anteilSaett>=0.9){
+      /* An der Sättigung und trotzdem flach. Mehr Sätze sind hier NICHT die
+         Antwort — der Hebel ist Last, Häufigkeit oder Energiezufuhr. */
+      belege[m]={grund:"an der Sättigung flach — Hebel ist nicht das Volumen",f}; continue;
+    } else { belege[m]={grund:"läuft wie erwartet",f}; continue; }
+    /* DÄMPFUNG: nur der verlässliche Anteil der Beobachtung zählt. */
+    roh[m]=1+schritt*KALIB_VERLAESSLICH;
+    belege[m]={grund,f,faktor:roh[m]};
+  }
+  /* Teilweises Pooling: ein gemeinsamer Faktor aus allem, was gemessen wurde —
+     für die Gruppen, deren eigene Datenlage nicht reicht. */
+  const werte=Object.values(roh);
+  const global=werte.length?werte.reduce((s,x)=>s+x,0)/werte.length:null;
+  const klemm=x=>Math.max(KALIB_SPANNE[0],Math.min(KALIB_SPANNE[1],x));
+  const out={};
+  for(const m of Object.keys(vol)){
+    if(m==="Herz") continue;
+    out[m]=klemm(roh[m]!=null?roh[m]:(global!=null?global:1));
+  }
+  return {faktoren:out, global:global!=null?klemm(global):null, belege,
+          gemessen:werte.length, individuell:werte.length>0};
+}
+
 /* Der Bericht. Gibt je Muskel UND gesamt zurück, worauf sich alles stützt. */
 function effizienzBericht(a){
   a=a||(S.profile&&S.profile.a)||{};
-  const ziel=primaryGoal(a), k=reizK(ziel);
+  const ziel=primaryGoal(a), k=reizK(ziel,a);
   const {vol,zeit,haeufig,schwer}=wochenVolumenFrakt();
   const bands=deficitScaledBands(a);
   /* Energieverfügbarkeit: im Defizit ist die Anpassungsfähigkeit begrenzt —
@@ -4284,23 +4493,35 @@ function effizienzBericht(a){
      der die App schon das erholbare Volumen skaliert; sie deckelt hier die
      erreichbare Anpassung, NICHT die Kurvenform. */
   const energie=Math.min(1,(typeof deficitFactor==="function"?deficitFactor(a):1)||1);
+  /* Substrat: ohne Baumaterial kein Aufbau. Liegt kein Ernährungslog vor,
+     bleibt der Faktor 1 — die App behauptet dann nichts über die Zufuhr. */
+  const prot=proteinDeckung(a);
+  const substrat=prot?prot.faktor:1;
+  /* Individuelle Kalibrierung: ein eigener Sättigungspunkt je Gruppe, soweit
+     die eigenen Daten das tragen. Ohne Daten ist der Faktor 1 und alles
+     verhält sich genau wie vorher. */
+  const kal=kalibFaktoren(a);
   const gruppen=[];
   for(const m of Object.keys(vol)){
     if(m==="Herz") continue;
     const n=Math.round(vol[m]*10)/10;
-    const roh=reizKurve(n,k);
+    const kM=k*(kal.faktoren[m]||1);
+    const roh=reizKurve(n,kM);
     /* Kraft lebt von der Last, nicht nur von der Satzzahl. Liegt kein Satz im
        schweren Bereich (≤6 Wdh), fehlt der spezifische Reiz — dann wird der
        Wert gedeckelt. Für Hypertrophie gilt das nicht: dort ist der
        Wiederholungsbereich bei gleicher Anstrengung weitgehend austauschbar. */
     const schwerAnteil=n>0?(schwer[m]||0)/n:0;
     const lastFaktor=(ziel==="strength")?(0.55+0.45*Math.min(1,schwerAnteil/0.5)):1;
-    const reiz=roh*lastFaktor*energie;
+    const reiz=roh*lastFaktor*energie*substrat;
     const minuten=Math.round(zeit[m]||0);
     gruppen.push({
       m, saetze:n, frequenz:haeufig[m]||0, minuten,
       reiz:Math.round(reiz*100),
-      grenz:grenzNutzen(n,k)*lastFaktor*energie,       // Nutzen des nächsten Satzes
+      grenz:grenzNutzen(n,kM)*lastFaktor*energie*substrat, // Nutzen des nächsten Satzes
+      kFaktor:Math.round((kal.faktoren[m]||1)*100)/100,
+      saettigungM:Math.round(kM*3),
+      kalibGrund:(kal.belege[m]&&kal.belege[m].grund)||null,
       proStunde: minuten>0?Math.round(reiz*100/(minuten/60)):0,
       band:bands[m]||null,
       schwerAnteil:Math.round(schwerAnteil*100),
@@ -4312,8 +4533,11 @@ function effizienzBericht(a){
   /* Der nächste Satz gehört dorthin, wo er am meisten bringt — und ein Satz
      ist "verschenkt", wenn sein Beitrag unter einem Zehntel dessen liegt, was
      der allererste Satz derselben Gruppe gebracht hätte. */
-  const schwelle=grenzNutzen(0,k)*0.1;
-  const verschenkt=gruppen.filter(g=>g.grenz<schwelle);
+  /* Die Schwelle gehört je Gruppe berechnet: mit individuellem k ist der
+     Nutzen des ERSTEN Satzes je Gruppe verschieden, ein globaler Vergleich
+     würde Gruppen mit flacherer Kurve pauschal benachteiligen. */
+  const schwelleVon=g=>grenzNutzen(0,k*(kal.faktoren[g.m]||1))*0.1;
+  const verschenkt=gruppen.filter(g=>g.grenz<schwelleVon(g));
   /* WENN ALLES GESÄTTIGT IST, GIBT ES KEINEN "NÄCHSTEN SATZ".
      Beim Kraftziel ist das der Normalfall: die Sättigung liegt bei rund drei
      fraktionierten Sätzen, ein normaler Plan liegt weit darüber. Die Liste
@@ -4323,7 +4547,22 @@ function effizienzBericht(a){
      der Hebel ist ein anderer. Für Kraft sind das Last und Häufigkeit (beides
      zählt laut derselben Meta-Regression für Kraft, nicht fürs Wachstum),
      für alle anderen Ziele ist der Plan am Ziel. */
-  const naechster=(gruppen.length&&gruppen[0].grenz>=schwelle)?gruppen[0]:null;
+  /* ERHOLUNGSGRENZE VOR GRENZNUTZEN. Der Sättigungspunkt sagt, was ein Satz
+     noch BRINGT; das MRV sagt, was der Körper noch VERKRAFTET. Das sind zwei
+     Größen, und die individuelle Eichung verschiebt nur die erste: wer laut
+     seinem Verlauf mehr Sätze für denselben Reiz braucht, kann sie deshalb
+     nicht automatisch auch erholen. Ohne diese Prüfung hätte die Eichung genau
+     bei den Menschen, die ohnehin schon zu wenig Fortschritt sehen, auf ein
+     Volumen über ihrer Erholungsgrenze gezeigt — die Empfehlung hätte das
+     Problem verstärkt, das sie lösen soll.
+     Eine Gruppe am oder über dem MRV ist daher kein Kandidat für den nächsten
+     Satz, so hoch ihr Grenznutzen auch rechnet. */
+  const hatLuft=g=>!g.band||g.saetze<g.band[1];
+  const kandidaten=gruppen.filter(hatLuft);
+  const naechster=(kandidaten.length&&kandidaten[0].grenz>=schwelleVon(kandidaten[0]))?kandidaten[0]:null;
+  /* Gruppen, bei denen der Grenznutzen noch hoch wäre, die Erholung aber nicht
+     mehr mitkommt. Das ist eine eigene Aussage und gehört sichtbar gemacht. */
+  const amDeckel=gruppen.filter(g=>!hatLuft(g)&&g.grenz>=schwelleVon(g));
   /* Woran es beim Kraftziel wirklich hängt, wenn das Volumen reicht: wie viel
      davon im schweren Bereich liegt. */
   const lastLuecke=(ziel==="strength")
@@ -4333,9 +4572,10 @@ function effizienzBericht(a){
     ziel, k, energie:Math.round(energie*100), gruppen, minutenGes,
     reiz:Math.round(reizMittel),
     proStunde: minutenGes>0?Math.round(reizMittel/(minutenGes/60)):0,
-    naechster, verschenkt, lastLuecke,
+    naechster, verschenkt, lastLuecke, amDeckel, protein:prot,
     gesaettigt: naechster===null,
-    saettigung: REIZ_SAETTIGUNG[ziel]||REIZ_SAETTIGUNG.muscle_gain,
+    saettigung: saettigungFuer(ziel,a),
+    kalib: kal,
   };
 }
 
@@ -4900,7 +5140,7 @@ function openPaywall(key){
 /* =====================================================================
    PERSONALISIERTE TRAININGSPLAN-ENGINE
    Prinzipien: RIR-gesteuert (Robinson et al., 2024) · 5–10 direkte
-   Sätze/Muskel/Woche (Pelland et al., 2025) · Frequenz = Recovery-Frage
+   Sätze/Muskel/Woche (Pelland et al., 2026) · Frequenz = Recovery-Frage
    · Lengthened Partials bei Isolation (Wolf et al., 2024) · Tempo für
    mechanische Spannung. Pläne sind Empfehlungen mit Begründung —
    niemals erfundene Fortschrittsdaten.
@@ -5382,7 +5622,7 @@ const FOCUS_PARENT={Brust:"Brust","Rücken":"Rücken",Latissimus:"Rücken",Schul
    übungen, i = Isolation (Robinson 2024: Isolation näher ans Versagen).
    Grundwerte = Wochenstart (MEV-nah). Über den Trainingsblock baut sich das
    Volumen progressiv auf (siehe weekSets) Richtung MAV/MRV (Israetel 2017,
-   Pelland 2025), Woche 4 = Erholung. */
+   Pelland 2026), Woche 4 = Erholung. */
 const SETS_BY_EXP={
   // count = Übungen pro Einheit. Bewusst schlank (4–6): mehr Übungen je Session
   // erhöhen v. a. die Ermüdung, nicht die Reizqualität — späte Übungen leiden
@@ -8845,10 +9085,15 @@ A.lpDemo=(n)=>{ const el=document.getElementById("lp-anat"); if(el)el.innerHTML=
    (quellenZahl()), nie von Hand gepflegt — so kann sie nicht driften. */
 const QUELLEN=[
   {g:"Wie viel du trainierst", items:[
-    ["Dein Plan bekommt eine Effizienzrechnung: Sätze je Muskel und Woche — Grundübungen zählen für den Zielmuskel voll und für die mitarbeitenden halb — werden gegen die Dosis-Wirkungs-Beziehung gelegt und durch die Zeit geteilt, die sie kosten. Daraus kommt, wo der nächste Satz am meisten bringt und wo er nur noch Zeit kostet. Die Kurvenform ist belegt, die Gleichung ist ein Modell — beides steht in der App nebeneinander.","Pelland et al. Sports Med 2025 · Meta-Regression"],
-    ["Der Volumen-Korridor je Muskel (MEV–MRV): unter MEV fehlt der Wachstumsreiz, über MRV entsteht mehr Ermüdung als Anpassung. Er setzt den Deckel für jede Muskelgruppe in deinem Plan.","Israetel et al. 2017 · MEV–MRV"],
-    ["Mehr Sätze bringen mehr Muskel — bis etwa 30 Sätze pro Muskel und Woche, mit abnehmendem Ertrag. Für KRAFT ist der Löwenanteil dagegen schon nach wenigen Sätzen erreicht. Deshalb deckelt die Engine beim Muskelziel höher als beim Kraftziel.","Pelland et al. Sports Med 2025 · Meta-Regression"],
-    ["Jede Muskelgruppe 2×/Woche statt 1× — entscheidet bei 2–4 Trainingstagen die Split-Wahl (Ganzkörper statt Muskel-pro-Tag). Für den MUSKELaufbau zählt bei gleichem Wochenvolumen vor allem das Volumen selbst, die Häufigkeit kaum; für KRAFT bringt die höhere Häufigkeit messbar mehr. Zweimal pro Woche verteilt das Volumen zudem auf erträglichere Einheiten.","Schoenfeld et al. 2016 · aktualisiert durch Pelland et al. Sports Med 2025"],
+    ["Dein Plan bekommt eine Effizienzrechnung: Sätze je Muskel und Woche — Grundübungen zählen für den Zielmuskel voll und für die mitarbeitenden halb — werden gegen die Dosis-Wirkungs-Beziehung gelegt und durch die Zeit geteilt, die sie kosten. Daraus kommt, wo der nächste Satz am meisten bringt und wo er nur noch Zeit kostet. Die Kurvenform ist belegt, die Gleichung ist ein Modell — beides steht in der App nebeneinander.","Pelland et al. Sports Med 2026;56(2):481–505 · Meta-Regression"],
+    ["Der Volumen-Korridor je Muskel (MEV–MRV): unter MEV fehlt der Wachstumsreiz, über MRV entsteht mehr Ermüdung als Anpassung. Er setzt den Deckel für jede Muskelgruppe in deinem Plan. Die App nimmt die veröffentlichten Untergrenzen (Brust und Rücken 10, Trizeps 6 direkte Sätze), bleibt bei den Obergrenzen aber bewusst darunter (20 statt 22 bei der Brust, 22 statt 25 beim Rücken) und skaliert sie zusätzlich nach Trainingsalter und Energiezufuhr — die veröffentlichten Maxima gelten für Fortgeschrittene mit voller Erholung.","Israetel et al. 2017 · MEV–MRV"],
+    ["Deine Trainingsantwort ist nicht die mittlere. 585 Menschen trainierten denselben Muskel nach demselben Plan: der Querschnitt änderte sich zwischen −2 % und +59 %, die Maximalkraft zwischen 0 % und +250 %. Deshalb eicht die App den Sättigungspunkt nach etwa sechs Wochen auf deinen eigenen 1RM-Verlauf, je Muskelgruppe getrennt.","Hubal MJ et al. Med Sci Sports Exerc 2005;37(6):964–972"],
+    ["Diese Eichung ist absichtlich gedämpft, und zwar um einen gemessenen Betrag: rechnet man Messfehler und normale biologische Schwankung aus derselben Datenlage heraus, schrumpft die scheinbare Streuung zwischen Menschen von 9,7 % auf 6,5 % — etwa ein Drittel war Rauschen. Die App übernimmt nur das Verhältnis der Varianzen (≈ 45 %) einer beobachteten Abweichung und zieht den Rest zum Mittelwert zurück. Dieselbe Arbeit zeigt, dass gängige „Non-Responder\u0022-Einordnungen Menschen falsch einsortieren — deshalb nennt diese App niemanden so.","Chaves TS, da Silva DG, Lixandrão ME, Libardi CA. Front Sports Act Living 2025;7:1517190"],
+    ["Bleibt der Fortschritt aus, obwohl noch Luft bis zur Sättigung ist, erhöht die App die Dosis statt sie zu senken. 85 Ältere trainierten ein Bein mit einem Satz, das andere mit vier: 51 von 85 galten nach dem Ein-Satz-Bein als nicht ansprechend — und legten am Vier-Satz-Bein messbar an Muskelquerschnitt und Kraft zu. Ausbleibende Reaktion ist zuerst eine Frage der Dosis, nicht der Veranlagung.","Lixandrão ME, Bamman M, Vechin FC et al. J Appl Physiol 2024;136(2):421–429"],
+    ["Die Effizienzrechnung deckelt auch biochemisch, weil ein Reiz Baumaterial braucht: die Eiweißzufuhr wirkt bis etwa 1,6 g je kg Körpergewicht und Tag, darüber ist die Dosis-Wirkungs-Kurve flach. Liegst du nach deinem Ernährungslog darunter, nennt die App das Eiweiß als größeren Hebel als den nächsten Satz — und sagt dazu, dass der Knickpunkt gemessen, die Form des Deckels aber Modell ist.","Morton RW et al. Br J Sports Med 2018;52(6):376–384 · Meta-Regression, 1.863 Teilnehmer"],
+    ["Erhalten kostet weniger als aufbauen: ein Drittel bis ein Neuntel des Aufbauvolumens hielt Muskelmasse und Kraft über 32 Wochen — vorausgesetzt, die relative Last blieb gleich. Daraus leitet die App den Sättigungspunkt für Ziele ab, bei denen Erhalt zählt (Abnehmen, Fitness, Mobility), statt ihn zu setzen. Bei Älteren hielt die reduzierte Dosis die MASSE nicht (die Kraft schon) — dort rechnet die App einen Zuschlag.","Bickel CS, Cross JM, Bamman MM. Med Sci Sports Exerc 2011;43(7):1177–1187 · Spiering BA et al. J Strength Cond Res 2021;35(5):1449–1458"],
+    ["Mehr Sätze bringen mehr Muskel — bis etwa 30 Sätze pro Muskel und Woche, mit abnehmendem Ertrag. Für KRAFT ist der Löwenanteil dagegen schon nach wenigen Sätzen erreicht. Deshalb deckelt die Engine beim Muskelziel höher als beim Kraftziel.","Pelland et al. Sports Med 2026;56(2):481–505 · Meta-Regression"],
+    ["Jede Muskelgruppe 2×/Woche statt 1× — entscheidet bei 2–4 Trainingstagen die Split-Wahl (Ganzkörper statt Muskel-pro-Tag). Für den MUSKELaufbau zählt bei gleichem Wochenvolumen vor allem das Volumen selbst, die Häufigkeit kaum; für KRAFT bringt die höhere Häufigkeit messbar mehr. Zweimal pro Woche verteilt das Volumen zudem auf erträglichere Einheiten.","Schoenfeld et al. 2016 · aktualisiert durch Pelland et al. Sports Med 2026;56(2):481–505"],
     ["Progressive Ueberladung als Fortschritts-Motor: jede Woche mehr Wiederholungen oder mehr Gewicht.","Schoenfeld 2017"],
     ["Mehr als 4–6 Uebungen pro Einheit erhöhen vor allem die Ermüdung — späte Uebungen verlieren Reizqualität. Begrenzt die Uebungszahl je Session.","Schoenfeld 2019"],
   ]},
@@ -9170,7 +9415,7 @@ function renderLanding(){
         <p class="lp-quote mb8">„Wissenschaftlich"<br>sagen alle.</p>
         <p class="sm mb16" style="color:rgba(255,255,255,.72);line-height:1.6">Der Satz kostet nichts, und jede Fitness-App schreibt ihn hin. Der Unterschied fängt da an, wo du nachfragen kannst: <b style="color:#fff">Warum diese Satzzahl? Warum dieses Proteinziel? Warum heute Pause?</b> Bei METRICGYM steht die Antwort direkt daneben — und dahinter die Quelle. Du musst uns nicht glauben. Du kannst es nachlesen.</p>
         ${[["Volumen-Korridor pro Muskel (MEV–MRV)","Israetel et al. 2017"],
-           ["Progressive Überladung & Volumen-Dosis","Schoenfeld 2017 · Pelland 2025"],
+           ["Progressive Überladung & Volumen-Dosis","Schoenfeld 2017 · Pelland 2026"],
            ["RIR-gesteuerte Progression","Helms 2016 · Robinson 2024"],
            ["Training in gedehnter Position","Wolf et al. 2024 · Maeo 2023"],
            ["Protein & Körperkomposition","Morton et al. 2018 · Helms 2014"],
@@ -10738,7 +10983,7 @@ function renderReveal(){
     <!-- BELEGE: vier Hebel, jeder als eigene Karte mit voller Textbreite -->
     <p class="label" style="text-align:center;margin:0 0 4px">Warum dieser Plan mehr bringt</p>
     <p class="xs t2" style="margin:0 auto 16px;max-width:34ch;line-height:1.55">Bauchgefühl-Pläne lassen Ergebnisse liegen. Diese vier Hebel sind in deinem Plan eingebaut — jeder einzeln belegt.</p>
-    ${[["+25–48 %","mehr Muskel","Dein Wochenvolumen liegt exakt im erholbaren Korridor (MEV–MRV) — statt blind „so viel wie möglich“.","Schoenfeld 2017 · Pelland 2025"],
+    ${[["+25–48 %","mehr Muskel","Dein Wochenvolumen liegt exakt im erholbaren Korridor (MEV–MRV) — statt blind „so viel wie möglich“.","Schoenfeld 2017 · Pelland 2026"],
        ["2×/Woche","doppelter Reiz","Jeder Muskel wird doppelt so oft trainiert wie im klassischen Bro-Split.","Schoenfeld 2016"],
        ["+9 %","extra Wachstum","Übungen in voller Dehnung (lengthened) — gezielt in deinen Plan eingebaut.","Wolf 2024"],
        ["0 kg","Muskelverlust","2,0–2,4 g/kg Protein plus RIR-Steuerung halten deine Muskeln auch im Defizit.","Helms 2014"]]
@@ -11904,7 +12149,7 @@ function openScheduleSheet(){
       <div class="grid4 mb8">${[1,2,3,4].map(w=>`
         <button class="cell ${S.currentWeek===w?"sel":""} ${w===4?"dash":""}" onclick="A.week(${w})" aria-label="Woche ${w}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px">
           <span style="font-size:17px">${w}</span><span class="xs ${w===4?"":"t3"}" style="${w===4?"color:var(--info)":""};font-size:9.5px">${w===1?"Start":w===2?"Aufbau":w===3?"Maximum":"Erholung"}</span></button>`).join("")}</div>
-      <p class="xs t2">Woche 1 startet nahe dem Minimal-Reiz, Woche 3 am produktiven Maximum, Woche 4 senkt das Volumen (−45 %) für die Erholung (Israetel 2017, Pelland 2025).</p>
+      <p class="xs t2">Woche 1 startet nahe dem Minimal-Reiz, Woche 3 am produktiven Maximum, Woche 4 senkt das Volumen (−45 %) für die Erholung (Israetel 2017, Pelland 2026).</p>
       <button class="btn volt mt16" onclick="A.sheetDone()">Fertig</button>
     </div></div>`;
 }
@@ -13088,7 +13333,7 @@ function planEvidence(){
      c:"Schoenfeld et al., 2016"},
     {tag:"Volumen",h:"Progressives Volumen über den Trainingsblock",
      b:"Woche 1 startet nahe deinem Minimal-Reiz, bis Woche 3 steigt das Volumen Richtung deines produktiven Maximums — dann eine Erholungswoche. So holst du das Maximum heraus und erholst rechtzeitig.",
-     c:"Israetel 2017 · Pelland 2025"},
+     c:"Israetel 2017 · Pelland 2026"},
     {tag:"Intensität",h:"Intensität: 1–2 Wiederholungen in Reserve",
      b:"Nah genug am Muskelversagen für den vollen Wachstumsreiz, ohne dich für die nächste Einheit auszubrennen.",
      c:"Helms 2016 · Robinson 2024"},
@@ -13693,22 +13938,51 @@ function effizienzHTML(){
     <span style="display:block;width:${Math.max(2,Math.min(100,pct))}%;height:100%;background:${farbe}"></span></span>`;
   const zeilen=e.gruppen.slice().sort((x,y)=>y.saetze-x.saetze).map(g=>{
     const farbe=g.reiz>=85?"var(--good)":g.reiz>=60?"var(--hl)":"var(--warn)";
+    /* Ein Zeichen, wenn für diese Gruppe der eigene Verlauf den Sättigungspunkt
+       verschoben hat — nach oben braucht sie mehr, nach unten weniger. */
+    const kz=(g.kFaktor&&Math.abs(g.kFaktor-1)>=0.03)
+      ? `<span class="xs" title="${esc(g.kalibGrund||"")} — Sättigung für dich bei ca. ${g.saettigungM} Sätzen" style="color:${g.kFaktor>1?"var(--warn)":"var(--good)"};min-width:16px;text-align:center">${g.kFaktor>1?"▲":"▼"}</span>`
+      : `<span class="xs" style="min-width:16px"></span>`;
     return `<div class="row" style="padding:5px 0;border-top:1px solid var(--hairline);gap:8px">
       <span class="sm" style="flex:1;min-width:0">${esc(g.m)}</span>
+      ${kz}
       <span class="xs t3" style="min-width:62px;text-align:right">${g.saetze} Sätze</span>
       ${bar(g.reiz,farbe)}
       <span class="metric xs" style="color:${farbe};min-width:40px;text-align:right">${g.reiz}&thinsp;%</span>
     </div>`;}).join("");
-  /* Die eine Zeile, die den Plan besser macht. */
-  const rat = e.gesaettigt
+  /* Die eine Zeile, die den Plan besser macht.
+     REIHENFOLGE IST HIER DIE AUSSAGE: fehlt das Baumaterial, ist der nächste
+     Satz nicht der beste nächste Schritt — dann steht das Eiweiß vorn. Ein
+     Ratschlag, der in dieser Lage noch Sätze empfiehlt, wäre zwar rechnerisch
+     richtig sortiert und trotzdem falsch. */
+  const protKnapp = e.protein && e.protein.knapp;
+  const rat = protKnapp
+    ? `Der größte Hebel liegt gerade nicht im Training: du isst im Schnitt <b style="color:var(--t1)">${String(e.protein.jeKg).replace(".",",")}&nbsp;g Eiweiß je kg</b> und Tag (${e.protein.tage} geloggte Tage). Bis etwa 1,6&nbsp;g/kg wächst der Aufbau mit der Zufuhr, darüber nicht mehr — die nächste Eiweißportion bringt dir mehr als der nächste Satz.`
+    : e.gesaettigt
     ? (e.ziel==="strength"
         ? `Beim Volumen ist nichts mehr zu holen — für Maximalkraft sättigt es früh. Der Hebel ist jetzt die <b style="color:var(--t1)">Last</b>${e.lastLuecke.length?` (am wenigsten schwere Sätze: ${esc(e.lastLuecke.slice(0,2).map(g=>g.m).join(", "))})`:""} und die Häufigkeit, nicht noch ein Satz.`
         : `Jede Gruppe ist im Sättigungsbereich. Mehr Volumen bringt messbar nichts mehr — die Zeit ist besser in Erholung und saubere Ausführung investiert.`)
     : `Der nächste Satz bringt bei <b style="color:var(--t1)">${esc(e.naechster.m)}</b> am meisten (${e.naechster.saetze}&nbsp;Sätze, ${e.naechster.reiz}&thinsp;% ausgereizt).`;
+  /* Wenn Gruppen nur deshalb kein Kandidat sind, weil die Erholung nicht
+     mitkommt, ist das die wichtigere Nachricht als der nächste Satz. */
+  const deckel = (e.amDeckel&&e.amDeckel.length)
+    ? `<p class="xs t2" style="margin-top:6px;line-height:1.55">Bei ${esc(e.amDeckel.map(g=>g.m).join(", "))} würde der nächste Satz noch etwas bringen — aber dort ist die Erholungsgrenze erreicht. Mehr Reiz ist nicht dasselbe wie mehr Ergebnis: über dem erholbaren Volumen entsteht Ermüdung statt Anpassung.</p>` : "";
+  /* Der Satz-Rat geht nicht verloren, er steht nur hinten an. */
+  const satzRat = !protKnapp ? ""
+    : (e.naechster
+        ? `<p class="xs t2" style="margin-top:6px;line-height:1.55">Im Training selbst wäre <b style="color:var(--t1)">${esc(e.naechster.m)}</b> die nächste Stelle (${e.naechster.saetze}&nbsp;Sätze, ${e.naechster.reiz}&thinsp;% ausgereizt) — das bleibt richtig, es ist nur der kleinere Hebel.</p>`
+        : `<p class="xs t2" style="margin-top:6px;line-height:1.55">Am Volumen liegt es ohnehin nicht: dein Plan ist bei allen Gruppen im Sättigungsbereich. Zusätzliche Sätze würden hier gar nichts ändern — die Zufuhr schon.</p>`);
   const weg = e.verschenkt.length
     ? `<p class="xs t2" style="margin-top:6px;line-height:1.55">Kaum noch Ertrag bei ${esc(e.verschenkt.map(g=>g.m).join(", "))} — dort kostet jeder weitere Satz Zeit, ohne viel zu ändern.</p>` : "";
   const energieHinweis = e.energie<100
     ? `<p class="xs t2" style="margin-top:6px;line-height:1.55">Im Defizit ist die Anpassungsfähigkeit begrenzt: die erreichbare Wirkung ist auf ${e.energie} % gedeckelt. Das ist kein Planfehler, sondern der Preis des Abnehmens.</p>` : "";
+  /* Die Kalibrierung ehrlich benennen — auch und besonders, wenn sie noch
+     nicht greift. Vorher hieß es hier pauschal „beschreibt Studien-Mittelwerte,
+     nicht dich"; sobald eigene Daten einfließen, wäre das falsch. */
+  const kal=e.kalib||{};
+  const kalibText = kal.individuell
+    ? `<b style="color:var(--t1)">Auf dich geeicht</b> ist der Sättigungspunkt bei ${kal.gemessen===1?"einer Gruppe":kal.gemessen+" Gruppen"}: dein eigener 1RM-Verlauf der letzten Wochen hat ihn verschoben (▲ du brauchst mehr Sätze für denselben Reiz, ▼ du holst aus jedem mehr heraus). Die Verschiebung ist bewusst gedämpft — rund ein Drittel der scheinbar individuellen Streuung ist Messrauschen (beobachtete Streuung 9,7 %, echte 6,5 %; Chaves et al., Front Sports Act Living 2025), also wird nur der verlässliche Anteil übernommen. Stagniert eine Gruppe, obwohl noch Luft zur Sättigung ist, geht der Punkt nach OBEN: 51 von 85 Älteren galten bei einem Satz als nicht ansprechend und legten bei vier Sätzen sehr wohl zu (Lixandrão et al., J&nbsp;Appl&nbsp;Physiol 2024). Ausbleibender Fortschritt ist zuerst eine Frage der Dosis.`
+    : `<b style="color:var(--t1)">Noch nicht auf dich geeicht.</b> Die Zahlen sind Studien-Mittelwerte. Nach etwa ${KALIB_MIN_WOCHEN} Wochen mit geloggten Sätzen eicht die App den Sättigungspunkt je Muskelgruppe auf deinen eigenen 1RM-Verlauf — die Spannweite der Trainingsantwort ist groß genug, dass das zählt (585 Menschen, Querschnitt −2 bis +59 %, Kraft 0 bis +250 %; Hubal et al. 2005).`;
   return `<div class="card" data-tone="cy">
     <p class="ct" style="display:flex;align-items:center;gap:6px">${icon("zap",14)} Effizienz · ${esc(ZIEL_WORT[e.ziel]||e.ziel)}</p>
     <div class="row" style="gap:10px;margin:4px 0 8px;align-items:flex-start">
@@ -13721,13 +13995,14 @@ function effizienzHTML(){
     </div>
     ${zeilen}
     <p class="xs" style="margin-top:8px;line-height:1.55;color:var(--t1)">${rat}</p>
-    ${weg}${energieHinweis}
+    ${satzRat}${deckel}${weg}${energieHinweis}
     <details style="margin-top:8px"><summary class="xs t2" style="cursor:pointer">Worauf diese Zahlen beruhen</summary>
       <p class="xs t2" style="line-height:1.55;margin-top:6px">
       <b style="color:var(--t1)">Gemessen</b> aus deinem Plan: Sätze je Muskel und Woche — Grundübungen zählen für den Zielmuskel voll und für die mitarbeitenden halb (Bankdrücken: Brust 1,0 · Trizeps 0,5 · Schulter 0,5), dazu die Zeit, die sie kosten.<br>
-      <b style="color:var(--t1)">Belegt</b> ist die Form der Beziehung: mehr Volumen bringt mehr, mit abnehmendem Ertrag; jenseits von rund ${e.saettigung} Sätzen je Muskel und Woche ist für dieses Ziel kein Vorteil mehr nachweisbar (Pelland et al., Sports Med 2025, Meta-Regression).<br>
-      <b style="color:var(--t1)">Modell</b> ist der Rest, und das sagen wir offen: die Sättigungskurve selbst, ihre Eichung auf 95 % am Sättigungspunkt und der Faktor 0,5 für mitarbeitende Muskeln. Die Studien geben keine Kurvengleichung her.<br>
-      Die Rechnung beschreibt Studien-Mittelwerte, nicht dich. Erholung, Technik, Schlaf und Veranlagung verschieben das — sie ist ein Kompass für den Plan, kein Versprechen für dein Ergebnis.</p>
+      <b style="color:var(--t1)">Belegt</b> ist die Form der Beziehung: mehr Volumen bringt mehr, mit abnehmendem Ertrag; jenseits von rund ${e.saettigung} Sätzen je Muskel und Woche ist für dieses Ziel kein Vorteil mehr nachweisbar (Pelland et al., Sports Med 2026, Meta-Regression).<br>
+      <b style="color:var(--t1)">Modell</b> ist der Rest, und das sagen wir offen: die Sättigungskurve selbst, ihre Eichung auf 95 % am Sättigungspunkt, der Faktor 0,5 für mitarbeitende Muskeln und der Zuschnitt der Eiweiß-Grenze (0,8 + 0,2 × Deckung). Die Studien geben keine Kurvengleichung her.<br>
+      <b style="color:var(--t1)">Biochemisch</b> gedeckelt wird zweifach, weil ein Reiz Material und Energie braucht: Eiweiß wirkt bis etwa 1,6 g je kg und Tag und darüber nicht mehr (Morton et al., Br J Sports Med 2018, Meta-Regression über 1.863 Teilnehmer) — der Knickpunkt ist gemessen, die Form des Deckels ist Modell. Und im Kaloriendefizit ist die Anpassungsfähigkeit selbst begrenzt, unabhängig vom Reiz.<br>
+      ${kalibText}</p>
     </details></div>`;
 }
 

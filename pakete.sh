@@ -47,7 +47,7 @@ if [ "${1:-}" != "--ohne-tests" ]; then
   done
 
   GESAMT=0
-  for T in app-tests endurance-tests ui-guard-tests dsgvo-tests ios-tests; do
+  for T in app-tests endurance-tests ui-guard-tests dsgvo-tests ios-tests effizienz-tests; do
     if OUT=$(node "metricgym-netlify/tests/$T.mjs" 2>&1); then
       N=$(printf '%s' "$OUT" | grep -c '^✓' || true)
       GESAMT=$((GESAMT+N))
