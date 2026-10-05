@@ -5234,6 +5234,22 @@ function progParams(a){
   if(decon) return {decon,cR:"8–12",sR:"10–15",iR:"12–20",lR:"12–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
   // Fettabbau (echtes Defizit): etwas höhere Reps, RIR 2–3 — Erholung ist eingeschränkt.
   if(g==="fat_loss") return {decon,cR:"8–12",sR:"10–15",iR:"12–20",lR:"12–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
+  /* FITNESS (allgemein) — hatte bis hierher KEINEN eigenen Zweig und fiel auf die
+     Muskelaufbau-Vorgabe durch: wer „Fitness" wählte, bekam Wort für Wort denselben
+     Plan wie jemand mit Ziel Muskelaufbau (6–10 Wdh, 150 s Pause, RIR 1–2). Damit war
+     die Zielauswahl an dieser Stelle ein Etikett ohne Wirkung.
+     Gesundheit und Leistungsfähigkeit brauchen etwas anderes als maximale Hypertrophie:
+     moderate Lasten (bei gleicher Anstrengung gleichwertig für Muskelaufbau, aber
+     gelenkschonender), RIR 2–3 statt 1–2 und kürzere Pausen. Entscheidend ist hier
+     nicht der maximale Reiz pro Einheit, sondern dass man in zwei Jahren noch dabei
+     ist — der niedrigere Anstrengungsgrad ist genau dafür da. */
+  if(g==="general") return {decon,cR:"8–12",sR:"10–15",iR:"12–15",lR:"12–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
+  /* MOBILITY — fiel ebenfalls durch. Wer Beweglichkeit als Hauptziel angibt, will keinen
+     Bodybuilding-Reiz: Kraft dient hier der KONTROLLE über den vollen Bewegungsumfang.
+     Moderate Last, mehr Wiederholungen, ausgiebige Pausen für saubere Ausführung —
+     Krafttraining über den vollen Weg verbessert Beweglichkeit nachweislich ähnlich gut
+     wie Dehnen, aber nur, wenn die Last die Ausführung nicht diktiert. */
+  if(g==="mobility") return {decon,cR:"10–12",sR:"12–15",iR:"12–20",lR:"15–20",cRest:120,sRest:90,iRest:60,rir:"2–3"};
   // RECOMP & Muskelaufbau: HART trainieren (Hypertrophie, RIR 1–2). Recomp findet nahe Erhaltung
   // statt — ohne Kalorienüberschuss MUSS der mechanische Reiz stark sein, sonst kein Muskelaufbau
   // (hohe mechanische Spannung + viel Volumen + Nähe zum Versagen; Helms/Schoenfeld).
@@ -8603,6 +8619,7 @@ const QUELLEN=[
     ["Satzpausen: 2,5–3 Min bei Grundübungen sichern volle Kraft pro Satz, 60–90 s bei Isolation erhöhen den metabolischen Stress.","Grgic et al. 2017 · 2018"],
   ]},
   {g:"Wie dein Plan mitwächst", items:[
+    ["Dein Ziel bestimmt Wiederholungen, Pausen und Anstrengungsgrad — nicht nur die Kalorien. Maximalkraft: 3–5 Wiederholungen, 3,5 Min Pause, mehr Grundübungen. Muskelaufbau: 6–10 Wiederholungen, näher ans Muskelversagen. Fitness und Mobility: moderate Lasten mit mehr Reserve, weil Dranbleiben hier mehr zählt als der maximale Reiz pro Einheit.","Schoenfeld et al. 2021 (Last und Wiederholungsbereich) · Grgic et al. 2018 (Satzpausen)"],
     ["RIR-gesteuerte Progression (Reps in Reserve) statt fester Prozentwerte — das Grundprinzip der Steuerung.","Robinson et al. 2024 · Helms et al. 2016"],
     ["Die RIR-/RPE-Skala und wechselnde Reize an verschiedenen Tagen (schwer/Volumen) bauen mehr Muskel als zweimal dasselbe.","Zourdos et al. 2016 · DUP · Schoenfeld 2015"],
     ["Die Erholungswoche jede vierte Woche (−40 % Sätze, −10 % Gewicht) ist eine Erfahrungsregel aus der Trainingspraxis, keine Studienvorgabe: belastbare Vergleiche von Plänen mit und ohne Entlastungswoche fehlen bislang. Sie steht hier, weil sie konservativ ist — zu wenig Erholung kostet mehr als eine Woche zu viel davon.","Israetel et al. 2017 (Praxismodell, nicht begutachtet) · belastbare Belege ausstehend"],

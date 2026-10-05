@@ -2398,3 +2398,59 @@ gegenüber Israetels Werten durchweg konservativ. Die RPE-zu-RIR-Umrechnung
 ist Standard.
 
 **Acht neue Prüfungen** halten die vier Befunde fest. Version **v65**.
+
+---
+
+## §86 — Das Ziel steuert den Plan (und meine Fehldiagnose davor)
+
+**Zuerst die Korrektur an mir selbst.** In §85 hatte ich behauptet, das
+Trainingsziel beeinflusse den Plan „fast nicht". Das war falsch. Ich hatte
+Vorkommen von `goals.includes("strength")` im Quelltext gezählt und bei
+`peMk()` nachgesehen — das ist aber nur der Helfer, mit dem der *Editor* eine
+Übung hinzufügt. Der erzeugte Plan läuft über `primaryGoal()` in
+`progParams()`, und der verzweigt sehr wohl. Gemessen statt gezählt hätte das
+sofort gezeigt. Genau der Fehler, vor dem die Testregeln dieses Projekts
+warnen.
+
+Was das Ziel wirklich ändert (gleiches Profil, nur das Ziel getauscht):
+
+| | Kraft | Muskeln | Fettabbau | Ausdauer |
+|---|---|---|---|---|
+| Wdh Grundübung | 3–5 | 6–10 | 8–12 | 12–15 |
+| Pause | 210 s | 150 s | 120 s | 75 s |
+| RIR | 2–3 | 1–2 | 2–3 | 2–3 |
+| Sätze gesamt | 170 | 232 | 249 | 272 |
+| Grundübungen | 67 % | 51 % | 51 % | 49 % |
+
+### Die echte Lücke: zwei Ziele fielen still durch
+
+`progParams()` kannte Zweige für Kraft, Ausdauer, Fettabbau und
+Dekonditionierung — aber **keinen für „Fitness" und keinen für „Mobility"**.
+Beide landeten im Default, also Wort für Wort auf der Muskelaufbau-Vorgabe:
+6–10 Wiederholungen, 150 s Pause, RIR 1–2. Wer „Fitness" wählte, bekam einen
+Bodybuilding-Plan, ohne dass irgendwo stand, dass das so gemeint ist. Die
+Zielauswahl war an dieser Stelle ein Etikett.
+
+Jetzt hat jedes der sechs Ziele ein eigenes Schema:
+
+* **Fitness** — 8–12 Wdh, 120 s, RIR 2–3. Moderate Lasten sind bei gleicher
+  Anstrengung gleichwertig für den Muskelaufbau, aber gelenkschonender; die
+  Reserve von 2–3 Wiederholungen ist bewusst da, weil für dieses Ziel zählt,
+  in zwei Jahren noch dabei zu sein — nicht der maximale Reiz pro Einheit.
+* **Mobility** — 10–12 Wdh, 120 s, RIR 2–3. Kraft dient hier der Kontrolle
+  über den vollen Bewegungsumfang; die Last darf die Ausführung nicht
+  diktieren.
+
+### Ein Wächter, der das künftig fängt
+
+Sechs neue Zusicherungen vergleichen die **erzeugten Vorgaben**, nicht den
+Quelltext: jedes Ziel muss in der Engine als es selbst ankommen, keines darf
+still die Muskelaufbau-Vorgabe erben, die sechs Schemata müssen wirklich
+verschieden sein, und Kraft muss sich inhaltlich wie Kraft verhalten
+(schwerer, weniger Gesamtvolumen, mehr Grundübungen).
+
+Einer davon war erst rot, obwohl die App richtig rechnete: ich hatte Pausen
+als Text verglichen, und `"75" < "210"` ist lexikografisch falsch. Wieder ein
+Messfehler, kein App-Fehler — der dritte in diesem Audit.
+
+303 Zusicherungen. Version **v66**.

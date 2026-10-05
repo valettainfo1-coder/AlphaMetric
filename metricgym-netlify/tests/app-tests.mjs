@@ -835,6 +835,72 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
     `Register nennt ~30, Engine erlaubt ${q.bandMin}–${q.bandMax}`);
 }
 
+// ---------- Das Trainingsziel muss den Plan wirklich ändern ----------
+/* Gefunden, weil ich es zuerst FALSCH behauptet hatte: ich hatte Vorkommen von
+   goals.includes("strength") gezaehlt statt zwei Plaene zu vergleichen, und
+   daraus geschlossen, das Ziel wirke nicht. Es wirkt — ueber primaryGoal() in
+   progParams(). ZWEI Ziele fielen aber still durch auf die
+   Muskelaufbau-Vorgabe: "Fitness" und "Mobility" bekamen Wort fuer Wort
+   denselben Plan wie Muskelaufbau. Eine Zielauswahl ohne Wirkung ist ein
+   Etikett. Dieser Test vergleicht die erzeugten Vorgaben, nicht den Quelltext. */
+{
+  const z = await page.evaluate(() => {
+    const basis = { sex:'male', age:30, height:180, weight:80, exp:'intermediate',
+      days:4, equipment:'gym_full', act:'light', len:60, injuries:[], focus:[] };
+    const aus = {};
+    for (const ziel of ['strength','muscle_gain','fat_loss','general','mobility','endurance']) {
+      const a = { ...basis, goals:[ziel] };
+      const pp = progParams(a);
+      const plan = generateTrainingPlan({ a });
+      const uebungen = Object.values(plan)
+        .filter(v => v && Array.isArray(v.main)).flatMap(v => v.main);
+      aus[ziel] = {
+        primaer: primaryGoal(a),
+        schema: `${pp.cR}|${pp.iR}|${pp.cRest}|${pp.rir}`,
+        saetze: uebungen.reduce((s, e) => s + (e.sets || 0), 0),
+        grundAnteil: Math.round(100 * uebungen.filter(e => (EXDB[e.n]||{}).compound).length / uebungen.length),
+      };
+    }
+    return aus;
+  });
+
+  // 1 · Jedes Ziel wird als es selbst erkannt — keines verschwindet unterwegs
+  const falschErkannt = Object.entries(z).filter(([k, v]) => v.primaer !== k).map(([k, v]) => `${k}→${v.primaer}`);
+  check('Ziel: jedes angegebene Ziel kommt auch als solches in der Engine an',
+    falschErkannt.length === 0, falschErkannt.join(', ') || 'alle sechs');
+
+  // 2 · Kein Ziel darf still die Muskelaufbau-Vorgabe erben
+  const wieHypertrophie = Object.entries(z)
+    .filter(([k, v]) => k !== 'muscle_gain' && v.schema === z.muscle_gain.schema).map(([k]) => k);
+  check('Ziel: keines fällt still auf die Muskelaufbau-Vorgabe durch',
+    wieHypertrophie.length === 0,
+    wieHypertrophie.length ? `identisch mit Muskelaufbau: ${wieHypertrophie.join(', ')}` : 'alle eigenständig');
+
+  // 3 · Die Schemata sind wirklich verschieden, nicht nur anders benannt
+  const schemata = new Set(Object.values(z).map(v => v.schema));
+  check('Ziel: sechs Ziele ergeben sechs verschiedene Wiederholungs-/Pausen-Schemata',
+    schemata.size === 6, `${schemata.size} verschiedene von 6`);
+
+  // 4 · Kraft muss sich inhaltlich wie Kraft verhalten: schwerer, weniger Volumen,
+  //     mehr Grunduebungen. Sonst ist der Unterschied kosmetisch.
+  check('Ziel: Maximalkraft trainiert schwerer und mit weniger Gesamtvolumen als Muskelaufbau',
+    z.strength.schema.startsWith('3–5') && z.strength.saetze < z.muscle_gain.saetze,
+    `Kraft ${z.strength.saetze} Sätze vs Muskelaufbau ${z.muscle_gain.saetze}`);
+  check('Ziel: Maximalkraft bekommt den höheren Anteil an Grundübungen',
+    z.strength.grundAnteil > z.muscle_gain.grundAnteil,
+    `${z.strength.grundAnteil} % vs ${z.muscle_gain.grundAnteil} %`);
+
+  // 5 · Ausdauer am anderen Ende: mehr Wiederholungen, kürzere Pausen
+  /* parseInt auf BEIDEN Seiten: beim ersten Versuch stand hier ein
+     String-Vergleich, und "75" < "210" ist als Text falsch. Der Test war rot,
+     obwohl die App richtig rechnete. */
+  const pause = (schema) => parseInt(schema.split('|')[2], 10);
+  check('Ziel: Ausdauer bekommt mehr Wiederholungen und kürzere Pausen als Maximalkraft',
+    parseInt(z.endurance.schema, 10) > parseInt(z.strength.schema, 10)
+      && pause(z.endurance.schema) < pause(z.strength.schema),
+    `Ausdauer ${z.endurance.schema} vs Kraft ${z.strength.schema}`);
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
