@@ -11970,7 +11970,7 @@ function renderHome(){
 
 
     ${homeGruppe("Heute")}  <!-- die Einheit zuerst — sie ist der Grund, warum die App offen ist -->
-    ${renderSection("Heute", _es
+    ${renderSection("Training", _es
       ? (_es.kind==="rest"
         ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — der Reiz von gestern wird jetzt verbaut.</p>
             <button class="btn ghost mt8" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.q('endurance')">${icon("calendar",14)} Nächste Einheit ansehen</button></div>`
@@ -11986,7 +11986,7 @@ function renderHome(){
           <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${tSession.est||p.a.len||60} Min</p></div></div>
           <button class="btn volt mt8" onclick="A.start()">${icon("play",15)} Training beginnen</button></div>`)}
 
-    ${renderSection("Ernährung heute",
+    ${renderSection("Ernährung",
       `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="A.q('nutrition')" aria-label="Zur Ernährung">
         <div class="row mb8"><span class="metric" style="font-size:20px">${nfi.format(sum.k)} / ${nfi.format(tg.kcal)} kcal</span>
           <span class="metric xs t2">${Math.round(Math.min(100,sum.k/tg.kcal*100))} %</span></div>
@@ -11994,7 +11994,7 @@ function renderHome(){
         <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</span> Protein</p>
       </button>`)}
 
-    ${renderSection("Heute eintragen",checklistCard())}
+    ${renderSection("Eintragen",checklistCard())}
 
 
     ${homeGruppe("Deine Entwicklung")}  <!-- Prognosen und Auswertung, nicht zwischen den Tagesinhalten verstreut -->
@@ -14523,6 +14523,13 @@ function renderTrain(){
             <span style="font-size:12px;font-weight:500;opacity:.7">${done?"Heute schon erledigt ✓":(first?"startet mit "+first+" · ≈ "+(FT.est||60)+" Min":"≈ "+(FT.est||60)+" Min")}</span>
           </span></button>`; }
       return tabHero("train",kick,hl,sub,[[String(sch.filter(t=>t!=="rest").length),"Einheiten"],[String(S.currentWeek||1)+"<em> / 4</em>","Woche"],[phase,"Phase"]],cta); })()}
+    ${/* RUECKMELDUNG: "ich will dass du die Wochenuebersicht mit Kalenderwoche
+          und Zahl OBEN haben als Uebersicht." Der Streifen lag bisher unten im
+          Abschnitt "Dein Plan" — man musste an der ganzen Einheit vorbei
+          scrollen, um zu sehen, in welcher Woche man ueberhaupt ist. Er steht
+          jetzt direkt hinter dem Kopf. In der fortlaufenden Rotation gibt es
+          keine Kalenderwoche, dort bleibt er aus. */
+      rotMode?"":renderSection("Deine Woche", weekStrip)}
     ${focusType?renderSection(rotMode?(trnSelRot!=null?"Ausgewählte Einheit":"Nächste Einheit"):"Deine Einheit",
       (()=>{
         const F=TYPES[focusType], isCardio=parseTypeKey(focusType).base==="cardio";
@@ -14593,7 +14600,7 @@ function renderTrain(){
           <button class="${rotMode?"sel":""}" onclick="A.setPlanMode('rotation')">Fortlaufende Rotation</button></div>
         <div class="row mb12"><span class="xs t2">${rotMode?"Du machst einfach die nächste Einheit — egal an welchem Tag":(S.blockNum>1?"Block "+S.blockNum+" · ":"")+(isDeload?LABELS.deload+" aktiv — bewusst leichter":"Woche "+S.currentWeek+" von 4 · "+(S.currentWeek===1?"Volumen-Start":S.currentWeek===2?"Volumen steigt":"Spitzenvolumen"))}</span>
           ${rotMode?"":`<button class="btn ghost" style="width:auto;min-height:36px" onclick="A.editSchedule()">${icon("edit",13)} Anpassen</button>`}</div>
-        ${rotMode?rotStrip:weekStrip}
+        ${rotMode?rotStrip:""}
         ${weekOverview}
         ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
         <p class="xs t2 mt8" style="line-height:1.55">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
