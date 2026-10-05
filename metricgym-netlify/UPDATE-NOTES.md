@@ -2533,3 +2533,84 @@ und den Weg heraus.
 **Sieben neue Zusicherungen** halten das fest, darunter eine, die prüft, dass
 es überhaupt einen Plan mit wiederholter Einheit gibt — sonst misst der
 Duplikat-Test nichts. 310 Zusicherungen. Version **v67**.
+
+---
+
+## §88 — Effizienzrechnung: was bringt die investierte Stunde?
+
+Bisher konnte die App sagen, ob das Volumen im Korridor liegt. Sie konnte
+nicht sagen, ob die Zeit gut investiert ist — und genau das entscheidet, ob
+ein Plan effizient ist. Drei Schichten, jede einzeln geprüft.
+
+### 1 · Die halbe Wahrheit, die fehlte: Sekundärmuskeln
+
+Die Übungsdatenbank kannte je Übung **einen** Muskel. Bankdrücken zählte auf
+die Brust — und auf nichts sonst. Damit wurden Trizeps und Bizeps systematisch
+unterschätzt, und die Engine schob Isolationsarbeit nach, die gar nicht fehlte.
+
+Jetzt zählt ein Satz **1,0 für den Zielmuskel und 0,5 für jeden deutlich
+mitarbeitenden** — die Zählweise, auf der auch die Metaanalysen beruhen, aus
+denen die Korridore dieser App stammen. Zugeordnet nach Bewegungsmuster, nicht
+nach Übungsname: alle 57 Mehrgelenkübungen geprüft, 42 bekommen einen
+Sekundärmuskel, die übrigen 15 sind Bein- und Cardio-Übungen, bei denen es
+innerhalb der App-Gruppen keinen zweiten Muskel zu verbuchen gibt.
+
+### 2 · Die Dosis-Wirkungs-Kurve
+
+| Sätze/Woche | ausgereizt | Nutzen des nächsten Satzes |
+|---|---|---|
+| 2 | 18 % | 7,97 |
+| 10 | 62 % | 3,68 |
+| 20 | 86 % | 1,40 |
+| 31 | 95 % | 0,48 |
+| 60 | 100 % | 0,03 |
+
+**Was belegt ist und was Modell ist, steht in der App nebeneinander** — das
+gehört in eine App, die mit Nachprüfbarkeit wirbt:
+
+* **Gemessen** aus dem Plan: fraktionierte Sätze, Zeitkosten (aus Tempo,
+  Wiederholungen und Pausen), Wiederholungsbereiche.
+* **Belegt** ist die Form: mehr Volumen bringt mehr, mit abnehmendem Ertrag,
+  und jenseits von rund 31 fraktionierten Sätzen je Muskel und Woche ist für
+  Hypertrophie kein Vorteil mehr nachweisbar; für Kraft ist der Löwenanteil
+  schon bei rund 3 erreicht (Pelland et al., Sports Med 2025).
+* **Modell** ist der Rest: die Sättigungsfunktion selbst, ihre Eichung auf
+  95 % am Sättigungspunkt, der Faktor 0,5. Die Studien geben keine
+  Kurvengleichung her, und das sagt die App auch so.
+
+### 3 · Was dabei herauskommt
+
+Der eigentliche Wert ist nicht die Gesamtnote, sondern der **Grenznutzen** —
+die Ableitung der Kurve. Sie sagt, wohin der nächste Satz gehört:
+
+```
+Muskeln 4 Tage   79 % ausgereizt · 20 Reizpunkte/Std · 236 Min
+                 → nächster Satz: Brust (10 Sätze, 62 % ausgereizt)
+                 → kaum noch Ertrag: Beine
+Muskeln 2 Tage   71 % · 23/Std · 188 Min   (weniger Reiz, aber effizienter)
+Muskeln 6 Tage   87 % · 17/Std · 301 Min   (mehr Reiz, weniger je Stunde)
+Kraft 4 Tage     gesättigt — der Hebel ist Last und Häufigkeit, nicht Volumen
+```
+
+**Beim Kraftziel war ein Fehler drin**, den erst die Prüfung zeigte: weil die
+Sättigung dort schon bei drei Sätzen liegt, lagen alle Grenznutzen bei
+praktisch null — die Sortierung war Rauschen, und die App hätte trotzdem einen
+„nächsten Satz" empfohlen. Jetzt sagt sie die Wahrheit: beim Volumen ist
+nichts mehr zu holen, der Hebel ist die Last. Dazu nennt sie die Gruppen mit
+dem geringsten Anteil schwerer Sätze.
+
+Im Defizit wird die erreichbare Wirkung gedeckelt (bei Fettabbau auf 80 %) —
+mit der Begründung, dass das kein Planfehler ist, sondern der Preis des
+Abnehmens.
+
+### Geprüft wurde das Verhalten, nicht das Ergebnis
+
+Ein Modell, das auf Sanitätsprüfungen nicht reagiert, ist Dekoration. **Acht
+neue Zusicherungen**: die Kurve steigt, deckelt bei 1 und trifft am
+Sättigungspunkt 95 %; der Grenznutzen fällt; Bankdrücken zählt
+Brust 1,0 / Trizeps 0,5 / Schulter 0,5 und Curls nur auf den Bizeps; doppeltes
+Volumen ergibt **mehr Gesamtreiz (79 → 95 %) und weniger pro Stunde
+(20 → 12)**; beim Kraftziel kommt keine sinnlose Empfehlung; die Zeit ist aus
+dem Plan gerechnet, nicht geschätzt.
+
+318 Zusicherungen. Version **v68**.

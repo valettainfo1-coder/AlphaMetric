@@ -4075,6 +4075,52 @@ function forecast12w(series){
   return pts;
 }
 
+/* ===== SEKUNDÄRMUSKELN: die halbe Wahrheit, die bisher fehlte =====
+   Bankdrücken trainiert nicht nur die Brust. Wer Sätze nur dem Primärmuskel
+   zurechnet, unterschätzt Trizeps und Bizeps systematisch — und schiebt dann
+   Isolationsarbeit nach, die gar nicht fehlt. Umgekehrt landet ein Plan über
+   der Obergrenze, ohne dass es jemand merkt.
+
+   KONVENTION: ein Satz zählt 1,0 für den Primärmuskel und 0,5 für jeden
+   deutlich mitarbeitenden Sekundärmuskel ("fraktionierte Sätze"). Das ist die
+   Zählweise, auf der auch die Volumen-Metaanalysen beruhen, die dieser App die
+   Korridore liefern — mit direkten Sätzen allein wären deren Zahlen nicht
+   vergleichbar.
+
+   Zugeordnet nach BEWEGUNGSMUSTER, nicht nach Übungsname: so bekommt jede neu
+   aufgenommene Übung automatisch das Richtige, solange ihr Muster erkannt wird.
+   Was kein Muster trifft, zählt nur primär — lieber zu wenig anrechnen als
+   Volumen erfinden. */
+const SEK_MUSTER=[
+  // Horizontales Drücken: Brust führt, Trizeps und vordere Schulter arbeiten mit
+  {test:/Bankdrücken|Liegestütze|Brustpresse|Dips|Schräg-KH-Drücken|Schrägbankdrücken/i,
+   wenn:"Brust", sek:{Trizeps:0.5, Schultern:0.5}},
+  // Vertikales Drücken: Schulter führt, Trizeps streckt mit
+  {test:/Schulterdrücken|Pike Push-?ups|Arnold Press|Landmine-Press|Handstand Push-?up/i,
+   wenn:"Schultern", sek:{Trizeps:0.5}},
+  // Ziehen (beide Richtungen): Rücken führt, Bizeps beugt mit
+  {test:/Klimmzug|Latzug|Rudern|Pendlay|T-Bar/i,
+   wenn:"Rücken", sek:{Bizeps:0.5}},
+  // Hüftlastiges Beugen/Strecken mit Langhantel: der Rückenstrecker trägt mit
+  {test:/Kreuzheben|Rumänisches|Swing/i,
+   wenn:"Beine", sek:{"Rücken":0.5}},
+  // Tragen: Griff, Rumpf und oberer Rücken halten die Last
+  {test:/Farmer/i, wenn:"Core", sek:{"Rücken":0.5}},
+];
+/* Fraktionierte Sätze einer Übung: {Muskel: Faktor}. Primär immer 1,0. */
+function satzAnteile(name){
+  const d=EXDB[name]||{}; const prim=volGroupOf(name)||d.m;
+  const out={}; if(!prim) return out;
+  out[prim]=1;
+  if(!d.compound) return out;                       // Isolation: nur der Zielmuskel
+  for(const r of SEK_MUSTER){
+    if(r.wenn!==prim || !r.test.test(name)) continue;
+    for(const [m,f] of Object.entries(r.sek)) out[m]=(out[m]||0)+f;
+    break;                                          // ein Muster je Übung
+  }
+  return out;
+}
+
 // ---------- Volumen-Toleranz je Muskelgruppe (MEV–MRV, Israetel et al., 2017) ----------
 const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Beine","Wadenheben":"Beine","Kreuzheben":"Beine","Rumänisches Kreuzheben":"Beine","Bankdrücken":"Brust","Schrägbankdrücken":"Brust","Schulterdrücken":"Schultern","Seitheben":"Schultern","Face Pull":"Schultern","Klimmzug":"Rücken","Langhantelrudern":"Rücken","Kabelrudern":"Rücken","Trizepsdrücken":"Arme","Plank":"Core",
   "Liegestütze":"Brust","KH-Bankdrücken":"Brust","KH-Fliegende":"Brust","KH-Schulterdrücken":"Schultern","Pike Push-ups":"Schultern","Band Pull-Apart":"Schultern","Reverse Flys":"Schultern","Latzug":"Rücken","Einarmiges KH-Rudern":"Rücken","Rudern am Tisch":"Rücken","Superman":"Rücken","Enge Liegestütze":"Arme","Bizeps-Curls":"Arme","Hammer-Curls":"Arme","Goblet Squat":"Beine","Kniebeuge (Körpergewicht)":"Beine","Beinpresse":"Beine","KH-Rumänisches Kreuzheben":"Beine","Bulgarian Split Squat":"Beine","Hip Thrust":"Beine"};
@@ -4139,6 +4185,160 @@ function deficitScaledBands(a){
   }
   return out;
 }
+/* ===========================================================================
+   EFFIZIENZ — wie viel Anpassung bekommst du pro investierter Stunde?
+   ---------------------------------------------------------------------------
+   WAS HIER MESSUNG IST UND WAS MODELL IST (die Trennung gehört in eine App,
+   die mit Nachprüfbarkeit wirbt):
+
+   GEMESSEN wird aus deinem Plan: fraktionierte Sätze je Muskel und Woche,
+   die Zeit, die sie kosten, und die Wiederholungsbereiche.
+
+   BELEGT ist die Form der Dosis-Wirkungs-Beziehung. Die Meta-Regression von
+   Pelland et al. (Sports Med 2025) über 67 Studien findet: Muskelwachstum
+   steigt mit dem Volumen weiter an, mit klar abnehmendem Ertrag, und jenseits
+   von rund 31 fraktionierten Sätzen pro Woche ist kein Vorteil mehr
+   nachweisbar. Für KRAFT ist der Löwenanteil schon bei rund 3 fraktionierten
+   Sätzen erreicht; dafür zählt dort die Häufigkeit, die fürs Wachstum bei
+   gleichem Volumen kaum ins Gewicht fällt.
+
+   MODELLIERT ist alles Übrige, und das sage ich offen:
+     · die Sättigungsfunktion 1 − e^(−n/k). Sie hat die belegte FORM
+       (monoton steigend, abnehmender Ertrag, Sättigung), aber die Studien
+       geben keine Kurvengleichung her.
+     · die Eichung: k so gewählt, dass die Kurve am belegten Sättigungspunkt
+       95 % erreicht.
+     · 0,5 für Sekundärmuskeln.
+   Wer diese drei Annahmen anders setzt, bekommt andere Zahlen. Deshalb steht
+   im Bericht, worauf jede Zahl beruht — nicht nur das Ergebnis.
+
+   WAS DIESE RECHNUNG NICHT KANN: sie sagt nichts über DICH. Sie beschreibt
+   Mittelwerte aus Studien. Deine Erholung, deine Technik, dein Schlaf und
+   deine Genetik verschieben das — deshalb ist sie ein Kompass für den Plan,
+   kein Versprechen für dein Ergebnis.
+   =========================================================================== */
+
+/* Eichpunkte je Ziel: ab wie vielen fraktionierten Sätzen pro Woche und Muskel
+   ist kein weiterer Vorteil mehr nachweisbar? Daraus k = Punkt / 3 (dort
+   erreicht die Kurve 95 %). */
+const REIZ_SAETTIGUNG={
+  muscle_gain: 31,   // Pelland 2025: Hypertrophie
+  recomp:      31,   // derselbe Reiz, nur bei knapper Energie
+  strength:     3,   // Pelland 2025: Kraft, zusätzlich häufigkeitsabhängig
+  fat_loss:    10,   // Ziel ist ERHALT, nicht Wachstum — sättigt früher
+  general:     10,   // Gesundheit/Leistungsfähigkeit sättigt früh
+  mobility:    10,
+  endurance:    8,   // Heben ist Begleitreiz
+};
+const reizK=(ziel)=>(REIZ_SAETTIGUNG[ziel]||REIZ_SAETTIGUNG.muscle_gain)/3;
+/* Sättigungskurve: steigt monoton, Ertrag nimmt ab, nähert sich 1. */
+const reizKurve=(n,k)=>1-Math.exp(-Math.max(0,n)/k);
+/* Grenznutzen: was bringt der NÄCHSTE Satz noch? Das ist die Ableitung —
+   und die eigentlich interessante Zahl, denn sie sagt, WOHIN er gehört. */
+const grenzNutzen=(n,k)=>Math.exp(-Math.max(0,n)/k)/k;
+
+/* Zeitkosten eines Satzes in Sekunden: Arbeit + Pause.
+   Arbeit = Wiederholungen × Sekunden je Wiederholung aus dem Tempo
+   ("3-1-1-0" = 3 s exzentrisch + 1 s Pause + 1 s konzentrisch + 0 s = 5 s). */
+function satzSekunden(e){
+  const t=String(e.tempo||"2-0-1-0").split("-").map(x=>parseFloat(x)||0);
+  const proWdh=t.reduce((s,x)=>s+x,0)||4;
+  const wdh=(String(e.reps||"8–12").match(/\d+/g)||[10]).map(Number);
+  const mittel=wdh.reduce((s,x)=>s+x,0)/wdh.length;
+  return mittel*proWdh + (e.rest||60);
+}
+
+/* Fraktioniertes Wochenvolumen je Muskel — über die ECHTE Woche, inklusive
+   wiederholter Einheiten, inklusive Sekundärmuskeln. */
+function wochenVolumenFrakt(){
+  const woche=(typeof schedule==="function"?schedule():(S.schedule||[])).filter(k=>k&&k!=="rest"&&k!=="cardio");
+  const vol={}, zeit={}, haeufig={}, schwer={}, saetzeGes={};
+  for(const key of woche){
+    const gesehen=new Set();
+    for(const e of peExArr(key)){
+      const n=weekSets(e.n,e.sets); if(!n) continue;
+      const sek=satzSekunden(e);
+      const wdh=(String(e.reps||"").match(/\d+/g)||[]).map(Number);
+      const istSchwer=wdh.length&&Math.max(...wdh)<=6;
+      for(const [m,f] of Object.entries(satzAnteile(e.n))){
+        vol[m]=(vol[m]||0)+n*f;
+        zeit[m]=(zeit[m]||0)+n*sek*f/60;          // Minuten, anteilig zugerechnet
+        saetzeGes[m]=(saetzeGes[m]||0)+n*f;
+        if(istSchwer) schwer[m]=(schwer[m]||0)+n*f;
+        if(!gesehen.has(m)){ haeufig[m]=(haeufig[m]||0)+1; gesehen.add(m); }
+      }
+      for(const m of Object.keys(satzAnteile(e.n))) gesehen.add(m);
+    }
+  }
+  return {vol,zeit,haeufig,schwer,saetzeGes};
+}
+
+/* Der Bericht. Gibt je Muskel UND gesamt zurück, worauf sich alles stützt. */
+function effizienzBericht(a){
+  a=a||(S.profile&&S.profile.a)||{};
+  const ziel=primaryGoal(a), k=reizK(ziel);
+  const {vol,zeit,haeufig,schwer}=wochenVolumenFrakt();
+  const bands=deficitScaledBands(a);
+  /* Energieverfügbarkeit: im Defizit ist die Anpassungsfähigkeit begrenzt —
+     derselbe Reiz erzeugt weniger Aufbau. deficitFactor() ist die Größe, mit
+     der die App schon das erholbare Volumen skaliert; sie deckelt hier die
+     erreichbare Anpassung, NICHT die Kurvenform. */
+  const energie=Math.min(1,(typeof deficitFactor==="function"?deficitFactor(a):1)||1);
+  const gruppen=[];
+  for(const m of Object.keys(vol)){
+    if(m==="Herz") continue;
+    const n=Math.round(vol[m]*10)/10;
+    const roh=reizKurve(n,k);
+    /* Kraft lebt von der Last, nicht nur von der Satzzahl. Liegt kein Satz im
+       schweren Bereich (≤6 Wdh), fehlt der spezifische Reiz — dann wird der
+       Wert gedeckelt. Für Hypertrophie gilt das nicht: dort ist der
+       Wiederholungsbereich bei gleicher Anstrengung weitgehend austauschbar. */
+    const schwerAnteil=n>0?(schwer[m]||0)/n:0;
+    const lastFaktor=(ziel==="strength")?(0.55+0.45*Math.min(1,schwerAnteil/0.5)):1;
+    const reiz=roh*lastFaktor*energie;
+    const minuten=Math.round(zeit[m]||0);
+    gruppen.push({
+      m, saetze:n, frequenz:haeufig[m]||0, minuten,
+      reiz:Math.round(reiz*100),
+      grenz:grenzNutzen(n,k)*lastFaktor*energie,       // Nutzen des nächsten Satzes
+      proStunde: minuten>0?Math.round(reiz*100/(minuten/60)):0,
+      band:bands[m]||null,
+      schwerAnteil:Math.round(schwerAnteil*100),
+    });
+  }
+  gruppen.sort((x,y)=>y.grenz-x.grenz);
+  const minutenGes=gruppen.reduce((s,g)=>s+g.minuten,0);
+  const reizMittel=gruppen.length?gruppen.reduce((s,g)=>s+g.reiz,0)/gruppen.length:0;
+  /* Der nächste Satz gehört dorthin, wo er am meisten bringt — und ein Satz
+     ist "verschenkt", wenn sein Beitrag unter einem Zehntel dessen liegt, was
+     der allererste Satz derselben Gruppe gebracht hätte. */
+  const schwelle=grenzNutzen(0,k)*0.1;
+  const verschenkt=gruppen.filter(g=>g.grenz<schwelle);
+  /* WENN ALLES GESÄTTIGT IST, GIBT ES KEINEN "NÄCHSTEN SATZ".
+     Beim Kraftziel ist das der Normalfall: die Sättigung liegt bei rund drei
+     fraktionierten Sätzen, ein normaler Plan liegt weit darüber. Die Liste
+     nach Grenznutzen zu sortieren und das oberste Element zu empfehlen wäre
+     dann Rauschen — alle Werte liegen bei praktisch null, die Reihenfolge ist
+     Zufall. Die ehrliche Antwort lautet dort: mehr Sätze bringen nichts mehr,
+     der Hebel ist ein anderer. Für Kraft sind das Last und Häufigkeit (beides
+     zählt laut derselben Meta-Regression für Kraft, nicht fürs Wachstum),
+     für alle anderen Ziele ist der Plan am Ziel. */
+  const naechster=(gruppen.length&&gruppen[0].grenz>=schwelle)?gruppen[0]:null;
+  /* Woran es beim Kraftziel wirklich hängt, wenn das Volumen reicht: wie viel
+     davon im schweren Bereich liegt. */
+  const lastLuecke=(ziel==="strength")
+    ? gruppen.filter(g=>g.schwerAnteil<40&&g.saetze>=4).sort((x,y)=>x.schwerAnteil-y.schwerAnteil)
+    : [];
+  return {
+    ziel, k, energie:Math.round(energie*100), gruppen, minutenGes,
+    reiz:Math.round(reizMittel),
+    proStunde: minutenGes>0?Math.round(reizMittel/(minutenGes/60)):0,
+    naechster, verschenkt, lastLuecke,
+    gesaettigt: naechster===null,
+    saettigung: REIZ_SAETTIGUNG[ziel]||REIZ_SAETTIGUNG.muscle_gain,
+  };
+}
+
 /* AUTOREGULATION (Tagesform): Kombiniert den subjektiven Status-Check mit OBJEKTIVEN
    Wearable-Signalen (HRV & Ruhepuls vs. 30-Tage-Baseline). Sinkt die Erholung, empfiehlt
    die Engine für HEUTE automatisch weniger Volumen und mehr Reserve (RIR) — unabhängig
@@ -8645,6 +8845,7 @@ A.lpDemo=(n)=>{ const el=document.getElementById("lp-anat"); if(el)el.innerHTML=
    (quellenZahl()), nie von Hand gepflegt — so kann sie nicht driften. */
 const QUELLEN=[
   {g:"Wie viel du trainierst", items:[
+    ["Dein Plan bekommt eine Effizienzrechnung: Sätze je Muskel und Woche — Grundübungen zählen für den Zielmuskel voll und für die mitarbeitenden halb — werden gegen die Dosis-Wirkungs-Beziehung gelegt und durch die Zeit geteilt, die sie kosten. Daraus kommt, wo der nächste Satz am meisten bringt und wo er nur noch Zeit kostet. Die Kurvenform ist belegt, die Gleichung ist ein Modell — beides steht in der App nebeneinander.","Pelland et al. Sports Med 2025 · Meta-Regression"],
     ["Der Volumen-Korridor je Muskel (MEV–MRV): unter MEV fehlt der Wachstumsreiz, über MRV entsteht mehr Ermüdung als Anpassung. Er setzt den Deckel für jede Muskelgruppe in deinem Plan.","Israetel et al. 2017 · MEV–MRV"],
     ["Mehr Sätze bringen mehr Muskel — bis etwa 30 Sätze pro Muskel und Woche, mit abnehmendem Ertrag. Für KRAFT ist der Löwenanteil dagegen schon nach wenigen Sätzen erreicht. Deshalb deckelt die Engine beim Muskelziel höher als beim Kraftziel.","Pelland et al. Sports Med 2025 · Meta-Regression"],
     ["Jede Muskelgruppe 2×/Woche statt 1× — entscheidet bei 2–4 Trainingstagen die Split-Wahl (Ganzkörper statt Muskel-pro-Tag). Für den MUSKELaufbau zählt bei gleichem Wochenvolumen vor allem das Volumen selbst, die Häufigkeit kaum; für KRAFT bringt die höhere Häufigkeit messbar mehr. Zweimal pro Woche verteilt das Volumen zudem auf erträglichere Einheiten.","Schoenfeld et al. 2016 · aktualisiert durch Pelland et al. Sports Med 2025"],
@@ -13481,6 +13682,55 @@ function peCandidates(key){ const base=parseTypeKey(key).base; const a=(S.profil
 function planBioCheck(){ const a=(S.profile&&S.profile.a)||{}; const bands=deficitScaledBands(a); const weekly={};
   const woche=(typeof schedule==="function"?schedule():(S.schedule||[])).filter(k=>k&&k!=="rest"&&k!=="cardio");
   for(const key of woche){ for(const e of peExArr(key)){ const g=volGroupOf(e.n); if(!g)continue; weekly[g]=(weekly[g]||0)+weekSets(e.n,e.sets); } } const rows=[]; for(const g of Object.keys(bands)){ const [mev,mrv]=bands[g]; const v=Math.round(weekly[g]||0); if(v===0)continue; rows.push({g,v,mev,mrv,st:v<mev?"low":v>mrv?"high":"ok"}); } const ord={low:0,high:1,ok:2}; return rows.sort((x,y)=>ord[x.st]-ord[y.st]); }
+/* Effizienz-Tafel für den Plan-Editor: zeigt, wo die investierte Zeit
+   tatsächlich Anpassung erzeugt — und wo nicht mehr. */
+function effizienzHTML(){
+  let e; try{ e=effizienzBericht(); }catch(err){ return ""; }
+  if(!e||!e.gruppen.length) return "";
+  const ZIEL_WORT={muscle_gain:"Muskelaufbau",recomp:"Recomp",strength:"Maximalkraft",
+    fat_loss:"Muskelerhalt im Defizit",general:"Fitness",mobility:"Mobility",endurance:"Ausdauer"};
+  const bar=(pct,farbe)=>`<span style="display:inline-block;width:52px;height:5px;border-radius:3px;background:var(--hairline);vertical-align:middle;overflow:hidden">
+    <span style="display:block;width:${Math.max(2,Math.min(100,pct))}%;height:100%;background:${farbe}"></span></span>`;
+  const zeilen=e.gruppen.slice().sort((x,y)=>y.saetze-x.saetze).map(g=>{
+    const farbe=g.reiz>=85?"var(--good)":g.reiz>=60?"var(--hl)":"var(--warn)";
+    return `<div class="row" style="padding:5px 0;border-top:1px solid var(--hairline);gap:8px">
+      <span class="sm" style="flex:1;min-width:0">${esc(g.m)}</span>
+      <span class="xs t3" style="min-width:62px;text-align:right">${g.saetze} Sätze</span>
+      ${bar(g.reiz,farbe)}
+      <span class="metric xs" style="color:${farbe};min-width:40px;text-align:right">${g.reiz}&thinsp;%</span>
+    </div>`;}).join("");
+  /* Die eine Zeile, die den Plan besser macht. */
+  const rat = e.gesaettigt
+    ? (e.ziel==="strength"
+        ? `Beim Volumen ist nichts mehr zu holen — für Maximalkraft sättigt es früh. Der Hebel ist jetzt die <b style="color:var(--t1)">Last</b>${e.lastLuecke.length?` (am wenigsten schwere Sätze: ${esc(e.lastLuecke.slice(0,2).map(g=>g.m).join(", "))})`:""} und die Häufigkeit, nicht noch ein Satz.`
+        : `Jede Gruppe ist im Sättigungsbereich. Mehr Volumen bringt messbar nichts mehr — die Zeit ist besser in Erholung und saubere Ausführung investiert.`)
+    : `Der nächste Satz bringt bei <b style="color:var(--t1)">${esc(e.naechster.m)}</b> am meisten (${e.naechster.saetze}&nbsp;Sätze, ${e.naechster.reiz}&thinsp;% ausgereizt).`;
+  const weg = e.verschenkt.length
+    ? `<p class="xs t2" style="margin-top:6px;line-height:1.55">Kaum noch Ertrag bei ${esc(e.verschenkt.map(g=>g.m).join(", "))} — dort kostet jeder weitere Satz Zeit, ohne viel zu ändern.</p>` : "";
+  const energieHinweis = e.energie<100
+    ? `<p class="xs t2" style="margin-top:6px;line-height:1.55">Im Defizit ist die Anpassungsfähigkeit begrenzt: die erreichbare Wirkung ist auf ${e.energie} % gedeckelt. Das ist kein Planfehler, sondern der Preis des Abnehmens.</p>` : "";
+  return `<div class="card" data-tone="cy">
+    <p class="ct" style="display:flex;align-items:center;gap:6px">${icon("zap",14)} Effizienz · ${esc(ZIEL_WORT[e.ziel]||e.ziel)}</p>
+    <div class="row" style="gap:10px;margin:4px 0 8px;align-items:flex-start">
+      <div style="flex:1;min-width:0"><p class="metric" style="font-size:21px;line-height:1.1">${e.proStunde}</p>
+        <p class="xs t2" style="line-height:1.3">Reiz je<br>Stunde</p></div>
+      <div style="flex:1;min-width:0"><p class="metric" style="font-size:21px;line-height:1.1">${e.reiz}&thinsp;%</p>
+        <p class="xs t2" style="line-height:1.3">im Schnitt<br>ausgereizt</p></div>
+      <div style="flex:1;min-width:0"><p class="metric" style="font-size:21px;line-height:1.1">${Math.round(e.minutenGes)}</p>
+        <p class="xs t2" style="line-height:1.3">Minuten<br>pro Woche</p></div>
+    </div>
+    ${zeilen}
+    <p class="xs" style="margin-top:8px;line-height:1.55;color:var(--t1)">${rat}</p>
+    ${weg}${energieHinweis}
+    <details style="margin-top:8px"><summary class="xs t2" style="cursor:pointer">Worauf diese Zahlen beruhen</summary>
+      <p class="xs t2" style="line-height:1.55;margin-top:6px">
+      <b style="color:var(--t1)">Gemessen</b> aus deinem Plan: Sätze je Muskel und Woche — Grundübungen zählen für den Zielmuskel voll und für die mitarbeitenden halb (Bankdrücken: Brust 1,0 · Trizeps 0,5 · Schulter 0,5), dazu die Zeit, die sie kosten.<br>
+      <b style="color:var(--t1)">Belegt</b> ist die Form der Beziehung: mehr Volumen bringt mehr, mit abnehmendem Ertrag; jenseits von rund ${e.saettigung} Sätzen je Muskel und Woche ist für dieses Ziel kein Vorteil mehr nachweisbar (Pelland et al., Sports Med 2025, Meta-Regression).<br>
+      <b style="color:var(--t1)">Modell</b> ist der Rest, und das sagen wir offen: die Sättigungskurve selbst, ihre Eichung auf 95 % am Sättigungspunkt und der Faktor 0,5 für mitarbeitende Muskeln. Die Studien geben keine Kurvengleichung her.<br>
+      Die Rechnung beschreibt Studien-Mittelwerte, nicht dich. Erholung, Technik, Schlaf und Veranlagung verschieben das — sie ist ein Kompass für den Plan, kein Versprechen für dein Ergebnis.</p>
+    </details></div>`;
+}
+
 function openPlanEditor(){
   A.peSets=(k,i,d)=>{ const arr=peExArr(k); if(arr[i])arr[i].sets=Math.max(1,Math.min(6,(arr[i].sets||3)+d)); save(); openPlanEditor(); };
   A.peRemove=(k,i)=>{ const arr=peExArr(k); if(arr.length>1){arr.splice(i,1); if(S.exOverrides)delete S.exOverrides[k];} else toast("Mind. 1 Übung"); save(); openPlanEditor(); };
@@ -13533,6 +13783,7 @@ function openPlanEditor(){
     <p class="display-m mb4">Plan anpassen</p>
     <p class="xs t2 mb16">Forme den Plan zu deinem — die Engine prüft live dein Volumen je Muskel.</p>
     ${bioHTML}
+    ${effizienzHTML()}
     ${peDays().map(dayHTML).join("")}
     <button class="btn volt mt8" onclick="A.peDone()">Fertig — Plan speichern</button>
   </div></div>`;

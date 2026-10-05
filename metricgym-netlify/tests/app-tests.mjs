@@ -814,7 +814,10 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
   const q = await page.evaluate(() => {
     const flach = QUELLEN.flatMap(g => g.items);
     const deload = flach.find(([t]) => /Erholungswoche jede vierte/.test(t));
-    const volumen = flach.find(([, q]) => /Pelland/.test(q));
+    /* Gezielt den VOLUMEN-Eintrag, nicht den erstbesten mit dieser Quelle:
+       seit der Effizienzrechnung gibt es mehrere Pelland-Eintraege, und der
+       Test griff vorher den falschen. */
+    const volumen = flach.find(([t, q]) => /Pelland/.test(q) && /Sätze pro Muskel und Woche/.test(t));
     const bands = Object.values(VOL_BANDS);
     return {
       deloadQuelle: deload ? deload[1] : '',
@@ -970,6 +973,78 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
     falschGezaehlt.length
       ? falschGezaehlt.map(t => `${t} Tage: Check ${v[t].checkSumme}, echt ${v[t].echteSumme}`).join(' | ')
       : mitWdh.map(t => `${t} Tage: ${v[t].checkSumme} Sätze (ohne Duplikat wären es ${v[t].dupSumme})`).join(' | '));
+}
+
+// ---------- Effizienzrechnung: verhält sie sich wie die Biologie? ----------
+/* Ein Modell, das auf Sanitaetspruefungen nicht reagiert, ist Dekoration.
+   Geprueft wird deshalb nicht das Ergebnis, sondern das VERHALTEN:
+   mehr Volumen muss mehr Gesamtreiz und WENIGER Reiz pro Stunde ergeben
+   (abnehmender Ertrag), Sekundaermuskeln muessen mitzaehlen, und beim
+   Kraftziel darf keine sinnlose Satz-Empfehlung herauskommen, weil dort
+   schon wenige Saetze saettigen. */
+{
+  const m = await page.evaluate(() => {
+    const basis = { sex:'male', age:30, height:180, weight:80, exp:'intermediate',
+      equipment:'gym_full', act:'light', len:60, sessionTime:60, injuries:[],
+      focus:[], schedule_pref:'consistent', recovery_profile:'average' };
+    const aufbau = (ziel, tage) => {
+      const a = { ...basis, days:tage, goals:[ziel] };
+      S.profile = { a }; S.plan = generateTrainingPlan({ a });
+      S.planB = generateTrainingPlan({ a }, 'B');
+      S.schedule = generateOptimalSchedule(a).schedule.slice();
+      S.currentWeek = 1; save();
+      return a;
+    };
+    const k = reizK('muscle_gain');
+    const a = aufbau('muscle_gain', 4);
+    const vorher = effizienzBericht(a);
+    for (const key of S.schedule) { const arr = peExArr(key) || []; for (const e of arr) e.sets *= 2; }
+    const nachher = effizienzBericht(a);
+    aufbau('muscle_gain', 4);
+    const kraftA = aufbau('strength', 4);
+    const kraft = effizienzBericht(kraftA);
+    return {
+      // Kurvenform
+      kurveSteigt: reizKurve(5,k) < reizKurve(10,k) && reizKurve(10,k) < reizKurve(20,k),
+      kurveGedeckelt: reizKurve(1000,k) <= 1,
+      saettigungBei95: Math.abs(reizKurve(REIZ_SAETTIGUNG.muscle_gain, k) - 0.95) < 0.01,
+      grenzFaellt: grenzNutzen(2,k) > grenzNutzen(10,k) && grenzNutzen(10,k) > grenzNutzen(30,k),
+      // Sekundärmuskeln
+      bank: satzAnteile('Bankdrücken'),
+      curl: satzAnteile('Bizeps-Curls'),
+      // Verhalten
+      mehrReiz: nachher.reiz > vorher.reiz,
+      wenigerProStunde: nachher.proStunde < vorher.proStunde,
+      vorherTxt: `${vorher.reiz}% / ${vorher.proStunde}`,
+      nachherTxt: `${nachher.reiz}% / ${nachher.proStunde}`,
+      // Kraftziel
+      kraftGesaettigt: kraft.gesaettigt,
+      kraftNaechster: kraft.naechster,
+      kraftSaettigung: REIZ_SAETTIGUNG.strength,
+      // Zeit muss echt gemessen sein
+      zeitPositiv: vorher.minutenGes > 60 && vorher.minutenGes < 900,
+      zeit: vorher.minutenGes,
+    };
+  });
+
+  check('Effizienz: die Kurve steigt, deckelt bei 1 und erreicht am Sättigungspunkt 95 %',
+    m.kurveSteigt && m.kurveGedeckelt && m.saettigungBei95);
+  check('Effizienz: der Nutzen des nächsten Satzes nimmt mit dem Volumen ab',
+    m.grenzFaellt);
+  check('Effizienz: Grundübungen zählen auf die mitarbeitenden Muskeln (halb)',
+    m.bank['Brust'] === 1 && m.bank['Trizeps'] === 0.5 && m.bank['Schultern'] === 0.5,
+    JSON.stringify(m.bank));
+  check('Effizienz: Isolation zählt nur auf ihren Zielmuskel',
+    Object.keys(m.curl).length === 1, JSON.stringify(m.curl));
+  check('Effizienz: doppeltes Volumen bringt mehr Gesamtreiz …',
+    m.mehrReiz, `${m.vorherTxt} → ${m.nachherTxt}`);
+  check('Effizienz: … aber WENIGER Reiz pro Stunde (abnehmender Ertrag)',
+    m.wenigerProStunde, `${m.vorherTxt} → ${m.nachherTxt}`);
+  check('Effizienz: beim Kraftziel wird kein sinnloser nächster Satz empfohlen',
+    m.kraftGesaettigt && m.kraftNaechster === null,
+    `Sättigung bei ${m.kraftSaettigung} fraktionierten Sätzen`);
+  check('Effizienz: die Zeit ist aus dem Plan gerechnet, nicht geschätzt',
+    m.zeitPositiv, `${m.zeit} Minuten/Woche`);
 }
 
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
