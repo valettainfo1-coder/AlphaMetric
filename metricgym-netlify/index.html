@@ -1645,31 +1645,37 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
       radial-gradient(120% 78% at 50% -6%, #313F70 0%, #1A2342 36%, #0C1020 70%, var(--bg) 100%),
       radial-gradient(70% 44% at 50% 86%, rgba(125,160,240,.16), transparent 72%);}
   /* lebendige, langsam atmende Lichtschleier in der Hero-Szene (Oura-Feel) */
-  .today-hero .th-scene::before{content:""; position:absolute; inset:-20%; z-index:0; pointer-events:none; will-change:transform,opacity;
+  /* EINE Atmosphaere, am Ring verankert — nicht drei wandernde Flecken.
+     Vorher lagen die Lichtquellen bei 30/24, 74/30 und 56/86 Prozent, also
+     verstreut ueber die ganze Szene; im Bildschirmfoto las sich das als
+     fleckig, und die Drift mit Skalierung 1.12 schob die Flecken zusaetzlich
+     unter die Begruessung. Oura setzt EINEN Kern hinter das Hauptobjekt und
+     laesst ihn atmen. Der Kern sitzt jetzt dort, wo der Ring steht (50 % / 44 %),
+     die zweite Quelle ist nur noch ein leiser Gegenpol oben rechts, und die
+     Drift bewegt ohne zu skalieren — Skalierung war es, die den Rand erreichte. */
+  .today-hero .th-scene::before{content:""; position:absolute; inset:-12%; z-index:0; pointer-events:none; will-change:transform,opacity;
     background:
-      radial-gradient(40% 36% at 30% 24%, rgba(120,150,255,.30), transparent 60%),
-      radial-gradient(38% 32% at 74% 30%, rgba(169,196,222,.24), transparent 62%),
-      radial-gradient(46% 30% at 56% 86%, rgba(143,184,220,.18), transparent 66%);
-    animation:heroDrift 18s ease-in-out infinite alternate;}
+      radial-gradient(52% 40% at 50% 44%, rgba(120,150,255,.34), transparent 68%),
+      radial-gradient(34% 26% at 76% 22%, rgba(169,196,222,.16), transparent 70%);
+    animation:heroDrift 24s ease-in-out infinite alternate;}
   .today-hero .th-scene::after{content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(78% 46% at 50% 16%, rgba(165,195,255,.16), transparent 60%);
     animation:heroBreath 7s ease-in-out infinite;}
-  @keyframes heroDrift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4%,-3%,0) scale(1.12)}100%{transform:translate3d(-3%,2%,0) scale(1.06)}}
+  /* Ohne Skalierung: 1.12 schob den Lichtkern bis an den Bildrand, wo er als
+   abgeschnittener Fleck las statt als Atmosphaere. Verschieben reicht. */
+  @keyframes heroDrift{0%{transform:translate3d(0,0,0)}50%{transform:translate3d(2.5%,-2%,0)}100%{transform:translate3d(-2%,1.5%,0)}}
   @keyframes heroBreath{0%,100%{opacity:.6}50%{opacity:1}}
   @media (prefers-reduced-motion:reduce){.today-hero .th-scene::before,.today-hero .th-scene::after{animation:none}}
   /* Score-reaktiver Hero (Prio 2): die Szene fühlt deinen Zustand */
   .today-hero.th-strong .th-scene::before{background:
-    radial-gradient(40% 36% at 30% 24%, rgba(255,184,96,.32), transparent 60%),
-    radial-gradient(38% 32% at 74% 30%, rgba(255,140,90,.22), transparent 62%),
-    radial-gradient(46% 30% at 56% 86%, rgba(240,205,120,.20), transparent 66%);}
+    radial-gradient(52% 40% at 50% 44%, rgba(255,184,96,.34), transparent 68%),
+    radial-gradient(34% 26% at 76% 22%, rgba(255,150,100,.15), transparent 70%);}
   .today-hero.th-mod .th-scene::before{background:
-    radial-gradient(40% 36% at 30% 24%, rgba(232,186,110,.26), transparent 60%),
-    radial-gradient(38% 32% at 74% 30%, rgba(180,160,230,.20), transparent 62%),
-    radial-gradient(46% 30% at 56% 86%, rgba(205,185,150,.16), transparent 66%);}
+    radial-gradient(52% 40% at 50% 44%, rgba(232,186,110,.28), transparent 68%),
+    radial-gradient(34% 26% at 76% 22%, rgba(180,160,230,.14), transparent 70%);}
   .today-hero.th-rest .th-scene::before{background:
-    radial-gradient(40% 36% at 30% 24%, rgba(96,202,222,.28), transparent 60%),
-    radial-gradient(38% 32% at 74% 30%, rgba(110,150,230,.20), transparent 62%),
-    radial-gradient(46% 30% at 56% 86%, rgba(143,184,220,.16), transparent 66%);}
+    radial-gradient(52% 40% at 50% 44%, rgba(96,202,222,.30), transparent 68%),
+    radial-gradient(34% 26% at 76% 22%, rgba(110,150,230,.14), transparent 70%);}
   .today-hero.th-strong .th-scene::after{background:radial-gradient(78% 46% at 50% 16%, rgba(255,205,150,.18), transparent 60%);}
   .today-hero.th-rest .th-scene::after{background:radial-gradient(78% 46% at 50% 16%, rgba(150,215,230,.16), transparent 60%);}
   .th-metrics{display:flex; justify-content:center; gap:26px; margin-bottom:14px;}
@@ -1694,8 +1700,21 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Jetzt ist es DERSELBE Bogen, nur ohne Füllung: ein kurzes Segment wandert
      langsam die Bahn entlang und sagt „hier fehlt noch deine Eingabe", ohne zu
      blinken. Wer Bewegung reduziert hat, sieht das Segment ruhig stehen. */
+  /* RUECKMELDUNG: "Der Kreis bleibt nicht im Rahmen sondern geht weiter und
+     geht dann nach einem kurzen Reload von links weiter."
+     Gemessen stimmte das, und die Rechnung zeigt auch warum: Umfang 534,07,
+     Strichmuster 68,09 + 534,07 = 602,16 — das Muster passt nicht ganzzahlig
+     auf den Kreis. Die Animation lief ueber 400,55 (die Bogenlaenge), also
+     weder eine volle Musterperiode noch einen vollen Umlauf. Am Zyklusende
+     stand das Segment in einer anderen Phase als am Anfang: der Sprung.
+     Zusaetzlich wanderte es ueber das Bogenende hinaus ins leere Viertel.
+
+     Jetzt wandert es NUR INNERHALB des Bogens — von 0 bis (Bogen minus
+     Segment), sodass es an beiden Enden vollstaendig auf der Bahn steht — und
+     laeuft per alternate zusammenhaengend wieder zurueck. Kein Sprung, kein
+     Austritt, und die Geometrie bleibt dieselbe wie beim gefuellten Ring. */
   @keyframes ringWarten{from{stroke-dashoffset:0}to{stroke-dashoffset:var(--rw)}}
-  .ring-warten{animation:ringWarten 5.5s linear infinite;}
+  .ring-warten{animation:ringWarten 2.8s cubic-bezier(.45,0,.55,1) infinite alternate;}
   @media (prefers-reduced-motion: reduce){ .ring-warten{animation:none;} }
   /* Linien-Chart zeichnet sich live */
   .chartdraw{stroke-dasharray:1400; stroke-dashoffset:1400; animation:chartDraw 1.5s ease forwards;}
@@ -1863,8 +1882,15 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      wanderndem Licht. Unten darf mehr Luft bleiben: dort liegt das Band. */
   /* Der Hero beginnt bei y=0 — die Leiste liegt DARUEBER, nicht davor. Das
      Polster oben haelt den Text frei von ihr (Leistenhoehe + Luft). */
-  .lp-hero{padding:calc(106px + env(safe-area-inset-top,0px)) 20px 56px; text-align:center; position:relative; overflow:hidden;
-    min-height:min(88vh,720px); display:flex; align-items:center; justify-content:center;}
+    /* Gemessen lagen zwischen Unterkante der Navigation und der Kickerzeile
+     101 leere Pixel. Die Navigation liegt UEBER dem Helden (beide beginnen bei
+     0), die 106 px Innenabstand sollten sie freistellen — zusammen mit der
+     Zentrierung in 720 px Mindesthoehe ergab das den doppelten Abstand.
+     Jetzt: kleinere Buehne, kleinerer Innenabstand. Die Navigation ist 65 px
+     hoch, rund 40 px Luft darunter reichen. Das holt knapp 60 px zurueck —
+     der Titel steht im ersten Blickfeld, nicht darunter. */
+  .lp-hero{padding:calc(64px + env(safe-area-inset-top,0px)) 20px 52px; text-align:center; position:relative; overflow:hidden;
+    min-height:min(80vh,648px); display:flex; align-items:center; justify-content:center;}
   .feld{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;
     pointer-events:none;}
   /* Der obere Rand des Feldes wird ausgeblendet. Rueckmeldung: "ueber der
@@ -1873,12 +1899,30 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Band, in dem nur noch wanderndes Licht zu sehen war. Licht ohne Inhalt
      darunter liest sich nicht als Atmosphaere, sondern als Stoerung.
      Die Maske laesst es erst dort beginnen, wo auch Text steht. */
+  /* Ein verankerter Lichtkern HINTER der Schlagzeile. Im Bildschirmfoto lag der
+     hellste Punkt der Seite unterhalb der beiden Knoepfe — also unter dem
+     Inhalt statt hinter ihm — und verschluckte die Zeile "Dauerhaft kostenlos
+     - Keine Werbung". Ein Glow unter dem Text ist kein Glow, sondern ein Fleck.
+     Jetzt sitzt er bei 50 % / 34 %, dort steht der Titel. */
+  .lp-hero::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(64% 46% at 50% 32%, rgba(132,166,246,.42), transparent 70%),
+      radial-gradient(40% 26% at 50% 30%, rgba(190,214,255,.22), transparent 66%),
+      radial-gradient(110% 70% at 50% 0%, rgba(44,62,116,.55), transparent 72%),
+      radial-gradient(120% 80% at 50% 100%, rgba(8,10,14,.9), transparent 60%);
+    animation:lpBreath 9s ease-in-out infinite;}
+  @keyframes lpBreath{0%,100%{opacity:.86}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.lp-hero::before{animation:none}}
   .lp-hero .feld{
-    /* Nur noch ein Hauch Ausblendung an der Oberkante. Die kraeftige Maske von
-       vorher stammt aus der Zeit, als dort ein LEERER Streifen lag; jetzt steht
-       dort die Leiste, und das Licht hinter ihr IST der immersive Effekt. */
-    -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.55) 0%, #000 12%);
-    mask-image:linear-gradient(180deg, rgba(0,0,0,.55) 0%, #000 12%);}
+    /* Senkrecht wie bisher ein Hauch an der Oberkante — dazu eine runde Maske,
+       die das Feld zur Bildmitte hin haelt. Ohne sie lief es bis an die
+       Unterkante des Helden und erzeugte genau dort, wo die kleine
+       Vertrauenszeile steht, den hellsten Fleck der Seite. */
+    -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.55) 0%, #000 12%, #000 70%, rgba(0,0,0,.3) 96%),
+                       radial-gradient(96% 78% at 50% 34%, #000 62%, transparent 100%);
+    mask-image:linear-gradient(180deg, rgba(0,0,0,.55) 0%, #000 12%, #000 70%, rgba(0,0,0,.3) 96%),
+               radial-gradient(96% 78% at 50% 34%, #000 62%, transparent 100%);
+    -webkit-mask-composite:source-in; mask-composite:intersect;}
   /* Das Feld läuft nach unten aus, damit der Hero nicht als Kasten endet. */
   /* NUR noch die Kante zum Seitenhintergrund. Vorher dunkelte dieser Verlauf ab
      62 % Hoehe ab — also genau dort, wo auch die Textbuehne liegt. Zwei Abdunkler
@@ -1893,9 +1937,20 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* Der Ring in der Mitte ist der Anker — dort trägt das Feld. Oben stehen
      Begrüßung und Kennzahlen, unten Überschrift und Fließtext; dort blendet es
      aus, damit die Schrift nicht gegen Spuren ankämpft. Maske statt Übermalen. */
-  .feld-home{position:absolute; inset:0; z-index:0; opacity:.92;
-    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 12%, #000 58%, transparent 82%);
-    mask-image:linear-gradient(180deg, transparent 0%, #000 12%, #000 58%, transparent 82%);}
+  /* Das Feld war nur senkrecht maskiert — waagerecht lief es bis an beide
+     Bildraender, und dort stand im Bildschirmfoto ein heller Fleck voellig
+     ohne Bezug zur Komposition. Dazu begann die Maske bei 12 % Hoehe, also
+     genau auf der Begruessung: "Guten Abend, Max" stand im hellsten Bereich
+     und war kaum lesbar.
+     Jetzt zwei Masken ueberlagert — senkrecht beginnt sie unter der
+     Begruessung, und eine runde Maske haelt das Licht in der Mitte, beim Ring.
+     Das Feld ist damit Textur um den Ring, nicht Streulicht am Rand. */
+  .feld-home{position:absolute; inset:0; z-index:0; opacity:.78;
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 22%, #000 56%, transparent 78%),
+                       radial-gradient(62% 46% at 50% 42%, #000 38%, transparent 82%);
+    mask-image:linear-gradient(180deg, transparent 0%, #000 22%, #000 56%, transparent 78%),
+               radial-gradient(62% 46% at 50% 42%, #000 38%, transparent 82%);
+    -webkit-mask-composite:source-in; mask-composite:intersect;}
   .today-hero>*:not(.th-scene):not(.feld-home){position:relative; z-index:1;}
   /* Eigener, weicher Grund NUR hinter der Kopie — das Feld bleibt an den Rändern
      kräftig, die Schrift steht ruhig. Ein Verlauf, kein Kasten: die Kante darf
@@ -2067,7 +2122,47 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
 
   /* ===== METRIC OS · Stufe 1+2: Konturen tot, Monumente, eine Stimme ===== */
   .acc,.qcard,.lockcard{box-shadow:inset 0 1px 0 var(--edge);}
-  .acc-i,.fh-card,.fh-q,.fh-sug,.lp-show,.gn-step,.th-metric,.tile,.logmode,.stepin,.bioproof,.ins-block,.fh-search,.quicklog-field{border:none !important; box-shadow:inset 0 1px 0 var(--edge);}
+  /* .th-metric war hier drin und hat sich die Lichtkante der KARTEN geholt —
+   auf einem randlosen Element im Helden erscheint ein inset-Strich oben
+   nicht als Kante, sondern als Trennstrich wie aus einer Tabelle. Gemessen:
+   box-shadow rgba(255,255,255,.05) 0 1px 0 inset auf drei Knoepfen, die
+   gar keine Flaeche haben. Eine Kante braucht einen Koerper. */
+.acc-i,.fh-card,.fh-q,.fh-sug,.lp-show,.gn-step,.tile,.logmode,.stepin,.bioproof,.ins-block,.fh-search,.quicklog-field{border:none !important; box-shadow:inset 0 1px 0 var(--edge);}
+.th-metric{box-shadow:none !important;}
+  /* Abstand zwischen den Anmelde-Knoepfen. Ohne ihn beruehren sie sich. */
+  .oauth-stack{display:flex; flex-direction:column; gap:10px; margin-bottom:4px;}
+  /* Wochenuebersicht im Training: Kalenderwoche oben, darunter die Tageszahlen. */
+  .kw-kopf{display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    padding:0 4px 8px; border-bottom:1px solid var(--hairline); margin-bottom:8px;}
+  .kw-nr{font-size:13px; font-weight:650; letter-spacing:.04em; color:var(--t1);}
+  .kw-spanne{font-size:11.5px; color:var(--t3); letter-spacing:.02em;}
+  .kw-tag{background:none; border:none; border-radius:14px; padding:7px 0 8px;
+    font-family:inherit; color:var(--t1); box-shadow:none !important;}
+  .kw-tag.sel{background:var(--accent-soft);}
+  .kw-wd{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); font-weight:600; margin:0;}
+  .kw-tag.heute .kw-wd{color:var(--t1);}
+  .kw-tag.sel .kw-wd{color:var(--hl);}
+  .kw-zahl{font-family:var(--font-hero); font-size:17px; font-weight:450; line-height:1.1;
+    margin:3px 0 0; color:var(--t2); font-variant-numeric:tabular-nums;}
+  .kw-tag.heute .kw-zahl{color:var(--t1); font-weight:650;}
+  .kw-tag.sel .kw-zahl{color:var(--hl); font-weight:650;}
+  /* Heute bekommt einen Punkt unter der Zahl — dieselbe Markierung wie im Kalender. */
+  .kw-tag.heute .kw-zahl::after{content:""; display:block; width:4px; height:4px; border-radius:50%;
+    background:var(--hl); margin:3px auto 0;}
+  .kw-mark{margin:4px 0 0; min-height:16px; font-size:13px;}
+  .kw-ruhe{color:var(--t3);}
+  /* Gruppenkopf der Heute-Seite: eine Linie, ein Wort. */
+  .home-grp{display:flex; align-items:center; gap:12px; margin:26px 0 2px;}
+  .home-grp>span{font-size:10.5px; font-weight:650; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--t3); white-space:nowrap;}
+  .home-grp::after{content:""; flex:1; height:1px; background:var(--hairline);}
+  /* Kopf jeder Reveal-Seite — dieselbe Hierarchie wie der Tab-Kopf der App. */
+  .rv-kopf{text-align:left; margin:0 0 18px; padding-bottom:14px; border-bottom:1px solid var(--hairline);}
+  .rv-kopf-k{font-size:10.5px; font-weight:650; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--hl); margin:0 0 6px;}
+  .rv-kopf-h{font-family:var(--font-serif); font-size:27px; font-weight:560; letter-spacing:-.015em;
+    line-height:1.12; margin:0 0 4px; color:var(--t1);}
+  .rv-kopf-s{font-size:13.5px; line-height:1.5; color:var(--t2); margin:0;}
   .ins-block::before{display:none;}  /* Farbbalken raus — die Caps-Kategorie trägt die Farbe allein */
   .chip.sel,.pill.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.18);}
   .st-word{font-family:var(--font-serif); font-weight:500; letter-spacing:-.01em; line-height:1.15; color:var(--t1);}
@@ -2276,7 +2371,7 @@ function logoMark(size){ return logoSVG(size||72,200); }
    bei „prefers-reduced-motion" wird EIN ruhiges Standbild komponiert und
    angehalten — die Szene bleibt, die Bewegung nicht.
    ═══════════════════════════════════════════════════════════════════════════ */
-const FELD={inst:[], loop:null};
+const FELD={inst:[], loop:null, scrollt:false, scrollWacht:false};
 function feldStart(cv,opts){
   if(!cv) return;
   opts=opts||{};
@@ -2415,18 +2510,50 @@ function feldStart(cv,opts){
 
   FELD.inst.push(inst);
   try{ new IntersectionObserver((es)=>{es.forEach(e=>{inst.visible=e.isIntersecting;});}).observe(cv); }catch(e){}
+  /* RUECKMELDUNG: "die Animation ist cool aber ich kann durch die Animation
+     schwerer scrollen". Gemessen lief diese Schleife mit der vollen
+     Bildwiederholrate und machte dabei pro Bild echte Arbeit: Offscreen-
+     Komposition, Hochskalierung per drawImage und ein Kornmuster ueber die
+     ganze Flaeche. Auf dem Telefon konkurriert das direkt mit dem Scrollen —
+     der Browser braucht in dem Moment jede Millisekunde fuer den eigenen
+     Bildlauf, und das Feld nimmt sie ihm weg.
+
+     Drei Bremsen, von denen die mittlere die eigentliche Antwort ist:
+       · 30 statt 60 Bilder/s — das Feld bewegt sich langsam, den Unterschied
+         sieht niemand, die Kosten halbieren sich.
+       · WAEHREND des Scrollens steht es still und laeuft 180 ms nach dem
+         letzten Scrollereignis weiter. Das Scrollen bekommt das Geraet dann
+         ganz fuer sich.
+       · Bei offenem Modal ruht es: dort liegt es ohnehin hinter einer
+         Abdeckung und ist nicht zu sehen. */
   if(!FELD.loop){
+    let letzte=0;
     const tick=(ts)=>{
       FELD.inst=FELD.inst.filter(i=>i.cv.isConnected);
       if(!FELD.inst.length){ FELD.loop=null; return; }
-      if(!document.hidden) for(const i of FELD.inst){
-        if(!i.visible) continue;
-        if(i.reduce && i.frames>2) continue;   // Standbild: einmal komponieren, dann ruhen
-        i.schritt(ts||performance.now());
+      const now=ts||performance.now();
+      const ruht = document.hidden || FELD.scrollt || window.__pauseGL
+                   || (typeof overlay!=="undefined" && overlay && overlay.innerHTML!=="");
+      if(!ruht && now-letzte>=33){
+        letzte=now;
+        for(const i of FELD.inst){
+          if(!i.visible) continue;
+          if(i.reduce && i.frames>2) continue;   // Standbild: einmal komponieren, dann ruhen
+          i.schritt(now);
+        }
       }
       FELD.loop=requestAnimationFrame(tick);
     };
     FELD.loop=requestAnimationFrame(tick);
+  }
+  if(!FELD.scrollWacht){
+    FELD.scrollWacht=true;
+    let t=0;
+    addEventListener("scroll",()=>{
+      FELD.scrollt=true;
+      clearTimeout(t);
+      t=setTimeout(()=>{ FELD.scrollt=false; },180);
+    },{passive:true});
   }
   addEventListener("resize",()=>{ try{ messen(); }catch(e){} },{passive:true});
   return inst;
@@ -7087,7 +7214,7 @@ function ringSVG(score,tier,size=130){
         <filter id="${id}f" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="${big?4:2.5}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.045)" stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
       <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${st}" stroke-dasharray="${fill} ${c}" stroke-linecap="round" filter="url(#${id}f)" style="--rl:${fill};animation:ringDraw 1.2s cubic-bezier(.34,1.06,.5,1) both"/>
     </svg>
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
@@ -7099,6 +7226,18 @@ function ringSVG(score,tier,size=130){
    eingetragen" und „Tagesform 82" sichtbar dasselbe Objekt sind und nicht zwei
    verschiedene Grafiken. Nur die Füllung fehlt; an ihrer Stelle wandert ein
    kurzes Segment die Bahn entlang. */
+/* ISO-8601-Kalenderwoche. Nicht "der wievielte Sonntag im Jahr", sondern die
+   Zaehlung, die in Deutschland auf jedem Kalender steht: Woche 1 ist die mit
+   dem ersten Donnerstag des Jahres, Wochen beginnen am Montag. Der
+   Donnerstags-Trick erspart die Sonderfaelle am Jahreswechsel. */
+function isoKW(d){
+  const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));          // auf den Donnerstag
+  const jahr1=new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return Math.ceil(((t-jahr1)/86400000+1)/7);
+}
+const MON_KURZ=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+
 function ringWartenSVG(size=184){
   const st=Math.max(7,Math.round(size*.075)), r=(size-st)/2,
         c=2*Math.PI*r, arc=c*.75, seg=arc*0.17;
@@ -7112,7 +7251,7 @@ function ringWartenSVG(size=184){
       <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.07)"
         stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
       <circle class="ring-warten" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})"
-        stroke-width="${st}" stroke-dasharray="${seg} ${c}" stroke-linecap="round" style="--rw:${-arc}px"/>
+        stroke-width="${st}" stroke-dasharray="${seg} ${c}" stroke-linecap="round" style="--rw:${-(arc-seg)}px"/>
     </svg>
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
       <span style="font-size:30px;font-weight:200;line-height:1;color:var(--hl)" aria-hidden="true">+</span>
@@ -7584,7 +7723,11 @@ function oauthButtons(label){
       <span>${label||"Mit Google fortfahren"}</span></button>`;
   /* In der iOS-App zuerst Apple, sonst zuerst Google — jeweils der Weg, den
      der Nutzer dort erwartet. Beide sind immer beide da. */
-  return (IOS_APP()? apple+google : google+apple)
+  /* Gemessen lagen zwischen Unterkante des einen und Oberkante des anderen
+     Knopfes 0 Pixel — zwei weisse Pillen ohne Abstand verschmelzen optisch zu
+     einem Klumpen mit Taille. Die Knoepfe selbst haben keinen Aussenabstand
+     (.btn setzt keinen), also muss ihn der Behaelter geben. */
+  return `<div class="oauth-stack">${IOS_APP()? apple+google : google+apple}</div>`
     + `<div class="lp-or"><span>oder mit E-Mail</span></div>`;
 }
 // Elegante Warp-Transition „ins Programm gebeamt" — Screen-Wechsel passiert hinter dem Flash.
@@ -10833,6 +10976,22 @@ function revealNav(){
     ${letzte?"":`<button class="btn volt" onclick="A.rvGo(${n+1})">Weiter</button>`}
   </div>`;
 }
+/* RUECKMELDUNG zu den Reveal-Seiten: "keine Ueberschrift also nicht
+   kohaerent". Das stimmte woertlich: REVEAL_PAGES traegt fuer jede der fuenf
+   Seiten einen Titel und eine Zeile darunter — benutzt wurden sie aber nur als
+   Vorlese-Beschriftung der Punkte. Seite 1 hatte ihren eigenen Helden, die
+   Seiten 2 bis 5 begannen uebergangslos mit einer Karte. Wer blaetterte, sah
+   Inhalt ohne zu wissen, worueber er gerade liest.
+   Derselbe Kopf auf jeder Seite, aus derselben Quelle wie die Punkte. */
+function rvKopf(n){
+  const t=REVEAL_PAGES[n-1]; if(!t) return "";
+  return `<div class="rv-kopf">
+    <p class="rv-kopf-k">Schritt ${n} von ${REVEAL_PAGES.length}</p>
+    <h2 class="rv-kopf-h">${t[0]}</h2>
+    <p class="rv-kopf-s">${t[1]}</p>
+  </div>`;
+}
+
 function renderReveal(){
   const p=S.profile, tg=p.tg;
   if(!S.revealPage) S.revealPage=1;
@@ -10911,6 +11070,7 @@ function renderReveal(){
         <p class="xs t2" style="margin-top:2px">auch ${s.headline}</p></div>`).join("")}</div>`:""}
 
     </div><div class="rv-page" data-p="2">
+    ${rvKopf(2)}
     <!-- JAHRES-PFAD: ehrliche Makro-Periodisierung aus Körperfett + Ziel -->
     ${(()=>{ const mp=macroPhases(a,tg); if(!mp)return "";
       return `<div class="card" data-tone="hl" style="text-align:left">
@@ -10940,8 +11100,14 @@ function renderReveal(){
     </div>
 
     </div><div class="rv-page" data-p="3">
+    ${rvKopf(3)}
     <!-- DOPAMIN: Das erreichst du (kompakt) -->
-    <div class="card" style="text-align:left; background:var(--accent); border:none">
+    <!-- raised: .card hat im Entwurf ABSICHTLICH kein waagerechtes Polster —
+         es ist ein Inhaltsblock, der den Seitenrand vom Container nimmt.
+         Hier stand eine Inline-FUELLUNG auf genau so einer Karte, also klebte
+         der Text an der Kante der Flaeche. raised ist die Klasse, die
+         Flaeche UND Polster vergibt; nur die Farbe wird ueberschrieben. -->
+    <div class="card raised" style="text-align:left; background:var(--accent)">
       <p class="ct" style="color:rgba(255,255,255,.65);margin-bottom:10px">Das holst du raus</p>
       ${wins.map(w=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0">
         <span style="color:#fff;display:inline-flex;flex-shrink:0">${icon("check",16)}</span>
@@ -10968,6 +11134,7 @@ function renderReveal(){
     ${(tg.recs||[]).map(rmsg=>`<div class="card mt8" data-tone="hl" style="text-align:left"><p class="sm" style="line-height:1.55"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Empfehlung</b><br>${rmsg}</p></div>`).join("")}
 
     </div><div class="rv-page" data-p="4">
+    ${rvKopf(4)}
     <!-- USP: So funktioniert METRICGYM (4 Boxen) -->
     <p class="label" style="text-align:center;margin:26px 0 10px">Warum METRICGYM dein bester Plan ist</p>
     <div class="grid2" style="gap:10px;text-align:left">
@@ -10980,6 +11147,7 @@ function renderReveal(){
     </div>
 
     </div><div class="rv-page" data-p="5">
+    ${rvKopf(5)}
     <!-- BELEGE: vier Hebel, jeder als eigene Karte mit voller Textbreite -->
     <p class="label" style="text-align:center;margin:0 0 4px">Warum dieser Plan mehr bringt</p>
     <p class="xs t2" style="margin:0 auto 16px;max-width:34ch;line-height:1.55">Bauchgefühl-Pläne lassen Ergebnisse liegen. Diese vier Hebel sind in deinem Plan eingebaut — jeder einzeln belegt.</p>
@@ -11172,6 +11340,11 @@ function korridor(cfg){
   }catch(e){ return ""; }
 }
 function renderSection(label,content){return `<div class="section"><span class="label sect-h">${label}</span>${content}</div>`;}
+/* Gruppenkopf auf der Heute-Seite. Eine Ebene UEBER renderSection: der
+   trennt einzelne Kaesten, dieser trennt die vier Bereiche der Seite
+   (jetzt / heute / Entwicklung / Einrichten). Bewusst sehr leise — eine
+   Linie mit einem Wort, kein zweiter Kasten um Kaesten herum. */
+function homeGruppe(titel){ return `<div class="home-grp"><span>${titel}</span></div>`; }
 /* Dieselbe Gruppe, aber aufklappbar — für Abschnitte, die erklären statt zu
    handeln. Sie bleiben erreichbar, liegen aber nicht dauerhaft auf dem Tisch.
    Wer eine Gruppe öffnet, findet sie beim nächsten Besuch offen vor. */
@@ -11740,6 +11913,21 @@ function renderHome(){
       </section>`;
     })()}
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         HEUTE-SEITE, NEU GEORDNET.
+         Rueckmeldung: "hier bitte uebersichtlicheres Homepage Menue machen!
+         Das ist nicht ersichtlich. Es ist alles kreuz und quer durchgewuerfelt.
+         Es ist keine Konsistenz drin."
+         Gemessen waren es dreizehn gleichrangige Bloecke ohne Gruppierung, und
+         die Reihenfolge widersprach dem Zweck: drei Einrichtungs- und
+         Werbekarten standen zwischen Held und Inhalt, waehrend die EINHEIT VON
+         HEUTE unter der Log-Routine lag — man musste an der Werbung vorbei
+         scrollen, um zu sehen, was man trainieren soll.
+         Jetzt vier Gruppen mit Namen, in der Reihenfolge, in der man sie
+         braucht: was JETZT gilt, was HEUTE ansteht, wie es sich ENTWICKELT,
+         und ganz unten, was man einmal EINRICHTET.
+         ══════════════════════════════════════════════════════════════════ -->
+
     ${(S.logged&&S.logged.length&&S.playerType&&(Date.now()-(S.logged[S.logged.length-1].ts||0))<3*36e5)?(()=>{
       const d=TYPES[S.playerType]; if(!d)return "";
       const tot=d.ex.reduce((sm,e)=>{const t=weekSets(e[0],e[1]);return sm+(isFinite(t)?t:0);},0);
@@ -11766,16 +11954,58 @@ function renderHome(){
           <button class="btn" style="flex:0 0 auto;width:auto;padding:0 16px" onclick="A.actNagOff()">Heute nicht</button></div>
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px;margin-top:2px" onclick="A.actAutoToggle()">${icon("zap",13)} Immer automatisch wechseln</button>
       </div>`; })()}
-    ${installCardHTML()}
     ${briefingCard}
-    ${starterCard()}
-    ${!S.seenCatalog?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.menuGo('features')">
-      <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
-      <span class="sm" style="flex:1;line-height:1.55"><b>Entdecke, was METRICGYM alles kann.</b><br><span class="t2">KI-Coach, Reiz-Beweis, Autoregulation, Auswertung und mehr — in 60 Sekunden.</span></span>
-      <span class="t2" style="align-self:center">→</span></button>`:""}
     ${streakRisk}
-    ${trialNudge}
+    ${overtrain&&S.currentWeek!==4?(S.tier!=="free"
+      ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">${LABELS.deload} vorziehen</button></div>`
+      :`<div class="lockcard"><p class="sm">${icon("lock",13)} Übertrainings-Signal erkannt — der automatische Erholungswochen-Vorschlag ist Teil von PERFORMANCE.</p>
+        <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
+    :""}
 
+    ${S.calAdjustMsg?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.dismissCalMsg()">
+      <span class="sm" style="flex:1"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Kalorienziel automatisch angepasst</b><br><span class="t2" style="line-height:1.55">${S.calAdjustMsg}</span></span><span class="t2" style="align-self:flex-start">✕</span></button>`:""}
+
+    ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
+      <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
+
+
+    ${homeGruppe("Heute")}  <!-- die Einheit zuerst — sie ist der Grund, warum die App offen ist -->
+    ${renderSection("Heute", _es
+      ? (_es.kind==="rest"
+        ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — der Reiz von gestern wird jetzt verbaut.</p>
+            <button class="btn ghost mt8" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.q('endurance')">${icon("calendar",14)} Nächste Einheit ansehen</button></div>`
+        :`<div class="card"><div class="row mb8">
+            <div style="flex:1;min-width:0"><p class="display-m">${icon(_es.ses.icon,18)} ${_es.ses.headline}</p>
+            <p class="sm t2 mt8">${_es.ses.vol}${_es.ses.hard?" · harte Einheit":""}</p>
+            <p class="xs t2 mt8" style="line-height:1.55">${_es.ses.steps[0][1].replace(/<\/?b>/g,"")}</p></div></div>
+            <button class="btn volt mt8" onclick="A.q('endurance')">${icon("calendar",15)} Ganze Einheit ansehen</button></div>`)
+      : tType==="rest"
+      ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — dein Körper baut jetzt auf, was du trainiert hast.</p></div>`
+      :`<div class="card"><div class="row mb8">
+          <div><p class="display-m">${icon(tSession.icon,18)} ${tSession.label}</p>
+          <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${tSession.est||p.a.len||60} Min</p></div></div>
+          <button class="btn volt mt8" onclick="A.start()">${icon("play",15)} Training beginnen</button></div>`)}
+
+    ${renderSection("Ernährung heute",
+      `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="A.q('nutrition')" aria-label="Zur Ernährung">
+        <div class="row mb8"><span class="metric" style="font-size:20px">${nfi.format(sum.k)} / ${nfi.format(tg.kcal)} kcal</span>
+          <span class="metric xs t2">${Math.round(Math.min(100,sum.k/tg.kcal*100))} %</span></div>
+        <div class="progress" style="height:8px;margin-bottom:10px"><div style="width:${Math.min(100,sum.k/tg.kcal*100)}%"></div></div>
+        <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</span> Protein</p>
+      </button>`)}
+
+    ${renderSection("Heute eintragen",checklistCard())}
+
+
+    ${homeGruppe("Deine Entwicklung")}  <!-- Prognosen und Auswertung, nicht zwischen den Tagesinhalten verstreut -->
+    ${(()=>{const o=strengthOracle(); if(!o)return "";
+      const dstr=o.when.toLocaleDateString("de-DE",{day:"numeric",month:"long"});
+      const wk=Math.max(1,Math.round(o.days/7));
+      return `<div class="card oracle-reveal" data-tone="hl">
+        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px">${icon("sparkle",13)} Kraft-Prognose</p>
+        <p class="sm" style="line-height:1.55">Bei deinem aktuellen Tempo knackst du <b style="color:var(--t1)">${o.target} kg ${esc(o.name)}</b> voraussichtlich am <b style="color:var(--hl)"><span class="oracle-date">${dstr}</span></b> — in etwa ${wk} ${wk===1?"Woche":"Wochen"}.</p>
+        <p class="xs t2" style="margin-top:8px">Jetzt ${o.cur} kg geschätzte Maximalkraft · Trend +${o.perWeek} kg/Woche · aus ${o.n} echten Sätzen</p>
+      </div>`;})()}
 
     ${(()=>{const tw=metabolicTwin(); if(!tw)return "";
       const cfg={surplus:{a:"#D08B6E",b:"#F4D4A0",lbl:"Aufbau-Überschuss"},
@@ -11807,29 +12037,29 @@ function renderHome(){
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px" onclick="A.twinInfo()">${icon("info",13)} So rechnet METRICGYM deinen Verbrauch</button>
       </div>`;})()}
 
-    ${(()=>{const o=strengthOracle(); if(!o)return "";
-      const dstr=o.when.toLocaleDateString("de-DE",{day:"numeric",month:"long"});
-      const wk=Math.max(1,Math.round(o.days/7));
-      return `<div class="card oracle-reveal" data-tone="hl">
-        <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px">${icon("sparkle",13)} Kraft-Prognose</p>
-        <p class="sm" style="line-height:1.55">Bei deinem aktuellen Tempo knackst du <b style="color:var(--t1)">${o.target} kg ${esc(o.name)}</b> voraussichtlich am <b style="color:var(--hl)"><span class="oracle-date">${dstr}</span></b> — in etwa ${wk} ${wk===1?"Woche":"Wochen"}.</p>
-        <p class="xs t2" style="margin-top:8px">Jetzt ${o.cur} kg geschätzte Maximalkraft · Trend +${o.perWeek} kg/Woche · aus ${o.n} echten Sätzen</p>
-      </div>`;})()}
+    ${renderFold("Diese Woche", _eu?(()=>{ try{
+      const c=endurCfg(), wn=endurWeekNo(c), wkp=endurWeekPlan(c,wn), dd=(new Date().getDay()+6)%7;
+      const dn=endurDone();
+      return `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('endurance')" aria-label="Zum Ausdauer-Plan">
+        <div class="e-week">${wkp.map((k,i)=>{ const K=ENDUR_KINDS[k];
+          return `<div class="e-day ${i===dd?"now":""} ${K.hard?"hard":""} ${dn[eWeekDayKey(i)]?"done":""}">
+            <span class="e-wd">${WD[i]}</span><span class="e-dot">${k==="rest"?"·":icon(K.icon,13)}</span>
+            <span class="e-dl">${K.label==="Lange Einheit"?"Lang":K.label==="HIIT · 30/30"?"HIIT":K.label}</span></div>`;}).join("")}</div>
+        <p class="xs t2 mt8" style="text-align:left">Woche ${wn} von ${c.goal.weeks} · Ziel ${esc(c.goal.label)}</p></button>`;
+      }catch(e){ return ""; } })():
+      `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('train')" aria-label="Zur Trainingswoche">
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
+          ${sch.map((t,i)=>`<div>
+            <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
+            <p style="font-size:17px;margin:4px 0">${t==="rest"?"·":`<span style=\"display:inline-flex\">${icon(TYPES[t].icon,15)}</span>`}</p>
+            <p style="font-size:9.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
+          </div>`).join("")}
+        </div></button>`)}
 
-    ${S.calAdjustMsg?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.dismissCalMsg()">
-      <span class="sm" style="flex:1"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Kalorienziel automatisch angepasst</b><br><span class="t2" style="line-height:1.55">${S.calAdjustMsg}</span></span><span class="t2" style="align-self:flex-start">✕</span></button>`:""}
-
-    ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
-      <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
-
-    ${overtrain&&S.currentWeek!==4?(S.tier!=="free"
-      ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">${LABELS.deload} vorziehen</button></div>`
-      :`<div class="lockcard"><p class="sm">${icon("lock",13)} Übertrainings-Signal erkannt — der automatische Erholungswochen-Vorschlag ist Teil von PERFORMANCE.</p>
-        <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
-    :""}
-
-    ${renderSection("Heute eintragen",checklistCard())}
-
+    ${renderFold("Auswertung",
+      `<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('analytics')" aria-label="Zur Auswertung">
+        <span class="sm">${visIns.length?`${visIns.length===1?"1 neue Erkenntnis":visIns.length+" Erkenntnisse"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt deine ersten Daten"}</span>
+        <span class="t2">→</span></button>`)}
     ${eng.daysCount>=2?renderFold("Deine Reise",
       `<div class="card"><div class="grid2" style="grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
         ${[[eng.journey,"Tage dabei",{c:eng.journey}],[eng.sessions,"Einheiten",{c:eng.sessions}],[nfi.format(Math.round(eng.totalVol/1000))+" t","Tonnen gestemmt",{cd:Math.round(eng.totalVol/1000),suf:" t"}]].map(([v,l,o])=>`
@@ -11874,53 +12104,22 @@ function renderHome(){
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.howItWorks()">${icon("info",14)} So funktioniert's</button>
       </div>`;})())}
 
-    ${renderSection("Heute", _es
-      ? (_es.kind==="rest"
-        ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — der Reiz von gestern wird jetzt verbaut.</p>
-            <button class="btn ghost mt8" style="justify-content:flex-start;padding-left:0;min-height:36px" onclick="A.q('endurance')">${icon("calendar",14)} Nächste Einheit ansehen</button></div>`
-        :`<div class="card"><div class="row mb8">
-            <div style="flex:1;min-width:0"><p class="display-m">${icon(_es.ses.icon,18)} ${_es.ses.headline}</p>
-            <p class="sm t2 mt8">${_es.ses.vol}${_es.ses.hard?" · harte Einheit":""}</p>
-            <p class="xs t2 mt8" style="line-height:1.55">${_es.ses.steps[0][1].replace(/<\/?b>/g,"")}</p></div></div>
-            <button class="btn volt mt8" onclick="A.q('endurance')">${icon("calendar",15)} Ganze Einheit ansehen</button></div>`)
-      : tType==="rest"
-      ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — dein Körper baut jetzt auf, was du trainiert hast.</p></div>`
-      :`<div class="card"><div class="row mb8">
-          <div><p class="display-m">${icon(tSession.icon,18)} ${tSession.label}</p>
-          <p class="sm t2 mt8">${tSession.ex.length} Übungen · ≈ ${tSession.est||p.a.len||60} Min</p></div></div>
-          <button class="btn volt mt8" onclick="A.start()">${icon("play",15)} Training beginnen</button></div>`)}
 
-    ${renderFold("Diese Woche", _eu?(()=>{ try{
-      const c=endurCfg(), wn=endurWeekNo(c), wkp=endurWeekPlan(c,wn), dd=(new Date().getDay()+6)%7;
-      const dn=endurDone();
-      return `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('endurance')" aria-label="Zum Ausdauer-Plan">
-        <div class="e-week">${wkp.map((k,i)=>{ const K=ENDUR_KINDS[k];
-          return `<div class="e-day ${i===dd?"now":""} ${K.hard?"hard":""} ${dn[eWeekDayKey(i)]?"done":""}">
-            <span class="e-wd">${WD[i]}</span><span class="e-dot">${k==="rest"?"·":icon(K.icon,13)}</span>
-            <span class="e-dl">${K.label==="Lange Einheit"?"Lang":K.label==="HIIT · 30/30"?"HIIT":K.label}</span></div>`;}).join("")}</div>
-        <p class="xs t2 mt8" style="text-align:left">Woche ${wn} von ${c.goal.weeks} · Ziel ${esc(c.goal.label)}</p></button>`;
-      }catch(e){ return ""; } })():
-      `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('train')" aria-label="Zur Trainingswoche">
-        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
-          ${sch.map((t,i)=>`<div>
-            <p class="xs" style="color:${i===dow?"var(--accent)":"var(--t3)"};font-weight:${i===dow?"700":"400"}">${WD[i]}</p>
-            <p style="font-size:17px;margin:4px 0">${t==="rest"?"·":`<span style=\"display:inline-flex\">${icon(TYPES[t].icon,15)}</span>`}</p>
-            <p style="font-size:9.5px;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t==="rest"?"":TYPES[t].label}</p>
-          </div>`).join("")}
-        </div></button>`)}
+    ${homeGruppe("Einrichten &amp; entdecken")}  <!-- einmalige Dinge gehoeren ans Ende, nicht vor den Inhalt -->
+    ${starterCard()}
+    ${!S.seenCatalog?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.menuGo('features')">
+      <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
+      <span class="sm" style="flex:1;line-height:1.55"><b>Entdecke, was METRICGYM alles kann.</b><br><span class="t2">KI-Coach, Reiz-Beweis, Autoregulation, Auswertung und mehr — in 60 Sekunden.</span></span>
+      <span class="t2" style="align-self:center">→</span></button>`:""}
+    ${trialNudge}
+    ${/* Der Installations-Hinweis stand bisher DIREKT unter dem Helden und war
+          damit das erste, was nach dem grossen Bild kam — eine Aufforderung,
+          die App woanders noch einmal zu oeffnen, bevor man gesehen hat, was
+          sie kann. Er steht jetzt hinter den Inhalten, wegen denen man sie
+          ueberhaupt aufmacht. Weggeklickt bleibt er weg (S.installDismissed). */
+       installCardHTML()}
 
-    ${renderSection("Ernährung heute",
-      `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="A.q('nutrition')" aria-label="Zur Ernährung">
-        <div class="row mb8"><span class="metric" style="font-size:20px">${nfi.format(sum.k)} / ${nfi.format(tg.kcal)} kcal</span>
-          <span class="metric xs t2">${Math.round(Math.min(100,sum.k/tg.kcal*100))} %</span></div>
-        <div class="progress" style="height:8px;margin-bottom:10px"><div style="width:${Math.min(100,sum.k/tg.kcal*100)}%"></div></div>
-        <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</span> Protein</p>
-      </button>`)}
 
-    ${renderFold("Auswertung",
-      `<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.q('analytics')" aria-label="Zur Auswertung">
-        <span class="sm">${visIns.length?`${visIns.length===1?"1 neue Erkenntnis":visIns.length+" Erkenntnisse"} verfügbar${S.tier==="free"&&ins.length>1?` · ${icon("lock",13)} ${ins.length-1} weitere in PERFORMANCE`:""}`:"Sammelt deine ersten Daten"}</span>
-        <span class="t2">→</span></button>`)}
   `;
   /* Das Feld hinter dem Tageskopf. Seine Ordnung kommt aus der Tagesform: ein
      guter Tag ordnet die Bewegung, ein zäher lässt sie streuen. Damit trägt die
@@ -14254,11 +14453,29 @@ function renderTrain(){
   const _mon=new Date(); _mon.setDate(_mon.getDate()-dow);
   const _trained=(i)=>{ const d=new Date(_mon); d.setDate(_mon.getDate()+i); const k=dkey(d);
     return S.trainingHistory.some(t=>t.date===k&&t.sets>0); };
-  const weekStrip=`<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
-    ${sch.map((t,i)=>{const train=t!=="rest"; const sel=i===focusDayIdx; const done=_trained(i);
-      return `<button ${train?`onclick="A.selectDay(${i})"`:""} style="background:${sel?"var(--accent-soft)":"none"};border:none;border-radius:14px;padding:8px 0 9px;cursor:${train?"pointer":"default"};font-family:inherit;color:var(--t1)">
-        <p class="xs" style="color:${sel?"var(--hl)":i===dow?"var(--t1)":"var(--t3)"};font-weight:${sel||i===dow?"600":"400"}">${WD[i]}</p>
-        <p style="font-size:15px;margin:6px 0 0">${done?`<span style="display:inline-flex;color:#7FA98F">${icon("check",14)}</span>`:t==="rest"?`<span style="color:var(--t3)">·</span>`:`<span style="display:inline-flex;color:${sel?"var(--hl)":"var(--t2)"}">${icon(TYPES[t].icon,15)}</span>`}</p>
+  /* RUECKMELDUNG: "ich will die Wochenuebersicht mit Kalenderwoche und Zahl
+     oben haben als Uebersicht. Nicht mit Push und Pull usw sondern nur eine
+     Tagesuebersicht mit Woche!"
+     Der Streifen zeigt jetzt oben die Kalenderwoche samt Zeitraum und je Tag
+     die TAGESZAHL — also das, was auf einem Kalender steht. Welche Einheit an
+     einem Tag liegt, sagt weiterhin das Symbol und die Karte darunter; der
+     Streifen selbst bleibt reine Tagesuebersicht. */
+  const _kw=isoKW(_mon);
+  const _so=new Date(_mon); _so.setDate(_mon.getDate()+6);
+  const _spanne=_mon.getMonth()===_so.getMonth()
+    ? `${_mon.getDate()}.–${_so.getDate()}. ${MON_KURZ[_so.getMonth()]}`
+    : `${_mon.getDate()}. ${MON_KURZ[_mon.getMonth()]} – ${_so.getDate()}. ${MON_KURZ[_so.getMonth()]}`;
+  const _tagZahl=(i)=>{ const d=new Date(_mon); d.setDate(_mon.getDate()+i); return d.getDate(); };
+  const weekStrip=`<div class="kw-kopf">
+      <span class="kw-nr">KW ${_kw}</span>
+      <span class="kw-spanne">${_spanne}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center">
+    ${sch.map((t,i)=>{const train=t!=="rest"; const sel=i===focusDayIdx; const done=_trained(i); const heute=i===dow;
+      return `<button ${train?`onclick="A.selectDay(${i})"`:""} class="kw-tag${sel?" sel":""}${heute?" heute":""}" ${train?"":'aria-disabled="true"'} style="cursor:${train?"pointer":"default"}">
+        <p class="kw-wd">${WD[i]}</p>
+        <p class="kw-zahl">${_tagZahl(i)}</p>
+        <p class="kw-mark">${done?`<span style="display:inline-flex;color:#7FA98F">${icon("check",13)}</span>`:t==="rest"?`<span class="kw-ruhe">·</span>`:`<span style="display:inline-flex;color:${sel?"var(--hl)":"var(--t2)"}">${icon(TYPES[t].icon,13)}</span>`}</p>
       </button>`;}).join("")}
   </div>`;
   // Rotations-Strip: Boxen pro Einheit, „Nächste" markiert, alle antippbar
@@ -14348,7 +14565,7 @@ function renderTrain(){
           ${F.abs&&F.abs.length?`<p class="label" style="margin-top:14px;margin-bottom:8px">Core-Finisher</p>${F.abs.map(e=>exLine(e)).join("")}`:""}
           <button class="btn mt16" onclick="A.startType('${focusType}')">${icon("play",15)} Training beginnen</button>
           <p class="xs t2 mt8" style="text-align:center">Übung antippen für Details · gedrückt halten zum Tauschen</p>
-          ${voicePreview?`<div class="card mt8" style="background:var(--s2)">
+          ${voicePreview?`<div class="card raised mt8" style="background:var(--s2)">
             <p class="sm"><b>${esc(voicePreview.name)}</b> · <span class="metric">${voicePreview.sets} × ${voicePreview.reps} @ ${fmtKg(voicePreview.weight)}</span></p>
             <p class="conf mt8">Treffsicherheit ${Math.round(voicePreview.conf*100)} %</p>
             <div class="grid2 mt8"><button class="btn" onclick="A.voiceCancel()">Verwerfen</button>
