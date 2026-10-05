@@ -5426,6 +5426,23 @@ function capWeeklyVolume(PLAN,a,ctx){
     const bases=[...new Set(sch)];
     const exesOf=(base)=>[...PLAN[base].main,...(PLAN[base].abs||[])];
     const weekly=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+peak(e); } } return w; };
+    /* DER BODEN GEHOERT AN DIE NIEDRIGSTE WOCHE, DIE DECKE AN DIE HOECHSTE.
+       Bis hierher wurde BEIDES an der Woche-3-Spitze gemessen (peak = sets+1 bei
+       Grunduebungen). Die MRV-Deckelung ist damit richtig — sie muss die
+       Spitzenwoche abfangen. Die MEV-Garantie war damit falsch: sie galt erst
+       in Woche 3. Gemessen am eigenen Bio-Check lag der frisch erzeugte Plan
+       in Woche 1 unter dem Mindestreiz —
+
+         2 Tage: Brust 8/10, Ruecken 8/12, Schultern 6/8, Trizeps 4/8
+         3 Tage: Brust 8/10, Ruecken 6/12, Schultern 6/8
+         4 Tage: Brust 8/10, Schultern 6/8
+         5-6 Tage: alles im Korridor
+
+       Das sind die ersten beiden Wochen JEDES Vier-Wochen-Blocks, also die
+       Haelfte der Trainingszeit unter der Schwelle, ab der das Modell der App
+       ueberhaupt Wachstum erwartet. Die Untergrenze wird deshalb jetzt an den
+       Grundsaetzen gemessen (Woche 1), die Obergrenze weiter an der Spitze. */
+    const weeklyBasis=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+e.sets; } } return w; };
     // 1) SÄTZE senken (Floor 2) — hält die Übungszahl hoch und das Volumen mittig im Korridor.
     let w=weekly();
     for(const [g,band] of Object.entries(BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
@@ -5490,8 +5507,8 @@ function capWeeklyVolume(PLAN,a,ctx){
         const spec=MEV_INJECT[g]; if(!spec||!spec.ex.some(x=>fits(x)))continue; // nur trainierbare Muskeln
         const target=focusSet.has(g)?Math.max(mevTarget(g),BANDS[g][0]):mevTarget(g); // Fokus → volles MEV
         let guard=0;
-        while((weekly()[g]||0)<target && guard++<10){
-          const zeroV=((weekly()[g]||0)===0)&&pgGoal!=="fat_loss"; // Muskel OHNE Direktvolumen -> Prioritaet (ausser Defizit)
+        while((weeklyBasis()[g]||0)<target && guard++<10){
+          const zeroV=((weeklyBasis()[g]||0)===0)&&pgGoal!=="fat_loss"; // Muskel OHNE Direktvolumen -> Prioritaet (ausser Defizit)
           let best=null,bestEst=1e9;
           for(const base of bases){
             if(!spec.days.includes(base))continue;
@@ -5504,7 +5521,34 @@ function capWeeklyVolume(PLAN,a,ctx){
             const e0=estB(base); if(e0+5>budgetM+slackM && !focusSet.has(g) && !zeroV)continue;
             if(e0<bestEst){ bestEst=e0; best={base,cand}; }
           }
-          if(!best)break;
+          /* KEIN PLATZ FUER EINE WEITERE UEBUNG? DANN SAETZE STATT UEBUNGEN.
+             Gemessen: bei 2-3 Trainingstagen sitzen ALLE Einheiten bei exakt
+             sieben Uebungen — der Deckel aus Schoenfeld 2019 (mehr Uebungen je
+             Einheit erhoehen vor allem die Ermuedung). Die Einschleif-Schleife
+             konnte bisher nur NEUE Uebungen hinzufuegen und gab dann auf; mehr
+             Zeit zu geben half nachweislich nichts (2 Tage mit 90 Min blieb bei
+             Bruste 8/10 und Ruecken 8/12).
+             Die beiden Regeln widersprechen sich aber nur scheinbar: Schoenfeld
+             deckelt die UEBUNGSZAHL, nicht die Satzzahl. Also bekommt die
+             vorhandene Uebung dieser Gruppe einen Satz mehr — das kostet rund
+             zwei Minuten statt fuenf und laesst die Reizqualitaet der spaeten
+             Uebungen in Ruhe. Deckel bei 5 Saetzen je Uebung. */
+          if(!best){
+            let gesetzt=false;
+            for(const base of bases){
+              if(!spec.days.includes(base))continue;
+              const d=PLAN[base]; if(!d||!d.main)continue;
+              const f=freqB[base]||1;
+              if((weekly()[g]||0)+f>BANDS[g][1]) continue;              // nie ueber MRV
+              // Grunduebungen zuerst: sie tragen den Reiz und vertragen den Satz besser
+              const kand=d.main.filter(e=>grpOf(e.n)===g && e.sets<5)
+                .sort((x,y)=>(isCompound(y.n)?1:0)-(isCompound(x.n)?1:0));
+              if(!kand.length)continue;
+              kand[0].sets++; gesetzt=true; break;
+            }
+            if(!gesetzt) break;
+            continue;
+          }
           const d=PLAN[best.base], dd=EXDB[best.cand]||{}, rir=PP.rirOv;
           // ZEIT-NEUTRALE UMVERTEILUNG (Audit-Fund P6): Hat der Muskel NULL Direktvolumen und
           // ist der Tag am Zeitlimit, gibt die Gruppe mit dem groessten MEV-UEBERSCHUSS einen
@@ -13420,7 +13464,23 @@ function peExArr(key){ const {base,variant}=parseTypeKey(key); const plan=varian
 function peDays(){ const seen=new Set(),out=[]; for(const k of schedule()){ if(k==="rest"||k==="cardio"||seen.has(k))continue; seen.add(k); out.push(k);} return out; }
 function peMk(name){ const d=EXDB[name]||{},comp=d.compound; return {n:name,sets:comp?4:3,reps:comp?"6–10":"10–15",rest:comp?120:60,tempo:d.tempo||"2-0-1-0",rir:d.rir||"1–2",m:d.m||"—",why:d.why||"",alt:d.alt||null,lengthened:!!d.lengthened}; }
 function peCandidates(key){ const base=parseTypeKey(key).base; const a=(S.profile&&S.profile.a)||{}; const allowed=EQ_ALLOWED[a.equipment]||EQ_ALLOWED.gym_full,hasBench=EQ_BENCH[a.equipment]!==false; const present=new Set(peExArr(key).map(e=>e.n)); const pool=new Set(); (SESSION_SLOTS[base]||[]).forEach(s=>s.forEach(x=>pool.add(x))); return [...pool].filter(n=>{const d=EXDB[n];return d&&allowed.includes(d.eq)&&(!d.bench||hasBench)&&!present.has(n)&&(!richGymEq(a.equipment)||!isCalisthenic(n))&&skillOk(n,a.exp);}); }
-function planBioCheck(){ const a=(S.profile&&S.profile.a)||{}; const bands=deficitScaledBands(a); const weekly={}; for(const key of peDays()){ for(const e of peExArr(key)){ const g=volGroupOf(e.n); if(!g)continue; weekly[g]=(weekly[g]||0)+weekSets(e.n,e.sets); } } const rows=[]; for(const g of Object.keys(bands)){ const [mev,mrv]=bands[g]; const v=Math.round(weekly[g]||0); if(v===0)continue; rows.push({g,v,mev,mrv,st:v<mev?"low":v>mrv?"high":"ok"}); } const ord={low:0,high:1,ok:2}; return rows.sort((x,y)=>ord[x.st]-ord[y.st]); }
+/* Wochenvolumen je Muskel — gegen die eigenen Korridore.
+   ZAEHLT DIE GANZE WOCHE, NICHT DIE VERSCHIEDENEN EINHEITEN. Vorher lief die
+   Schleife ueber peDays(), und das entfernt Duplikate. Eine Woche wie
+   fullA · fullB · fullA (so sieht der 3-Tage-Plan aus) wurde damit als zwei
+   Einheiten gezaehlt — ein Drittel des Volumens fiel unter den Tisch:
+
+     Brust      gemeldet  8, tatsaechlich 12   (Korridor 10-20)
+     Ruecken    gemeldet  8, tatsaechlich 12   (Korridor 12-22)
+     Schultern  gemeldet  6, tatsaechlich  9   (Korridor  8-20)
+
+   Der Bio-Check erklaerte also einen Plan fuer mangelhaft, der in Ordnung war,
+   und forderte den Nutzer auf, Uebungen nachzulegen, die er nicht braucht.
+   capWeeklyVolume() im Plan-Generator zaehlte immer schon richtig — nur die
+   Anzeige log. */
+function planBioCheck(){ const a=(S.profile&&S.profile.a)||{}; const bands=deficitScaledBands(a); const weekly={};
+  const woche=(typeof schedule==="function"?schedule():(S.schedule||[])).filter(k=>k&&k!=="rest"&&k!=="cardio");
+  for(const key of woche){ for(const e of peExArr(key)){ const g=volGroupOf(e.n); if(!g)continue; weekly[g]=(weekly[g]||0)+weekSets(e.n,e.sets); } } const rows=[]; for(const g of Object.keys(bands)){ const [mev,mrv]=bands[g]; const v=Math.round(weekly[g]||0); if(v===0)continue; rows.push({g,v,mev,mrv,st:v<mev?"low":v>mrv?"high":"ok"}); } const ord={low:0,high:1,ok:2}; return rows.sort((x,y)=>ord[x.st]-ord[y.st]); }
 function openPlanEditor(){
   A.peSets=(k,i,d)=>{ const arr=peExArr(k); if(arr[i])arr[i].sets=Math.max(1,Math.min(6,(arr[i].sets||3)+d)); save(); openPlanEditor(); };
   A.peRemove=(k,i)=>{ const arr=peExArr(k); if(arr.length>1){arr.splice(i,1); if(S.exOverrides)delete S.exOverrides[k];} else toast("Mind. 1 Übung"); save(); openPlanEditor(); };
@@ -13456,7 +13516,19 @@ function openPlanEditor(){
     <p class="xs t2 mb8" style="line-height:1.55">Sätze/Woche im Korridor MEV (Mindestreiz) → MRV (max. erholbar) — Israetel 2017.</p>
     ${bio.map(r=>{const col=r.st==="ok"?"var(--good)":r.st==="low"?"var(--warn)":"var(--danger)";const lbl=r.st==="ok"?"optimal":r.st==="low"?"unter MEV":"über MRV";
       return `<div class="row" style="padding:6px 0;border-top:1px solid var(--hairline)"><span class="sm" style="flex:1">${esc(r.g)}</span><span class="metric xs" style="color:${col}">${r.v} · ${lbl}</span><span class="xs t3" style="min-width:54px;text-align:right">(${r.mev}–${r.mrv})</span></div>`;}).join("")}
-    ${bio.length&&bio.every(r=>r.st==="ok")?`<p class="xs" style="color:var(--good);margin-top:8px">${icon("check",12)} Alles im optimalen Korridor.</p>`:`<p class="xs t2" style="margin-top:8px">Tipp: bei „unter MEV" eine Übung ergänzen, bei „über MRV" Sätze senken.</p>`}</div>`;
+    ${(()=>{
+      if(bio.length&&bio.every(r=>r.st==="ok"))
+        return `<p class="xs" style="color:var(--good);margin-top:8px">${icon("check",12)} Alles im optimalen Korridor.</p>`;
+      const unter=bio.filter(r=>r.st==="low");
+      const voll=peDays().every(k=>peExArr(k).length>=7);
+      /* „Ergänze eine Übung" war oft kein Rat, sondern eine Sackgasse: bei
+         wenigen Trainingstagen sitzen alle Einheiten am Übungsdeckel (7), und
+         die Engine hat bereits Sätze nachgelegt, soweit es ging. Dann liegt es
+         an der Frequenz, nicht am Plan — und das gehört gesagt. */
+      if(unter.length&&voll)
+        return `<p class="xs t2" style="margin-top:8px;line-height:1.55">${esc(unter.map(r=>r.g).join(", "))} ${unter.length>1?"liegen":"liegt"} unter dem Mindestreiz, und die Einheiten sind bereits voll. Das ist eine Folge deiner <b style="color:var(--t1)">Trainingshäufigkeit</b>, nicht des Plans: bei ${peDays().length} Einheiten pro Woche passt dieses Volumen nicht mehr hinein. Ein Tag mehr löst es — oder du nimmst es bewusst in Kauf und setzt den Schwerpunkt woanders.</p>`;
+      return `<p class="xs t2" style="margin-top:8px">Tipp: bei „unter MEV" eine Übung ergänzen, bei „über MRV" Sätze senken.</p>`;
+    })()}</div>`;
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.peDone()"><div class="sheet fade">
     <p class="display-m mb4">Plan anpassen</p>
     <p class="xs t2 mb16">Forme den Plan zu deinem — die Engine prüft live dein Volumen je Muskel.</p>

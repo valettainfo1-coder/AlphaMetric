@@ -901,6 +901,77 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
     `Ausdauer ${z.endurance.schema} vs Kraft ${z.strength.schema}`);
 }
 
+// ---------- Volumen: hält der Plan den eigenen Mindestreiz? ----------
+/* Drei Befunde aus dem Effizienz-Audit, jeder einzeln nachgemessen:
+   1. Die MEV-Garantie wurde an der Woche-3-SPITZE geprueft. Der Boden gehoert
+      an die niedrigste Woche, die Decke an die hoechste.
+   2. Lief die Einheit gegen den Uebungsdeckel (7, Schoenfeld 2019), gab die
+      Einschleif-Schleife auf — mehr Zeit half nachweislich nichts. Jetzt
+      bekommt die vorhandene Uebung einen Satz mehr: der Deckel gilt fuer
+      UEBUNGEN, nicht fuer Saetze.
+   3. planBioCheck() lief ueber peDays() — das entfernt Duplikate. Eine Woche
+      fullA·fullB·fullA wurde als zwei Einheiten gezaehlt, ein Drittel des
+      Volumens fiel unter den Tisch. Der Check erklaerte gesunde Plaene fuer
+      mangelhaft. */
+{
+  const v = await page.evaluate(() => {
+    const aus = {};
+    for (const tage of [2, 3, 4, 5, 6]) {
+      const a = { sex:'male', age:30, height:180, weight:80, exp:'intermediate',
+        days:tage, equipment:'gym_full', act:'light', len:60, sessionTime:60,
+        injuries:[], focus:[], schedule_pref:'consistent',
+        recovery_profile:'average', goals:['muscle_gain'] };
+      S.profile = { a };
+      S.plan = generateTrainingPlan({ a });
+      S.planB = generateTrainingPlan({ a }, 'B');
+      S.schedule = generateOptimalSchedule(a).schedule.slice();
+      const je = {};
+      for (const woche of [1, 3]) {
+        S.currentWeek = woche; save();
+        const bio = planBioCheck();
+        je[woche] = { unter: bio.filter(x => x.st === 'low').map(x => `${x.g} ${x.v}/${x.mev}`),
+                      ueber: bio.filter(x => x.st === 'high').length, n: bio.length };
+      }
+      // Zaehlt der Check die ganze Woche? Vergleich gegen die Einheiten OHNE Duplikate.
+      const woche = S.schedule.filter(k => k && k !== 'rest' && k !== 'cardio');
+      const ohneDup = {}, mitAllen = {};
+      S.currentWeek = 1;
+      for (const k of peDays()) for (const e of peExArr(k)) {
+        const g = volGroupOf(e.n); if (g) ohneDup[g] = (ohneDup[g] || 0) + weekSets(e.n, e.sets); }
+      for (const k of woche) for (const e of peExArr(k)) {
+        const g = volGroupOf(e.n); if (g) mitAllen[g] = (mitAllen[g] || 0) + weekSets(e.n, e.sets); }
+      const check = planBioCheck();
+      aus[tage] = { je, wiederholt: woche.length !== peDays().length,
+        checkSumme: check.reduce((s, r) => s + r.v, 0),
+        echteSumme: Object.values(mitAllen).reduce((s, x) => s + x, 0),
+        dupSumme: Object.values(ohneDup).reduce((s, x) => s + x, 0) };
+    }
+    return aus;
+  });
+
+  // 1 · Ab drei Trainingstagen muss der erzeugte Plan den Mindestreiz treffen —
+  //     in WOCHE 1, nicht erst in der Spitzenwoche.
+  for (const tage of [3, 4, 5, 6]) {
+    check(`Volumen: ${tage}-Tage-Plan trifft ab Woche 1 jeden Mindestreiz`,
+      v[tage].je[1].unter.length === 0, v[tage].je[1].unter.join(', ') || `${v[tage].je[1].n}/${v[tage].je[1].n} im Korridor`);
+  }
+  // 2 · Und keiner darf über die Obergrenze laufen — auch in der Spitzenwoche nicht
+  const ueberMRV = [2,3,4,5,6].filter(t => v[t].je[3].ueber > 0);
+  check('Volumen: kein Plan läuft in der Spitzenwoche über die Obergrenze',
+    ueberMRV.length === 0, ueberMRV.length ? `über MRV bei ${ueberMRV.join(', ')} Tagen` : 'alle unter MRV');
+
+  // 3 · Der Bio-Check muss die ganze Woche zählen, auch wiederholte Einheiten
+  const mitWdh = [2,3,4,5,6].filter(t => v[t].wiederholt);
+  check('Volumen: es gibt überhaupt einen Plan mit wiederholter Einheit (sonst misst Test 4 nichts)',
+    mitWdh.length > 0, `wiederholt bei ${mitWdh.join(', ')} Tagen`);
+  const falschGezaehlt = mitWdh.filter(t => v[t].checkSumme !== v[t].echteSumme);
+  check('Volumen: der Bio-Check zählt wiederholte Einheiten mit',
+    falschGezaehlt.length === 0,
+    falschGezaehlt.length
+      ? falschGezaehlt.map(t => `${t} Tage: Check ${v[t].checkSumme}, echt ${v[t].echteSumme}`).join(' | ')
+      : mitWdh.map(t => `${t} Tage: ${v[t].checkSumme} Sätze (ohne Duplikat wären es ${v[t].dupSumme})`).join(' | '));
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

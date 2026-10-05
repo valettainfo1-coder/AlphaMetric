@@ -2454,3 +2454,82 @@ als Text verglichen, und `"75" < "210"` ist lexikografisch falsch. Wieder ein
 Messfehler, kein App-Fehler — der dritte in diesem Audit.
 
 303 Zusicherungen. Version **v66**.
+
+---
+
+## §87 — Effizienz-Audit: drei Gründe, warum Pläne unter dem Mindestreiz lagen
+
+Geprüft mit dem Messgerät der App selbst (`planBioCheck`), über alle
+Trainingshäufigkeiten von 2 bis 6 Tagen und über die Wochen 1 und 3.
+Ausgangslage, Muskelaufbau, Intermediate, Studio:
+
+| Tage | Woche 1 | unter dem eigenen MEV |
+|---|---|---|
+| 2 | 2/6 | Brust, Rücken, Schultern, Trizeps |
+| 3 | 3/6 | Brust, Rücken, Schultern |
+| 4 | 4/6 | Brust, Schultern |
+| 5–6 | 6/6 | — |
+
+Drei verschiedene Ursachen, alle nachgemessen.
+
+### 1 · Der Boden wurde an der Decke gemessen
+
+`capWeeklyVolume()` prüfte die MEV-Garantie mit `peak(e) = sets + 1` — also an
+der Woche-3-Spitze. Für die MRV-Obergrenze ist das richtig; für die
+Untergrenze war es falsch. Die Garantie galt erst ab Woche 3, und das sind
+**die ersten beiden Wochen jedes Vier-Wochen-Blocks** unter der Schwelle, ab
+der das Modell der App überhaupt Wachstum erwartet. Jetzt: Boden an der
+niedrigsten Woche, Decke an der höchsten.
+
+### 2 · Die Engine konnte nur Übungen nachlegen, keine Sätze
+
+Lief eine Einheit gegen den Übungsdeckel von sieben (Schoenfeld 2019: mehr
+Übungen je Einheit erhöhen vor allem die Ermüdung), gab die Einschleif-Schleife
+auf. Gemessen: bei 2–3 Tagen saßen **alle** Einheiten bei exakt sieben
+Übungen, und mehr Zeit zu geben half nachweislich nichts — bei 2 Tagen mit
+90 Minuten blieb Brust bei 8/10 und Rücken bei 8/12.
+
+Die beiden Regeln widersprechen sich aber nur scheinbar: Schoenfeld deckelt die
+**Übungszahl**, nicht die Satzzahl. Jetzt bekommt die vorhandene Übung dieser
+Gruppe einen Satz mehr (Grundübungen zuerst, Deckel bei 5 Sätzen) — das kostet
+rund zwei Minuten statt fünf und lässt die Reizqualität der späten Übungen in
+Ruhe. Allein das brachte den 4-Tage-Plan von 4/6 auf 6/6.
+
+### 3 · Der Bio-Check zählte ein Drittel der Woche nicht
+
+`planBioCheck()` lief über `peDays()` — und das entfernt Duplikate. Der
+3-Tage-Plan ist aber **fullA · fullB · fullA**: eine Einheit wiederholt sich.
+Gezählt wurden zwei statt drei.
+
+| Gruppe | gemeldet | tatsächlich | Korridor |
+|---|---|---|---|
+| Brust | 8 | **12** | 10–20 |
+| Rücken | 8 | **12** | 12–22 |
+| Schultern | 6 | **9** | 8–20 |
+
+Der Check erklärte also einen Plan für mangelhaft, der in Ordnung war, und
+forderte den Nutzer auf, Übungen nachzulegen, die er nicht braucht — in
+Einheiten, die ohnehin schon voll waren. `capWeeklyVolume()` im Generator
+zählte immer richtig; nur die Anzeige log.
+
+**Damit war ein Teil meines eigenen Befundes ein Messfehler des Instruments,
+nicht ein Fehler des Plans.** Für 3 Tage war der Plan die ganze Zeit korrekt.
+
+### Ergebnis
+
+| Tage | vorher (Woche 1) | jetzt |
+|---|---|---|
+| 2 | 2/6 | 4/6 |
+| 3 | 3/6 | **6/6** |
+| 4 | 4/6 | **6/6** |
+| 5–6 | 6/6 | 6/6 |
+
+Bei zwei Trainingstagen bleibt es strukturell: mit sieben Übungen je Einheit
+passt das Volumen für alle Gruppen nicht in zwei Sessions. Der Hinweis im
+Bio-Check sagt das jetzt auch — statt „ergänze eine Übung" (was bei vollen
+Einheiten eine Sackgasse ist) nennt er die **Trainingshäufigkeit** als Ursache
+und den Weg heraus.
+
+**Sieben neue Zusicherungen** halten das fest, darunter eine, die prüft, dass
+es überhaupt einen Plan mit wiederholter Einheit gibt — sonst misst der
+Duplikat-Test nichts. 310 Zusicherungen. Version **v67**.
