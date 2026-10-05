@@ -3799,16 +3799,29 @@ function eRenderAthlete() {
 // ---------- Engine ----------
 function mifflin(sex,age,h,w){ return Math.round(10*w+6.25*h-5*age+(sex==="male"?5:-161)); }
 function katch(w,bf){ return Math.round(370+21.6*w*(1-bf/100)); }
-// Adjustiertes Körpergewicht: bei Übergewicht/Adipositas geht NICHT das volle Gewicht
-// in den Grundumsatz ein (Fettmasse verbraucht kaum Energie). Sonst überschätzt die
-// Formel den Bedarf massiv und das "Defizit" ist gar keins → kein Fettabbau.
-// Klinischer Standard: ABW = Idealgewicht + 0,25 × (Ist − Ideal).
-function effWeight(a){
-  const bmi=a.weight/((a.height/100)**2);
-  if(a.bodyFat!=null || bmi<=25) return a.weight;
-  const ibw=24*(a.height/100)**2;
-  return Math.round((ibw+0.25*(a.weight-ibw))*10)/10;
-}
+/* ADJUSTIERTES KÖRPERGEWICHT — NICHT MEHR IM GRUNDUMSATZ.
+   -----------------------------------------------------------------------
+   Hier stand: "Klinischer Standard: ABW = Idealgewicht + 0,25 × (Ist − Ideal)",
+   angewandt auf Mifflin-St Jeor. Das ist falsch zugeordnet. Die ABW-Korrektur
+   stammt aus der Harris-Benedict-Tradition; Mifflin-St Jeor wurde MIT dem
+   tatsächlichen Gewicht entwickelt und validiert, Übergewichtige eingeschlossen.
+   Die Fachgesellschaft (Academy of Nutrition and Dietetics, Evidence Analysis
+   Library) empfiehlt Mifflin-St Jeor ausdrücklich mit dem TATSÄCHLICHEN
+   Gewicht auch bei Adipositas — dort trifft es 70 % der Messungen auf ±10 %,
+   während Harris-Benedict mit ABW in bis zu 100 % der Fälle UNTERschätzte.
+
+   Gerechnet, was die alte Fassung kostete (Mifflin, NEAT 1,3, 4×60 min):
+     BMI 29  →  129 kcal/Tag zu wenig
+     BMI 34  →  242 kcal/Tag zu wenig
+     BMI 42  →  424 kcal/Tag zu wenig
+   Mit dem 20-%-Defizit obendrauf landete der schwerste Fall bei 0,74 % Körper-
+   gewicht pro Woche — über dem Korridor von 0,5–0,7 %, den die App selbst
+   zitiert (Garthe 2011). Die Unterschätzung traf also ausgerechnet die
+   Gruppe, die die App zum Abnehmen nutzt.
+
+   Die Funktion bleibt als Durchreiche stehen: sie wird an mehreren Stellen
+   gerufen, und eine stille Rückkehr der Korrektur soll sichtbar bleiben. */
+function effWeight(a){ return a.weight; }
 function bmrCalc(a){
   // Mit bekanntem Körperfett: Katch-McArdle (über fettfreie Masse — am genauesten).
   // Sonst: Mifflin mit adjustiertem Gewicht (korrekt über das ganze Gewichtsspektrum).
@@ -4023,10 +4036,25 @@ function adaptiveCalorieCheck(){
     save();
   }catch(e){}
 }
+/* Geschätztes 1RM nach Epley, über RIR auf die effektive Wiederholungszahl
+   gebracht (RPE 8 = 2 in Reserve).
+
+   OBERGRENZE, weil die Formel sonst ins Unsinnige läuft: Epley steigt linear
+   und unbegrenzt mit den Wiederholungen, validiert ist sie etwa bis 10.
+   Ungedeckelt sagte sie aus 100 kg × 30 Wdh ein Maximum von 203 kg voraus,
+   und ein leichter Satz schlug den echten schweren: 80 kg × 12 ergaben mehr
+   als 100 kg × 3. Diese Werte gingen ungeprüft in Rekordmeldung, Kraftkurve
+   und 12-Wochen-Prognose.
+
+   Ab 12 effektiven Wiederholungen wird deshalb bei 12 gedeckelt. Das ist
+   bewusst konservativ: lieber ein zu niedriger Schätzwert als ein erfundener
+   Rekord. Wer sein Maximum wissen will, macht schwere Sätze — und genau dazu
+   führt die Deckelung hin. */
+const E1RM_MAX_REPS=12;
 function e1rm(w,reps,rpe){
   if(!isFinite(w)||!isFinite(reps)) return 0; // defensiv: keine NaN/Infinity in Kennzahlen
   if(reps===1) return w;
-  const eff=reps+(10-(rpe??8));
+  const eff=Math.min(E1RM_MAX_REPS, reps+(10-(rpe??8)));
   return Math.round(w*(1+eff/30)*10)/10;
 }
 function statusScore(sleep,energy,stress,sore){
@@ -8558,8 +8586,8 @@ A.lpDemo=(n)=>{ const el=document.getElementById("lp-anat"); if(el)el.innerHTML=
 const QUELLEN=[
   {g:"Wie viel du trainierst", items:[
     ["Der Volumen-Korridor je Muskel (MEV–MRV): unter MEV fehlt der Wachstumsreiz, über MRV entsteht mehr Ermüdung als Anpassung. Er setzt den Deckel für jede Muskelgruppe in deinem Plan.","Israetel et al. 2017 · MEV–MRV"],
-    ["5–10 direkte Sätze pro Muskel und Woche — der Arbeitsbereich, in dem die Engine dein Volumen verteilt.","Pelland et al. 2025"],
-    ["Jede Muskelgruppe 2×/Woche statt 1× — entscheidet bei 2–4 Trainingstagen die Split-Wahl (Ganzkörper statt Muskel-pro-Tag).","Schoenfeld et al. 2016"],
+    ["Mehr Sätze bringen mehr Muskel — bis etwa 30 Sätze pro Muskel und Woche, mit abnehmendem Ertrag. Für KRAFT ist der Löwenanteil dagegen schon nach wenigen Sätzen erreicht. Deshalb deckelt die Engine beim Muskelziel höher als beim Kraftziel.","Pelland et al. Sports Med 2025 · Meta-Regression"],
+    ["Jede Muskelgruppe 2×/Woche statt 1× — entscheidet bei 2–4 Trainingstagen die Split-Wahl (Ganzkörper statt Muskel-pro-Tag). Für den MUSKELaufbau zählt bei gleichem Wochenvolumen vor allem das Volumen selbst, die Häufigkeit kaum; für KRAFT bringt die höhere Häufigkeit messbar mehr. Zweimal pro Woche verteilt das Volumen zudem auf erträglichere Einheiten.","Schoenfeld et al. 2016 · aktualisiert durch Pelland et al. Sports Med 2025"],
     ["Progressive Ueberladung als Fortschritts-Motor: jede Woche mehr Wiederholungen oder mehr Gewicht.","Schoenfeld 2017"],
     ["Mehr als 4–6 Uebungen pro Einheit erhöhen vor allem die Ermüdung — späte Uebungen verlieren Reizqualität. Begrenzt die Uebungszahl je Session.","Schoenfeld 2019"],
   ]},
@@ -8577,7 +8605,7 @@ const QUELLEN=[
   {g:"Wie dein Plan mitwächst", items:[
     ["RIR-gesteuerte Progression (Reps in Reserve) statt fester Prozentwerte — das Grundprinzip der Steuerung.","Robinson et al. 2024 · Helms et al. 2016"],
     ["Die RIR-/RPE-Skala und wechselnde Reize an verschiedenen Tagen (schwer/Volumen) bauen mehr Muskel als zweimal dasselbe.","Zourdos et al. 2016 · DUP · Schoenfeld 2015"],
-    ["Ohne Entlastung keine Superkompensation — begründet die Erholungswoche jede vierte Woche (−40 % Sätze, −10 % Gewicht).","Seiler 2010 · Israetel et al. 2017"],
+    ["Die Erholungswoche jede vierte Woche (−40 % Sätze, −10 % Gewicht) ist eine Erfahrungsregel aus der Trainingspraxis, keine Studienvorgabe: belastbare Vergleiche von Plänen mit und ohne Entlastungswoche fehlen bislang. Sie steht hier, weil sie konservativ ist — zu wenig Erholung kostet mehr als eine Woche zu viel davon.","Israetel et al. 2017 (Praxismodell, nicht begutachtet) · belastbare Belege ausstehend"],
     ["Zustandsgesteuertes Training: an schlechten Tagen weniger Volumen und mehr Reserve, unabhängig vom Plan. Genau das macht dein Tagesform-Check.","Javaloyes et al. 2019 · Vesterinen et al. 2016"],
     ["Zu schnelle Belastungssprünge gehen mit mehr Ausfällen einher — deckelt die wöchentliche Steigerung (typisch ≤ 10 %).","Gabbett 2016 · Br J Sports Med · Nielsen et al. 2014 · J Orthop Sports Phys Ther"],
   ]},
@@ -8593,7 +8621,7 @@ const QUELLEN=[
     ["Punktuellen Fettabbau gibt es nicht: Bauchtraining baut kein Bauchfett ab. Steht so im Coach, damit du nicht falsch planst.","Vispute et al. 2011"],
     ["Sättigungsindex: energiedichte, eiweißarme Mahlzeiten machen schneller wieder hungrig.","Holt et al. 1995"],
     ["Ballaststoff-Zielwert 30 g/Tag.","DGE-Referenzwert · Slavin 2005"],
-    ["Grundumsatz nach Mifflin-St Jeor bzw. Katch-McArdle, wenn dein Körperfett bekannt ist.","Mifflin-St Jeor 1990 · Katch-McArdle"],
+    ["Grundumsatz nach Mifflin-St Jeor — mit deinem tatsächlichen Gewicht, auch bei Übergewicht: so ist die Formel entwickelt, validiert und von der Fachgesellschaft empfohlen. Ist dein Körperfett bekannt, rechnet die App stattdessen Katch-McArdle über die fettfreie Masse.","Mifflin MD et al. Am J Clin Nutr 1990;51(2):241–247 · Academy of Nutrition and Dietetics, Evidence Analysis Library · Katch-McArdle"],
   ]},
   {g:"Ausdauer", items:[
     ["Polarisiert ~80 % locker / ~20 % hart — die belegte Intensitätsverteilung bei Spitzenathleten und die Grundstruktur deiner Laufwoche.","Seiler S. Int J Sports Physiol Perform 2010;5(3):276–291"],
@@ -8654,8 +8682,9 @@ A.quellen=()=>{ modal(`<div style="max-height:70vh;overflow-y:auto;-webkit-overf
 
 /* ============================ ECHTE ERGEBNISSE ============================
    Die Landing hat null Sozialbeweis: keine Kundenstimme, keine Nutzerzahl,
-   keine Bewertung. Die gesamte Beweisfuehrung sind 57 wissenschaftliche
-   Quellen — die belegen aber, dass die METHODE stimmt, nicht dass sie BEI MIR
+   keine Bewertung. Die gesamte Beweisfuehrung ist das Quellenregister
+   (Anzahl rechnet quellenZahl(), NICHT hier hartschreiben — eine zweite Zahl
+   driftet) — die Arbeiten belegen aber, dass die METHODE stimmt, nicht dass sie BEI MIR
    wirkt. Im Consumer-Bereich schlaegt Ergebnisbeweis den Autoritaetsbeweis.
 
    Dieser Abschnitt bleibt ABSICHTLICH leer ausgeliefert. Erfundene Stimmen

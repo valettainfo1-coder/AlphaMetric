@@ -2308,3 +2308,93 @@ Produkt-Kennungen zwischen App und Server. Beim ersten Lauf hat es sofort
 die Regression gefangen, die der Umbau oben ausgelöst hatte.
 
 Zusammen **289 Zusicherungen**, alle grün. Version **v64**.
+
+---
+
+## §85 — Wissenschafts-Audit: vier Befunde im Rechenkern
+
+Die App wirbt damit, dass jede Zahl bis zur Studie zurückverfolgbar ist. Also
+habe ich die Rechenkerne gegen die Literatur geprüft, nicht gegen die
+Kommentare im Code. Vier Stellen hielten nicht.
+
+### 1 · Der Grundumsatz war für Übergewichtige systematisch zu niedrig
+
+Die App rechnete Mifflin-St Jeor mit einem **adjustierten** Körpergewicht
+(ABW = Idealgewicht + 0,25 × Differenz) und nannte das im Kommentar
+„klinischen Standard". Falsch zugeordnet: die ABW-Korrektur stammt aus der
+Harris-Benedict-Tradition. Mifflin-St Jeor wurde **mit dem tatsächlichen
+Gewicht** entwickelt und validiert, Übergewichtige eingeschlossen, und die
+Fachgesellschaft empfiehlt es genau so — dort trifft es 70 % der Messungen
+auf ±10 %, während Harris-Benedict mit ABW in bis zu 100 % der Fälle
+unterschätzte.
+
+Gerechnet, was das kostete:
+
+| Person | BMI | zu wenig |
+|---|---|---|
+| m 180 cm, 95 kg | 29 | 129 kcal/Tag |
+| m 180 cm, 110 kg | 34 | 242 kcal/Tag |
+| m 175 cm, 130 kg | 42 | **424 kcal/Tag** |
+
+Mit dem 20-%-Defizit obendrauf landete der schwerste Fall bei **0,74 %
+Körpergewicht pro Woche** — über dem Korridor von 0,5–0,7 %, den die App im
+eigenen Quellenregister als Maßstab zitiert (Garthe 2011). Die
+Unterschätzung traf ausgerechnet die Gruppe, die die App zum Abnehmen nutzt.
+
+Die Deficit-Rate selbst ist übrigens sauber: ohne den ABW-Fehler liegt sie
+bei 0,46–0,56 % pro Woche, exakt im belegten Bereich.
+
+### 2 · Die 1RM-Schätzung hatte keine Obergrenze
+
+Epley steigt linear und **unbegrenzt** mit den Wiederholungen; belegt ist sie
+etwa bis zehn. Ungedeckelt sagte die App aus 100 kg × 30 Wiederholungen ein
+Maximum von **203 kg** voraus. Und weil die Formel monoton steigt, schlug
+irgendwann immer ein leichter Satz den schweren: 80 kg × 12 ergaben mehr als
+100 kg × 3.
+
+Diese Werte liefen ungeprüft in Rekordmeldung, Kraftkurve und
+12-Wochen-Prognose — `e1rm()` wird an dreizehn Stellen gerufen. Jetzt ist bei
+zwölf effektiven Wiederholungen Schluss. Bewusst konservativ: lieber ein zu
+niedriger Schätzwert als ein erfundener Rekord.
+
+### 3 · Pelland 2025 sagt das Gegenteil von dem, was im Register stand
+
+Das Register nannte „5–10 direkte Sätze pro Muskel und Woche — der
+Arbeitsbereich, in dem die Engine dein Volumen verteilt" und berief sich auf
+Pelland et al. 2025. Diese Meta-Regression (67 Studien, 2 058 Teilnehmende)
+fand aber, dass Muskelwachstum **mit dem Volumen weiter steigt**, ohne
+erkennbare Überlegenheit erst jenseits von rund 31 Sätzen pro Woche; nur für
+**Kraft** ist der Löwenanteil schon nach wenigen Sätzen erreicht.
+
+Dazu kommt: **keine einzige Muskelgruppe der Engine liegt in dem Korridor,
+den das Register nannte.** Die Bänder gehen von 4 bis 30 Sätzen. Der Eintrag
+beschrieb also weder die Studie noch die eigene App richtig.
+
+### 4 · Seiler 2010 ist eine Ausdauer-Arbeit, keine Deload-Arbeit
+
+Die Erholungswoche berief sich auf „Seiler 2010 · Israetel et al. 2017".
+Seiler 2010 (Int J Sports Physiol Perform 5(3):276–291) handelt von der
+Intensitätsverteilung im Ausdauersport — dieselbe Arbeit wird im Register
+drei weitere Male korrekt genau dafür zitiert. Für Entlastungswochen im
+Krafttraining sagt sie nichts.
+
+Der Eintrag ist jetzt ehrlich: die 4-Wochen-Entlastung ist eine
+Erfahrungsregel aus der Praxis, belastbare Vergleiche mit und ohne
+Entlastungswoche fehlen. Sie bleibt, weil sie konservativ ist — aber sie
+steht nicht mehr als belegt da.
+
+Auch Israetel 2017 ist jetzt als **Praxismodell, nicht begutachtet**
+gekennzeichnet. Das MEV-MRV-Gerüst ist nützlich, aber es ist keine Studie,
+und in einem Register mit dem Versprechen „bis zur Studie zurückverfolgbar"
+gehört dieser Unterschied hin.
+
+### Was unverändert korrekt ist
+
+Mifflin-St Jeor und Katch-McArdle sind formelgetreu umgesetzt. Protein
+(2,6 g/kg fettfreie Masse im Defizit, 2,2 im Erhalt, +0,2 ab 50 Jahren),
+Fettboden 0,5 g/kg, Kohlenhydratboden, Kalorienböden 1400/1600 — alle im
+belegten Bereich und richtig zugeordnet. Die Volumen-Korridore sind
+gegenüber Israetels Werten durchweg konservativ. Die RPE-zu-RIR-Umrechnung
+ist Standard.
+
+**Acht neue Prüfungen** halten die vier Befunde fest. Version **v65**.

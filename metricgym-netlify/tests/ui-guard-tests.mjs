@@ -583,8 +583,19 @@ check('USP: „nachprüfbar in der App" stimmt — das Register steht im Menü',
 
 /* Die Landing darf keine zweite, handpflegte Studienzahl führen: zwei Zahlen
    driften auseinander, und die falsche ist dann die, die der Kunde liest. */
-const hart = await page.evaluate(() => {
-  const s = document.documentElement.outerHTML;
+/* Durchsucht den QUELLTEXT OHNE KOMMENTARE.
+   Zwei Anläufe waren falsch: `outerHTML` schlug auch bei einer Zahl in einem
+   Code-Kommentar an und blockierte eine Auslieferung, obwohl die Seite in
+   Ordnung war. `document.body.innerText` deckte dafür zu wenig ab — in dieser
+   App steckt fast aller Text in Vorlagen-Strings, die gerade nicht gerendert
+   sind; eine dort versteckte Zahl wäre durchgerutscht (selbst geprüft: eine
+   eingeschmuggelte „142 Studien" blieb unentdeckt).
+   Kommentare raus, alles andere rein — das trifft genau die Zahlen, die
+   irgendwann vor einem Kunden landen. */
+const quelltext = (await (await fetch(BASE + '/index.html')).text())
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')      // Blockkommentare
+  .replace(/^\s*\/\/.*$/gm, ' ');          // ganze Zeilenkommentare
+const hart = await page.evaluate((s) => {
   const n = (typeof quellenZahl === 'function') ? quellenZahl() : -1;
   const treffer = [];
   // Auch Formen mit Adjektiv dazwischen ("aus 57 wissenschaftlichen Quellen"),
@@ -592,7 +603,7 @@ const hart = await page.evaluate(() => {
   for (const m of s.matchAll(/\b(\d{2,3})\s*(?:\+\s*)?(?:[a-zäöüß]+en?\s+)?(?:Studien|Arbeiten|Quellen)\b/gi))
     if (parseInt(m[1]) !== n) treffer.push(m[0]);
   return treffer;
-});
+}, quelltext);
 check('USP: keine zweite, von Hand gepflegte Studienzahl auf der Seite',
   hart.length === 0, hart.join(' | ').slice(0, 180));
 

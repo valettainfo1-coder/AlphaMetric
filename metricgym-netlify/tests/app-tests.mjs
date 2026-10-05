@@ -769,6 +769,72 @@ check('Profile: zwei in derselben Millisekunde angelegte Profile haben verschied
 check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
   kollision.aktiv === 'running', `aktiv=${kollision.aktiv}`);
 
+// ---------- Wissenschaftliche Korrektheit der Rechenkerne ----------
+/* Vier Befunde aus dem Wissenschafts-Audit. Jeder war im laufenden Code und
+   jeder hatte Folgen fuer das, was der Nutzer zu sehen bekam. */
+{
+  const w = await page.evaluate(() => {
+    const p = { sex:'male', age:45, height:175, weight:130 };   // BMI 42
+    const schlank = { sex:'male', age:30, height:180, weight:75 };
+    return {
+      // 1 · Mifflin gehoert das TATSAECHLICHE Gewicht, auch bei Adipositas
+      effVoll: effWeight(p) === p.weight,
+      effSchlank: effWeight(schlank) === schlank.weight,
+      bmrDick: bmrCalc(p),
+      bmrErwartet: Math.round(10*130 + 6.25*175 - 5*45 + 5),
+      // 2 · 1RM-Schaetzung muss gedeckelt sein
+      e1_30: e1rm(100, 30, 9),
+      e1_12: e1rm(100, 12, 10),
+      e1_leicht: e1rm(80, 12, 9),
+      e1_schwer: e1rm(100, 3, 9),
+      e1_eins: e1rm(100, 1, 10),
+    };
+  });
+
+  check('Grundumsatz: Mifflin rechnet mit dem tatsächlichen Gewicht (auch bei BMI 42)',
+    w.effVoll && w.effSchlank && w.bmrDick === w.bmrErwartet,
+    `BMR ${w.bmrDick}, erwartet ${w.bmrErwartet}`);
+
+  /* Ungedeckelt sagte Epley aus 100 kg x 30 Wdh ein Maximum von 203 kg voraus.
+     Bei 12 effektiven Wiederholungen ist Schluss: 100 x (1 + 12/30) = 140. */
+  check('1RM-Schätzung ist nach oben gedeckelt — keine erfundenen Rekorde',
+    w.e1_30 === 140 && w.e1_30 === w.e1_12, `30 Wdh → ${w.e1_30} kg, 12 Wdh → ${w.e1_12} kg`);
+  check('1RM: ein leichter Satz schlägt den schweren nicht mehr',
+    w.e1_leicht <= w.e1_schwer,
+    `80×12 → ${w.e1_leicht} kg vs 100×3 → ${w.e1_schwer} kg`);
+  check('1RM: ein echter Einser bleibt unverändert', w.e1_eins === 100);
+}
+
+{
+  /* 3+4 · Das Quellenregister ist die Kernbehauptung der App. Zwei Eintraege
+     waren falsch zugeordnet: Pelland 2025 fand KEINEN 5-10-Satz-Korridor
+     (sondern Nutzen bis ~30 Saetze), und Seiler 2010 ist eine Arbeit ueber
+     Intensitaetsverteilung im Ausdauersport — nicht ueber Deloads im
+     Krafttraining. */
+  const q = await page.evaluate(() => {
+    const flach = QUELLEN.flatMap(g => g.items);
+    const deload = flach.find(([t]) => /Erholungswoche jede vierte/.test(t));
+    const volumen = flach.find(([, q]) => /Pelland/.test(q));
+    const bands = Object.values(VOL_BANDS);
+    return {
+      deloadQuelle: deload ? deload[1] : '',
+      volumenText: volumen ? volumen[0] : '',
+      bandMin: Math.min(...bands.map(b => b[0])),
+      bandMax: Math.max(...bands.map(b => b[1])),
+    };
+  });
+
+  check('Register: die Erholungswoche beruft sich nicht mehr auf eine Ausdauer-Arbeit',
+    !/Seiler/.test(q.deloadQuelle), q.deloadQuelle.slice(0, 70));
+  check('Register: die Erholungswoche ist ehrlich als Erfahrungsregel ausgewiesen',
+    /Praxismodell|ausstehend/.test(q.deloadQuelle), q.deloadQuelle.slice(0, 70));
+  check('Register: die Volumen-Angabe nennt keinen 5–10-Satz-Korridor mehr',
+    !/5[–-]10 direkte Sätze/.test(q.volumenText), q.volumenText.slice(0, 70));
+  check('Register: die genannte Volumen-Obergrenze passt zur Engine',
+    /30 Sätze/.test(q.volumenText) && q.bandMax === 30,
+    `Register nennt ~30, Engine erlaubt ${q.bandMin}–${q.bandMax}`);
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();
