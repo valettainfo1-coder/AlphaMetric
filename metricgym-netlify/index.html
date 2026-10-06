@@ -4077,7 +4077,17 @@ const GOAL_LABEL={muscle_gain:"Muskelaufbau",fat_loss:"Fettabbau",recomp:"Recomp
 //   Ausdauer zuerst → ausgewogen, Cardio dominiert. Protein bleibt überall hoch.
 function calorieDirection(a){
   const goals=(a.goals&&a.goals.length?a.goals:[a.goal||"muscle_gain"]);
-  const g0=goals[0], hasFat=goals.includes("fat_loss"), hasGain=goals.includes("muscle_gain");
+  /* "Recomp" IST Fettabbau plus Muskelaufbau — bisher wurde es aber nur dann
+     als solches behandelt, wenn jemand beide Einzelziele angehakt hatte. Wer
+     direkt "Recomp" waehlte, fiel durch alle Recomp-Zweige hindurch und landete
+     bei Erhaltung: kein Defizit, also kein Fettabbau, also eine Prognose mit
+     "±0 kg Fett" unter einer Ueberschrift, die Fettabbau verspricht.
+     Recomp zaehlt jetzt fuer beide Flaggen, und die Prioritaet folgt dem
+     Koerperfett — genau wie im Zweig fuer "Muskelaufbau zuerst". */
+  const istRecomp=goals.includes("recomp");
+  const g0=(goals[0]==="recomp")?"muscle_gain":goals[0];
+  const hasFat=goals.includes("fat_loss")||istRecomp;
+  const hasGain=goals.includes("muscle_gain")||istRecomp;
   const bmi=a.weight/((a.height/100)**2);
   if(hasFat&&hasGain){
     if(g0==="muscle_gain"){
@@ -9357,6 +9367,7 @@ const QUELLEN=[
   ]},
   {g:"Welche Uebungen du bekommst", items:[
     ["Mechanische Spannung als Haupttreiber des Muskelwachstums — Grundlage der Uebungsbewertung.","Schoenfeld 2010"],
+    ["Beweglichkeit wird unter acht Wochen vor allem über die DEHNUNGSTOLERANZ besser, nicht über einen längeren Muskel: dein Nervensystem lässt mehr Bewegungsumfang zu. Strukturelle Änderungen werden erst danach nachweisbar, Bindegewebe braucht Monate. Der Zeitstrahl im Mobility-Plan sagt das so, statt frühe Fortschritte als Gewebeumbau zu verkaufen.","Thomas E et al. Int J Sports Med 2018;39(4):243–254"],
     ["Training in gedehnter Position bringt messbar mehr Wachstum als in verkürzter. Steuert Lengthened Partials und die Auswahl gedehnter Isolationen.","Wolf et al. 2024"],
     ["Dehnungsbetonte Isolation schlägt Standard-Ausführung (Bizeps, Trizeps, Beinbeuger, Waden).","Maeo et al. 2021 · 2023 · Pedrosa et al. 2023 · Sato et al. 2021 · Larsen 2025"],
     ["Isolationsarbeit schließt die Lücken, die Mehrgelenkübungen offen lassen — begründet direkte Arm-, Waden- und Schulterarbeit.","Schoenfeld 2010 · Gentil et al. 2017"],
@@ -9389,6 +9400,7 @@ const QUELLEN=[
     ["Grundumsatz nach Mifflin-St Jeor — mit deinem tatsächlichen Gewicht, auch bei Übergewicht: so ist die Formel entwickelt, validiert und von der Fachgesellschaft empfohlen. Ist dein Körperfett bekannt, rechnet die App stattdessen Katch-McArdle über die fettfreie Masse.","Mifflin MD et al. Am J Clin Nutr 1990;51(2):241–247 · Academy of Nutrition and Dietetics, Evidence Analysis Library · Katch-McArdle"],
   ]},
   {g:"Ausdauer", items:[
+    ["Der Zeitstrahl für Ausdauer beginnt beim Blut: trainingsbedingt steigt das Plasmavolumen früh, der Puls sinkt bei gleichem Tempo, bevor sich sonst etwas geändert hat. Erst danach tragen die langsameren zentralen Anpassungen den weiteren Zuwachs. Deshalb startet deine Ausdauerkurve steil und flacht ab — nicht umgekehrt.","Convertino VA et al. Med Sci Sports Exerc 1983;15(1):77–82"],
     ["Polarisiert ~80 % locker / ~20 % hart — die belegte Intensitätsverteilung bei Spitzenathleten und die Grundstruktur deiner Laufwoche.","Seiler S. Int J Sports Physiol Perform 2010;5(3):276–291"],
     ["Schwellentraining für das Tempo, das du lange durchhältst.","Laursen & Jenkins 2002 · Seiler 2010"],
     ["VO₂max-Intervalle: viel Zeit nahe der maximalen Sauerstoffaufnahme bei weniger Ermüdung pro Einheit.","Billat 2001 · Rønnestad 2015"],
@@ -11209,12 +11221,13 @@ function revealBlockBand(){
    Alle drei sind auf Woche 12 = 1 normiert, monoton steigend und starten bei
    null — nachgerechnet, nicht angenommen. */
 const ZEIT_KURVE={
-  strength:  (t)=>_zExp(t,9),
-  general:   (t)=>_zExp(t,9),
-  endurance: (t)=>_zExp(t,10),
-  fat_loss:  (t)=>_zExp(t,20),
-  recomp:    (t)=>_zExp(t,20),
-  muscle_gain:(t)=>_zSig(t,6.5,2.6),
+  strength:  (t)=>_zExp(t,9),    // neural vorn (Moritani & deVries 1979)
+  general:   (t)=>_zExp(t,9),    // Mischung aus Kreislauf und Ansteuerung — beides frueh
+  endurance: (t)=>_zExp(t,10),   // Plasmavolumen in Tagen, VO2max ab Woche 3
+  mobility:  (t)=>_zExp(t,9),    // Dehnungstoleranz kommt frueh, Struktur spaeter (Thomas et al. 2018)
+  fat_loss:  (t)=>_zExp(t,20),   // mild vorn (Hall 2011)
+  recomp:    (t)=>_zExp(t,20),   // folgt dem Fettanteil; die Muskelseite hat ihre eigene Kurve
+  muscle_gain:(t)=>_zSig(t,6.5,2.6), // Nachlauf (Seynnes et al. 2007)
 };
 function _zExp(t,tau){ return (1-Math.exp(-t/tau))/(1-Math.exp(-12/tau)); }
 function _zSig(t,c,s){ const L=(x)=>1/(1+Math.exp(-(x-c)/s)); return (L(t)-L(0))/(L(12)-L(0)); }
@@ -11232,13 +11245,35 @@ const ZEIT_MARKEN={
   ],
   muscle_gain:[
     [3,"Noch wenig auf der Waage","Der Reiz wirkt ab dem ersten Satz — messbares Gewebe braucht länger. Das ist kein Stillstand, das ist die Bauzeit."],
-    [6,"Ab hier wird es messbar","Signifikante Faserhypertrophie ist typischerweise ab Woche 4 bis 6 nachweisbar. Genau jetzt geht die Kurve steil."],
+    [6,"Ab hier wird es messbar","Signifikante Faserhypertrophie ist typischerweise ab Woche vier bis sechs nachweisbar. Genau jetzt geht die Kurve steil."],
     [10,"Die stärkste Phase","Zwischen Woche 8 und 12 kommt der größte Teil deines Zuwachses. Wer hier aufhört, verpasst ihn."],
   ],
   fat_loss:[
     [2,"Schneller Start — mit Vorbehalt","Ein Teil der ersten Kilos ist Glykogen und Wasser. Echt, aber nicht nur Fett. Lass dich davon nicht täuschen."],
     [4,"Jetzt zählt Fett","Ab hier besteht der Verlust überwiegend aus Fettmasse. Die Waage bewegt sich langsamer — und sagt mehr."],
     [8,"Das Tempo sinkt, der Fortschritt nicht","Dein Umsatz fällt mit der Masse, deshalb wird es rechnerisch zäher. Genau dafür passt die App dein Ziel laufend an."],
+  ],
+  /* Recomp bekommt eine eigene Erzaehlung, weil hier ZWEI Kurven laufen und
+     die Waage genau deshalb irrefuehrt. */
+  recomp:[
+    [2,"Die Waage fällt zuerst","Fett geht früh, Muskel kommt später — dazwischen liegen Wochen. Dass du am Anfang leichter wirst, ist normal."],
+    [6,"Jetzt kommt der Muskel dazu","Ab hier wird Hypertrophie messbar. Die Waage bremst — nicht weil es schlechter läuft, sondern weil oben etwas dazukommt."],
+    [10,"Das Bild kippt","Fast dasselbe Gewicht, ein anderer Körper. Ab hier sagt der Spiegel mehr als die Waage."],
+  ],
+  endurance:[
+    [1,"Dein Blut passt sich zuerst an","Schon in den ersten Wochen steigt das Plasmavolumen. Der Puls sinkt bei gleichem Tempo, bevor sich sonst etwas geändert hat."],
+    [3,"Die Ausdauer steigt messbar","Zuerst peripher: deine Muskeln holen mehr Sauerstoff aus demselben Blut. Das geht schnell und fühlt sich sofort anders an."],
+    [8,"Jetzt das Herz","Der weitere Zuwachs kommt über das maximale Herzzeitvolumen — die langsamere, aber dauerhaftere Anpassung."],
+  ],
+  mobility:[
+    [2,"Du kommst weiter — ohne längeren Muskel","Die ersten Fortschritte sind Dehnungstoleranz: dein Nervensystem lässt mehr zu. Der Muskel selbst ist noch gleich lang."],
+    [4,"Die Steifigkeit sinkt","Jetzt ändert sich auch die Muskel-Sehnen-Steifigkeit messbar. Der Bewegungsumfang bleibt, statt nach jedem Dehnen zurückzufallen."],
+    [8,"Jetzt auch die Struktur","Strukturelle Änderungen werden ab etwa acht Wochen nachweisbar. Bindegewebe braucht länger — Monate, nicht Wochen."],
+  ],
+  general:[
+    [2,"Der Alltag wird leichter","Kreislauf und Ansteuerung passen sich zuerst an: niedrigerer Puls, sicherere Bewegungen, weniger Anstrengung bei gleichem Tempo."],
+    [6,"Belastbarkeit statt Tagesform","Ab hier trägt echte Anpassung statt Gewöhnung — du hältst länger durch, auch an schlechteren Tagen."],
+    [10,"Es wird zur Gewohnheit","Der letzte Abschnitt trägt überproportional, und das Dranbleiben kostet jetzt am wenigsten Überwindung."],
   ],
   default:[
     [2,"Die Gewöhnung","Technik und Ansteuerung verbessern sich zuerst — darauf baut alles Weitere auf."],
@@ -11247,6 +11282,19 @@ const ZEIT_MARKEN={
   ],
 };
 function zeitMarken(ziel){ return ZEIT_MARKEN[ziel]||ZEIT_MARKEN.default; }
+/* Jede Marke haengt an einer geprueften Arbeit — und die Fussnote nennt sie.
+   Wo ich keine belastbare Arbeit zum ZEITVERLAUF gefunden habe (Fitness als
+   Mischziel), sagt die Fussnote genau das, statt eine zu erfinden. */
+const ZEIT_QUELLE={
+  strength:"Zeitverlauf nach Moritani &amp; deVries 1979: die ersten drei bis vier Wochen sind fast vollständig neural, Fasergewebe trägt erst danach bei.",
+  muscle_gain:"Zeitverlauf nach Seynnes et al. 2007: signifikante Hypertrophie wird ab Woche vier bis sechs messbar, bei hoher Intensität ab etwa drei.",
+  fat_loss:"Zeitverlauf nach Hall 2011: der Energiegehalt des Verlusts ist früh niedriger und steigt, der Umsatz sinkt mit der Masse — die Kurve ist deshalb gekrümmt, nicht gerade.",
+  recomp:"Zwei Kurven, zwei Quellen: Fett nach Hall 2011, Muskel nach Seynnes et al. 2007. Dass die Waage erst fällt und dann bremst, folgt aus beiden zusammen.",
+  endurance:"Zeitverlauf nach Convertino et al. 1983 (frühe Zunahme des Plasmavolumens) und den Ausdauer-Quellen im Register — die schnellen Anpassungen kommen zuerst, die zentralen später.",
+  mobility:"Zeitverlauf nach Thomas et al. 2018: unter acht Wochen steigt vor allem die Dehnungstoleranz, nicht die Dehnbarkeit des Muskels selbst.",
+  general:"Fitness ist ein Mischziel aus Kreislauf und Kraft; der Verlauf folgt den schnelleren der beiden Anpassungen. Eine eigene Arbeit zum Zeitverlauf dieses Mischziels gibt es nicht — das ist eine Herleitung, keine Messung.",
+  default:"Der Verlauf ist nicht linear, weil keine dieser Größen linear verläuft.",
+};
 
 /* Der Zeitstrahl unter dem Diagramm. */
 function revealZeitstrahl(ziel){
@@ -11257,7 +11305,7 @@ function revealZeitstrahl(ziel){
       <span class="zs-wk">W<b>${wk}</b></span>
       <span class="zs-txt"><b>${titel}</b><i>${text}</i></span>
     </div>`).join("")}
-    <p class="zs-fuss">Zeitverlauf nach Moritani &amp; deVries 1979 (Kraft), Seynnes et al. 2007 (Hypertrophie) und Hall 2011 (Gewicht) — nicht linear, weil keine dieser Größen linear verläuft.</p>
+    <p class="zs-fuss">${ZEIT_QUELLE[ziel]||ZEIT_QUELLE.default}</p>
   </div>`;
 }
 
@@ -11418,8 +11466,13 @@ function renderReveal(){
      Kurve, die BEIDES zeigt — sonst stuende dort eine fallende Linie und der
      halbe Plan waere unsichtbar. */
   const _zs=new Set(tg.goals||[]);
+  /* Beide Groessen muessen nicht beide > 0 sein. Bei reinem Recomp steht die
+     Energiebilanz oft auf Erhaltung, dann ist der Fettwert klein oder null —
+     und genau dann zeigte die App bisher das Block-Band statt der Doppelkurve,
+     obwohl Recomp der Fall IST, fuer den die Doppelkurve gebaut wurde.
+     Es reicht, wenn EINE der beiden Linien etwas zu zeigen hat. */
   const recompFall=((_zs.has("fat_loss")&&_zs.has("muscle_gain"))||_zs.has("recomp"))
-    && proj._fat && proj._musc && proj._fat.hi>0 && proj._musc.hi>0;
+    && proj._fat && proj._musc && ((proj._fat.hi>0)||(proj._musc.hi>0));
   const winLine={fat_loss:`~${Math.max(2,Math.round((a.weight||80)*0.04))} kg Fett weg in 12 Wochen`,
     muscle_gain:`Sichtbar mehr Muskeln`,
     strength:`Deutlich mehr Maximalkraft`,
@@ -11458,10 +11511,10 @@ function renderReveal(){
       <p class="xs t2" style="margin-top:2px">${primary.sub}</p>
       ${primary.note?`<p class="xs" style="margin:10px auto 0;max-width:320px;line-height:1.55;color:var(--t2);background:var(--s2);border-radius:10px;padding:10px 12px;text-align:left">${icon("info",12)} ${primary.note}</p>`:""}
       ${recompFall
-        ? revealRecompChart(proj._fat.hi, proj._musc.hi, a.weight)+revealZeitstrahl("fat_loss")+
+        ? revealRecompChart(proj._fat.hi, proj._musc.hi, a.weight)+revealZeitstrahl("recomp")+
           `<p class="xs t2" style="margin-top:10px;line-height:1.6;max-width:330px;margin-left:auto;margin-right:auto">Deine <b style="color:var(--t1)">Waage bewegt sich kaum</b> — und genau das ist der Punkt. Darunter tauschst du Fett gegen Muskel: dieselbe Zahl auf der Waage, ein anderer Körper.</p>`
         : milestones.length?revealChart(milestones,primary)+revealZeitstrahl(primary.key||(tg.goals||[])[0])
-        :revealBlockBand()}
+        :revealBlockBand()+revealZeitstrahl(primary.key||(tg.goals||[])[0])}
     </div>
 
     ${secondary.length?`<div class="row" style="gap:10px;margin-bottom:12px">${secondary.map(s=>`
