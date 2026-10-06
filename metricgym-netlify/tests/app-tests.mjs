@@ -1047,6 +1047,67 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
     m.zeitPositiv, `${m.zeit} Minuten/Woche`);
 }
 
+// ── Muskel-Fokus: Frage erreichbar, Vorlagen fair, Engine hört zu ─────────────
+// RUECKMELDUNG: "wieso kann ich nicht auswaehlen, welche Muskeln ich fokussieren
+// will?" Die Frage gab es — nur nicht in der Abnehmen-Persona, und ueber die
+// steigt ein grosser Teil der Nutzerinnen ein. Dieser Test haelt sie dort fest.
+{
+  const m = await page.evaluate(() => {
+    const out = {};
+    const vorher = (S.a && S.a.mode) || null;
+    out.personas = {};
+    for (const mode of ['gym', 'loss', 'hybrid', 'running', 'cycling']) {
+      S.a = S.a || {}; S.a.mode = mode;
+      out.personas[mode] = oblocks().some(b => b.includes('focus'));
+    }
+    if (vorher !== null) S.a.mode = vorher;
+
+    // Beide Vorlagen gleichwertig: gleiche Gruppenzahl, keine vorausgewaehlt,
+    // und die Reihenfolge haengt am Geschlecht, der Inhalt nicht.
+    out.vorlagen = FOKUS_VORLAGEN.length;
+    out.jeVier = FOKUS_VORLAGEN.every(v => v.k.length === 4);
+    out.alleBekannt = FOKUS_VORLAGEN.every(v => v.k.every(k => FOCUS_EX[k]));
+
+    // Engine: hoert der Plan der Abnehmen-Persona auf den Fokus?
+    const attrs = { mode: 'loss', sex: 'female', age: 31, height: 168, weight: 84,
+      bodyFat: 33, goals: ['fat_loss'], exp: 'novice', injury: [], days: 4, time: 50,
+      equipment: 'gym_full', act: 'light', split: 'auto' };
+    const bau = (f) => {
+      const a = { ...attrs, focus: f }, bmr = bmrCalc(a);
+      const pl = generateTrainingPlan({ a, bmr, tdee: tdeeCalc(a, bmr) });
+      const ex = [], sets = {};
+      for (const [t, v] of Object.entries(pl || {}))
+        for (const e of (v.main || [])) { ex.push(`${t}:${e.n}`); sets[e.m] = (sets[e.m] || 0) + (e.sets || 0); }
+      return { ex: ex.sort(), sets };
+    };
+    const A = bau([]), B = bau(FOKUS_VORLAGEN[0].k), C = bau(FOKUS_VORLAGEN[1].k);
+    out.bbpNeu = B.ex.filter(x => !A.ex.includes(x)).length;
+    out.bbpBeine = (B.sets['Beine'] || 0) - (A.sets['Beine'] || 0);
+    out.okNeu = C.ex.filter(x => !A.ex.includes(x)).length;
+    out.okArme = (C.sets['Arme'] || 0) - (A.sets['Arme'] || 0);
+    out.verschieden = B.ex.filter(x => !C.ex.includes(x)).length;
+    // Negativkontrolle: ohne Fokus zweimal dasselbe, Unsinn wird verworfen
+    out.stabil = bau([]).ex.join('|') === bau([]).ex.join('|');
+    out.unsinnVerworfen = bau([]).ex.join('|') === bau(['Quatschgruppe']).ex.join('|');
+    return out;
+  });
+  check('Fokus-Frage: Kraft-Personas fragen sie alle (auch Abnehmen)',
+    m.personas.gym && m.personas.loss && m.personas.hybrid,
+    `gym=${m.personas.gym} loss=${m.personas.loss} hybrid=${m.personas.hybrid}`);
+  check('Fokus-Frage: Ausdauer-Personas fragen sie zu Recht nicht',
+    !m.personas.running && !m.personas.cycling);
+  check('Fokus-Vorlagen: zwei, je vier Gruppen, alle der Engine bekannt',
+    m.vorlagen === 2 && m.jeVier && m.alleBekannt);
+  check('Engine: Bauch/Beine/Po-Fokus bringt Übungen und Beine-Sätze',
+    m.bbpNeu > 0 && m.bbpBeine > 0, `+${m.bbpNeu} Übungen, +${m.bbpBeine} Sätze`);
+  check('Engine: Brust/Rücken/Arme-Fokus bringt Übungen und Arm-Sätze',
+    m.okNeu > 0 && m.okArme > 0, `+${m.okNeu} Übungen, +${m.okArme} Sätze`);
+  check('Engine: die zwei Fokusse führen zu verschiedenen Plänen',
+    m.verschieden > 0, `${m.verschieden} Übungen unterscheiden sich`);
+  check('Engine: ohne Fokus reproduzierbar, unbekannte Gruppe verworfen',
+    m.stabil && m.unsinnVerworfen);
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));
 
 await browser.close();

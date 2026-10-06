@@ -314,6 +314,18 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .frec-note{margin:8px 0 0; font-size:12px; line-height:1.5; color:var(--t3); border-top:1px solid rgba(169,196,222,.16); padding-top:8px;}
   .frec-go{margin-top:10px; min-height:42px; font-size:13.5px;}
   .frec-go[disabled]{opacity:.55;}
+  /* Fokus-Vorlagen: zwei häufige Zusammenstellungen auf einen Tipp. Bewusst
+     gleichwertig gestaltet — keine ist hervorgehoben, keine vorausgewählt. */
+  .fvor{margin:0 0 14px;}
+  .fvor-h{margin:0 0 9px; font-size:10.5px; font-weight:680; letter-spacing:.08em; text-transform:uppercase; color:var(--t3);}
+  .fvor-row{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  .fvor-b{display:flex; gap:7px; align-items:center; justify-content:center; min-height:52px; padding:10px 11px;
+    border-radius:13px; border:1px solid var(--hairline); background:rgba(169,196,222,.05);
+    font-size:12.5px; font-weight:600; line-height:1.3; color:var(--t2); text-align:center;
+    transition:border-color .18s var(--spring), background .18s var(--spring), color .18s var(--spring);}
+  .fvor-b svg{color:var(--hl); flex-shrink:0;}
+  .fvor-b.an{border-color:rgba(143,184,220,.6); background:linear-gradient(135deg, rgba(110,147,184,.2), rgba(143,184,220,.07)); color:var(--t1);}
+  .fvor-s{margin:8px 0 0; font-size:11.5px; line-height:1.5; color:var(--t3);}
   /* Start-Übersicht: To-do plus sichtbare Wirkungskette. */
   .st-row{border-top:1px solid var(--hairline); align-items:flex-start; padding-top:11px; padding-bottom:11px;}
   .st-mark{width:25px; height:25px; min-width:25px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -10250,7 +10262,17 @@ const OBLOCKS=[
 // Cyclist/Runner bekommen disziplin-spezifische Fragen statt Split/Equipment; Gym bleibt unverändert.
 function oblocks(){
   const m=(S.a&&S.a.mode)||"gym";
-  if(m==="loss")    return [["sex","age"],["height","weight"],["bf","loss_rate"],["exp","injury"],["days","time"],["equipment","act"]];
+  /* RUECKMELDUNG: "wieso kann ich nicht auswaehlen, welche Muskeln ich
+     fokussieren will? Eine Frau will eher Bauch/Beine/Po, ein Mann eher
+     Ruecken/Arme/Brust."
+     Die Frage GAB es — nur nicht hier. Sie steht in OBLOCKS (Gym) und damit
+     auch in hybrid, aber die Abnehmen-Persona hatte sie nie, und genau ueber
+     die steigt ein grosser Teil der Nutzerinnen ein. Wer abnehmen will, will
+     deshalb nicht weniger mitreden, welche Form dabei herauskommt — im
+     Gegenteil: beim Abnehmen entscheidet die Muskelverteilung, wie der Koerper
+     am Ende aussieht. Die Engine konnte das die ganze Zeit (sie legt gezielt
+     Hip Thrust und Bulgarian Split Squat ein), sie wurde nur nie gefragt. */
+  if(m==="loss")    return [["sex","age"],["height","weight"],["bf","loss_rate"],["exp","injury"],["days","time"],["equipment","act"],["focus"]];
   if(m==="cycling") return [["sex","age"],["height","weight"],["cyc_goal","exp"],["cyc_ftp","cyc_hours"],["days","injury"]];
   if(m==="running") return [["sex","age"],["height","weight"],["run_goal","exp"],["run_pace","run_km"],["days","injury"]];
   if(m==="hybrid")  return [...OBLOCKS,["endur_disc","endur_vol"]];
@@ -10484,11 +10506,38 @@ function focusRec(a){
   return {picks, head, note,
     lines:picks.map(k=>[k,(FOCUS_WHY[k]||["",""])[0],(FOCUS_WHY[k]||["",""])[1]])};
 }
+/* Zwei haeufige Zusammenstellungen auf einen Tipp. Bewusst NICHT nach
+   Geschlecht beschriftet und beide fuer jeden sichtbar — nur die Reihenfolge
+   folgt dem, was statistisch haeufiger gesucht wird. Niemand soll hier lesen,
+   was er wollen SOLL; die Vorlage nimmt nur die Tipparbeit ab, und jede
+   Gruppe bleibt einzeln an- und abwaehlbar. */
+const FOKUS_VORLAGEN=[
+  {id:"bbp", n:"Bauch · Beine · Po", k:["Gesäß","Quadrizeps","Beinbeuger","Core"]},
+  {id:"ok",  n:"Brust · Rücken · Arme", k:["Brust","Latissimus","Bizeps","Trizeps"]},
+];
+A.fokusVorlage=(id)=>{ const v=FOKUS_VORLAGEN.find(x=>x.id===id); if(!v) return;
+  const cur=(S.a.focus||[]);
+  const gleich=v.k.length===cur.length&&v.k.every(k=>cur.includes(k));
+  S.a.focus=gleich?[]:v.k.slice();      // nochmal tippen hebt sie wieder auf
+  save(); render(); };
+function fokusVorlagenHTML(){
+  const weiblich=(S.a&&S.a.sex)==="female";
+  const reihe=weiblich?FOKUS_VORLAGEN:[FOKUS_VORLAGEN[1],FOKUS_VORLAGEN[0]];
+  const cur=(S.a&&S.a.focus)||[];
+  return `<div class="fvor">
+    <p class="fvor-h">Häufig gewählt — ein Tipp genügt</p>
+    <div class="fvor-row">${reihe.map(v=>{
+      const an=v.k.length===cur.length&&v.k.every(k=>cur.includes(k));
+      return `<button class="fvor-b${an?" an":""}" onclick="A.fokusVorlage('${v.id}')">
+        ${an?icon("check",13):""}<span>${v.n}</span></button>`;}).join("")}</div>
+    <p class="fvor-s">Beides ist frei wählbar, und jede Gruppe lässt sich einzeln an- und abhaken.</p>
+  </div>`;
+}
 function focusRecHTML(){
-  const r=focusRec(S.a||{}); if(!r.picks.length) return "";
+  const r=focusRec(S.a||{}); if(!r.picks.length) return fokusVorlagenHTML();
   const cur=(S.a&&S.a.focus)||[];
   const done=r.picks.length===cur.length&&r.picks.every(k=>cur.includes(k));
-  return `<div class="frec">
+  return fokusVorlagenHTML()+`<div class="frec">
     <div class="frec-h">${icon("sparkle",14)}<span>${r.head}</span></div>
     ${r.lines.map(([k,why,src],i)=>`<div class="frec-row">
       <span class="frec-n">${i+1}</span>
