@@ -241,11 +241,37 @@ for (const z of ziel) {
       console.log(`      PubMed:    ${(e.fremd.authors||[])[0]?.name} · ${e.fremd.source} ${String(e.fremd.pubdate).slice(0,4)};${e.fremd.volume}:${e.fremd.pages}`);
       await warte(450); continue;
     }
-    /* Nicht indexiert (alte Jahrgaenge, Buecher, manche Journale). Das ist
-       kein Befund gegen das Zitat — nur die Feststellung, dass PubMed es
-       nicht kennt. */
+    /* Der exakte Schluessel hat nichts gefunden. Das kann ZWEI Dinge heissen,
+       und sie duerfen nicht gleich aussehen:
+         (a) die Arbeit ist nicht indexiert (alte Jahrgaenge, Buecher)
+         (b) die SEITE im Register ist falsch — die Arbeit gibt es, nur woanders
+       Eine Gegenprobe in der eigenen Pruefung hat genau das gezeigt: eine
+       absichtlich verfaelschte Seitenzahl (115-130 → 999-1010) meldete
+       "nicht indexiert" statt "abweichend". Das ist eine falsche Beruhigung.
+       Deshalb jetzt eine zweite Abfrage ohne die Seite: findet sie die Arbeit
+       bei diesem Autor in diesem Journal und Band, ist die SEITE falsch. */
+    let zweit=null;
+    try{
+      const term=`"${z.journal}"[ta] AND ${z.band}[vi] AND ${platt(z.autor)}[Author]`;
+      const s2=await hole(`${api}/esearch.fcgi?db=pubmed&retmode=json&retmax=5&term=${encodeURIComponent(term)}`);
+      const ids2=s2.esearchresult?.idlist||[];
+      if(ids2.length){ await warte(350);
+        const d2=await hole(`${api}/esummary.fcgi?db=pubmed&retmode=json&id=${ids2.join(",")}`);
+        const res2=d2.result||{};
+        const liste2=(res2.uids||[]).map(u=>res2[u]).filter(Boolean);
+        zweit=liste2.find(t=>{ const a=(t.authors||[])[0]?.name||"";
+          return platt(a).toLowerCase().startsWith(platt(z.autor).toLowerCase()); })||null;
+      }
+    }catch(e){}
+    if(zweit){
+      abweichend.push({ z, kandidaten:[`dieselbe Arbeit steht bei ${zweit.pages}`] });
+      console.log(`  ✗ ${z.autor} ${z.jahr} — SEITEN STIMMEN NICHT`);
+      console.log(`      Register: ${z.journal} ${z.band}:${z.von} (${z.text})`);
+      console.log(`      PubMed:   ${(zweit.authors||[])[0]?.name} · ${zweit.source} ${String(zweit.pubdate).slice(0,4)};${zweit.volume}(${zweit.issue||""}):${zweit.pages}`);
+      await warte(450); continue;
+    }
     offen.push(z);
-    console.log(`  – ${z.autor} ${z.jahr} — ${z.journal} ${z.band}:${z.von} nicht in PubMed indexiert`);
+    console.log(`  – ${z.autor} ${z.jahr} — ${z.journal} ${z.band}:${z.von} nicht in PubMed indexiert (auch nicht unter anderer Seite)`);
     await warte(450); continue;
   }
 
