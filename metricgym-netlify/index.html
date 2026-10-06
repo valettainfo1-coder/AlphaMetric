@@ -1668,6 +1668,25 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .rv-wert.musk b{color:#A9C4DE;}
   .rv-wert.fett b{color:#D08B6E;}
   .rv-wert.netto b{color:var(--t1);}
+  /* Der Zeitstrahl: eine Linie, drei Haltepunkte, je ein Satz dazu. */
+  .zs{max-width:330px; margin:20px auto 0; text-align:left; position:relative;}
+  .zs-kopf{font-size:10px; font-weight:650; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--t3); margin:0 0 12px;}
+  .zs-e{display:flex; gap:12px; align-items:flex-start; padding:0 0 16px; position:relative;
+    opacity:0; animation:rvAuf .5s cubic-bezier(.22,1,.36,1) var(--d,1.3s) both;}
+  /* Die Linie laeuft durch die Marken hindurch, endet aber an der letzten. */
+  .zs-e::before{content:""; position:absolute; left:17px; top:26px; bottom:0; width:1px;
+    background:linear-gradient(180deg,rgba(143,184,220,.5),rgba(143,184,220,.12));}
+  .zs-e:last-of-type::before{display:none;}
+  .zs-wk{flex:none; width:36px; height:26px; border-radius:8px; display:flex; align-items:center;
+    justify-content:center; gap:1px; background:var(--accent-soft); color:var(--hl);
+    font-size:9.5px; font-weight:650; letter-spacing:.04em; position:relative; z-index:1;}
+  .zs-wk b{font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .zs-txt{flex:1; min-width:0;}
+  .zs-txt b{display:block; font-size:13.5px; font-weight:650; color:var(--t1); line-height:1.3;}
+  .zs-txt i{display:block; font-style:normal; font-size:12px; line-height:1.55; color:var(--t2); margin-top:3px;}
+  .zs-fuss{font-size:10.5px; line-height:1.55; color:var(--t3); margin:2px 0 0;}
+  @media (prefers-reduced-motion:reduce){ .zs-e{animation:none; opacity:1;} }
   @media (prefers-reduced-motion:reduce){
     .rv-chart .ln,.rv-chart .ar,.rv-chart .pt,.rv-chart .rv-grid,.rv-wert{
       animation:none; opacity:1; stroke-dashoffset:0; transform:none;}
@@ -9323,6 +9342,9 @@ const QUELLEN=[
   {g:"Wie viel du trainierst", items:[
     ["Dein Plan bekommt eine Effizienzrechnung: Sätze je Muskel und Woche — Grundübungen zählen für den Zielmuskel voll und für die mitarbeitenden halb — werden gegen die Dosis-Wirkungs-Beziehung gelegt und durch die Zeit geteilt, die sie kosten. Daraus kommt, wo der nächste Satz am meisten bringt und wo er nur noch Zeit kostet. Die Kurvenform ist belegt, die Gleichung ist ein Modell — beides steht in der App nebeneinander.","Pelland et al. Sports Med 2026;56(2):481–505 · Meta-Regression"],
     ["Der Volumen-Korridor je Muskel (MEV–MRV): unter MEV fehlt der Wachstumsreiz, über MRV entsteht mehr Ermüdung als Anpassung. Er setzt den Deckel für jede Muskelgruppe in deinem Plan. Die App nimmt die veröffentlichten Untergrenzen (Brust und Rücken 10, Trizeps 6 direkte Sätze), bleibt bei den Obergrenzen aber bewusst darunter (20 statt 22 bei der Brust, 22 statt 25 beim Rücken) und skaliert sie zusätzlich nach Trainingsalter und Energiezufuhr — die veröffentlichten Maxima gelten für Fortgeschrittene mit voller Erholung.","Israetel et al. 2017 · MEV–MRV"],
+    ["Der Zeitstrahl deiner Prognose ist NICHT linear, weil keine dieser Größen linear verläuft. Kraft kommt vorn: die ersten drei bis vier Wochen sind fast vollständig neural — bessere Ansteuerung, höhere Entladungsraten, weniger Gegenspannung —, messbare Faserhypertrophie trägt erst danach bei. Deshalb steht bei Kraft rund die Hälfte des 12-Wochen-Zuwachses schon nach vier Wochen.","Moritani T, deVries HA. Am J Phys Med 1979;58(3):115–130"],
+    ["Muskelmasse hat dagegen Nachlauf: der Reiz wirkt ab dem ersten Satz, messbares Gewebe braucht länger — signifikante Hypertrophie wird typischerweise ab Woche vier bis sechs nachweisbar, bei hoher Frequenz und Intensität auch ab etwa drei. Die Kurve startet deshalb flach und wird in der zweiten Hälfte steil. Wer in Woche 4 aufgibt, hört genau vor dem Teil auf, für den er trainiert hat.","Seynnes OR, de Boer M, Narici MV. J Appl Physiol 2007;102(1):368–373"],
+    ["Beim Abnehmen fällt die Kurve früh schneller und wird dann zäher, aus zwei Gründen: der Energiegehalt des Verlusts ist zu Beginn niedriger (Glykogen und Wasser gehen zuerst) und steigt dann an, und dein Gesamtumsatz sinkt mit der Masse. Die starre 7.700-kcal-Regel beschreibt das nicht — die App rechnet den Verlauf deshalb gekrümmt und zieht dein Ziel laufend nach.","Hall KD. Lancet 2011;378(9793):826–837"],
     ["Deine Trainingsantwort ist nicht die mittlere. 585 Menschen trainierten denselben Muskel nach demselben Plan: der Querschnitt änderte sich zwischen −2 % und +59 %, die Maximalkraft zwischen 0 % und +250 %. Deshalb eicht die App den Sättigungspunkt nach etwa sechs Wochen auf deinen eigenen 1RM-Verlauf, je Muskelgruppe getrennt.","Hubal MJ et al. Med Sci Sports Exerc 2005;37(6):964–972"],
     ["Diese Eichung ist absichtlich gedämpft, und zwar um einen gemessenen Betrag: rechnet man Messfehler und normale biologische Schwankung aus derselben Datenlage heraus, schrumpft die scheinbare Streuung zwischen Menschen von 9,7 % auf 6,5 % — etwa ein Drittel war Rauschen. Die App übernimmt nur das Verhältnis der Varianzen (≈ 45 %) einer beobachteten Abweichung und zieht den Rest zum Mittelwert zurück. Dieselbe Arbeit zeigt, dass gängige „Non-Responder\u0022-Einordnungen Menschen falsch einsortieren — deshalb nennt diese App niemanden so.","Chaves TS, da Silva DG, Lixandrão ME, Libardi CA. Front Sports Act Living 2025;7:1517190"],
     ["Bleibt der Fortschritt aus, obwohl noch Luft bis zur Sättigung ist, erhöht die App die Dosis statt sie zu senken. 85 Ältere trainierten ein Bein mit einem Satz, das andere mit vier: 51 von 85 galten nach dem Ein-Satz-Bein als nicht ansprechend — und legten am Vier-Satz-Bein messbar an Muskelquerschnitt und Kraft zu. Ausbleibende Reaktion ist zuerst eine Frage der Dosis, nicht der Veranlagung.","Lixandrão ME, Bamman M, Vechin FC et al. J Appl Physiol 2024;136(2):421–429"],
@@ -11077,14 +11099,21 @@ function revealRecompChart(fatHi,muscHi,gewicht){
      zeichnet die drei Verlaeufe, die Werte stehen als eigene Zeile darunter —
      dort sind sie auch die Legende, ohne dass eine zweite noetig waere. */
   const W=330,H=142,PL=12,PR=17,PT=13,PB=13;
-  const f=[0,.35,.7,1], wochen=[0,4,8,12];
-  const fett  = f.map(k=>-fatHi*k);
-  const muskel= f.map(k=> muscHi*k);
-  const netto = f.map((_,i)=>Math.round((fett[i]+muskel[i])*10)/10);
+  /* ZWEI VERSCHIEDENE KURVEN, nicht eine fuer beide. Das ist der eigentliche
+     Gewinn an dieser Stelle: Fett geht frueh (ein Teil davon zuerst Glykogen
+     und Wasser, Hall 2011), Muskel kommt spaet (messbare Hypertrophie ab Woche
+     4 bis 6, Seynnes 2007). Die Waage faellt deshalb ERST und kommt dann
+     zurueck — vorher lief beides im Gleichschritt, was den ganzen Punkt der
+     Darstellung verfehlt hat. */
+  const wochen=[0,4,8,12];
+  const kF=zeitKurve("fat_loss"), kM=zeitKurve("muscle_gain");
+  const fett  = wochen.map(w=>-fatHi*kF(w));
+  const muskel= wochen.map(w=> muscHi*kM(w));
+  const netto = wochen.map((_,i)=>Math.round((fett[i]+muskel[i])*10)/10);
   const alle=[...fett,...muskel,...netto,0];
   let lo=Math.min(...alle), hi=Math.max(...alle);
   const luft=(hi-lo)*0.18||1; lo-=luft; hi+=luft;
-  const x=(i)=>PL+(W-PL-PR)*(i/3);
+  const x=(i)=>PL+(W-PL-PR)*(wochen[i]/12);
   const y=(v)=>PT+(H-PT-PB)*(1-(v-lo)/(hi-lo));
   const yNull=y(0);
   const kurve=(vals)=>{ let d=`M ${x(0).toFixed(1)} ${y(vals[0]).toFixed(1)}`;
@@ -11153,6 +11182,83 @@ function revealBlockBand(){
       <text class="rvb-lbl" x="${W/2}" y="${PT-14}" text-anchor="middle">GEPLANTES VOLUMEN JE WOCHE</text>
     </svg>
     <p class="xs t2" style="margin-top:8px;line-height:1.55;text-align:center">Drei Wochen steigt dein Volumen, die vierte entlastet — danach geht es auf höherem Niveau weiter. <b style="color:var(--t1)">Die hellen Balken sind die Entlastungswochen.</b></p>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DER ZEITVERLAUF — geprueft, nicht geschaetzt.
+   Bisher galt fuer JEDES Ziel dieselbe Stuetzstellen-Reihe: 35 % in Woche 4,
+   70 % in Woche 8, 100 % in Woche 12. Das ist praktisch eine Gerade, und sie
+   ist fuer alle drei Groessen falsch — jede hat ihren eigenen Verlauf:
+
+   KRAFT laeuft vorne. Die ersten drei bis vier Wochen sind fast vollstaendig
+   neural: mehr Rekrutierung, hoehere Entladungsraten, weniger Gegenspannung.
+   Messbare Faserhypertrophie traegt erst danach bei (Moritani & deVries,
+   Am J Phys Med 1979;58(3):115-30). Exponentieller Anlauf, tau 9.
+
+   MUSKELMASSE hat Nachlauf. Der Reiz wirkt sofort, das Gewebe braucht Zeit;
+   signifikante Hypertrophie wird typischerweise ab Woche 4 bis 6 messbar — bei
+   hoher Frequenz und Intensitaet auch frueher (Seynnes et al., J Appl Physiol
+   2007;102(1):368-73, ab etwa drei Wochen). Deshalb eine logistische Kurve mit
+   Wendepunkt bei Woche 6,5 statt eines Anlaufs ab null.
+
+   FETTABBAU laeuft leicht vorne, aber schwaecher als die Kraft. Zwei Gruende,
+   beide bei Hall (Lancet 2011): der Energiegehalt des Verlusts ist zu Beginn
+   NIEDRIGER (Glykogen und Wasser gehen zuerst) und steigt dann an, und der
+   Gesamtumsatz sinkt mit der Masse. Exponentieller Anlauf, tau 20.
+
+   Alle drei sind auf Woche 12 = 1 normiert, monoton steigend und starten bei
+   null — nachgerechnet, nicht angenommen. */
+const ZEIT_KURVE={
+  strength:  (t)=>_zExp(t,9),
+  general:   (t)=>_zExp(t,9),
+  endurance: (t)=>_zExp(t,10),
+  fat_loss:  (t)=>_zExp(t,20),
+  recomp:    (t)=>_zExp(t,20),
+  muscle_gain:(t)=>_zSig(t,6.5,2.6),
+};
+function _zExp(t,tau){ return (1-Math.exp(-t/tau))/(1-Math.exp(-12/tau)); }
+function _zSig(t,c,s){ const L=(x)=>1/(1+Math.exp(-(x-c)/s)); return (L(t)-L(0))/(L(12)-L(0)); }
+function zeitKurve(ziel){ return ZEIT_KURVE[ziel]||ZEIT_KURVE.strength; }
+
+/* Was wann passiert — als Text, nicht als Zahl. Der Zeitstrahl soll sagen,
+   WARUM es sich lohnt dranzubleiben, und zwar an den Stellen, an denen die
+   Physiologie tatsaechlich umschaltet. Jeder Eintrag haengt an einer der drei
+   Arbeiten oben; keiner ist ausgedacht. */
+const ZEIT_MARKEN={
+  strength:[
+    [2,"Die Last steigt schon","Fast alles davon ist Nervensystem: bessere Ansteuerung, weniger Gegenspannung. Der Muskel ist noch derselbe."],
+    [4,"Rund die Hälfte steht","Die ersten vier Wochen tragen den größten Teil deines 12-Wochen-Zuwachses — danach wird es langsamer, aber es hört nicht auf."],
+    [8,"Jetzt wächst auch Gewebe","Ab hier trägt der Muskelquerschnitt messbar bei. Die Kurve flacht ab, der Zuwachs wird dauerhafter."],
+  ],
+  muscle_gain:[
+    [3,"Noch wenig auf der Waage","Der Reiz wirkt ab dem ersten Satz — messbares Gewebe braucht länger. Das ist kein Stillstand, das ist die Bauzeit."],
+    [6,"Ab hier wird es messbar","Signifikante Faserhypertrophie ist typischerweise ab Woche 4 bis 6 nachweisbar. Genau jetzt geht die Kurve steil."],
+    [10,"Die stärkste Phase","Zwischen Woche 8 und 12 kommt der größte Teil deines Zuwachses. Wer hier aufhört, verpasst ihn."],
+  ],
+  fat_loss:[
+    [2,"Schneller Start — mit Vorbehalt","Ein Teil der ersten Kilos ist Glykogen und Wasser. Echt, aber nicht nur Fett. Lass dich davon nicht täuschen."],
+    [4,"Jetzt zählt Fett","Ab hier besteht der Verlust überwiegend aus Fettmasse. Die Waage bewegt sich langsamer — und sagt mehr."],
+    [8,"Das Tempo sinkt, der Fortschritt nicht","Dein Umsatz fällt mit der Masse, deshalb wird es rechnerisch zäher. Genau dafür passt die App dein Ziel laufend an."],
+  ],
+  default:[
+    [2,"Die Gewöhnung","Technik und Ansteuerung verbessern sich zuerst — darauf baut alles Weitere auf."],
+    [6,"Die Mitte","Jetzt schlägt die Anpassung in messbares Gewebe um."],
+    [10,"Die Ernte","Der letzte Abschnitt trägt überproportional. Dranbleiben zahlt hier am meisten."],
+  ],
+};
+function zeitMarken(ziel){ return ZEIT_MARKEN[ziel]||ZEIT_MARKEN.default; }
+
+/* Der Zeitstrahl unter dem Diagramm. */
+function revealZeitstrahl(ziel){
+  const marken=zeitMarken(ziel);
+  return `<div class="zs">
+    <p class="zs-kopf">Was wann passiert</p>
+    ${marken.map(([wk,titel,text],i)=>`<div class="zs-e" style="--d:${1300+i*110}ms">
+      <span class="zs-wk">W<b>${wk}</b></span>
+      <span class="zs-txt"><b>${titel}</b><i>${text}</i></span>
+    </div>`).join("")}
+    <p class="zs-fuss">Zeitverlauf nach Moritani &amp; deVries 1979 (Kraft), Seynnes et al. 2007 (Hypertrophie) und Hall 2011 (Gewicht) — nicht linear, weil keine dieser Größen linear verläuft.</p>
+  </div>`;
 }
 
 function revealChart(ms,primary){
@@ -11324,7 +11430,11 @@ function renderReveal(){
   const wins=[winLine,`+${pLo}–${pHi}% Kraft`,`Neue Rekorde, wissenschaftlich belegt`,`Fortschritt in Echtzeit-Statistiken`,`Streak, Level & Meilensteine`];
   // Verlauf des Hauptziels — zeigt, wie sich der Fortschritt aufbaut (Woche 4 · 8 · 12).
   const hiN=primary.hi!=null?primary.hi:0;
-  const milestones=primary.hi!=null?[[4,0.35],[8,0.7],[12,1]].map(([wk,f])=>({wk,v:primary.unit==="kg"?Math.round(hiN*f*10)/10:Math.round(hiN*f)})):[];
+  /* Die Stuetzstellen folgen jetzt dem geprueften Zeitverlauf des JEWEILIGEN
+     Ziels, nicht mehr einer Geraden fuer alle. */
+  const _zk=zeitKurve(primary.key||(tg.goals||[])[0]);
+  const milestones=primary.hi!=null?[4,8,12].map(wk=>{ const f=_zk(wk);
+    return {wk, v:primary.unit==="kg"?Math.round(hiN*f*10)/10:Math.round(hiN*f)}; }):[];
   const bigNum=primary.hi==null
     ? `<p class="hero-num volt-txt rv-big" style="font-size:clamp(38px,11vw,50px);line-height:1;letter-spacing:-.03em">${primary.word||"spürbar"}</p>`
     : `<p class="hero-num volt-txt rv-big" style="font-size:clamp(52px,16vw,72px);line-height:.98;letter-spacing:-.04em">${primary.prefix||""}<span data-count="${primary.lo}">0</span>–<span data-count="${primary.hi}">0</span><span style="font-size:.46em;letter-spacing:-.01em"> ${primary.unit}</span></p>`;
@@ -11348,10 +11458,9 @@ function renderReveal(){
       <p class="xs t2" style="margin-top:2px">${primary.sub}</p>
       ${primary.note?`<p class="xs" style="margin:10px auto 0;max-width:320px;line-height:1.55;color:var(--t2);background:var(--s2);border-radius:10px;padding:10px 12px;text-align:left">${icon("info",12)} ${primary.note}</p>`:""}
       ${recompFall
-        ? revealRecompChart(proj._fat.hi, proj._musc.hi, a.weight)+
+        ? revealRecompChart(proj._fat.hi, proj._musc.hi, a.weight)+revealZeitstrahl("fat_loss")+
           `<p class="xs t2" style="margin-top:10px;line-height:1.6;max-width:330px;margin-left:auto;margin-right:auto">Deine <b style="color:var(--t1)">Waage bewegt sich kaum</b> — und genau das ist der Punkt. Darunter tauschst du Fett gegen Muskel: dieselbe Zahl auf der Waage, ein anderer Körper.</p>`
-        : milestones.length?revealChart(milestones,primary)+
-          `<p class="xs t2" style="margin-top:12px;line-height:1.55">So baut sich dein Fortschritt Woche für Woche auf — sichtbar, messbar, belegt.</p>`
+        : milestones.length?revealChart(milestones,primary)+revealZeitstrahl(primary.key||(tg.goals||[])[0])
         :revealBlockBand()}
     </div>
 
