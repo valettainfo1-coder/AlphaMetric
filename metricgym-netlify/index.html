@@ -1608,23 +1608,52 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @keyframes rvBig{from{opacity:0;transform:scale(.86);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
   /* Projektions-Kurve statt drei Balken: eine steigende Fläche liest sich als
      Entwicklung, drei Klötze als Diagramm-Platzhalter. */
-  .rv-chart{width:100%; max-width:330px; margin:14px auto 0; display:block;}
-  .rv-chart .ln{fill:none; stroke:#A9C4DE; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round;
+  .rv-chart{width:100%; max-width:340px; margin:16px auto 2px; display:block; overflow:visible;}
+  .rv-chart .ln{fill:none; stroke-width:2.75; stroke-linecap:round; stroke-linejoin:round;
     stroke-dasharray:var(--len,400); stroke-dashoffset:var(--len,400);
-    animation:rvDraw 1.15s cubic-bezier(.4,0,.2,1) .18s forwards;}
+    animation:rvDraw 1.25s cubic-bezier(.4,0,.2,1) .18s forwards;}
+  /* Dieselbe Kurve ein zweites Mal, unscharf darunter: das gibt der Linie Tiefe,
+     ohne dass ein Schlagschatten das Dunkel aufhellt. */
+  .rv-chart .ln.glow{stroke-width:4; opacity:.5;}
   @keyframes rvDraw{to{stroke-dashoffset:0}}
-  .rv-chart .ar{opacity:0; animation:rvFade .7s ease .85s forwards;}
+  .rv-chart .ar{opacity:0; animation:rvFade .8s ease .8s forwards;}
   @keyframes rvFade{to{opacity:1}}
   .rv-chart .pt{opacity:0; transform-box:fill-box; transform-origin:center;
-    animation:rvPop .42s cubic-bezier(.34,1.3,.5,1) both;}
+    animation:rvPop .46s cubic-bezier(.34,1.3,.5,1) both;}
   @keyframes rvPop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+  /* Raster und Nulllinie: so leise wie moeglich, aber vorhanden — ohne sie
+     schwebt die Kurve ohne Bezugspunkt im Raum. */
+  .rv-chart .rv-grid{stroke:rgba(255,255,255,.07); stroke-width:1; stroke-dasharray:2 5;
+    opacity:0; animation:rvFade .5s ease both;}
+  .rv-chart .rv-null{stroke:rgba(255,255,255,.17); stroke-width:1; stroke-dasharray:5 4;}
+  .rv-chart .rv-heute{fill:var(--t3); font:650 8.5px var(--font-ui); letter-spacing:.14em;}
+  .rv-chart .rv-start{fill:#0A0C0F; stroke:#6E93B8; stroke-width:2;}
+  /* Halo um den Zielpunkt — der Moment, auf den die Kurve zulaeuft. */
+  .rv-chart .rv-halo{fill:rgba(169,196,222,.14); animation:rvPop .6s ease both, rvAtmen 3.2s ease-in-out 1.6s infinite;}
+  @keyframes rvAtmen{0%,100%{opacity:1}50%{opacity:.45}}
+  .rv-chart .rv-dot{fill:#0A0C0F; stroke:#A9C4DE; stroke-width:2.5;}
+  .rv-chart .rv-dot.end{stroke:#C9D2E2; stroke-width:3; filter:drop-shadow(0 0 7px rgba(169,196,222,.8));}
+  .rv-chart .rv-val{fill:var(--t1); font:650 13px var(--font-ui); font-variant-numeric:tabular-nums;}
+  .rv-chart .rv-val.end{fill:#C9D2E2; font-size:15px; font-weight:700;}
+  .rv-chart .rv-wk{fill:var(--t3); font:600 9px var(--font-ui); letter-spacing:.12em;}
+  /* Das Band fuer Ziele ohne Zahlenprognose. */
+  .rv-band{width:100%; max-width:340px; margin:16px auto 0; display:block; overflow:visible;}
+  .rv-band .rvb-bar{opacity:0; transform-box:fill-box; transform-origin:bottom;
+    animation:rvbWachs .5s cubic-bezier(.34,1.2,.5,1) both;}
+  @keyframes rvbWachs{from{opacity:0;transform:scaleY(.08)}to{opacity:1;transform:scaleY(1)}}
+  .rv-band .rvb-bar.dl{opacity:0; fill:rgba(201,214,226,.9);}
+  .rv-band .rvb-base{stroke:rgba(255,255,255,.17); stroke-width:1;}
+  .rv-band .rvb-wk{fill:var(--t3); font:600 9px var(--font-ui); letter-spacing:.12em;}
+  .rv-band .rvb-lbl{fill:var(--t3); font:650 8.5px var(--font-ui); letter-spacing:.16em;}
+  @media (prefers-reduced-motion:reduce){ .rv-band .rvb-bar{animation:none; opacity:1; transform:none;} }
   .rv-marks{display:flex; justify-content:space-between; max-width:330px; margin:8px auto 0;}
   .rv-mark{flex:1; text-align:center; min-width:0;}
   .rv-mark b{display:block; font-size:var(--fs-sm); font-weight:650; color:var(--t1); font-variant-numeric:tabular-nums;}
   .rv-mark i{display:block; font-style:normal; font-size:var(--fs-micro); letter-spacing:.1em;
     text-transform:uppercase; color:var(--t3); margin-top:3px;}
   @media (prefers-reduced-motion:reduce){
-    .rv-big,.rv-chart .ln,.rv-chart .ar,.rv-chart .pt{animation:none; opacity:1; stroke-dashoffset:0; transform:none; filter:none;}
+    .rv-big,.rv-chart .ln,.rv-chart .ar,.rv-chart .pt,.rv-chart .rv-grid,.rv-chart .rv-halo{animation:none; opacity:1; stroke-dashoffset:0; transform:none;}
+    .rv-chart .rv-halo{opacity:.6}
   }
   /* ===== Immersive Today-Hero (Oura/Apple-würdig): atmosphärische Szene + Score + Serif-Voice ===== */
   /* ===== 180° EDITORIAL-ATMOSPHÄRE: jeder Tab öffnet mit einer SZENE, nicht mit einer Box ===== */
@@ -10953,47 +10982,153 @@ const REVEAL_PAGES=[
    Meilensteinen. Drei Balken lasen sich wie ein Diagramm-Platzhalter — eine
    Kurve liest sich als Entwicklung. Rein rechnerisch dieselben Zahlen.
    Die Kurve startet bei 0 (heute) und läuft über die Meilensteine. */
+/* Fuer Ziele OHNE belastbare Zahl (Recomp, Mobility) gab es gar kein Bild —
+   nur ein Wort. Eine Kurve zu erfinden waere die bequeme Loesung und genau
+   das, was diese App sonst nirgends tut: es gibt fuer Beweglichkeit keine
+   seriöse 12-Wochen-Prognose in Prozent.
+   Was es GIBT, ist der eigene Plan. Dieses Band zeigt, wie er ueber zwoelf
+   Wochen aufbaut: drei Wochen steigendes Volumen, die vierte entlastet, dann
+   von vorn auf hoeherem Niveau. Das ist keine Vorhersage, sondern der
+   Bauplan — und deshalb darf man ihn zeigen. */
+function revealBlockBand(){
+  const W=330,H=150,PL=16,PR=16,PT=34,PB=40;
+  const n=12, bw=(W-PL-PR)/n;
+  /* Relatives Volumen je Woche aus dem Vier-Wochen-Rhythmus der Engine:
+     Woche 1 Start, 2 und 3 steigend, 4 Entlastung — danach hoeher wieder an. */
+  const hoehe=(w)=>{ const imBlock=((w-1)%4)+1, block=Math.floor((w-1)/4);
+    const basis=[0.62,0.78,0.94,0.45][imBlock-1];
+    return Math.min(1, basis + block*0.06); };
+  const id="rvb"+Math.random().toString(36).slice(2,7);
+  const bars=[...Array(n)].map((_,i)=>{
+    const w=i+1, h=hoehe(w)*(H-PT-PB), x=PL+i*bw, y=H-PB-h;
+    const entlastung=((w-1)%4)===3;
+    return `<rect class="rvb-bar${entlastung?" dl":""}" x="${(x+1.5).toFixed(1)}" y="${y.toFixed(1)}"
+        width="${(bw-3).toFixed(1)}" height="${h.toFixed(1)}" rx="3"
+        style="animation-delay:${320+i*55}ms"/>`;
+  }).join("");
+  const marken=[1,4,8,12].map(w=>`<text class="rvb-wk" x="${(PL+(w-0.5)*bw).toFixed(1)}" y="${H-PB+20}" text-anchor="middle">W ${w}</text>`).join("");
+  return `<svg class="rv-band" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img"
+      aria-label="Zwoelf Wochen Plan: drei Wochen steigendes Volumen, jede vierte entlastet">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#A9C4DE" stop-opacity=".92"/>
+        <stop offset="100%" stop-color="#6E93B8" stop-opacity=".30"/></linearGradient></defs>
+      <line class="rvb-base" x1="${PL-6}" y1="${H-PB}" x2="${W-PR+6}" y2="${H-PB}"/>
+      <g fill="url(#${id})">${bars}</g>
+      ${marken}
+      <text class="rvb-lbl" x="${W/2}" y="${PT-14}" text-anchor="middle">GEPLANTES VOLUMEN JE WOCHE</text>
+    </svg>
+    <p class="xs t2" style="margin-top:8px;line-height:1.55;text-align:center">Drei Wochen steigt dein Volumen, die vierte entlastet — danach geht es auf höherem Niveau weiter. <b style="color:var(--t1)">Die hellen Balken sind die Entlastungswochen.</b></p>`;
+}
+
 function revealChart(ms,primary){
-  const W=330,H=150,PL=6,PR=6,PT=14,PB=44;   // PB trägt die Beschriftung IM Diagramm
-  const pts=[{v:0}].concat(ms);                       // heute = 0, dann Woche 4/8/12
-  const max=Math.max(...pts.map(p=>p.v))||1;
+  /* ══════════════════════════════════════════════════════════════════════
+     DIE PROJEKTIONSKURVE — neu gebaut.
+     Rueckmeldung: "diese Visualisierung sieht uebelst billig aus … auch dass
+     es oben abgeschnitten ist macht die Sache nicht besser."
+     Beides stimmte, und ein dritter Fehler steckte darin, den man nur beim
+     Nachrechnen sieht:
+
+     ABGESCHNITTEN. Der Endpunkt lag bei y = PT = 14, also exakt auf der
+     oberen Polsterkante; der Punkt mit Radius 4,5 ragte darueber hinaus.
+     Rechts dasselbe: x = 324 bei 330 Breite. Die Kurve stiess buchstaeblich
+     an die Decke.
+
+     BILLIG. Eine Linie, eine kaum sichtbare Fuellung, und drei Beschriftungen
+     in einer leeren Zone UNTER der Kurve statt an ihren Punkten. Keine
+     Grundlinie, kein Startpunkt, kein Bezug — man sah eine Diagonale.
+
+     UND INHALTLICH FALSCH. Gezeichnet wurde der BETRAG der Veraenderung, also
+     stieg die Linie auch beim Abnehmen — waehrend darunter "−2,1 kg" stand.
+     Jetzt wird das VORZEICHEN gezeichnet: beim Abnehmen faellt die Kurve unter
+     die Nulllinie, beim Aufbauen steigt sie darueber. Eine Regel, die fuer
+     jedes Ziel stimmt, weil sie nur das Vorzeichen aus primary.prefix liest.
+     ══════════════════════════════════════════════════════════════════════ */
+  const W=330,H=200;
+  const PL=16,PR=16,PT=46,PB=44;        // oben Raum fuer die Werte, unten fuer die Wochen
+  const negativ=(primary.prefix==="−"||primary.prefix==="-");
+  const vz=(v)=>negativ?-v:v;           // Vorzeichenbehaftete Groesse
+  const pts=[{wk:0,v:0}].concat(ms.map(m=>({wk:m.wk,v:vz(m.v)})));
+  const werte=pts.map(p=>p.v);
+  let lo=Math.min(0,...werte), hi=Math.max(0,...werte);
+  if(hi===lo){ hi=lo+1; }
+  const spanne=hi-lo, luft=spanne*0.14;   // Luft, damit NICHTS die Kante beruehrt
+  lo-=luft; hi+=luft;
   const x=(i)=>PL+(W-PL-PR)*(i/(pts.length-1));
-  const y=(v)=>PT+(H-PT-PB)*(1-v/max);
-  // weiche Kurve über Catmull-Rom → kubische Bézier
-  let d=`M ${x(0)} ${y(pts[0].v)}`;
+  const y=(v)=>PT+(H-PT-PB)*(1-(v-lo)/(hi-lo));
+  const yNull=y(0);
+
+  /* Weiche Kurve ueber Catmull-Rom → kubische Bezier. */
+  let d=`M ${x(0).toFixed(1)} ${y(pts[0].v).toFixed(1)}`;
   for(let i=0;i<pts.length-1;i++){
-    const x0=x(Math.max(0,i-1)), y0=y(pts[Math.max(0,i-1)].v);
-    const x1=x(i),   y1=y(pts[i].v);
-    const x2=x(i+1), y2=y(pts[i+1].v);
-    const x3=x(Math.min(pts.length-1,i+2)), y3=y(pts[Math.min(pts.length-1,i+2)].v);
-    const c1x=x1+(x2-x0)/6, c1y=y1+(y2-y0)/6;
-    const c2x=x2-(x3-x1)/6, c2y=y2-(y3-y1)/6;
-    d+=` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+    const i0=Math.max(0,i-1), i3=Math.min(pts.length-1,i+2);
+    const x0=x(i0),y0=y(pts[i0].v), x1=x(i),y1=y(pts[i].v);
+    const x2=x(i+1),y2=y(pts[i+1].v), x3=x(i3),y3=y(pts[i3].v);
+    d+=` C ${(x1+(x2-x0)/6).toFixed(1)} ${(y1+(y2-y0)/6).toFixed(1)}, ${(x2-(x3-x1)/6).toFixed(1)} ${(y2-(y3-y1)/6).toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
   }
-  const flaeche=`${d} L ${x(pts.length-1)} ${H-PB} L ${x(0)} ${H-PB} Z`;
-  const gid="rvg"+Math.random().toString(36).slice(2,7);
-  // Linienlänge grob schätzen, damit der Zeichen-Effekt ohne Messung im DOM läuft
-  const len=Math.round(W*1.35);
-  const einheit=primary.unit?(" "+primary.unit):"";
-  return `<svg class="rv-chart" viewBox="0 0 ${W} ${H}" role="img"
-      aria-label="Projektion: ${ms.map(m=>`Woche ${m.wk} ${primary.prefix||""}${nf.format(m.v)}${einheit}`).join(", ")}">
-      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#8FB8DC" stop-opacity=".34"/>
-        <stop offset="100%" stop-color="#8FB8DC" stop-opacity="0"/></linearGradient></defs>
-      <path class="ar" d="${flaeche}" fill="url(#${gid})"/>
-      <path class="ln" d="${d}" style="--len:${len}"/>
-      ${ms.map((m,i)=>{const xi=x(i+1),yi=y(m.v);
-        // Beschriftung sitzt im selben Koordinatensystem wie der Punkt — damit steht
-        // sie IMMER darunter. Vorher lagen die Punkte bei 1/3, 2/3, 1 und die Labels
-        // gleichmäßig verteilt: sie passten nie zusammen.
-        const anker=i===ms.length-1?"end":(i===0?"start":"middle");
-        const xt=i===ms.length-1?Math.min(xi+6,W-2):(i===0?Math.max(xi-6,2):xi);
-        return `<circle class="pt" cx="${xi.toFixed(1)}" cy="${yi.toFixed(1)}" r="4.5" fill="#0A0C0F" stroke="#A9C4DE" stroke-width="2.5"
-            style="animation-delay:${900+i*130}ms"/>
-          <text class="pt" x="${xt.toFixed(1)}" y="${H-24}" text-anchor="${anker}" fill="#F2F4F6"
-            style="font:650 14px var(--font-ui);animation-delay:${960+i*130}ms">${primary.prefix||""}${nf.format(m.v)}${einheit}</text>
-          <text class="pt" x="${xt.toFixed(1)}" y="${H-8}" text-anchor="${anker}" fill="#6C7480"
-            style="font:600 9.5px var(--font-ui);letter-spacing:.1em;animation-delay:${960+i*130}ms">WOCHE ${m.wk}</text>`;}).join("")}
+  /* Die Flaeche haengt an der NULLLINIE, nicht am Diagrammboden — sonst
+     waere bei einer fallenden Kurve der gefuellte Bereich das Gegenteil
+     dessen, was erreicht wird. */
+  const flaeche=`${d} L ${x(pts.length-1).toFixed(1)} ${yNull.toFixed(1)} L ${x(0).toFixed(1)} ${yNull.toFixed(1)} Z`;
+  const id="rvc"+Math.random().toString(36).slice(2,7);
+  const len=Math.round(W*1.45);
+  const einheit=primary.unit?(" "+primary.unit):"";
+  const beschrift=(v)=>`${primary.prefix||""}${nf.format(v)}${einheit}`;
+
+  return `<svg class="rv-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img"
+      aria-label="Projektion: heute 0, ${ms.map(m=>`Woche ${m.wk} ${beschrift(m.v)}`).join(", ")}">
+      <defs>
+        <linearGradient id="${id}f" x1="0" y1="${negativ?1:0}" x2="0" y2="${negativ?0:1}" gradientUnits="objectBoundingBox">
+          <stop offset="0%"   stop-color="#8FB8DC" stop-opacity=".42"/>
+          <stop offset="55%"  stop-color="#7C96F0" stop-opacity=".16"/>
+          <stop offset="100%" stop-color="#7C96F0" stop-opacity="0"/></linearGradient>
+        <linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stop-color="#6E93B8"/>
+          <stop offset="55%"  stop-color="#A9C4DE"/>
+          <stop offset="100%" stop-color="#C9D2E2"/></linearGradient>
+        <filter id="${id}g" x="-30%" y="-40%" width="160%" height="190%">
+          <feGaussianBlur stdDeviation="5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+
+      <!-- Raster: eine Senkrechte je Meilenstein, damit die Punkte Bezug haben -->
+      ${ms.map((m,i)=>`<line class="rv-grid" x1="${x(i+1).toFixed(1)}" y1="${PT-16}" x2="${x(i+1).toFixed(1)}" y2="${H-PB}"
+          style="animation-delay:${520+i*90}ms"/>`).join("")}
+
+      <!-- Nulllinie = heute. Ohne sie hat die Kurve keinen Nullpunkt. -->
+      <line class="rv-null" x1="${PL-8}" y1="${yNull.toFixed(1)}" x2="${W-PR+8}" y2="${yNull.toFixed(1)}"/>
+      <text class="rv-heute" x="${PL-8}" y="${(yNull-12).toFixed(1)}">HEUTE</text>
+
+      <path class="ar" d="${flaeche}" fill="url(#${id}f)"/>
+      <path class="ln glow" d="${d}" stroke="url(#${id}l)" filter="url(#${id}g)" style="--len:${len}"/>
+      <path class="ln" d="${d}" stroke="url(#${id}l)" style="--len:${len}"/>
+
+      <!-- Startpunkt: hier stehst du -->
+      <circle class="pt rv-start" cx="${x(0).toFixed(1)}" cy="${yNull.toFixed(1)}" r="3.5" style="animation-delay:780ms"/>
+
+      ${ms.map((m,i)=>{
+        const xi=x(i+1), yi=y(vz(m.v)), letzte=i===ms.length-1;
+        /* Der Wert steht AM Punkt, nicht in einer eigenen Zeile darunter — und
+           immer auf der Seite, auf der Platz ist: ueber einer steigenden,
+           unter einer fallenden Kurve. */
+        /* Der Wert steht auf der Seite, auf der Platz IST — nicht stur auf einer.
+           Gemessen kollidierte "−6,1 kg" beim Abnehmen mit der Wochenzeile
+           darunter, weil der letzte Punkt tief liegt und das Label noch 22 px
+           tiefer gesetzt wurde. Reicht der Platz auf der bevorzugten Seite
+           nicht, klappt es auf die andere. */
+        const unterGrenze=H-PB+2, oberGrenze=PT-4;
+        let oben=!negativ;
+        let ty=oben?(yi-16):(yi+22);
+        if(!oben && ty>unterGrenze){ oben=true; ty=yi-16; }
+        else if(oben && ty<oberGrenze){ oben=false; ty=yi+22; }
+        const anker=letzte?"end":"middle";
+        const tx=letzte?Math.min(xi+4,W-PR+8):xi;
+        return `${letzte?`<circle class="pt rv-halo" cx="${xi.toFixed(1)}" cy="${yi.toFixed(1)}" r="13" style="animation-delay:${1020+i*120}ms"/>`:""}
+          <circle class="pt rv-dot${letzte?" end":""}" cx="${xi.toFixed(1)}" cy="${yi.toFixed(1)}" r="${letzte?6:4.5}"
+            style="animation-delay:${940+i*120}ms"/>
+          <text class="pt rv-val${letzte?" end":""}" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${anker}"
+            style="animation-delay:${1000+i*120}ms">${beschrift(m.v)}</text>
+          <text class="pt rv-wk" x="${xi.toFixed(1)}" y="${H-PB+22}" text-anchor="middle"
+            style="animation-delay:${1040+i*120}ms">W ${m.wk}</text>`;}).join("")}
     </svg>`;
 }
 function revealNav(){
@@ -11129,7 +11264,8 @@ function renderReveal(){
       <p class="xs t2" style="margin-top:2px">${primary.sub}</p>
       ${primary.note?`<p class="xs" style="margin:10px auto 0;max-width:320px;line-height:1.55;color:var(--t2);background:var(--s2);border-radius:10px;padding:10px 12px;text-align:left">${icon("info",12)} ${primary.note}</p>`:""}
       ${milestones.length?revealChart(milestones,primary)+
-        `<p class="xs t2" style="margin-top:12px;line-height:1.55">So baut sich dein Fortschritt Woche für Woche auf — sichtbar, messbar, belegt.</p>`:""}
+        `<p class="xs t2" style="margin-top:12px;line-height:1.55">So baut sich dein Fortschritt Woche für Woche auf — sichtbar, messbar, belegt.</p>`
+        :revealBlockBand()}
     </div>
 
     ${secondary.length?`<div class="row" style="gap:10px;margin-bottom:12px">${secondary.map(s=>`
