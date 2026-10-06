@@ -173,7 +173,22 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   /* ===== iOS-App-Gefühl: Doppeltipp-Zoom aus (touch-action), kein Gummiband im Standalone ===== */
   html{-webkit-text-size-adjust:100%;}
   *{touch-action:manipulation;}
-  @media (display-mode:standalone){ body{overscroll-behavior-y:none;} }
+  /* RUECKMELDUNG: "wenn ich nach unten scrolle, quasi aktualisiere, ist es
+     oben abgeschnitten — kann man das so machen, dass es im Fade der Seite
+     bleibt?"
+     Die Sperre galt bisher NUR in der installierten App (display-mode:
+     standalone). Im Browser blieb das Gummiband aktiv: beim Ueberziehen nach
+     unten rutscht der Inhalt weg und darunter erscheint der nackte
+     Seitenhintergrund — eine harte Naht quer ueber den Kopfbereich, weil der
+     Tab-Kopf seinen Verlauf oben mit margin:-70px unter die Leiste schiebt
+     und dort einfach endet.
+     Jetzt gilt die Sperre ueberall. Zusaetzlich traegt html einen Verlauf, der
+     oben die Farbe der Kopfzone aufnimmt: sollte eine Browserfassung die
+     Sperre ignorieren, erscheint dort kein Schwarz, sondern dieselbe Tiefe —
+     die Naht ist dann nicht mehr zu sehen, auch wenn sie entsteht. */
+  html,body{overscroll-behavior-y:none;}
+  html{background:linear-gradient(180deg,#14192B 0%, #0D111C 220px, var(--bg) 520px) no-repeat,var(--bg);
+    background-attachment:fixed;}
   /* ===== „Lebendiges KI-Feld" hinter Home: morphende, driftende Gradienten —
      wirkt wie ein intelligentes System, das im Hintergrund rechnet/optimiert. ===== */
   .ai-field{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;}
@@ -470,10 +485,23 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:var(--s1); box-shadow:inset 0 1px 0 var(--edge);
     border-radius:var(--r-lg); padding:20px; border-bottom:none; margin-bottom:var(--sp-3);}
   /* Getönte Hinweise: Kante links und zarter Anlauf statt vollflächigem Kasten. */
+  /* RUECKMELDUNG: "die Boxen sind nicht Box, sondern links abgeschnitten —
+     mach eine Box, die sich durch die App durchzieht."
+     Woertlich richtig: hier stand border-radius 0 oben/unten LINKS und ein
+     Radius nur rechts, dazu padding 16px 0 20px 15px — also rechts gar kein
+     Innenabstand. Eine Flaeche, die links eine scharfe Kante hat und rechts
+     rund ist, liest sich nicht als Kasten, sondern als angeschnittener Kasten.
+     Entstanden ist das aus der Idee "Kante links statt Rahmen"; mit der
+     spaeteren Regel, die derselben Karte eine FLAECHE gibt, passt es nicht
+     mehr zusammen.
+     Jetzt: eine Box mit vier gleichen Ecken und gleichem Innenabstand auf
+     allen Seiten — ueberall in der App dieselbe. Die farbige Kante bleibt, sie
+     sitzt jetzt INNEN an der linken Rundung statt die Box aufzuschneiden. */
   .card[data-tone]{background:linear-gradient(90deg,var(--tone-wash),transparent 46%);
-    box-shadow:none; border-bottom:1px solid var(--hairline);
-    border-radius:0 var(--r-sm) var(--r-sm) 0; padding:16px 0 20px 15px;}
-  .card[data-tone]::before{top:2px; bottom:22px;}
+    box-shadow:none; border-bottom:none;
+    border-radius:var(--r-lg); padding:16px 18px 18px 18px;}
+  .card[data-tone]::before{top:12px; bottom:12px; left:0; width:3px;
+    border-radius:var(--r-xs);}
   .grid2>.card[data-tone], .row>.card[data-tone]{padding:20px; border-bottom:none;
     background:linear-gradient(158deg,var(--tone-wash),transparent 64%),var(--s1);
     box-shadow:inset 0 1px 0 var(--tone-edge); border-radius:var(--r-lg);}
@@ -489,7 +517,8 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      ────────────────────────────────────────────────────────────────────── */
   .card[data-tone]{
     background:linear-gradient(158deg,var(--tone-wash),transparent 64%),var(--s1);
-    box-shadow:inset 0 1px 0 var(--tone-edge);}
+    box-shadow:inset 0 1px 0 var(--tone-edge);
+    border-radius:var(--r-lg); padding:16px 18px 18px 18px; border-bottom:none;}
   .card[data-tone]::before{content:""; position:absolute; left:0; top:16px; bottom:16px; width:3px;
     border-radius:0 var(--r-xs) var(--r-xs) 0; background:var(--tone); opacity:.5;}
   .card[data-tone="hl"]  {--tone:#8FB8DC; --tone-wash:rgba(143,184,220,.11); --tone-edge:rgba(143,184,220,.30);}
@@ -1564,7 +1593,9 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      Jetzt: der Moment IST die Seite. Keine Box, keine Kontur — eine Szene, die
      nach oben ausläuft, mit der Zahl als unbestrittenem Zentrum.
      ────────────────────────────────────────────────────────────────────── */
-  .reveal-hero{position:relative; margin:-70px -24px 6px; padding:96px 24px 4px; overflow:hidden; text-align:center;
+  /* Kein Hochziehen mehr: ueber dem Helden steht jetzt derselbe Kopf wie auf
+     den anderen vier Seiten, damit beim Durchklicken nichts springt. */
+  .reveal-hero{position:relative; margin:0 -24px 6px; padding:22px 24px 4px; overflow:hidden; text-align:center;
     background:
       radial-gradient(120% 76% at 50% 0%, rgba(58,85,120,.55) 0%, rgba(27,40,57,.35) 44%, rgba(10,12,15,0) 82%),
       radial-gradient(62% 32% at 50% 8%, rgba(240,246,255,.10), transparent 70%);}
@@ -8423,8 +8454,16 @@ function renderActivities(){
       <button class="back" onclick="A.actBack()" aria-label="Zurück">‹</button>
       <span class="metric xs t2">${l.length} von ${max}</span></div>
     <div class="fade">
-      ${scrHead("Aktivitätsprofile","Wofür trainierst du?")}
-      <p class="hint" style="margin-top:-10px">Jedes Profil hat <b style="color:var(--t1)">eigene Ziele, eigene Tage und eine eigene Oberfläche</b>. Dein Körper, deine Gewichtskurve und alle Verläufe bleiben überall dieselben — du wechselst die Absicht, nicht den Menschen.</p>
+      ${scrHead("Aktivitätsprofile","Du kannst mehrere Trainings nebeneinander führen")}
+      ${/* RUECKMELDUNG: "da erklaerst du direkt WAS es ist. Man muesste erst
+            sagen, dass man ueberhaupt mehrere Profile anlegen kann je nach
+            Training und Ziel — ein Gym-Profil und ein Ausdauer-Profil."
+            Richtig: der Text begann mit der Mechanik ("jedes Profil hat eigene
+            Ziele…") und setzte voraus, dass man die Idee schon kennt. Erst
+            kommt jetzt, WOFUER es das gibt und ein Beispiel, das man sofort
+            versteht — die Mechanik danach. */""}
+      <p class="hint" style="margin-top:-10px;line-height:1.6">Du musst dich nicht für eine Sache entscheiden. Lege dir <b style="color:var(--t1)">ein Profil fürs Studio</b> an und daneben <b style="color:var(--t1)">eines fürs Laufen</b> — jedes mit eigenem Ziel, eigenen Tagen und eigener Oberfläche. Mit einem Tipp wechselst du zwischen ihnen.</p>
+      <p class="hint" style="margin-top:8px;line-height:1.6">Dein Körper bleibt dabei <b style="color:var(--t1)">derselbe</b>: Gewichtskurve, Fortschritt und Verläufe gelten über alle Profile hinweg. Du wechselst die Absicht, nicht den Menschen.</p>
       <div class="stagger" style="margin-top:14px">
       ${l.map((x,ix)=>{ const m=actMeta(x.type), on=x.id===S.actId;
         return `<div class="ap-card ${on?"on":""}" style="--i:${ix}">
@@ -10985,10 +11024,39 @@ function revealNav(){
    Derselbe Kopf auf jeder Seite, aus derselben Quelle wie die Punkte. */
 function rvKopf(n){
   const t=REVEAL_PAGES[n-1]; if(!t) return "";
+  /* RUECKMELDUNG: "mach die fuenf Schritte aussagekraeftiger — geh individuell
+     auf jeden Endkonsumenten ein mit Gewicht, Ziel und so weiter, und leite
+     ihn ein, WIE du die Ziele erreichen wirst."
+     Die Unterzeile ist deshalb nicht mehr fuer alle gleich, sondern rechnet
+     mit den Zahlen, die der Mensch gerade eingegeben hat: Gewicht, Ziel,
+     Trainingstage, Kalorien, Eiweiss. Faellt eine Zahl aus (kein Profil, kein
+     Ziel), bleibt der allgemeine Satz aus REVEAL_PAGES stehen — die Seite
+     bricht nie, sie wird nur unpersoenlicher. */
+  let unter=t[1];
+  try{
+    const p=S.profile, a=p&&p.a, tg=p&&p.tg;
+    if(a&&tg){
+      const name=userName();
+      const kg=Math.round(a.weight||0);
+      const tage=(a.days||4);
+      const ziel=GOAL_LABEL[(tg.goals||[])[0]]||"";
+      const kcal=tg.train&&tg.train.kcal?nfi.format(tg.train.kcal):null;
+      const eiweiss=tg.train&&tg.train.p?tg.train.p:null;
+      const kf=(a.bodyFat!=null)?Math.round(a.bodyFat):null;
+      const U=[
+        kg&&tage?`${name}, gerechnet auf deine ${kg} kg und ${tage} Trainingstage pro Woche.`:null,
+        ziel?`Wie aus deinem Ziel <b style="color:var(--t1)">${ziel}</b> ein Wochenplan wird — in Phasen, mit Zwischenzielen.`:null,
+        (kcal&&eiweiss)?`${kcal} kcal, ${eiweiss} g Eiweiß, ${tage} Einheiten — damit fängst du morgen an.`:null,
+        kf!=null?`Die vier Hebel, die in DEINEM Plan stecken — bei ${kf} % Körperfett und ${tage} Tagen.`:`Die vier Hebel, die in deinem Plan stecken.`,
+        `Jede Zahl von eben mit der Arbeit, aus der sie stammt — zum Nachlesen.`,
+      ];
+      if(U[n-1]) unter=U[n-1];
+    }
+  }catch(e){}
   return `<div class="rv-kopf">
     <p class="rv-kopf-k">Schritt ${n} von ${REVEAL_PAGES.length}</p>
     <h2 class="rv-kopf-h">${t[0]}</h2>
-    <p class="rv-kopf-s">${t[1]}</p>
+    <p class="rv-kopf-s">${unter}</p>
   </div>`;
 }
 
@@ -11047,6 +11115,7 @@ function renderReveal(){
      wachsende Kurve. */
   root.innerHTML=`<div class="fade rv-deck" data-page="${S.revealPage||1}" style="text-align:center">
     <div class="rv-page" data-p="1">
+    ${rvKopf(1)}
     <!-- PRIMÄR-HERO: Begrüßung GANZ OBEN in der Box (kein Leerraum, kein separater Haken) -->
     <div class="reveal-hero">
       <div class="reveal-orb" aria-hidden="true"></div>
@@ -13576,7 +13645,13 @@ function planAnswer(q){
 const AI_MODEL="llama-3.3-70b-versatile";
 // Proxy-Modus: wenn config.useGroqProxy + supabaseUrl gesetzt, laufen alle KI-Aufrufe
 // über die Supabase Edge Function (Groq-Key liegt dann NUR serverseitig, nie im Browser).
-function aiProxy(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.useGroqProxy&&c.supabaseUrl)?(String(c.supabaseUrl).replace(/\/$/,"")+"/functions/v1/groq-proxy"):null; }catch{ return null; } }
+/* ACHTUNG, STOLPERSTELLE: diese Funktion zeigte auf /functions/v1/groq-proxy
+   — eine Edge Function, die es im Repo gar nicht gibt (die echte heisst
+   ai-proxy). Haette jemand useGroqProxy auf true gesetzt, um "den Server zu
+   benutzen", waere jeder KI-Aufruf mit 404 gescheitert, und zwar still.
+   Sie zeigt jetzt auf dieselbe Funktion wie aiProxyURL(); der Schalter bleibt
+   nur, damit bestehende config.js-Dateien nichts kaputt machen. */
+function aiProxy(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.useGroqProxy&&c.supabaseUrl)?(String(c.supabaseUrl).replace(/\/$/,"")+"/functions/v1/ai-proxy"):null; }catch{ return null; } }
 function aiEndpoint(){ return aiProxy()||"https://api.groq.com/openai/v1/chat/completions"; }
 function aiHeaders(){
   if(aiProxy()){ const c=window.METRICGYM_CONFIG||{}; const tok=(typeof SB!=="undefined"&&SB.token)||c.supabaseAnonKey||"";
@@ -13589,7 +13664,16 @@ function geminiKey(){ try{ return ((window.METRICGYM_CONFIG||{}).geminiKey)||"";
 function geminiOn(){ return !!S.aiOn && geminiKey().length>20; }
 // ===== Server-Proxy (Supabase Edge Function ai-proxy): versteckt ALLE Keys serverseitig =====
 function aiProxyURL(){ try{ const c=window.METRICGYM_CONFIG||{}; return (c.useAiProxy&&c.supabaseUrl)?(String(c.supabaseUrl).replace(/\/$/,"")+"/functions/v1/ai-proxy"):null; }catch{ return null; } }
-function aiProxyOn(){ return !!S.aiOn && !!aiProxyURL(); }
+/* RUECKMELDUNG: "ich muss den Groq-Schluessel als Endverbraucher nicht
+   eingeben, den hab ich ja als Entwickler gegeben."
+   Genau so ist es, und die Kette war an einer Stelle falsch verdrahtet:
+   S.aiOn ist der Schalter fuer den CLIENT-Pfad (eigener Schluessel im Browser)
+   und steht bei einem frischen Konto auf false. aiProxyOn() verlangte ihn
+   zusaetzlich — also galt der Coach als "aus", obwohl der Server-Proxy
+   eingerichtet ist und den Schluessel laengst hat. Die App fiel damit auf den
+   Client-Pfad zurueck und fragte den Endkunden nach einem eigenen Key.
+   Liegt ein Server-Proxy vor, ist der Coach fuer jeden da, ohne Zutun. */
+function aiProxyOn(){ return !!aiProxyURL(); }
 function aiProxyHeaders(){ const c=window.METRICGYM_CONFIG||{}; const tok=(typeof SB!=="undefined"&&SB.token)||c.supabaseAnonKey||""; return {"Content-Type":"application/json","Authorization":"Bearer "+tok,"apikey":c.supabaseAnonKey||""}; }
 async function proxyComplete(system,user,opts){ opts=opts||{};
   const mode=(typeof user==="object"&&user&&user.images&&user.images.length)?"vision":"complete";
@@ -17280,13 +17364,22 @@ ${sec("Körper & Status",row("Gewichts-Messungen",(S.weightLog||[]).length)+row(
     </div>
     <div class="section"><span class="label sect-h">Werkzeuge &amp; Fortschritt</span>
     ${acc("brain","Coach (KI)",aiActive()?'<span class="badge volt" style="font-size:9.5px">aktiv</span>':"",`
-      ${aiActive()
-        ? `<p class="sm mb8"><span class="badge volt">aktiv</span> Dein KI-Coach ist an — er kennt deine Daten und antwortet frei im Plan-Assistenten und im Coach-Chat.</p>
-           <button class="btn mb8" onclick="A.aiToggle()">KI-Coach ausschalten</button>`
-        : `<p class="sm t2 mb8" style="line-height:1.55">Schalte den echten KI-Coach frei: freie Fragen zu Training, Ernährung & Motivation — mit deinen Daten beantwortet (Groq / Llama 3.3).</p>
-           <input type="password" id="ai-key" placeholder="Groq API-Key (gsk_…)" style="width:100%;margin-bottom:8px" autocomplete="off" value="${(S.aiKey||"").replace(/"/g,"")}">
-           <button class="btn volt" onclick="A.aiActivate()">KI-Coach aktivieren</button>`}
-      <p class="xs t2 mt8" style="line-height:1.55">${icon("lock",12)} Dein Key bleibt <b style="color:var(--t1)">nur auf diesem Gerät</b> (lokal gespeichert, nie an uns gesendet). In einer Web-App ist der Key im Browser sichtbar — für den öffentlichen Launch gehört er hinter einen Server.</p>`)}
+      ${(()=>{
+        /* Drei Zustaende, und nur in EINEM davon darf ueberhaupt nach einem
+           Schluessel gefragt werden. Vorher stand das Eingabefeld immer da,
+           sobald der Coach nicht aktiv war — auch dann, wenn der Server den
+           Schluessel laengst hat und nur die Anmeldung fehlte. */
+        const ueberServer=aiProxyOn();
+        if(ueberServer) return `<p class="sm mb8"><span class="badge volt">aktiv</span> Dein KI-Coach läuft über unseren Server — du musst nichts einrichten und keinen Schlüssel eintragen.</p>
+          <p class="xs t2" style="line-height:1.55">${icon("lock",12)} Der Zugang liegt ausschließlich auf dem Server. In deinem Browser liegt kein Schlüssel, und es wird auch keiner dorthin übertragen.</p>`;
+        if(aiActive()) return `<p class="sm mb8"><span class="badge volt">aktiv</span> Dein KI-Coach ist an — er kennt deine Daten und antwortet frei im Plan-Assistenten und im Coach-Chat.</p>
+          <button class="btn mb8" onclick="A.aiToggle()">KI-Coach ausschalten</button>`;
+        return `<p class="sm t2 mb8" style="line-height:1.55">Der KI-Coach ist gerade nicht erreichbar. Normalerweise läuft er über unseren Server — du musst nichts eintragen. Bis er wieder da ist, antwortet die Regel-Engine weiter: Plan, Gewichte und Auswertung funktionieren unverändert.</p>
+          <details><summary class="xs t2" style="cursor:pointer">Eigenen Zugang verwenden (nur für Entwicklung)</summary>
+            <input type="password" id="ai-key" placeholder="Groq API-Key (gsk_…)" style="width:100%;margin:8px 0" autocomplete="off" value="${(S.aiKey||"").replace(/"/g,"")}">
+            <button class="btn" onclick="A.aiActivate()">Mit eigenem Zugang aktivieren</button>
+            <p class="xs t2 mt8" style="line-height:1.55">${icon("alert",12)} Ein hier eingetragener Schlüssel liegt im Browser und ist dort einsehbar. Für den normalen Gebrauch ist das nicht nötig und nicht gedacht.</p></details>`;
+      })()}`)}
 
     ${acc("activity","Wearable hinzufügen",S.wearActive[todayKey()]!=null?`<span class="badge volt" style="font-size:9.5px">heute ${nfi.format(S.wearActive[todayKey()])} kcal</span>`:"",`
       <p class="xs t2 mb12" style="line-height:1.55">Trag die <b style="color:var(--t1)">heute aktiv verbrannten Kalorien</b> von deiner Watch ein — dein Kalorienziel passt sich sofort an deinen echten Verbrauch an.</p>
