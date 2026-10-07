@@ -4446,7 +4446,8 @@ const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Bei
    eigene Quelle — und erzwang damit Isolationsarbeit, die niemand braucht.
    Besonders beim Trizeps: der bekommt seit der fraktionierten Zaehlung aus
    jedem Druecken 0,5 Saetze, acht DIREKTE zu verlangen war doppelt zu viel.
-   Die MRV bleiben bewusst unter Israetels Werten (22/25 statt 20/22): seine
+   Die MRV bleiben bewusst unter Israetels Werten (20/22 statt 22/25 — App
+   zuerst, Quelle danach; hier stand es vertauscht): seine
    Obergrenzen gelten fuer Fortgeschrittene mit voller Erholung — deficitScaledBands()
    skaliert ohnehin nach Trainingsalter und Energiezufuhr. */
 const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[10,22],Schultern:[8,20],Bizeps:[8,20],Trizeps:[6,18],Arme:[10,22],Core:[4,16]};
@@ -4541,7 +4542,7 @@ function deficitScaledBands(a){
    erreicht die Kurve 95 %). */
 /* Sättigungspunkte — ABGELEITET, nicht gesetzt.
    Zwei Werte stammen direkt aus der Meta-Regression (Pelland et al., Sports
-   Med 2025): rund 31 fraktionierte Sätze je Muskel und Woche für Hypertrophie,
+   Med 2026;56(2):481–505): rund 31 fraktionierte Sätze je Muskel und Woche für Hypertrophie,
    rund 3 für Kraft.
    Die übrigen leiten sich aus der Erhaltungs-Literatur ab statt aus meinem
    Bauchgefühl: Bickel et al. (2011, n=70, 32 Wochen reduziertes Training) und
@@ -4745,10 +4746,15 @@ function gruppenFortschritt(m){
 
 /* Ein Kalibrierfaktor je Gruppe. >1 heißt: dieser Mensch braucht mehr Sätze
    für denselben Reiz. <1 heißt: er holt aus jedem Satz mehr heraus. */
-function kalibFaktoren(a){
+function kalibFaktoren(a,volQuelle){
   a=a||(S.profile&&S.profile.a)||{};
   const ziel=primaryGoal(a);
-  const {vol}=wochenVolumenFrakt();
+  /* EINE Quelle fuer alles: der Bericht rechnet seit L1 aus dem Log, sobald
+     genug geloggt ist. Holte sich die Eichung ihr Volumen weiter aus dem Plan,
+     liefen Eichung und Bericht auf verschiedenen Zahlen — gemessen: Verdoppeln
+     der Plansaetze senkte den ausgewiesenen Reiz, obwohl der Bericht den Plan
+     gar nicht mehr liest. Der Aufrufer reicht sein Volumen durch. */
+  const {vol}=volQuelle||volumenQuelle(a);
   const saett=saettigungFuer(ziel,a);
   const roh={}, belege={};
   for(const m of Object.keys(vol)){
@@ -4791,11 +4797,93 @@ function kalibFaktoren(a){
           gemessen:werte.length, individuell:werte.length>0};
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   WOCHENVOLUMEN AUS DEM LOG — was wirklich passiert ist.
+
+   wochenVolumenFrakt() rechnet aus `schedule()` und `peExArr()`, also aus dem
+   PLAN. Fuer jemanden mit 70 % Adhaerenz rechnet der Effizienzbericht damit
+   ueber eine Absicht, nicht ueber sein Training — und fuer jemanden, der
+   gerade seine Hevy-Historie importiert hat und noch gar keinen Plan hat,
+   kommt schlicht null heraus.
+
+   Diese Funktion zaehlt dieselben Groessen aus `S.liftLog`: dort liegt je
+   Uebung ein Eintrag PRO SATZ ({t,w,reps,rpe}). Ein Satz zaehlt 1,0 fuer den
+   Zielmuskel und 0,5 fuer jeden nennenswert mitarbeitenden — dieselbe
+   Konvention wie im Plan-Pfad, damit beide Zahlen vergleichbar bleiben.
+
+   Zeit kommt aus dem Tempo der Uebung und den TATSAECHLICH geloggten
+   Wiederholungen, nicht aus dem geplanten Bereich.
+
+   `wochen` = Fenster in Wochen. Rueckgabe hat dieselbe Form wie
+   wochenVolumenFrakt(), plus `tage` (Kalendertage mit Saetzen) und `saetze`
+   (Rohzahl), damit der Aufrufer die Belastbarkeit beurteilen kann. */
+const LOG_MIN_SAETZE=12;        // darunter ist ein Wochenschnitt kein Schnitt
+const LOG_MIN_TAGE=4;           // und braucht mehrere Trainingstage
+
+function wochenVolumenAusLog(wochen){
+  wochen=wochen||4;
+  const grenze=Date.now()-wochen*7*dayMs;
+  const vol={}, zeit={}, haeufig={}, schwer={}, saetzeGes={};
+  const tageJeMuskel={}, alleTage=new Set();
+  let saetze=0;
+
+  for(const name of Object.keys(S.liftLog||{})){
+    const anteile=satzAnteile(name); if(!anteile) continue;
+    const d=EXDB[name]||{};
+    for(const satz of (S.liftLog[name]||[])){
+      if(!satz||!(satz.t>=grenze)) continue;
+      const wdh=Number(satz.reps)||0; if(!(wdh>0)) continue;
+      saetze++;
+      const tagKey=Math.floor(satz.t/dayMs);
+      alleTage.add(tagKey);
+      /* Zeitkosten aus dem Tempo der Uebung und den ECHTEN Wiederholungen. */
+      const tempo=String(d.tempo||"2-0-1-0").split("-").map(x=>parseFloat(x)||0);
+      const proWdh=tempo.reduce((q,x)=>q+x,0)||4;
+      const sek=wdh*proWdh+(d.rest||90);
+      const istSchwer=wdh<=6;
+      for(const [m,f] of Object.entries(anteile)){
+        vol[m]=(vol[m]||0)+f;
+        zeit[m]=(zeit[m]||0)+sek*f/60;
+        saetzeGes[m]=(saetzeGes[m]||0)+f;
+        if(istSchwer) schwer[m]=(schwer[m]||0)+f;
+        (tageJeMuskel[m]=tageJeMuskel[m]||new Set()).add(tagKey);
+      }
+    }
+  }
+  /* Auf EINE Woche normieren — der Korridor ist ein Wochenmass. Gezaehlt wird
+     ueber die Wochen, in denen ueberhaupt trainiert wurde, nicht ueber das
+     starre Fenster: zwei Wochen Urlaub sollen das Mittel nicht verwaessern. */
+  const aktiveWochen=Math.max(1,Math.min(wochen,Math.ceil(alleTage.size/2)));
+  for(const m of Object.keys(vol)){
+    vol[m]=vol[m]/aktiveWochen;
+    zeit[m]=zeit[m]/aktiveWochen;
+    saetzeGes[m]=saetzeGes[m]/aktiveWochen;
+    if(schwer[m]) schwer[m]=schwer[m]/aktiveWochen;
+    haeufig[m]=(tageJeMuskel[m]?tageJeMuskel[m].size:0)/aktiveWochen;
+  }
+  return {vol,zeit,haeufig,schwer,saetzeGes,
+          saetze, tage:alleTage.size, wochen:aktiveWochen};
+}
+
+/* Welche Quelle traegt den Bericht? Das Log, sobald es belastbar ist —
+   sonst der Plan. Der Bericht sagt dem Nutzer, welche es war. */
+function volumenQuelle(a){
+  try{
+    const log=wochenVolumenAusLog(4);
+    if(log.saetze>=LOG_MIN_SAETZE && log.tage>=LOG_MIN_TAGE && Object.keys(log.vol).length){
+      return {...log, quelle:"log"};
+    }
+  }catch(e){}
+  const plan=wochenVolumenFrakt();
+  return {...plan, quelle:"plan", saetze:0, tage:0};
+}
+
 /* Der Bericht. Gibt je Muskel UND gesamt zurück, worauf sich alles stützt. */
 function effizienzBericht(a){
   a=a||(S.profile&&S.profile.a)||{};
   const ziel=primaryGoal(a), k=reizK(ziel,a);
-  const {vol,zeit,haeufig,schwer}=wochenVolumenFrakt();
+  const _q=volumenQuelle(a);
+  const {vol,zeit,haeufig,schwer}=_q;
   const bands=deficitScaledBands(a);
   /* Energieverfügbarkeit: im Defizit ist die Anpassungsfähigkeit begrenzt —
      derselbe Reiz erzeugt weniger Aufbau. deficitFactor() ist die Größe, mit
@@ -4809,7 +4897,7 @@ function effizienzBericht(a){
   /* Individuelle Kalibrierung: ein eigener Sättigungspunkt je Gruppe, soweit
      die eigenen Daten das tragen. Ohne Daten ist der Faktor 1 und alles
      verhält sich genau wie vorher. */
-  const kal=kalibFaktoren(a);
+  const kal=kalibFaktoren(a,_q);
   const gruppen=[];
   for(const m of Object.keys(vol)){
     if(m==="Herz") continue;
@@ -4885,6 +4973,14 @@ function effizienzBericht(a){
     gesaettigt: naechster===null,
     saettigung: saettigungFuer(ziel,a),
     kalib: kal,
+    /* Worauf die Zahlen beruhen. "log" = deine geloggten Saetze der letzten
+       Wochen, "plan" = der Plan, weil noch zu wenig geloggt ist. Der
+       Unterschied gehoert dem Nutzer, nicht nur dem Entwickler. */
+    quelle: _q.quelle,
+    quelleText: _q.quelle==="log"
+      ? `aus ${Math.round(_q.saetze)} geloggten Sätzen an ${_q.tage} Tagen`
+      : "aus deinem Plan — logge ein paar Einheiten, dann rechnet das hier mit deinen echten Sätzen",
+    logSaetze: _q.saetze||0, logTage: _q.tage||0,
   };
 }
 
@@ -6230,8 +6326,16 @@ function capWeeklyVolume(PLAN,a,ctx){
     };
     if(ctx.scheme&&ctx.PP&&ctx.mk&&ctx.fits){
       const PP=ctx.PP, mk=ctx.mk, fits=ctx.fits;
-      const expF=a.exp==="beginner"?0.65:a.exp==="novice"?0.85:1.0;
-      const mevTarget=(g)=>Math.max(g==="Core"?4:6,Math.round(BANDS[g][0]*expF));
+      /* DOPPELSKALIERUNG (gefunden beim Gegenlesen): BANDS kommt aus
+         deficitScaledBands(), das die Untergrenze BEREITS nach Trainingsalter
+         skaliert hat (expBandFactor, Zeile 4493). Hier wurde ein zweites Mal
+         mit einem ANDEREN Faktor skaliert — Einsteiger landeten bei 0,65 ×
+         0,65 = 0,42, Novizen bei 0,78 × 0,85 = 0,66 der veroeffentlichten
+         Untergrenze. Schlimmer noch: beim Trizeps hob der Boden max(6,…) den
+         Wert wieder auf 6 und damit auf 100 % des Intermediate-Bandes — die
+         Skalierung wirkte dort in die Gegenrichtung ihrer eigenen Absicht.
+         Es bleibt bei EINER Skalierung, naemlich der dokumentierten. */
+      const mevTarget=(g)=>Math.max(g==="Core"?4:6,BANDS[g][0]);
       // Fokus auf die FEIN-Gruppen der MEV-Garantie abbilden: "Arme" deckt Bizeps UND Trizeps ab.
       const focusSet=new Set();
       for(const fm of (ctx.focus||[])){
@@ -6996,7 +7100,15 @@ function buildInsights(){
   const _strengthUi=(()=>{ try{ return actUi()!=="endur"; }catch(e){ return true; } })();
   if(_strengthUi&&S.trainingHistory.length>=4){
     const w0=weeklyMuscleSets(0), w1=weeklyMuscleSets(1);
-    for(const [m,band] of Object.entries(VOL_BANDS)){
+    /* DRITTE ZAEHLWEISE (gefunden beim Gegenlesen): hier wurde gegen das ROHE
+       VOL_BANDS geprueft, waehrend der Planbau gegen deficitScaledBands()
+       deckelt — also gegen Baender, die nach Trainingsalter und Energiezufuhr
+       skaliert sind. Derselbe Muskel stand dadurch in der einen Ansicht "im
+       Korridor" und in der anderen "unter MEV". Beide Ansichten benutzen jetzt
+       dasselbe Band. */
+    const _bands=(()=>{ try{ return deficitScaledBands((S.profile&&S.profile.a)||{}); }
+                        catch(e){ return VOL_BANDS; } })();
+    for(const [m,band] of Object.entries(_bands)){
       const a0=w0[m]||0, a1=w1[m]||0;
       if(a0>band[1]&&a1>band[1]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen über deinem belastbaren Maximum (${a0} Sätze/Woche, optimal sind ${band[0]}–${band[1]}) — deine Erholung kommt nicht hinterher (Fachbegriff: MRV).`,n:S.trainingHistory.length,nUnit:"Trainings",conf:70,risk:true});
       else if(a0>0&&a1>0&&a0<band[0]&&a1<band[0]) out.push({t:`${LABELS.volume} ${m}: seit 2 Wochen zu niedrig für spürbares Wachstum (${a0} Sätze/Woche) — peile mindestens ${band[0]} Sätze an (Fachbegriff: MEV).`,n:S.trainingHistory.length,nUnit:"Trainings",conf:65});
@@ -9698,8 +9810,8 @@ function renderLanding(){
       <p class="sm t2 mb16" style="line-height:1.6">Weil dein Körper eine Spanne hat, in der er wächst. Darunter passiert zu wenig, darüber kommt die Erholung nicht mehr nach. METRICGYM hält jeden Muskel in dieser Spanne — und sagt dir bei jeder Zahl, worauf sie beruht.</p>
       <div class="lp-beleg" style="margin-left:0">
         <p class="lp-beleg-k">So steht es in der App</p>
-        ${corridorHTML([{g:"Brust · deine Woche",tot:16,mev:10,mrv:20}])}
-        <p class="lp-beleg-q">Unter 10 Sätzen fehlt der Wachstumsreiz, über 20 kommt die Erholung nicht mehr nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor</span></p>
+        ${corridorHTML([demoKorridor("Brust","Brust · deine Woche",16)])}
+        <p class="lp-beleg-q">Unter ${VOL_BANDS.Brust[0]} Sätzen fehlt der Wachstumsreiz, über ${VOL_BANDS.Brust[1]} kommt die Erholung nicht mehr nach.<br><span>Israetel et al. 2017 · MEV–MRV-Korridor (Praxismodell, nicht begutachtet)</span></p>
       </div>
     </section>
 
@@ -9723,7 +9835,7 @@ function renderLanding(){
       <div class="fh-row" style="padding-bottom:10px">
         <div class="lp-show">
           <p class="lp-show-t">${icon("activity",13)} Wissenschafts-Korridor</p>
-          ${corridorHTML([{g:"Brust",tot:16,mev:10,mrv:20},{g:"Rücken",tot:18,mev:12,mrv:22}])}
+          ${corridorHTML([demoKorridor("Brust","Brust",16),demoKorridor("Rücken","Rücken",18)])}
           <p class="xs t2" style="line-height:1.55;margin-top:2px">Jeder Muskel bekommt exakt die Dosis, bei der er wächst — nicht mehr, nicht weniger (Israetel 2017).</p>
         </div>
         <div class="lp-show">
@@ -13227,359 +13339,18 @@ function bodyDiagram(act){
       <span class="xs t2" style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:6px;background:#C4B47A;box-shadow:0 0 7px #C4B47A;display:inline-block"></span>Sekundär</span></div>`;
 }
 
-/* =====================================================================
-   MG3D v4 — der drehbare 3D-Körper, gebaut AUS der 2D-Anatomie.
-   Die Silhouette wird per Scanline direkt aus den anatomischen Polygonen
-   (MG_ANT/MG_POST, 100×220-Raum) vermessen → Ring-Stapel je Körperteil.
-   Die professionelle Muskel-Zeichnung selbst wird als Textur auf Vorder-
-   und Rückseite projiziert (Diffuse + Glow-Map, gepulst): Von vorn und
-   hinten sieht der 3D-Körper EXAKT wie die bewährte 2D-Ansicht aus —
-   und bleibt frei drehbar. three.js lokal; ohne WebGL: 2D-Fallback.
-   ===================================================================== */
-const MG3D={
-  inst:[], raf:0, _p:null, failed:false, _profCache:{},
-  IDS:["chest","obliques","abs","biceps","triceps","delts","reardelts","traps","lats","lowerback","forearm","adductors","quads","hams","glutes","calves"],
-  K:.00864, // svg-Einheit → Welt (220 svg ≈ 1.9 m)
-  load(){
-    if(window.THREE) return Promise.resolve();
-    if(MG3D._p) return MG3D._p;
-    const urls=["vendor/three.min.js",
-                "https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js",
-                "https://unpkg.com/three@0.147.0/build/three.min.js"];
-    MG3D._p=new Promise((res,rej)=>{ let i=0;
-      const next=()=>{ if(i>=urls.length){ MG3D.failed=true; return rej(new Error("three.js nicht ladbar")); }
-        const s=document.createElement("script"); s.src=urls[i++]; s.async=true;
-        s.onload=()=>window.THREE?res():next(); s.onerror=()=>next();
-        document.head.appendChild(s); };
-      next(); });
-    return MG3D._p;
-  },
-  mount(el){
-    const cv=el.querySelector("canvas"); if(!cv) return;
-    let colors={}; try{ colors=JSON.parse(el.dataset.b3d||"{}"); }catch(e){}
-    const sex=el.dataset.sex==="female"?"female":"male";
-    MG3D.load().then(()=>{ if(!el.isConnected) return; MG3D.build(el,cv,colors,sex); })
-      .catch(()=>MG3D.fallback(el,colors));
-  },
-  fallback(el,colors){
-    const col=(id)=>colors[id]||MG_BODY;
-    const hint=el.nextElementSibling;
-    if(hint&&hint.classList&&hint.classList.contains("b3d-hint")) hint.remove();
-    el.outerHTML=`<div style="display:flex;justify-content:center;gap:12px;align-items:flex-start">${muscleBody("front",col)}${muscleBody("back",col)}</div>`;
-  },
-  key(keys,t){
-    if(t<=keys[0][0]) return keys[0][1];
-    for(let i=0;i<keys.length-1;i++){ const a=keys[i],b=keys[i+1];
-      if(t<=b[0]){ const k=(t-a[0])/((b[0]-a[0])||1), s=k*k*(3-2*k); return a[1]+(b[1]-a[1])*s; } }
-    return keys[keys.length-1][1];
-  },
-  /* ---- Silhouetten-Vermessung: Scanline über die anatomischen Polygone ----
-     Liefert je Körperteil Zeilen {y, lo, hi} im finalen SVG-Raum (Front bereits
-     auf Rück-Maßstab skaliert, Geschlechts-Proportionen wie in der 2D-Ansicht). */
-  profiles(sex){
-    if(MG3D._profCache[sex]) return MG3D._profCache[sex];
-    const FS=1.1224, sf=sex==="female";
-    const sxUp=sf?0.82:1.13, sxLo=sf?0.97:0.95; // identisch zur 2D-Ansicht
-    const ARM=new Set(["BICEPS","TRICEPS","FOREARM"]);
-    const SKIP=new Set(["HEAD","NECK"]); // Kopf/Hals werden separat als Kugel+Zylinder gebaut
-    const LEG=new Set(["QUADRICEPS","ABDUCTOR","ABDUCTORS","KNEES","CALVES","HAMSTRING","LEFT_SOLEUS","RIGHT_SOLEUS"]);
-    const parse=(data,front)=>{
-      const groups={torso:[],armL:[],armR:[],legL:[],legR:[]};
-      for(const m of data){
-        if(SKIP.has(m.k)) continue;
-        const gsx=MG_LOWER_KEYS.has(m.k)?sxLo:sxUp;
-        for(const str of m.p){
-          const raw=str.split(" ").map(Number), pts=[];
-          for(let i=0;i<raw.length;i+=2){
-            let x=raw[i], y=raw[i+1];
-            x=50+(x-50)*gsx;                       // Statur (wie 2D-grp())
-            if(front){ x=50+(x-50)*FS; y=y*FS; }   // Front→Rück-Maßstab (wie 2D-Fix)
-            pts.push([x,y]);
-          }
-          const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
-          let g="torso";
-          if(ARM.has(m.k)) g=cx<50?"armL":"armR";
-          else if(LEG.has(m.k)) g=cx<50?"legL":"legR";
-          groups[g].push(pts);
-        }
-      }
-      return groups;
-    };
-    const scan=(polys,y)=>{ let lo=1e9,hi=-1e9;
-      for(const pts of polys){ const n=pts.length;
-        for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n];
-          if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y)){
-            const x=a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]);
-            if(x<lo)lo=x; if(x>hi)hi=x; } } }
-      return hi<lo?null:[lo,hi]; };
-    const F=parse(MG_ANT,true), Bk=parse(MG_POST,false);
-    const profile=(gF,gB,y0,y1,pad)=>{
-      const rows=[];
-      for(let y=y0;y<=y1;y+=2){
-        const a=scan(gF,y), b=scan(gB,y);
-        let lo=null,hi=null;
-        if(a){ lo=a[0]; hi=a[1]; }
-        if(b){ lo=lo==null?b[0]:Math.min(lo,b[0]); hi=hi==null?b[1]:Math.max(hi,b[1]); }
-        rows.push({y,lo,hi});
-      }
-      let last=null; // Lücken zwischen Muskel-Polygonen linear schließen
-      for(let i=0;i<rows.length;i++){ if(rows[i].lo!=null){
-        if(last!=null&&i-last>1){ for(let j=last+1;j<i;j++){ const t=(j-last)/(i-last);
-          rows[j].lo=rows[last].lo+(rows[i].lo-rows[last].lo)*t;
-          rows[j].hi=rows[last].hi+(rows[i].hi-rows[last].hi)*t; } }
-        last=i; } }
-      const out=rows.filter(r=>r.lo!=null);
-      for(const r of out){ r.lo-=pad; r.hi+=pad; } // Silhouetten-Rand (2D: stroke-width 7 ⇒ ~3.5)
-      // Glätten (5 Gauß-Pässe, breiter Kernel): die Scanline übernimmt sonst
-      // jede Polygon-Ecke → sichtbare Dellen. So wird die Silhouette organisch.
-      const k=[1,3,6,10,12,10,6,3,1];
-      for(let pass=0;pass<5;pass++){
-        const L=out.map(r=>r.lo), H=out.map(r=>r.hi);
-        for(let i=0;i<out.length;i++){
-          let sl=0,sh=0,sw=0;
-          for(let o=-4;o<=4;o++){ const j=Math.max(0,Math.min(out.length-1,i+o));
-            const w=k[o+4]; sl+=L[j]*w; sh+=H[j]*w; sw+=w; }
-          out[i].lo=sl/sw; out[i].hi=sh/sw;
-        }
-      }
-      return out;
-    };
-    const p={
-      torso:profile(F.torso,Bk.torso,38,126,1.4),
-      armL:profile(F.armL,Bk.armL,46,113,1.4), armR:profile(F.armR,Bk.armR,46,113,1.4),
-      legL:profile(F.legL,Bk.legL,102,218,1.6), legR:profile(F.legR,Bk.legR,102,218,1.6),
-    };
-    MG3D._profCache[sex]=p;
-    return p;
-  },
-  /* Ring-Stapel: aus {y,lo,hi}-Zeilen wird ein glatter Schlauch — Halbbreite a
-     aus der Silhouette (Front-Projektion == 2D-Zeichnung), Tiefe b=a·d(y),
-     z-Versatz für Brust-/Gesäß-Asymmetrie. taperTop/Bot schließt die Enden. */
-  stack(rows,dKeys,zKeys,capKeys,taperTop,taperBot){
-    const K=MG3D.K, RAD=34;
-    const R=[...rows];
-    const syn=(base,list,end)=>{ // synthetische Schließ-Zeilen
-      const c=(base.lo+base.hi)/2, a=(base.hi-base.lo)/2;
-      for(const [dy,f] of list) end.push({y:base.y+dy, lo:c-a*f, hi:c+a*f});
-    };
-    if(taperTop){ const t=[]; syn(R[0],taperTop.map(([dy,f])=>[-dy,f]),t); R.unshift(...t.reverse()); }
-    if(taperBot){ const t=[]; syn(R[R.length-1],taperBot,t); R.push(...t); }
-    const n=R.length, V=[], I=[];
-    for(let i=0;i<n;i++){
-      const r=R[i];
-      const cx=((r.lo+r.hi)/2-50)*K, cy=1.93-r.y*K, a=Math.max(.003,(r.hi-r.lo)/2*K);
-      let b=Math.max(.003,a*MG3D.key(dKeys,r.y));
-      if(capKeys) b=Math.min(b,MG3D.key(capKeys,r.y)); // z. B. Schulterbreite ≠ Brusttiefe
-      const zo=zKeys?MG3D.key(zKeys,r.y)*K:0;
-      for(let j=0;j<RAD;j++){ const th=j/RAD*Math.PI*2;
-        V.push(cx+Math.cos(th)*a, cy, Math.sin(th)*b+zo);
-      }
-    }
-    for(let i=0;i<n-1;i++) for(let j=0;j<RAD;j++){
-      const a0=i*RAD+j, a1=i*RAD+(j+1)%RAD, b0=a0+RAD, b1=a1+RAD;
-      I.push(a0,b0,a1, a1,b0,b1);
-    }
-    const g=new THREE.BufferGeometry();
-    g.setIndex(I);
-    g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(V),3));
-    g.computeVertexNormals();
-    return g;
-  },
-  /* Texturen: die 2D-Anatomie wird gerastert — Diffuse (plain) + Glow-Map */
-  makeTex(view,colors,sex,glow){
-    return new Promise((res)=>{
-      const col=(id)=>{
-        let c=colors[id]||MG_BODY;
-        if(String(c).startsWith("var(")){ try{ c=getComputedStyle(document.documentElement).getPropertyValue(String(c).slice(4,-1)).trim()||"#C97C63"; }catch(e){ c="#C97C63"; } }
-        return c;
-      };
-      const svg=muscleBody(view,col,sex,glow?{glow:true}:{plain:true});
-      const img=new Image();
-      const cnv=document.createElement("canvas"); cnv.width=256; cnv.height=512;
-      const done=()=>{
-        const t=new THREE.CanvasTexture(cnv);
-        t.flipY=false; // v läuft top-down wie unsere Projektion
-        if(THREE.sRGBEncoding!==undefined) t.encoding=THREE.sRGBEncoding;
-        res(t);
-      };
-      img.onload=()=>{ const c=cnv.getContext("2d");
-        if(glow){ c.fillStyle="#000"; c.fillRect(0,0,256,512); }
-        c.drawImage(img,0,0,256,512); done(); };
-      img.onerror=()=>done(); // leere Textur → Basisfarbe bleibt sichtbar
-      img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
-    });
-  },
-  build(el,cv,colors,sex){
-    let renderer=null;
-    try{ renderer=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true,powerPreference:"low-power"}); }
-    catch(e){ return MG3D.fallback(el,colors); }
-    const W=el.clientWidth||300, H=el.clientHeight||300;
-    renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
-    renderer.setSize(W,H,false); renderer.setClearColor(0x000000,0);
-    if(THREE.sRGBEncoding!==undefined) renderer.outputEncoding=THREE.sRGBEncoding;
-    const scene=new THREE.Scene();
-    const cam=new THREE.PerspectiveCamera(33,W/H,.1,20);
-    cam.position.set(0,.12,3.62); cam.lookAt(0,-.02,0);
-    scene.add(new THREE.HemisphereLight(0xBCD2F0,0x2A3340,1.05));
-    const key=new THREE.DirectionalLight(0xF0F5FF,.5); key.position.set(1.4,2.2,4.2); scene.add(key);
-    const rim=new THREE.PointLight(0x8FB8DC,.7,12); rim.position.set(-2.4,1.4,-2.6); scene.add(rim);
-    const group=new THREE.Group(); scene.add(group);
-    // ---- Geometrie aus der 2D-Silhouette ----
-    const Pr=MG3D.profiles(sex);
-    // Tiefe relativ zur Halbbreite (Seitenansicht) + z-Versatz (Brust vor, Gesäß zurück)
-    // Tiefe: Verhältnis zur Breite MIT absoluter Obergrenze (athletisch statt massig)
-    const torso=MG3D.stack(Pr.torso,
-      // Tiefe/Breite-Verhältnis
-      [[38,.7],[52,.66],[64,.6],[76,.56],[88,.54],[100,.56],[112,.6],[126,.55]],
-      // Sagittale S-Linie (+z=vorn): Schulter zurück, Brustbein vor, Lende zurück, Gesäß raus
-      [[38,-.3],[50,.5],[62,1.5],[74,1.15],[86,.25],[98,-.9],[108,-2.0],[118,-1.5],[126,-.35]],
-      // absolute Tiefen-Obergrenze (Meter-Halbtiefe) → athletisch, nie massig
-      [[38,.1],[52,.108],[64,.112],[76,.108],[88,.096],[100,.09],[112,.096],[126,.086]],
-      [[1.5,.8],[3,.52],[5,.22],[6.5,.06]], // Schulter-Yoke weich & rund schließen
-      [[2,.55],[3.2,.28],[4,.1]]);
-    // Hals (kurzer, leicht nach vorn geneigter Zylinder) + Kopf (Ei)
-    const neck=new THREE.CylinderGeometry(.052,.086,.15,28,1,true);
-    { const np=neck.attributes.position;               // leichte Vorneigung + Kehlkopf-Andeutung
-      for(let i=0;i<np.count;i++){ const y=np.getY(i); np.setZ(i,np.getZ(i)+ .012*(y/.15)); }
-      neck.computeVertexNormals(); }
-    neck.translate(0,1.64,.006);
-    const head=new THREE.SphereGeometry(.1,36,30);
-    { const hp=head.attributes.position;
-      for(let i=0;i<hp.count;i++){ let x=hp.getX(i),y=hp.getY(i),z=hp.getZ(i);
-        const u=y/.1;                                   // -1 Kinn … +1 Scheitel
-        const jaw=1-.34*Math.pow(Math.max(0,-u),1.6);   // Unterkiefer schmaler
-        x*=jaw*.9; z*=jaw*.97; y*=1.1;
-        z+=.02*Math.max(0,-u-.15);                       // Kinn/Kiefer nach vorn
-        z-=.008*Math.max(0,u-.3);                        // Hinterkopf runder
-        hp.setXYZ(i,x,y,z); }
-      head.computeVertexNormals(); }
-    head.translate(0,1.805,.012);
-    const dArm=[[46,.92],[70,.9],[90,.85],[113,.8]], capArm=[[46,.05],[80,.047],[113,.038]];
-    const armL=MG3D.stack(Pr.armL,dArm,null,capArm,null,[[3,.7],[6,.38],[8.5,.1]]);
-    const armR=MG3D.stack(Pr.armR,dArm,null,capArm,null,[[3,.7],[6,.38],[8.5,.1]]);
-    const dLeg=[[102,.62],[126,.9],[150,.85],[172,1.0],[200,.85],[218,.8]];
-    const zLeg=[[102,.2],[128,1.4],[150,.2],[172,-2.2],[205,-.6],[218,.4]];
-    const capLeg=[[102,.095],[130,.09],[152,.07],[174,.078],[218,.045]];
-    const legL=MG3D.stack(Pr.legL,dLeg,zLeg,capLeg,null,[[2.5,.6],[4.5,.25]]);
-    const legR=MG3D.stack(Pr.legR,dLeg,zLeg,capLeg,null,[[2.5,.6],[4.5,.25]]);
-    // ---- EIN Material mit Front/Rück-Projektion der 2D-Zeichnung ----
-    const inst={el,cv,renderer,scene,cam,group,visible:true,dead:false,
-      rotY:-.5,rotX:.02,vY:0,idle:0,drag:null,phase:Math.random()*6,uPulse:null,sh:null,tex:{}};
-    const mat=new THREE.MeshStandardMaterial({color:0x33404F,roughness:.62,metalness:.08});
-    mat.customProgramCacheKey=()=>"mg3dTexProj";
-    mat.onBeforeCompile=(sh)=>{
-      sh.uniforms.tF={value:inst.tex.f||null}; sh.uniforms.tB={value:inst.tex.b||null};
-      sh.uniforms.gF={value:inst.tex.gf||null}; sh.uniforms.gB={value:inst.tex.gb||null};
-      sh.uniforms.uHasTex={value:inst.tex.f?1:0};
-      sh.uniforms.uPulse={value:.65};
-      inst.uPulse=sh.uniforms.uPulse; inst.sh=sh;
-      sh.vertexShader="varying vec3 vMPos;\nvarying float vNz;\n"+sh.vertexShader
-        .replace("#include <begin_vertex>","#include <begin_vertex>\n vMPos=position;\n vNz=normal.z;");
-      sh.fragmentShader=("varying vec3 vMPos;\nvarying float vNz;\n"+
-        "uniform sampler2D tF;uniform sampler2D tB;uniform sampler2D gF;uniform sampler2D gB;uniform float uHasTex;uniform float uPulse;\n")+
-        sh.fragmentShader
-        .replace("#include <map_fragment>",
-          "#include <map_fragment>\n"+
-          " vec2 suv=vec2((vMPos.x/0.00864+58.0)/116.0, ((1.93-vMPos.y)/0.00864+6.0)/232.0);\n"+
-          " float kfb=smoothstep(-0.4,0.4,vNz);\n"+
-          " if(uHasTex>0.5){\n"+
-          "   vec4 tf=texture2D(tF,suv);\n"+
-          "   vec4 tb=texture2D(tB,vec2(1.0-suv.x,suv.y));\n"+
-          "   vec4 tex=mix(tb,tf,kfb);\n"+
-          "   diffuseColor.rgb=mix(diffuseColor.rgb,tex.rgb,tex.a);\n"+
-          " }")
-        .replace("#include <emissivemap_fragment>",
-          "#include <emissivemap_fragment>\n"+
-          " if(uHasTex>0.5){\n"+
-          "   vec3 gf=texture2D(gF,suv).rgb;\n"+
-          "   vec3 gb=texture2D(gB,vec2(1.0-suv.x,suv.y)).rgb;\n"+
-          "   totalEmissiveRadiance+=mix(gb,gf,kfb)*(0.4+0.4*uPulse);\n"+
-          " }");
-    };
-    for(const g of [torso,neck,head,armL,armR,legL,legR]) group.add(new THREE.Mesh(g,mat));
-    // Füße (Textur dort dunkel — Silhouetten-Ton)
-    for(const s of [-1,1]){
-      const P2=Pr["leg"+(s<0?"L":"R")], lastRow=P2[P2.length-1];
-      const axc=((lastRow.lo+lastRow.hi)/2-50)*MG3D.K;
-      const ft=new THREE.SphereGeometry(.043,16,12); ft.scale(.92,.52,2.15);
-      ft.rotateY(s*.12); ft.translate(axc,.05,.06);
-      group.add(new THREE.Mesh(ft,mat));
-    }
-    group.position.y=-.95;
-    MG3D.paintInst(inst,colors,sex);
-    try{ new IntersectionObserver((es)=>{es.forEach(e=>inst.visible=e.isIntersecting);}).observe(el); }catch(e){}
-    cv.addEventListener("pointerdown",(e)=>{ inst.drag={x:e.clientX,y:e.clientY,rY:inst.rotY,rX:inst.rotX}; inst.vY=0;
-      try{ cv.setPointerCapture(e.pointerId); }catch(ex){} });
-    cv.addEventListener("pointermove",(e)=>{ if(!inst.drag) return;
-      const dx=e.clientX-inst.drag.x, dy=e.clientY-inst.drag.y;
-      inst.vY=(inst.drag.rY+dx*.012)-inst.rotY;
-      inst.rotY=inst.drag.rY+dx*.012;
-      inst.rotX=Math.max(-.4,Math.min(.4,inst.drag.rX+dy*.005));
-      inst.idle=0; });
-    const end=()=>{ inst.drag=null; };
-    cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end);
-    cv.addEventListener("webglcontextlost",(e)=>{ e.preventDefault(); inst.dead=true; });
-    el.dataset.on="1";
-    MG3D.inst.push(inst);
-    inst.group.rotation.y=inst.rotY; inst.group.rotation.x=inst.rotX;
-    renderer.render(scene,cam);
-    MG3D.loop();
-  },
-  /* Färben = Texturen (neu) rastern: Diffuse+Glow für Front und Rück */
-  paintInst(inst,colors,sex){
-    sex=sex||"male";
-    Promise.all([
-      MG3D.makeTex("front",colors,sex,false), MG3D.makeTex("back",colors,sex,false),
-      MG3D.makeTex("front",colors,sex,true),  MG3D.makeTex("back",colors,sex,true),
-    ]).then(([f,b,gf,gb])=>{
-      if(inst.dead) return;
-      inst.tex={f,b,gf,gb};
-      if(inst.sh){
-        inst.sh.uniforms.tF.value=f; inst.sh.uniforms.tB.value=b;
-        inst.sh.uniforms.gF.value=gf; inst.sh.uniforms.gB.value=gb;
-        inst.sh.uniforms.uHasTex.value=1;
-      }
-    });
-  },
-  scan(){
-    if(MG3D.failed){ document.querySelectorAll(".b3d:not([data-on])").forEach(el=>{ el.dataset.on="1"; let c={}; try{ c=JSON.parse(el.dataset.b3d||"{}"); }catch(e){} MG3D.fallback(el,c); }); return; }
-    document.querySelectorAll(".b3d:not([data-on])").forEach(el=>{ el.dataset.on="1"; MG3D.mount(el); });
-  },
-  loop(){
-    if(MG3D.raf) return;
-    const step=()=>{
-      MG3D.inst=MG3D.inst.filter(i=>{
-        if(i.dead||!i.el.isConnected){
-          try{ i.renderer.dispose(); i.renderer.forceContextLoss&&i.renderer.forceContextLoss(); }catch(e){}
-          return false; }
-        return true; });
-      if(!MG3D.inst.length){ MG3D.raf=0; return; }
-      if(window.__pauseGL){ MG3D.raf=requestAnimationFrame(step); return; }
-      if(!document.hidden){
-        const t=performance.now()/1000;
-        for(const i of MG3D.inst){
-          if(!i.visible) continue;
-          if(!i.drag){
-            i.rotY+=i.vY; i.vY*=.94;
-            i.idle+=1/60;
-            if(i.idle>2.5) i.rotY+=.0045*Math.min(1,(i.idle-2.5));
-          }
-          i.group.rotation.y=i.rotY; i.group.rotation.x=i.rotX;
-          if(i.uPulse) i.uPulse.value=.5+.5*Math.sin(t*2.1+i.phase);
-          i.renderer.render(i.scene,i.cam);
-        }
-      }
-      MG3D.raf=requestAnimationFrame(step);
-    };
-    MG3D.raf=requestAnimationFrame(step);
-  },
-};
+/* MG3D (drehbarer 3D-Koerper, three.js) ENTFERNT — 347 Zeilen.
+   Gruende, alle nachgemessen: (a) 0 Aufrufe ausserhalb der eigenen Definition,
+   body3d() rendert seit laengerem bewusst die 2D-Anatomie; (b) der Lader haette
+   three.js von jsdelivr bzw. unpkg nachgezogen, weil vendor/ kein three.min.js
+   enthaelt — zwei Fremd-CDNs in einer App, die Datensparsamkeit verspricht;
+   (c) toter Code verfaelscht jede Aussage ueber die Buendelgroesse.
+   Die 2D-Muskelkarte (body3d/bodyDiagram, direkt darueber) bleibt unberuehrt. */
 /* body3d(): bewusst wieder die hochwertige 2D-Anatomie (Vorder- + Rückansicht).
    Das prozedurale 3D-Mesh wirkte trotz vieler Iterationen wie ein Roblox-Modell;
    die professionelle 2D-Muskelkarte sieht high-end aus — darum EINE Zeile, die
    überall die zwei Ansichten rendert. arg = {p,s} | col(id)-Funktion | {id:farbe}.
-   (MG3D bleibt im Code, wird aber nicht mehr instanziiert — kein Canvas, kein
-   three.js-Load, da body3d keine .b3d-Platzhalter mehr erzeugt.) */
+   (MG3D ist inzwischen ganz entfernt, s. Notiz darueber.) */
 function body3d(arg,opts){
   opts=opts||{};
   const sex=opts.sex||curBodySex();
@@ -13743,7 +13514,11 @@ const GROUP2REGION={Brust:["chest"],Schultern:["delts","reardelts"],"Rücken":["
 function muscleHeatBody(){
   const w0=weeklyMuscleSets(0);
   const r2c={}; const status={};
-  for(const [g,[lo,hi]] of Object.entries(VOL_BANDS)){
+  /* Dieselbe Angleichung wie bei den Erkenntnissen: die Muskelkarte faerbte
+     gegen das rohe Band, der Plan deckelt gegen das skalierte. */
+  const _bands=(()=>{ try{ return deficitScaledBands((S.profile&&S.profile.a)||{}); }
+                      catch(e){ return VOL_BANDS; } })();
+  for(const [g,[lo,hi]] of Object.entries(_bands)){
     const n=w0[g]||0; let c,st;
     if(n===0){c=MG_BODY;st="—";}
     else if(n<lo){c="rgba(143,184,220,.30)";st="zu wenig";}
@@ -13969,21 +13744,30 @@ function firstGenesis(run){
   const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const lanes=[
     ["activity","Stoffwechsel", "Grundumsatz, Aktivität, Zielkalorien", 1900],
-    ["dumbbell","Trainingsplan",    "112 Übungen · "+(EQ_LABEL[a.equipment]||"Gym")+" · "+(a.days||4)+" Tage", 2600],
+    ["dumbbell","Trainingsplan",    Object.keys(EXDB).length+" Übungen · "+(EQ_LABEL[a.equipment]||"Gym")+" · "+(a.days||4)+" Tage", 2600],
     ["chart",   "Volumen-Korridor",      "MEV–MRV je Muskelgruppe kalibriert", 2250],
     ["utensils","Ernährung",   "Makros auf dein Ziel gerechnet", 1600],
   ];
-  // Echte Belege — genau die, auf die sich die Engine stützt.
-  const QUELLEN=[
-    "Schoenfeld 2016 · Trainingsfrequenz",
-    "Israetel 2017 · Volumen-Korridore",
-    "Helms 2014 · Protein & Muskelerhalt",
-    "Zourdos 2016 · Autoregulation",
-    "Morton 2018 · Proteinbedarf",
-    "Wolf 2024 · Lengthened Partials",
-    "Garthe 2011 · Abnehmtempo",
-    "Grgic 2018 · Satzpausen",
-  ];
+  /* Hier stand eine ZWEITE, von Hand getippte Quellenliste — und sie ueberdeckte
+     mit `const QUELLEN` das globale Register. quellenZahl() sah sie nie, also
+     konnte sie beliebig davon abdriften, ohne dass irgendeine Pruefung anschlug.
+     Genau die Fehlerklasse, fuer die es das Register gibt. Die Namen kommen
+     jetzt aus dem Register selbst (anderer Bezeichner, damit nichts mehr
+     ueberdeckt wird) und koennen nicht mehr auseinanderlaufen. */
+  const belegZeilen=(()=>{
+    try{
+      const raus=[], gesehen=new Set();
+      for(const grp of QUELLEN) for(const [,zit] of grp.items){
+        const m=String(zit).match(/^([A-Za-zÄÖÜäöüß\-]+)[^·]*?((?:19|20)\d{2})/);
+        if(!m) continue;
+        const kurz=m[1]+" "+m[2];
+        if(gesehen.has(kurz)) continue;
+        gesehen.add(kurz); raus.push(kurz);
+        if(raus.length>=8) return raus;
+      }
+      return raus;
+    }catch(e){ return []; }
+  })();
   const dauer=reduce?600:3400;
   const gid="fgen-"+Date.now();
   let fired=false; const finish=()=>{ if(fired)return; fired=true; try{ run(); }catch(e){} };
@@ -13999,7 +13783,7 @@ function firstGenesis(run){
       </div>`).join("")}
     </div>
     <div class="gn-src" aria-hidden="true">
-      ${QUELLEN.map((q,i)=>`<span style="animation-delay:${i*(dauer/QUELLEN.length)}ms">${icon("check",11)} ${q}</span>`).join("")}
+      ${belegZeilen.map((q,i)=>`<span style="animation-delay:${i*(dauer/Math.max(1,belegZeilen.length))}ms">${icon("check",11)} ${q}</span>`).join("")}
     </div>
     <p class="gn-skip">Tippen zum Überspringen</p>
   </div>`;
@@ -14022,7 +13806,7 @@ function planGenesis(run,ctx){
   const a=(S.profile&&S.profile.a)||{};
   const EXPL={beginner:"Einsteiger",novice:"Aufbau-Level",intermediate:"Fortgeschritten",advanced:"Sehr fortgeschritten"};
   const steps=[
-    {ic:"grid",t:"112 Übungen gescannt",d:"Universum-Bibliothek · alle Equipment-Klassen"},
+    {ic:"grid",t:Object.keys(EXDB).length+" Übungen gescannt",d:"Universum-Bibliothek · alle Equipment-Klassen"},
     {ic:"dumbbell",t:"Auf dich gefiltert",d:(EQ_LABEL[a.equipment]||"Gym")+" · "+(EXPL[a.exp]||"individuell")+" · "+(a.days||4)+" Tage"},
     {ic:"activity",t:"Volumen-Korridor kalibriert",d:"MEV–MRV je Muskelgruppe · Israetel 2017"},
     {ic:"undo",t:"DUP-Rotation gesetzt",d:"Tag A schwer · Tag B Volumen · Zourdos 2016"}]
@@ -14805,6 +14589,8 @@ function effizienzHTML(){
     : `<b style="color:var(--t1)">Noch nicht auf dich geeicht.</b> Die Zahlen sind Studien-Mittelwerte. Nach etwa ${KALIB_MIN_WOCHEN} Wochen mit geloggten Sätzen eicht die App den Sättigungspunkt je Muskelgruppe auf deinen eigenen 1RM-Verlauf — die Spannweite der Trainingsantwort ist groß genug, dass das zählt (585 Menschen, Querschnitt −2 bis +59 %, Kraft 0 bis +250 %; Hubal et al. 2005).`;
   return `<div class="card" data-tone="cy">
     <p class="ct" style="display:flex;align-items:center;gap:6px">${icon("zap",14)} Effizienz · ${esc(ZIEL_WORT[e.ziel]||e.ziel)}</p>
+    <p class="xs" style="margin:-2px 0 8px;line-height:1.45;color:${e.quelle==="log"?"var(--good)":"var(--t3)"}">
+      ${icon(e.quelle==="log"?"check":"info",11)} Gerechnet ${esc(e.quelleText)}.</p>
     <div class="row" style="gap:10px;margin:4px 0 8px;align-items:flex-start">
       <div style="flex:1;min-width:0"><p class="metric" style="font-size:21px;line-height:1.1">${e.proStunde}</p>
         <p class="xs t2" style="line-height:1.3">Reiz je<br>Stunde</p></div>
@@ -15304,6 +15090,15 @@ const RPE_DESC={7:"2–3 Reps Reserve",8:"1–2 Reps Reserve",9:"1 Rep Reserve",
       Marker = Mindestreiz (MEV), Ende = maximal erholbares Volumen (MRV).
    2) DUP-Welle (Zourdos 2016): A schwer / B Volumen, wenn der Tag sich wiederholt.
    3) Frequenz-Leiste (Schoenfeld 2016: 2×/Woche schlägt 1×). */
+/* RUECKMELDUNG W1: Die Landing-Demo trug ihre Korridor-Zahlen HART getippt —
+   Ruecken stand dort auf MEV 12, waehrend VOL_BANDS 10 sagt. Die Werbeflaeche
+   behauptete also etwas anderes als die Engine rechnet. Jede Demo-Zeile kommt
+   jetzt aus VOL_BANDS; ein Auseinanderlaufen ist damit strukturell unmoeglich
+   und wird zusaetzlich vom UI-Waechter geprueft. */
+function demoKorridor(gruppe,titel,tot){
+  const b=VOL_BANDS[gruppe]||[10,20];
+  return {g:titel, tot, mev:b[0], mrv:b[1]};
+}
 function corridorHTML(rows){
   return rows.map((r,i)=>{ const capd=r.tot>=r.mrv-1, ok=r.tot>=r.mev;
     const pct=Math.max(4,Math.min(100,Math.round(100*r.tot/r.mrv)));

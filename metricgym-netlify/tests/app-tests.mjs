@@ -992,6 +992,11 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
       S.profile = { a }; S.plan = generateTrainingPlan({ a });
       S.planB = generateTrainingPlan({ a }, 'B');
       S.schedule = generateOptimalSchedule(a).schedule.slice();
+      /* Dieser Block prueft gezielt den PLAN-Pfad des Effizienzmodells.
+         Seit L1 rechnet der Bericht aus dem LOG, sobald genug geloggt ist —
+         ein Log aus einem frueheren Block wuerde hier also etwas anderes
+         messen, als der Test zu messen glaubt. Quelle festnageln. */
+      S.liftLog = {};
       S.currentWeek = 1; save();
       return a;
     };
@@ -1106,6 +1111,73 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
     m.verschieden > 0, `${m.verschieden} Übungen unterscheiden sich`);
   check('Engine: ohne Fokus reproduzierbar, unbekannte Gruppe verworfen',
     m.stabil && m.unsinnVerworfen);
+}
+
+// ── L1: Effizienz rechnet aus dem LOG, nicht aus dem Plan ────────────────────
+// Der Bericht rechnete bisher aus schedule()+peExArr(), also aus der ABSICHT.
+// Wer Beine auslaesst, bekam Lob fuer einen Plan, den er nicht befolgt hat —
+// und wer gerade seine Hevy-Historie importiert hat, bekam Volumen null.
+{
+  const m = await page.evaluate(() => {
+    localStorage.clear();
+    const a = { mode:'gym', sex:'male', age:30, height:180, weight:82, bodyFat:18,
+      goals:['muscle_gain'], exp:'intermediate', injury:[], days:4, time:60,
+      equipment:'gym_full', act:'light', split:'auto', focus:[],
+      schedule_pref:'consistent', recovery_profile:'average' };
+    const plan = generateTrainingPlan({ a });
+    const ests = ['push','pull','legs','upper','lower'].map(k => plan[k].est).filter(Boolean);
+    a.len = ests.length ? Math.round(ests.reduce((s,x)=>s+x,0)/ests.length) : 60;
+    const bmr = bmrCalc(a), td = tdeeCalc(bmr, a.act, effWeight(a), a.len, a.days);
+    S.users = [{ id:'u1', name:'P' }]; S.currentUser = 'u1';
+    S.profile = { a, bmr, td, tg: multiTargets(a, bmr, td) };
+    S.plan = plan; S.planB = generateTrainingPlan({ a }, 'B');
+    S.schedule = generateOptimalSchedule(a).schedule.slice();
+    S.liftLog = {}; save();
+
+    const out = {};
+    out.ohneLog = effizienzBericht(a).quelle;
+    out.planVol = Object.keys(wochenVolumenFrakt().vol).sort();
+
+    // Einseitiges Training: nur Druecken, nie Beine
+    const now = Date.now(), tag = 86400000;
+    const legen = (n, saetze, tage) => { S.liftLog[n] = S.liftLog[n] || [];
+      for (let d = 0; d < tage; d++) for (let i = 0; i < saetze; i++)
+        S.liftLog[n].push({ t: now - d*3*tag - i*60000, w:80, reps:8, rpe:8 }); };
+    legen('Bankdrücken', 4, 8); legen('Schrägbankdrücken', 3, 8); legen('Trizepsdrücken', 3, 8);
+
+    const ber = effizienzBericht(a);
+    out.mitLog = ber.quelle;
+    out.logSaetze = ber.logSaetze; out.logTage = ber.logTage;
+    out.text = ber.quelleText;
+    out.logGruppen = ber.gruppen.map(g => g.m).sort();
+    out.hatBeine = out.logGruppen.includes('Beine');
+
+    // Eichung und Bericht muessen DIESELBE Quelle benutzen: Plansaetze
+    // verdoppeln darf den Log-Bericht nicht mehr bewegen.
+    const vorher = effizienzBericht(a).reiz;
+    for (const key of S.schedule) { const arr = peExArr(key) || []; for (const e of arr) e.sets *= 2; }
+    out.unbewegt = effizienzBericht(a).reiz === vorher;
+
+    // NEGATIVKONTROLLE: zu wenig Log → zurueck auf den Plan
+    S.liftLog = {}; legen('Bankdrücken', 2, 2);     // 4 Saetze, 2 Tage
+    out.zuWenig = volumenQuelle(a).quelle;
+    out.zuWenigSaetze = wochenVolumenAusLog(4).saetze;
+    return out;
+  });
+
+  check('L1: ohne Log rechnet der Bericht aus dem Plan',
+    m.ohneLog === 'plan');
+  check('L1: mit genug geloggten Sätzen rechnet er aus dem Log',
+    m.mitLog === 'log', `${m.logSaetze} Sätze an ${m.logTage} Tagen`);
+  check('L1: der Bericht nennt dem Nutzer seine Quelle',
+    /geloggten Sätzen/.test(m.text), m.text);
+  check('L1: ausgelassene Muskeln tauchen nicht als trainiert auf',
+    !m.hatBeine && m.planVol.includes('Beine'),
+    `Log: ${m.logGruppen.join(',')} · Plan hätte: ${m.planVol.join(',')}`);
+  check('L1: Eichung und Bericht nutzen dieselbe Quelle',
+    m.unbewegt === true, 'Plansätze verdoppeln bewegt den Log-Bericht nicht');
+  check('L1 Negativkontrolle: zu wenig Log fällt auf den Plan zurück',
+    m.zuWenig === 'plan', `${m.zuWenigSaetze} Sätze im Fenster`);
 }
 
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));

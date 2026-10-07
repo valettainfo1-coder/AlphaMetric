@@ -858,6 +858,33 @@ check('Lesbarkeit: jede Hero-Zeile hält WCAG AA über den ganzen Lichtzyklus',
     m.ringVersatz != null && m.ringVersatz < 0.6, `${m.ringVersatz} px Versatz`);
 }
 
+/* W1: Die Landing-Demo trug ihre Korridor-Zahlen hart getippt — Ruecken stand
+   auf MEV 12, waehrend VOL_BANDS 10 sagt. Die Werbeflaeche behauptete etwas
+   anderes als die Engine rechnet. Diese Pruefung haelt beide zusammen. */
+{
+  const m = await page.evaluate(() => {
+    const out = { zeilen: [], abweichung: [] };
+    for (const g of ['Brust', 'Rücken']) {
+      const b = VOL_BANDS[g];
+      const d = demoKorridor(g, g, 16);
+      out.zeilen.push(`${g} ${d.mev}–${d.mrv}`);
+      if (d.mev !== b[0] || d.mrv !== b[1]) out.abweichung.push(`${g}: Demo ${d.mev}–${d.mrv} vs Engine ${b[0]}–${b[1]}`);
+    }
+    /* Negativkontrolle: liest demoKorridor wirklich je Gruppe, oder gibt es
+       nur eine Konstante zurueck? Trizeps hat ein anderes Band als die Brust —
+       ein Helfer, der sein Argument ignoriert, faellt hier durch.
+       (Erster Versuch verglich gegen eine unbekannte Gruppe — deren Rueckfall
+       [10,20] ist zufaellig identisch mit dem Brust-Band und maß daher nichts.) */
+    const nk = demoKorridor('Brust', 'x', 16).mev === VOL_BANDS['Brust'][0]
+            && demoKorridor('Trizeps', 'x', 16).mev === VOL_BANDS['Trizeps'][0]
+            && VOL_BANDS['Trizeps'][0] !== VOL_BANDS['Brust'][0];
+    return { ...out, nk };
+  });
+  check('Negativkontrolle: der Demo-Vergleich schlägt aus', m.nk === true);
+  check('W1: die Landing-Demo liest ihre Korridor-Werte aus VOL_BANDS',
+    m.abweichung.length === 0, m.abweichung.length ? m.abweichung.join(' · ') : m.zeilen.join(' · '));
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 
 await browser.close();
