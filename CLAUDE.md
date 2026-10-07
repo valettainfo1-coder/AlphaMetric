@@ -1,5 +1,28 @@
 # Arbeitsregeln für dieses Projekt
 
+## Maßgeblich: `docs/AUFTRAG.md`
+
+Der Rebrief „Prüfbares Training" in [`docs/AUFTRAG.md`](docs/AUFTRAG.md) ist der
+gültige Auftrag für alle Sessions, bis er ersetzt wird. Er geht den Regeln hier
+vor, wo beides etwas zum selben Punkt sagt. Insbesondere:
+
+* **Paketweise arbeiten.** Pro Paket Kurzplan (max. 10 Zeilen) → Umsetzung →
+  Tests → STATUSBERICHT im Format aus Abschnitt 9. Nie mehrere Pakete in einem
+  Commit, Paket-ID im Commit-Titel (`A3: …`).
+* **Ein Branch pro Phase:** `phase1-fundament`, `phase2-pruefschleife`,
+  `phase3-launch`. Nichts auf `claude/landing-app-redesign-*`.
+* **Nicht verhandelbar** (Abschnitt 4): keine erfundenen Quellen, DOIs oder
+  Nutzerzahlen; keine LLM-Zahl, die der Nutzer als Ergebnis sieht; local-first
+  bleibt; Nutzerdaten werden migriert, nie verworfen; keine Aussage über
+  Ergebnisse ohne Spanne.
+* **Bestandsaufnahme:** [`docs/PARAMS-INVENTUR.md`](docs/PARAMS-INVENTUR.md) —
+  87 Stellgrößen, 42 davon ohne Quelle, fünf Widersprüche W1–W5.
+
+**Achtung Repository:** `origin/main` trägt ein anderes Projekt (Next.js). Das
+gesamte METRICGYM hängt allein an der Linie, die mit
+`claude/landing-app-redesign-d4ejyc` begann; `phase1-fundament` ist davon
+abgezweigt, nicht von `main`.
+
 ## Nach JEDEM Update: zwei Pakete ausliefern
 
 Der Nutzer hat das als Dauerauftrag gesetzt. Es gilt für jede Änderung am
