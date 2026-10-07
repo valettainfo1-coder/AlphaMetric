@@ -749,6 +749,115 @@ check('Lesbarkeit: jede Hero-Zeile hält WCAG AA über den ganzen Lichtzyklus',
   durchgefallen.length ? durchgefallen.map(x => `${x.s} ${x.schlecht.toFixed(2)}:1`).join(' | ')
                        : lesbar.map(x => `${x.s.replace('.lp-','')} ${x.schlecht.toFixed(1)}`).join(' · '));
 
+/* ══ 4) STARTSEITE: Gliederung und Innenabstand ═════════════════════════════
+   RUECKMELDUNG: "die Heute-Seite massiv strukturieren — auf einen Blick sichtbar,
+   wie es unterteilt ist", "die Ernaehrungs-Box ist zu weit nach unten", "die
+   Zentrierung bei Deine Entwicklung stimmt nicht".
+   Keine der bisherigen 40 Zusicherungen hat einen dieser vier Fehler gesehen:
+   sie pruefen Ueberlauf und Unterschiede, nicht Hierarchie und Symmetrie. Jede
+   Pruefung hier traegt ihre eigene Negativkontrolle, damit sie nicht gruen luegt. */
+{
+  const m = await page.evaluate(async () => {
+    localStorage.clear();
+    const a = { mode:'loss', sex:'female', age:31, height:168, weight:60, bodyFat:26,
+      goals:['fat_loss','muscle_gain'], exp:'novice', injury:[], days:4, time:60,
+      equipment:'gym_full', act:'light', split:'auto', focus:[], loss_rate:'mod',
+      schedule_pref:'consistent', recovery_profile:'average' };
+    const plan = generateTrainingPlan({ a });
+    const ests = ['push','pull','legs','upper','lower'].map(k => plan[k].est).filter(Boolean);
+    a.len = ests.length ? Math.round(ests.reduce((s,x)=>s+x,0)/ests.length) : 60;
+    const bmr = bmrCalc(a), td = tdeeCalc(bmr, a.act, effWeight(a), a.len, a.days);
+    S.users = [{ id:'u1', name:'Probe' }]; S.currentUser = 'u1';
+    S.profile = { a, bmr, td, tg: multiTargets(a, bmr, td) };
+    S.plan = plan; S.planB = generateTrainingPlan({ a }, 'B'); S.rotation = null;
+    S.nutritionLog = {};
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+      S.nutritionLog[d] = { meals: [{ n:'Tag', k:3700, p:120, c:400, f:120 }] };
+    }
+    S.weightLog = [{ t: Date.now() - 6*864e5, v:60 }, { t: Date.now(), v:60 }];
+    S.screen = 'app'; S.tab = 'home'; save(); render();
+    await new Promise(r => setTimeout(r, 900));
+
+    const out = {};
+    const wrap = document.querySelector('.wrap') || document.getElementById('root');
+
+    // (a) Keine verwaisten Bloecke: jedes Kind ist Held, Ueberschrift oder Brett.
+    out.lose = [...wrap.children]
+      .filter(e => !e.classList.contains('today-hero') && !e.classList.contains('home-grp')
+                && !e.classList.contains('home-brett') && e.offsetParent !== null
+                && (e.textContent || '').trim())
+      .map(e => (e.className || e.tagName).toString().slice(0, 40));
+
+    // (b) Hierarchie: Ebene 1 muss GROESSER und HELLER sein als Ebene 2.
+    const g = document.querySelector('.home-grp .g-t');
+    const l = document.querySelector('.home-brett .sect-h');
+    const px = e => parseFloat(getComputedStyle(e).fontSize);
+    const hell = e => { const c = getComputedStyle(e).color.match(/\d+/g).map(Number);
+      return (c[0]*299 + c[1]*587 + c[2]*114) / 1000; };
+    out.grpPx = g ? px(g) : null; out.lblPx = l ? px(l) : null;
+    out.grpHell = g ? Math.round(hell(g)) : null; out.lblHell = l ? Math.round(hell(l)) : null;
+
+    // (c) Innenabstand: jede Karte MIT Flaeche steht oben wie unten gleich weit frei.
+    out.schief = [];
+    for (const c of document.querySelectorAll('.home-brett .card, .home-brett button.card')) {
+      if (c.offsetParent === null) continue;
+      const cs = getComputedStyle(c);
+      if (cs.backgroundColor === 'rgba(0, 0, 0, 0)') continue;   // flache Variante: kein Kasten
+      const t = parseFloat(cs.paddingTop), b = parseFloat(cs.paddingBottom);
+      if (Math.abs(t - b) > 2) out.schief.push(`${(c.className||'').slice(0,22)} ${t}/${b}`);
+    }
+
+    // (d) Prognose-Ring: die Beschriftung passt in den freien Innenkreis.
+    const st = document.querySelector('.twin-stage');
+    if (st) {
+      const groesse = 176, strich = Math.max(7, Math.round(groesse * .075));
+      out.freiD = groesse - 2 * strich;
+      out.lblW = +st.querySelector('.t-lbl').getBoundingClientRect().width.toFixed(1);
+      out.partikel = st.querySelectorAll('.twin-orbit i').length;
+      const svg = st.querySelector('svg').getBoundingClientRect();
+      const mit = st.querySelector('.twin-mitte').getBoundingClientRect();
+      out.ringVersatz = +Math.abs((svg.left+svg.right)/2 - (mit.left+mit.right)/2).toFixed(2);
+    }
+
+    // NEGATIVKONTROLLEN — schlaegt jede Messung ueberhaupt aus?
+    const nk = {};
+    if (g) { const alt = g.style.fontSize; g.style.fontSize = '8px';
+      nk.hierarchie = px(g) < px(l); g.style.fontSize = alt; }
+    const probe = document.querySelector('.home-brett button.card');
+    if (probe) { const alt = probe.style.paddingBottom; probe.style.paddingBottom = '0px';
+      const cs = getComputedStyle(probe);
+      nk.innenabstand = Math.abs(parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) > 2;
+      probe.style.paddingBottom = alt; }
+    if (st) { const lbl = st.querySelector('.t-lbl'); const alt = lbl.style.maxWidth;
+      lbl.style.maxWidth = '400px'; lbl.textContent = 'X'.repeat(60);
+      nk.ringUeberlauf = lbl.getBoundingClientRect().width > out.freiD;
+      lbl.style.maxWidth = alt; }
+    out.nk = nk;
+    return out;
+  });
+
+  // Erst die Messgeraete, dann die Messung (Selbsttest-Prinzip dieser Suite).
+  check('Negativkontrolle: Hierarchie-Messung schlägt aus', m.nk.hierarchie === true);
+  check('Negativkontrolle: Innenabstands-Messung schlägt aus', m.nk.innenabstand === true);
+  check('Negativkontrolle: Ring-Überlauf-Messung schlägt aus', m.nk.ringUeberlauf === true);
+
+  check('Startseite: kein Block steht außerhalb von Überschrift und Brett',
+    m.lose.length === 0, m.lose.join(' · '));
+  check('Startseite: Gruppenkopf ist größer als das Etikett darunter',
+    m.grpPx > m.lblPx, `${m.grpPx}px vs ${m.lblPx}px`);
+  check('Startseite: Gruppenkopf ist heller als das Etikett darunter',
+    m.grpHell > m.lblHell, `${m.grpHell} vs ${m.lblHell}`);
+  check('Startseite: jede Karte mit Fläche steht oben wie unten gleich weit frei',
+    m.schief.length === 0, m.schief.join(' · '));
+  check('Prognose-Ring: Beschriftung passt in den freien Innenkreis',
+    m.lblW != null && m.lblW <= m.freiD, `${m.lblW} ≤ ${m.freiD}`);
+  check('Prognose-Ring: keine losen Partikel mehr auf der Bahn',
+    m.partikel === 0, `${m.partikel}`);
+  check('Prognose-Ring: Ring und Mitte teilen denselben Mittelpunkt',
+    m.ringVersatz != null && m.ringVersatz < 0.6, `${m.ringVersatz} px Versatz`);
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 
 await browser.close();

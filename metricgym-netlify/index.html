@@ -491,7 +491,18 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
      ────────────────────────────────────────────────────────────────────── */
   .card{background:none; box-shadow:none; border-radius:0;
     padding:0 0 24px; margin:0 0 24px; border-bottom:1px solid var(--hairline);}
+  /* RUECKMELDUNG: "die Ernaehrungs-Box mit den Kalorien ist nicht zentriert,
+     sondern zu weit nach unten."
+     Gemessen: Innenabstand oben 20 px, unten 0 — der Inhalt endete exakt auf der
+     Kartenkante. Diese Regel war fuer die FLACHE .card gedacht (ein Inhaltsblock
+     in einer Liste, dessen letzter Eintrag keine Schlusskante braucht). Sie traf
+     aber auch jede Karte MIT Flaeche und nahm ihr den unteren Innenabstand,
+     sobald sie zufaellig als letzte in ihrem Behaelter stand. */
   .card:last-child{border-bottom:none; padding-bottom:0; margin-bottom:0;}
+  button.card:last-child, label.card:last-child, a.card:last-child,
+  .grid2>.card:last-child, .row>.card:last-child,
+  .card.raised:last-child, .card.tile:last-child{padding-bottom:20px;}
+  .card[data-tone]:last-child{padding-bottom:18px;}
   /* Erhaben bleibt, was eine Fläche wirklich braucht. */
   button.card, label.card, a.card, .grid2>.card, .row>.card, .card.raised, .card.tile{
     background:var(--s1); box-shadow:inset 0 1px 0 var(--edge);
@@ -1883,23 +1894,33 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .oracle-date{display:inline-block;animation:oracleDate 1s ease .5s both;}
   @keyframes oracleDate{from{opacity:0;filter:blur(8px);letter-spacing:.18em}to{opacity:1;filter:blur(0);letter-spacing:normal}}
   /* ===== STOFFWECHSEL-ZWILLING (Magie A): lebender Kern + eleganter Entrance ===== */
-  .twin-stage{position:relative;width:150px;height:150px;margin:6px auto 12px;display:flex;align-items:center;justify-content:center;animation:twinIn .8s var(--ease-spring) both;}
+  /* RUECKMELDUNG: "die Animation ist billig gemacht und sieht nicht modern oder
+     premium aus" — und die Zentrierung stimme nicht.
+     Gemessen: der Text war 118,8 px breit, der leuchtende Kern nur 113,1 px — die
+     Beschriftung lief ueber den Ball hinaus. Die zwei weissen Partikel sassen bei
+     cx 213,8 und 173, also sichtbar asymmetrisch, und lasen sich als Ladekringel.
+     Vor allem aber war das eine ZWEITE Formensprache: der Held nebenan traegt
+     laengst einen sauberen Bogen-Ring. Die Prognose benutzt jetzt denselben Ring,
+     und die einzige Bewegung ist ein ruhiges Atmen des Scheins. */
+  .twin-stage{position:relative;width:176px;height:176px;margin:10px auto 14px;display:flex;align-items:center;justify-content:center;animation:twinIn .8s var(--ease-spring) both;}
   @keyframes twinIn{0%{transform:scale(.62);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
   /* Aura: weicher, vor-geblurrter Gradient (transparenter Falloff) — KEIN animiertes filter:blur (Perf-Budget) */
-  .twin-aura{position:absolute;inset:-16px;border-radius:50%;opacity:.6;will-change:transform,opacity;animation:twinBreath 4.6s ease-in-out infinite;}
-  @keyframes twinBreath{0%,100%{transform:scale(.92);opacity:.42}50%{transform:scale(1.07);opacity:.72}}
-  .twin-core{position:relative;width:112px;height:112px;border-radius:50%;overflow:hidden;will-change:transform;
-    box-shadow:inset 0 0 26px rgba(255,255,255,.20), 0 0 30px rgba(0,0,0,.28);animation:twinPulse 4.6s ease-in-out infinite;}
-  @keyframes twinPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-  .twin-core::before{content:"";position:absolute;inset:-35%;will-change:transform;
-    background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.22),transparent 42%);animation:twinSpin 9s linear infinite;}
-  .twin-core::after{content:"";position:absolute;inset:0;border-radius:50%;
-    background:radial-gradient(circle at 36% 30%,rgba(255,255,255,.45),transparent 46%);}
+  .twin-aura{position:absolute;inset:6px;border-radius:50%;opacity:.5;will-change:transform,opacity;
+    animation:twinBreath 7.2s ease-in-out infinite;}
+  @keyframes twinBreath{0%,100%{transform:scale(.94);opacity:.30}50%{transform:scale(1.04);opacity:.52}}
   @keyframes twinSpin{to{transform:rotate(360deg)}}
-  /* Orbit: randlose Bahn, nur ein glühender Partikel (kein gestrichelter Rand) */
-  .twin-orbit{position:absolute;top:50%;left:50%;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;will-change:transform;animation:twinSpin 17s linear infinite;}
-  .twin-orbit i{position:absolute;top:-3px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#fff;box-shadow:0 0 10px 3px rgba(255,255,255,.8);}
-  .twin-orbit.r2{width:108px;height:108px;margin:-54px 0 0 -54px;animation-duration:11s;animation-direction:reverse;opacity:.7;}
+  /* Die Mitte: Text sitzt im freien Innenkreis des Rings, nicht auf einem Ball.
+     Breite ist begrenzt, damit keine Beschriftung je wieder ueberlaeuft. */
+  .twin-mitte{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;pointer-events:none;}
+  .twin-mitte .t-lbl{max-width:126px;font-size:10px;font-weight:620;letter-spacing:.04em;
+    text-transform:uppercase;line-height:1.3;color:var(--t2);hyphens:none;}
+  .twin-mitte .t-val{margin-top:6px;font-size:26px;font-weight:600;line-height:1;letter-spacing:-.02em;}
+  .twin-mitte .t-unit{margin-top:3px;font-size:10px;color:var(--t3);letter-spacing:.04em;}
+  /* Legende zur Marke auf der Bahn — leise, direkt unter dem Ring. */
+  .twin-marke{display:flex;align-items:center;justify-content:center;gap:7px;
+    font-size:10.5px;color:var(--t3);text-align:center;margin:-6px 0 14px;}
+  .twin-marke::before{content:"";width:2px;height:10px;border-radius:1px;background:rgba(255,255,255,.55);}
   /* ===== REZEPT-ALCHEMIST (Magie B): Zutaten setzen sich zusammen ===== */
   .alch-row{opacity:0;transform:translateY(9px);animation:alchIn .52s var(--ease-out3) forwards;}
   .alch-row:nth-child(1){animation-delay:.06s}.alch-row:nth-child(2){animation-delay:.20s}.alch-row:nth-child(3){animation-delay:.34s}.alch-row:nth-child(4){animation-delay:.48s}
@@ -1908,7 +1929,7 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   @media (prefers-reduced-motion:reduce){
     .prw-flash,.prw-burst,.prw-ring,.prw-spark,.prw-core,.prw-eyebrow,.prw-num,.prw-sub,.prw-name,
     .oracle-reveal::after,.oracle-date,
-    .twin-stage,.twin-aura,.twin-core,.twin-core::before,.twin-orbit,.alch-row{animation:none !important;}
+    .twin-stage,.twin-aura,.alch-row{animation:none !important;}
     .twin-aura{opacity:.6} .alch-row{opacity:1;transform:none} .oracle-date{opacity:1}
     .prw-eyebrow,.prw-num,.prw-sub,.prw-name,.prw-core{opacity:1}
   }
@@ -2267,11 +2288,46 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
     background:var(--hl); margin:3px auto 0;}
   .kw-mark{margin:4px 0 0; min-height:16px; font-size:13px;}
   .kw-ruhe{color:var(--t3);}
-  /* Gruppenkopf der Heute-Seite: eine Linie, ein Wort. */
-  .home-grp{display:flex; align-items:center; gap:12px; margin:26px 0 2px;}
-  .home-grp>span{font-size:10.5px; font-weight:650; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--t3); white-space:nowrap;}
-  .home-grp::after{content:""; flex:1; height:1px; background:var(--hairline);}
+  /* RUECKMELDUNG: "die Heute-Seite massiv strukturieren, mit Ueberschriften und
+     Abgrenzungen — auf einen Blick sichtbar, wie es unterteilt ist."
+     Gemessen war die Hierarchie UMGEKEHRT: der oberste Kopf (.home-grp) stand bei
+     10,5 px in --t3, die Ebene darunter (.sect-h) bei 12 px in --t2 — die
+     wichtigste Gliederungsebene war die kleinste und blasseste. Dazu benutzten
+     die Klappen dieselbe Klasse wie die Abschnittskoepfe, also standen zwei
+     Ebenen voellig gleich da. Jetzt: Ebene 1 traegt Groesse und Helligkeit,
+     Ebene 2 bleibt Etikett, und jede Gruppe steht sichtbar auf einem eigenen
+     Brett statt frei im Strom. */
+  .home-grp{margin:40px 0 0; padding:0 2px;}
+  .home-grp .g-t{display:block; font-family:var(--font-hero); font-size:20px; font-weight:600;
+    letter-spacing:-.015em; color:var(--t1); line-height:1.2;}
+  .home-grp .g-s{display:block; margin-top:3px; font-size:12.5px; line-height:1.45; color:var(--t3);}
+  .home-grp:first-of-type{margin-top:26px;}
+  /* Das Brett: macht sichtbar, was zusammengehoert — ohne jede Karte einzukasteln. */
+  .home-brett{margin:14px 0 0; padding:16px 14px 4px; border-radius:22px;
+    background:linear-gradient(180deg, rgba(169,196,222,.055), rgba(169,196,222,.016) 120px, transparent);
+    border:1px solid var(--hairline);}
+  .home-brett>.section:last-child{margin-bottom:16px;}
+  .home-brett>.an-grp:last-child{margin-bottom:14px;}
+  .home-brett>.card:last-child{margin-bottom:16px;}
+  /* Klappen sind Eintraege IM Brett, keine eigene Gliederungsebene mehr.
+     Vorher trug jede geschlossene Klappe 32 px Aussenabstand plus 14 px unter
+     ihrer Zeile mit sich herum — vier davon untereinander ergaben eine Seite
+     voller Loecher. Jetzt eine ruhige Zeilenliste: Trennlinie statt Unterlinie,
+     Pfeil rechts, und zugeklappt nimmt eine Zeile auch nur eine Zeile ein. */
+  .home-brett .an-grp{margin-bottom:0; border-top:1px solid var(--hairline);}
+  .home-brett .an-grp:first-child{border-top:none;}
+  .home-brett .an-sum{padding:15px 2px; justify-content:space-between; gap:10px;}
+  .home-brett .an-sum .sect-h{margin:0; flex:0 1 auto; font-size:12.5px;
+    letter-spacing:.07em; color:var(--t2);}
+  .home-brett .an-sum .sect-h::after{display:none;}
+  .home-brett .an-grp[open] .an-body{padding-bottom:16px;}
+  .home-brett .an-grp[open] .an-sum .sect-h{color:var(--t1);}
+  /* Ein flacher Inhaltsblock auf dem Brett bekommt dieselbe Flaeche wie eine
+     Schaltflaechen-Karte daneben — sonst stand "Training" am Erholungstag als
+     nackter Text neben der gerahmten "Ernaehrung". */
+  .home-brett .section>.card:not(button):not(label):not(a):not([data-tone]){
+    background:var(--s1); box-shadow:inset 0 1px 0 var(--edge);
+    border-radius:var(--r-lg); padding:20px; border-bottom:none;}
   /* Kopf jeder Reveal-Seite — dieselbe Hierarchie wie der Tab-Kopf der App. */
   .rv-kopf{text-align:left; margin:0 0 18px; padding-bottom:14px; border-bottom:1px solid var(--hairline);}
   .rv-kopf-k{font-size:10.5px; font-weight:650; letter-spacing:.16em; text-transform:uppercase;
@@ -7348,6 +7404,34 @@ function ringSVG(score,tier,size=130){
       <span class="ring-lbl" style="font-size:${big?16:9}px;margin-top:${big?3:1}px;color:${stops[1]}">${tier}</span>
     </div></div>`;
 }
+/* Prognose-Ring. Dieselbe Geometrie wie ringSVG() — 3/4-Bogen, feine Bahn,
+   Verlauf mit Glow — damit Held und Prognose sichtbar EIN System sind und nicht
+   zwei Grafiken nebeneinander. Der Bogen traegt hier eine Information: die
+   Aufnahme im Verhaeltnis zur Erhaltung. Die Mitte der Bahn ist die Erhaltung,
+   also ist auf einen Blick zu sehen, auf welcher Seite man steht und wie weit. */
+function twinRingSVG(intake,maint,stops,size=176){
+  const st=Math.max(7,Math.round(size*.075)), r=(size-st)/2, c=2*Math.PI*r, arc=c*.75;
+  // Erhaltung liegt bei der HALBEN Bahn: doppelte Erhaltung fuellt sie ganz.
+  const anteil=Math.max(.012,Math.min(1,(intake||0)/Math.max(1,2*maint)));
+  const fill=anteil*arc, mitte=.5*arc;
+  const id="tw"+Math.random().toString(36).slice(2,8);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
+      style="transform:rotate(135deg);overflow:visible;position:relative;z-index:1" aria-hidden="true">
+    <defs>
+      <linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${stops[0]}"/><stop offset="1" stop-color="${stops[1]}"/></linearGradient>
+      <filter id="${id}f" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.045)"
+      stroke-width="${st}" stroke-dasharray="${arc} ${c}" stroke-linecap="round"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="url(#${id})"
+      stroke-width="${st}" stroke-dasharray="${fill} ${c}" stroke-linecap="round"
+      filter="url(#${id}f)" style="--rl:${fill};animation:ringDraw 1.2s cubic-bezier(.34,1.06,.5,1) both"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.55)"
+      stroke-width="${st}" stroke-dasharray="2 ${c}" stroke-dashoffset="${-mitte}" stroke-linecap="butt"/>
+  </svg>`;
+}
 /* Der wartende Ring — gleiche Geometrie wie ringSVG(), damit „noch nichts
    eingetragen" und „Tagesform 82" sichtbar dasselbe Objekt sind und nicht zwei
    verschiedene Grafiken. Nur die Füllung fehlt; an ihrer Stelle wandert ein
@@ -11847,7 +11931,16 @@ function renderSection(label,content){return `<div class="section"><span class="
    trennt einzelne Kaesten, dieser trennt die vier Bereiche der Seite
    (jetzt / heute / Entwicklung / Einrichten). Bewusst sehr leise — eine
    Linie mit einem Wort, kein zweiter Kasten um Kaesten herum. */
-function homeGruppe(titel){ return `<div class="home-grp"><span>${titel}</span></div>`; }
+function homeGruppe(titel,unter){
+  return `<div class="home-grp"><span class="g-t">${titel}</span>${unter?`<span class="g-s">${unter}</span>`:""}</div>`;
+}
+/* Eine Gruppe als sichtbare Einheit: Kopf plus Brett. Vorher standen Kopf und
+   Inhalt als lose Geschwister im Strom, und nichts zeigte, wo eine Gruppe
+   aufhoert und die naechste anfaengt. */
+function homeAbschnitt(titel,unter,inhalt){
+  if(!inhalt||!String(inhalt).trim()) return "";
+  return `${homeGruppe(titel,unter)}<div class="home-brett">${inhalt}</div>`;
+}
 /* Dieselbe Gruppe, aber aufklappbar — für Abschnitte, die erklären statt zu
    handeln. Sie bleiben erreichbar, liegen aber nicht dauerhaft auf dem Tisch.
    Wer eine Gruppe öffnet, findet sie beim nächsten Besuch offen vor. */
@@ -12457,22 +12550,27 @@ function renderHome(){
           <button class="btn" style="flex:0 0 auto;width:auto;padding:0 16px" onclick="A.actNagOff()">Heute nicht</button></div>
         <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px;margin-top:2px" onclick="A.actAutoToggle()">${icon("zap",13)} Immer automatisch wechseln</button>
       </div>`; })()}
-    ${briefingCard}
-    ${streakRisk}
-    ${overtrain&&S.currentWeek!==4?(S.tier!=="free"
-      ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">${LABELS.deload} vorziehen</button></div>`
-      :`<div class="lockcard"><p class="sm">${icon("lock",13)} Übertrainings-Signal erkannt — der automatische Erholungswochen-Vorschlag ist Teil von PERFORMANCE.</p>
-        <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
-    :""}
+    ${/* Diese Karten standen vorher ohne jede Ueberschrift zwischen Held und der
+          ersten Gruppe — die Seite fing also mit unbeschrifteten Dingen an und
+          sagte erst danach "Heute". Sie sind jetzt eine eigene Gruppe, die ganz
+          verschwindet, wenn gerade nichts anliegt. */
+      homeAbschnitt("Kurz für dich","Was gerade deine Aufmerksamkeit braucht.",`
+      ${briefingCard}
+      ${streakRisk}
+      ${overtrain&&S.currentWeek!==4?(S.tier!=="free"
+        ?`<div class="warncard"><b>Intensität läuft heiß.</b> ${overtrain.t}<br><button class="btn mt8" onclick="A.earlyDeload()">${LABELS.deload} vorziehen</button></div>`
+        :`<div class="lockcard"><p class="sm">${icon("lock",13)} Übertrainings-Signal erkannt — der automatische Erholungswochen-Vorschlag ist Teil von PERFORMANCE.</p>
+          <button class="btn ghost" style="justify-content:flex-start;padding-left:0" onclick="A.showTeaser('deload')">Mehr erfahren</button></div>`)
+      :""}
+      ${S.calAdjustMsg?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.dismissCalMsg()">
+        <span class="sm" style="flex:1"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Kalorienziel automatisch angepasst</b><br><span class="t2" style="line-height:1.55">${S.calAdjustMsg}</span></span><span class="t2" style="align-self:flex-start">✕</span></button>`:""}
+      ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
+        <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
+      `)}
 
-    ${S.calAdjustMsg?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.dismissCalMsg()">
-      <span class="sm" style="flex:1"><b style="color:var(--hl);display:inline-flex;align-items:center;gap:6px">${icon("sparkle",14)} Kalorienziel automatisch angepasst</b><br><span class="t2" style="line-height:1.55">${S.calAdjustMsg}</span></span><span class="t2" style="align-self:flex-start">✕</span></button>`:""}
 
-    ${S.recapReady?`<button class="card row" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1)" onclick="A.openRecap()">
-      <span class="sm">${icon("calendar",15)} Dein Wochenrückblick ist da</span><span class="t2">→</span></button>`:""}
-
-
-    ${homeGruppe("Heute")}  <!-- die Einheit zuerst — sie ist der Grund, warum die App offen ist -->
+    ${homeGruppe("Heute","Was heute ansteht — Training, Essen, Eintragen.")}
+    <div class="home-brett">
     ${renderSection("Training", _es
       ? (_es.kind==="rest"
         ?`<div class="card"><p class="sm t2">Heute ist Erholung dran — der Reiz von gestern wird jetzt verbaut.</p>
@@ -12498,9 +12596,10 @@ function renderHome(){
       </button>`)}
 
     ${renderSection("Eintragen",checklistCard())}
+    </div>
 
-
-    ${homeGruppe("Deine Entwicklung")}  <!-- Prognosen und Auswertung, nicht zwischen den Tagesinhalten verstreut -->
+    ${homeGruppe("Deine Entwicklung","Wohin dein aktuelles Verhalten führt — und was die Zahlen sagen.")}
+    <div class="home-brett">
     ${(()=>{const o=strengthOracle(); if(!o)return "";
       const dstr=o.when.toLocaleDateString("de-DE",{day:"numeric",month:"long"});
       const wk=Math.max(1,Math.round(o.days/7));
@@ -12519,15 +12618,16 @@ function renderHome(){
       return `<div class="card oracle-reveal" data-tone="dyn" style="--tone:${cfg.a};--tone-wash:${cfg.a}1f;--tone-edge:${cfg.a}55">
         <p class="xs" style="color:var(--hl);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:2px">${icon("sparkle",13)} Dein Verbrauch, hochgerechnet</p>
         <div class="twin-stage">
-          <div class="twin-aura" style="background:radial-gradient(circle,${cfg.b},${cfg.a} 42%,transparent 74%)"></div>
-          <div class="twin-orbit"><i></i></div><div class="twin-orbit r2"><i></i></div>
-          <div class="twin-core" style="background:radial-gradient(circle at 38% 30%,${cfg.b},${cfg.a} 72%)"></div>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0a0c11;text-shadow:0 1px 2px rgba(255,255,255,.25)">
-            <span style="font-size:12px;font-weight:600;opacity:.85">${cfg.lbl}</span>
-            <span class="metric" style="font-size:15px;font-weight:650">${bal} kcal/Tag</span>
+          <div class="twin-aura" style="background:radial-gradient(circle,${cfg.a}2e,${cfg.a}12 44%,transparent 72%)"></div>
+          ${twinRingSVG(tw.intake,tw.maint,[cfg.b,cfg.a],176)}
+          <div class="twin-mitte">
+            <span class="t-lbl">${cfg.lbl}</span>
+            <span class="t-val metric" style="color:${cfg.b}">${bal}</span>
+            <span class="t-unit">kcal / Tag</span>
           </div>
         </div>
-        <p class="sm" style="text-align:center;line-height:1.55;margin-bottom:10px">In <b style="color:var(--t1)">6 Wochen</b> bei deinem aktuellen Verhalten:</p>
+        <p class="twin-marke">hier liegt deine Erhaltung</p>
+        <p class="sm" style="text-align:center;line-height:1.55;margin-bottom:10px">In <b style="color:var(--t1)">6 Wochen</b>, wenn du so weitermachst</p>
         <div class="row" style="gap:8px">
           ${[["Gewicht",`<span data-count-dec="${tw.projWeight}" data-dec="1" data-suf=" kg">${tw.projWeight.toFixed(1).replace(".",",")} kg</span>`,`heute ${tw.wNow.toFixed(1).replace(".",",")}`],
              ["Muskel",`${sgn(tw.muscleKg)} kg`,"geschätzt"],
@@ -12608,7 +12708,10 @@ function renderHome(){
       </div>`;})())}
 
 
-    ${homeGruppe("Einrichten &amp; entdecken")}  <!-- einmalige Dinge gehoeren ans Ende, nicht vor den Inhalt -->
+    </div>
+
+    ${homeGruppe("Einrichten &amp; entdecken","Einmal erledigt und dann weg — steht deshalb am Ende.")}
+    <div class="home-brett">
     ${starterCard()}
     ${!S.seenCatalog?`<button class="card row" data-tone="hl" style="width:100%; text-align:left; cursor:pointer; font-family:inherit; color:var(--t1)" onclick="A.menuGo('features')">
       <span class="brief-orb" style="flex-shrink:0">${icon("sparkle",20)}</span>
@@ -12621,7 +12724,7 @@ function renderHome(){
           sie kann. Er steht jetzt hinter den Inhalten, wegen denen man sie
           ueberhaupt aufmacht. Weggeklickt bleibt er weg (S.installDismissed). */
        installCardHTML()}
-
+    </div>
 
   `;
   /* Das Feld hinter dem Tageskopf. Seine Ordnung kommt aus der Tagesform: ein
