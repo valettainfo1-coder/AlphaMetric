@@ -885,6 +885,97 @@ check('Lesbarkeit: jede Hero-Zeile hält WCAG AA über den ganzen Lichtzyklus',
     m.abweichung.length === 0, m.abweichung.length ? m.abweichung.join(' · ') : m.zeilen.join(' · '));
 }
 
+/* A2 — Herleitung pro Zahl. Die Zwei-Zeilen-Vorgabe ist keine Kosmetik: wird
+   die Standardansicht laenger, liest sie niemand, und die Herleitung waere
+   Dekoration statt Rechenschaft. Deshalb gemessen, nicht geschaetzt. */
+{
+  const arten = [['kcal', {}], ['protein', {}], ['saetze', { muskel: 'Brust', ist: 14 }],
+    ['pause', {}], ['last', { uebung: 'Bankdrücken' }], ['prognose', { uebung: 'Bankdrücken' }]];
+
+  const vorbereitet = await page.evaluate(async () => {
+    localStorage.clear();
+    const a = { mode:'gym', sex:'male', age:30, height:180, weight:82, bodyFat:18,
+      goals:['fat_loss'], exp:'intermediate', injury:[], days:4, time:60,
+      equipment:'gym_full', act:'light', split:'auto', focus:[], loss_rate:'mod',
+      schedule_pref:'consistent', recovery_profile:'average' };
+    const plan = generateTrainingPlan({ a });
+    const ests = ['push','pull','legs','upper','lower'].map(k => plan[k].est).filter(Boolean);
+    a.len = ests.length ? Math.round(ests.reduce((s,x)=>s+x,0)/ests.length) : 60;
+    const bmr = bmrCalc(a), td = tdeeCalc(bmr, a.act, effWeight(a), a.len, a.days);
+    S.users = [{ id:'u1', name:'P' }]; S.currentUser = 'u1';
+    S.profile = { a, bmr, td, tg: multiTargets(a, bmr, td) };
+    S.plan = plan; S.planB = generateTrainingPlan({ a }, 'B');
+    S.schedule = generateOptimalSchedule(a).schedule.slice();
+    S.screen = 'app'; S.tab = 'home'; save(); render();
+    await new Promise(r => setTimeout(r, 700));
+    return typeof A.herleitung === 'function';
+  });
+  check('A2: die Herleitung ist erreichbar', vorbereitet === true);
+
+  const mess = [];
+  for (const [art, ctx] of arten) {
+    const r = await page.evaluate(async ([art, ctx]) => {
+      A.closeModal();
+      A.herleitung(art, encodeURIComponent(JSON.stringify(ctx)));
+      await new Promise(r => setTimeout(r, 220));
+      const k = document.querySelector('.hl-kurz'); if (!k) return null;
+      const cs = getComputedStyle(k);
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6;
+      const det = document.querySelector('.hl-det');
+      return { art,
+        zeilen: Math.round(k.getBoundingClientRect().height / lh),
+        zu: det ? !det.open : null,
+        schritte: document.querySelectorAll('.hl-s').length,
+        params: document.querySelectorAll('.hl-p').length,
+        typen: [...document.querySelectorAll('.hl-p-t')].map(x => x.textContent.trim()),
+      };
+    }, [art, ctx]);
+    mess.push(r || { art, fehlt: true });
+  }
+  await page.evaluate(() => A.closeModal());
+
+  check('A2: jede der sechs Zahlen hat eine Herleitung',
+    mess.every(m => !m.fehlt), mess.filter(m => m.fehlt).map(m => m.art).join(', '));
+  check('A2: die Standardansicht bleibt bei höchstens zwei Zeilen',
+    mess.every(m => m.fehlt || m.zeilen <= 2),
+    mess.map(m => `${m.art} ${m.fehlt ? '—' : m.zeilen}`).join(' · '));
+  check('A2: die Details starten zugeklappt',
+    mess.every(m => m.fehlt || m.zu === true));
+  check('A2: jede Herleitung nennt Rechenschritte und Parameter',
+    mess.every(m => m.fehlt || (m.schritte >= 3 && m.params >= 1)),
+    mess.map(m => `${m.art} ${m.schritte || 0}/${m.params || 0}`).join(' · '));
+  check('A2: eine Annahme nennt sich im Blatt auch Annahme',
+    mess.some(m => (m.typen || []).some(t => /Annahme/i.test(t))),
+    'mindestens eine Herleitung weist eine Annahme als solche aus');
+
+  // Negativkontrolle: misst die Zeilenzaehlung ueberhaupt?
+  const nk = await page.evaluate(async () => {
+    A.herleitung('kcal', encodeURIComponent('{}'));
+    await new Promise(r => setTimeout(r, 200));
+    const k = document.querySelector('.hl-kurz');
+    const cs = getComputedStyle(k);
+    const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.6;
+    const vorher = Math.round(k.getBoundingClientRect().height / lh);
+    k.textContent = 'x '.repeat(220);
+    const nachher = Math.round(k.getBoundingClientRect().height / lh);
+    A.closeModal();
+    return { vorher, nachher };
+  });
+  check('Negativkontrolle: die Zeilenzählung schlägt aus',
+    nk.nachher > nk.vorher + 2, `${nk.vorher} → ${nk.nachher} Zeilen`);
+
+  // Eine Zahl in einer Karte darf die Karte NICHT aus dem Dokument heben
+  const nest = await page.evaluate(async () => {
+    S.tab = 'home'; render(); await new Promise(r => setTimeout(r, 500));
+    const z = [...document.querySelectorAll('.hl-z')];
+    return { anzahl: z.length, drin: z.filter(e => e.closest('.card')).length,
+             tags: [...new Set(z.map(e => e.tagName))] };
+  });
+  check('A2: antippbare Zahlen bleiben in ihrer Karte',
+    nest.anzahl > 0 && nest.drin === nest.anzahl,
+    `${nest.drin}/${nest.anzahl} · ${nest.tags.join(',')}`);
+}
+
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 200));
 
 await browser.close();

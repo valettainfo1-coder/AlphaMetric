@@ -326,6 +326,45 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .fvor-b svg{color:var(--hl); flex-shrink:0;}
   .fvor-b.an{border-color:rgba(143,184,220,.6); background:linear-gradient(135deg, rgba(110,147,184,.2), rgba(143,184,220,.07)); color:var(--t1);}
   .fvor-s{margin:8px 0 0; font-size:11.5px; line-height:1.5; color:var(--t3);}
+  /* Herleitung pro Zahl (A2): antippbare Zahl und das Blatt dahinter. */
+  .hl-z{background:none; border:none; padding:0; margin:0; font:inherit; color:inherit;
+    cursor:pointer; text-align:inherit; border-bottom:1px dashed rgba(169,196,222,.42);
+    line-height:inherit;}
+  .hl-z:active{opacity:.6;}
+  .hl-erg{font-family:var(--font-hero); font-size:30px; font-weight:600; letter-spacing:-.02em;
+    line-height:1.1; margin:0 0 8px; color:var(--t1);}
+  .hl-kurz{font-size:14px; line-height:1.6; color:var(--t2); margin:0 0 14px;}
+  .hl-det{border-top:1px solid var(--hairline);}
+  .hl-sum{display:flex; align-items:center; gap:8px; cursor:pointer; list-style:none;
+    padding:13px 0; font-size:12.5px; font-weight:650; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--t2);}
+  .hl-sum::-webkit-details-marker{display:none;}
+  .hl-sum svg{margin-left:auto; color:var(--t3); transition:transform .3s var(--spring);}
+  .hl-det[open] .hl-sum svg{transform:rotate(180deg);}
+  .hl-det[open] .hl-sum{color:var(--t1);}
+  .hl-body{animation:anOpen .42s cubic-bezier(.22,1,.36,1); padding-bottom:4px;}
+  .hl-s{display:flex; gap:11px; align-items:flex-start; padding:9px 0;
+    border-top:1px solid var(--hairline);}
+  .hl-s:first-child{border-top:none;}
+  .hl-s-n{width:19px; height:19px; border-radius:50%; flex-shrink:0; margin-top:2px;
+    display:flex; align-items:center; justify-content:center; background:var(--s2);
+    color:var(--t2); font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .hl-s-w{margin:0 0 2px; font-size:11px; font-weight:650; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--t3);}
+  .hl-s-t{margin:0; font-size:13.5px; line-height:1.55; color:var(--t2);}
+  .hl-s-t b{color:var(--t1);}
+  .hl-p{padding:11px 12px; margin-bottom:8px; border-radius:13px; background:var(--s2);}
+  .hl-p-n{font-family:var(--font-mono); font-size:11px; color:var(--t3); word-break:break-all;}
+  .hl-p-t{margin:5px 0 0; font-size:11px; font-weight:650; letter-spacing:.05em; text-transform:uppercase;}
+  .hl-p-b{margin:5px 0 0; font-size:13px; line-height:1.5; color:var(--t2);}
+  .hl-p-s{margin:5px 0 0; font-size:11.5px; line-height:1.45; color:var(--t3);}
+  .hl-p-q{margin:6px 0 0; font-size:11px; line-height:1.45; color:var(--t3);}
+  .hl-p-q a{color:var(--hl);}
+  .hl-offen{color:var(--warn); white-space:nowrap;}
+  .hl-hinweis{margin:10px 0 0; font-size:12px; line-height:1.5; color:var(--t3);
+    border-left:2px solid var(--hairline); padding-left:10px;}
+  .hl-fuss{margin:14px 0 0; padding-top:12px; border-top:1px solid var(--hairline);
+    font-size:12px; line-height:1.5; color:var(--t3);}
   /* Start-Übersicht: To-do plus sichtbare Wirkungskette. */
   .st-row{border-top:1px solid var(--hairline); align-items:flex-start; padding-top:11px; padding-bottom:11px;}
   .st-mark{width:25px; height:25px; min-width:25px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -5446,6 +5485,180 @@ function volumenQuelle(a){
   return {...plan, quelle:"plan", saetze:0, tage:0};
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   HERLEITUNG PRO ZAHL (A2)
+
+   Jede Zahl, die die App zeigt, soll auf Tippen erzaehlen koennen, wie sie
+   zustande kam: Eingabe → Regel → Parameter → Quelle → Ergebnis.
+
+   Die Standardansicht ist bewusst auf ZWEI ZEILEN begrenzt. Wer mehr will,
+   klappt auf. Die Alternative waere gewesen, alles sofort zu zeigen — dann
+   liest es niemand, und die Herleitung waere Dekoration statt Rechenschaft.
+
+   Diese Funktion RECHNET NICHT. Sie liest die Zahlen, die die Engine ohnehin
+   gerechnet hat, und erzaehlt den Weg dorthin. So kann die Herleitung nicht
+   von der Empfehlung abweichen.                                           */
+
+function herleitung(art,ctx){
+  ctx=ctx||{};
+  const a=ctx.a||(S.profile&&S.profile.a)||{};
+  const nf=(x)=>nfi.format(Math.round(x));
+  const kom=(x,n)=>Number(x).toFixed(n==null?1:n).replace(".",",");
+
+  if(art==="kcal"){
+    const p=S.profile; if(!p||!p.tg) return null;
+    const istTrain=ctx.tag!=="rest";
+    const ziel=istTrain?p.tg.train:p.tg.rest;
+    const cd=calorieDirection(a);
+    const bmr=p.bmr||bmrCalc(a);
+    const neatK="energie.neat."+(a.act||"light");
+    const richtung=cd.dir===0?"Erhaltung":(cd.dir>0?"+":"−")+Math.round(Math.abs(cd.dir)*100)+" %";
+    return {
+      titel:"Dein Kalorienziel", ergebnis:nf(ziel.kcal)+" kcal",
+      kurz:`Grundumsatz ${nf(bmr)} × Aktivität ${kom(P(neatK),2)} ergibt deinen Bedarf. Darauf ${richtung} für „${esc(cd.label)}“.`,
+      schritte:[
+        {was:"Deine Eingabe", text:`${a.weight} kg · ${a.height} cm · ${a.age} Jahre · ${a.sex==="female"?"weiblich":"männlich"}${a.bodyFat!=null?` · ${a.bodyFat} % Körperfett`:""} · ${a.days||4} Einheiten/Woche`},
+        {was:"Grundumsatz", text:a.bodyFat!=null
+            ? `Katch-McArdle über die fettfreie Masse: ${nf(bmr)} kcal. Mit bekanntem Körperfett ist das die genauere Formel.`
+            : `Mifflin-St Jeor: ${nf(bmr)} kcal. Ohne Körperfettwert ist das die belastbarere Formel.`},
+        {was:"Alltagsbewegung", text:`Faktor ${kom(P(neatK),3)} für „${esc(({sedentary:"sitzend",light:"leicht aktiv",moderate:"mäßig aktiv",active:"aktiv",very_active:"sehr aktiv"})[a.act||"light"])}“.`},
+        {was:"Zielrichtung", text:`${esc(cd.label)}. Die Anpassung geht auf den Wochenschnitt, nicht auf den einzelnen Tag.`},
+        {was:"Trainings- und Ruhetag", text:`Am Trainingstag ${nf(p.tg.train.kcal)}, am Ruhetag ${nf(p.tg.rest.kcal)} kcal. Der Wochenschnitt bleibt gleich; der Mehrverbrauch wird dorthin gelegt, wo er anfällt.`},
+      ],
+      params:[neatK, "energie.training.kcalProKgStunde",
+        cd.mode==="cut"?"kcal.cut.moderat.normal":cd.mode==="bulk"?"kcal.bulk":
+        cd.mode&&cd.mode.startsWith("recomp")?"kcal.recomp.ausgewogen":"energie.bmi.schwelle27",
+        a.sex==="female"?"energie.floor.weiblich":"energie.floor.maennlich"],
+    };
+  }
+
+  if(art==="protein"){
+    const p=S.profile; if(!p||!p.tg) return null;
+    const cut=(p.tg.dir||0)<0;
+    const alt=(a.age||P("alter.standard"))>=P("reiz.alter.schwelle");
+    const basisK=a.bodyFat!=null?(cut?"makro.protein.cut.ffm":"makro.protein.erhalt.ffm")
+                                :(cut?"makro.protein.cut.kg":"makro.protein.erhalt.kg");
+    const ffm=a.bodyFat!=null?a.weight*(1-a.bodyFat/100):null;
+    return {
+      titel:"Dein Eiweißziel", ergebnis:nf(p.tg.train.p)+" g",
+      kurz:`${kom(P(basisK),1)} g je kg ${a.bodyFat!=null?"fettfreier Masse":"Körpergewicht"}${alt?` plus ${kom(P("makro.protein.alterBonus"),1)} g ab ${P("reiz.alter.schwelle")} Jahren`:""}.`,
+      schritte:[
+        {was:"Deine Eingabe", text:a.bodyFat!=null
+            ? `${a.weight} kg bei ${a.bodyFat} % Körperfett — das sind ${kom(ffm,1)} kg fettfreie Masse.`
+            : `${a.weight} kg, kein Körperfettwert hinterlegt.`},
+        {was:"Regel", text:cut
+            ? "Im Defizit höher: ohne überschüssige Energie schützt Eiweiß die Muskulatur."
+            : "Bei Erhaltung und Aufbau reicht weniger, weil Energie zum Aufbau vorhanden ist."},
+        alt?{was:"Alter", text:`Ab ${P("reiz.alter.schwelle")} braucht dieselbe Muskelproteinsynthese mehr Eiweiß (anabole Resistenz) — ${kom(P("makro.protein.alterBonus"),1)} g je kg obendrauf.`}:null,
+        {was:"Wirkungsgrenze", text:`Oberhalb von ${kom(P("prot.plateau"),1)} g je kg Körpergewicht und Tag ist die Kurve flach. Mehr Eiweiß bringt dann nichts mehr für den Aufbau.`},
+      ].filter(Boolean),
+      params:[basisK, alt?"makro.protein.alterBonus":null, "prot.plateau"].filter(Boolean),
+    };
+  }
+
+  if(art==="saetze"){
+    const m=ctx.muskel; if(!m) return null;
+    const bands=deficitScaledBands(a);
+    const b=bands[m]||VOL_BANDS[m]; if(!b) return null;
+    const roh=VOL_BANDS[m];
+    const ef=expBandFactor(a.exp||"intermediate");
+    const df=deficitFactor(a);
+    const ist=ctx.ist;
+    return {
+      titel:`Korridor ${esc(m)}`, ergebnis:`${b[0]}–${b[1]} Sätze/Woche`,
+      kurz:`Veröffentlicht sind ${roh[0]}–${roh[1]}. Dein Trainingsalter und deine Energiezufuhr verschieben das auf ${b[0]}–${b[1]}.`,
+      schritte:[
+        {was:"Untergrenze", text:`${roh[0]} Sätze — darunter fehlt der Wachstumsreiz. Das ist der Wert aus der Quelle.`},
+        {was:"Obergrenze", text:`${roh[1]} Sätze — darüber entsteht mehr Ermüdung als Anpassung. Das ist ein Erholungsdeckel aus der Praxis, keine Dosis-Wirkungs-Grenze: Zuwächse sind bis etwa ${P("reiz.saettigung.wachstum")} fraktionierten Sätzen belegt, aber so viel muss man auch wegstecken können.`},
+        {was:"Trainingsalter", text:`„${esc(({beginner:"Einsteiger",novice:"Fortgeschritten",intermediate:"Erfahren",advanced:"Sehr erfahren"})[a.exp]||a.exp||"Erfahren")}“: Untergrenze × ${kom(ef.mev,2)}, Obergrenze × ${kom(ef.mrv,2)}.`},
+        df<1?{was:"Energiezufuhr", text:`Im Defizit sinkt das erholbare Volumen: Obergrenze zusätzlich × ${kom(df,2)}. Die Untergrenze bleibt — der Mindestreiz zum Muskelerhalt ändert sich nicht.`}:null,
+        {was:"Fraktionierte Zählung", text:`Ein Satz zählt ${kom(P("reiz.sek.anteil"),1)} für jeden nennenswert mitarbeitenden Muskel, nicht nur für den Zielmuskel. Bankdrücken zählt also voll auf die Brust und halb auf Trizeps und Schultern.`},
+        ist!=null?{was:"Dein Stand", text:`Aktuell ${kom(ist,1)} Sätze — ${ist<b[0]?"unter der Untergrenze":ist>b[1]?"über der Obergrenze":"im Korridor"}.`}:null,
+      ].filter(Boolean),
+      params:[`vol.band.${m}.mev`, `vol.band.${m}.mrv`,
+              a.exp==="beginner"?"vol.exp.beginner.mev":a.exp==="novice"?"vol.exp.novice.mev":null,
+              df<1?"vol.defizit.untergrenze":null, "reiz.sek.anteil"].filter(k=>k&&PARAMS[k]),
+    };
+  }
+
+  if(art==="pause"){
+    const pp=ctx.pp||progParams(a); const g=primaryGoal(a);
+    const sek=ctx.sekunden!=null?ctx.sekunden:pp.cRest;
+    return {
+      titel:"Deine Satzpause", ergebnis:sek+" Sekunden",
+      kurz:`Aus deinem Ziel „${esc(GOAL_LABEL[g]||g)}“: Grundübungen brauchen längere Pausen als Isolation.`,
+      schritte:[
+        {was:"Dein Ziel", text:`${esc(GOAL_LABEL[g]||g)} — daraus kommen Wiederholungsbereich, Anstrengungsgrad und Pause als EIN Satz Vorgaben.`},
+        {was:"Regel", text:`Grundübungen ${pp.cRest} s · zusammengesetzte Übungen ${pp.sRest} s · Isolation ${pp.iRest} s. Längere Pausen erhalten die Last; kürzere sparen Zeit, kosten aber Wiederholungen.`},
+        {was:"Anstrengung", text:`RIR ${pp.rir} — so viele Wiederholungen bleiben am Satzende in Reserve.`},
+      ],
+      params:["prog.step.standard"],
+      hinweis:"Pausenlängen und Wiederholungsbereiche stehen noch nicht einzeln im Register — sie kommen aus progParams() und sind dort je Ziel festgelegt.",
+    };
+  }
+
+  if(art==="last"){
+    const name=ctx.uebung; if(!name) return null;
+    const e1=bestE1(name);
+    const step=progFor(name).step;
+    return {
+      titel:`Gewicht für ${esc(name)}`, ergebnis:ctx.wert!=null?kom(ctx.wert,1)+" kg":(e1>0?kom(e1,1)+" kg max.":"noch offen"),
+      kurz:e1>0?`Geschätzte Maximalkraft aus deinen Sätzen: ${kom(e1,1)} kg. Die Vorgabe ist ein Anteil davon.`
+               :`Noch nichts geloggt — der Startwert kommt aus Gewicht und Trainingsalter.`,
+      schritte:[
+        e1>0?{was:"Deine Daten", text:`${liftHistory(name).length} geloggte Sätze. Beste geschätzte Maximalkraft: ${kom(e1,1)} kg.`}
+            :{was:"Deine Daten", text:"Keine Historie für diese Übung. Der erste Wert ist geschätzt und korrigiert sich, sobald du loggst."},
+        {was:"Schätzformel", text:`Epley: Maximalkraft ≈ Gewicht × (1 + Wiederholungen / ${P("e1rm.epley.teiler")}). Eine Praxisformel — sie schätzt, sie misst nicht. Über ${P("e1rm.maxReps")} Wiederholungen wird sie unzuverlässig und die App deckelt.`},
+        {was:"Steigerung", text:`${kom(step,1)} kg je Schritt, sobald alle Sätze sauber sitzen. Das ist der kleinste gängige Hantelsprung, keine physiologische Grenze.`},
+      ],
+      params:["e1rm.epley.teiler","e1rm.maxReps","e1rm.rpe.standard","prog.step.standard"],
+    };
+  }
+
+  if(art==="prognose"){
+    const name=ctx.uebung;
+    return {
+      titel:"Wie die Prognose entsteht", ergebnis:ctx.wert||"Schätzung, keine Zusage",
+      kurz:`Gerade durch deine Kraftwerte, gedämpft: jeder Block zählt ${Math.round((1-P("prognose.daempfung"))*100)} % weniger, Deckel +${Math.round((P("prognose.deckel")-1)*100)} %.`,
+      schritte:[
+        {was:"Datengrundlage", text:name?`${(e1Series(name)||[]).length} geschätzte Maximalkraft-Werte aus deinen Sätzen. Ab ${P("prognose.minPunkte")} Werten rechnet die App überhaupt, ab 12 steht die Prognose deutlich fester.`:"Deine geloggten Kraftwerte."},
+        {was:"Regel", text:`Gerade durch die bisherigen Werte, dann ${P("prognose.bloecke")} Blöcke à ${P("prognose.blockTage")} Tage nach vorn.`},
+        {was:"Dämpfung", text:`Jeder Block wird mit ${kom(P("prognose.daempfung"),2)} multipliziert, weil Fortschritt mit der Zeit abflacht. Das ist eine gesetzte Form, keine aus Verlaufsdaten geschätzte.`},
+        {was:"Deckel", text:`Höchstens +${Math.round((P("prognose.deckel")-1)*100)} % auf den heutigen Wert, damit eine steile Anfangsphase nicht linear hochgerechnet wird.`},
+        {was:"Was sie nicht ist", text:"Eine Schätzung aus deinem bisherigen Verlauf, keine Zusage. Sie wird bisher nicht gespeichert und nicht nachgeprüft — das kommt."},
+      ],
+      params:["prognose.daempfung","prognose.deckel","prognose.blockTage","prognose.minPunkte","prognose.bloecke"],
+    };
+  }
+  return null;
+}
+
+/* Der Parameter-Block: Typ, Evidenzgrad, Quelle. Eine Annahme sagt hier, dass
+   sie eine ist — das ist der Punkt des ganzen Registers. */
+const TYP_WORT={beleg:"belegt", modell:"Modellannahme", praxisregel:"Praxisregel",
+                annahme:"Annahme der App", nutzerdaten:"aus deinen Daten"};
+const TYP_FARBE={beleg:"var(--good)", modell:"var(--hl)", praxisregel:"var(--hl)",
+                 annahme:"var(--warn)", nutzerdaten:"var(--good)"};
+
+function herleitungParamHTML(keys){
+  return (keys||[]).map(k=>{
+    const e=PARAMS[k]; if(!e) return "";
+    const q=e.quelle
+      ? (e.doi ? `<a href="https://doi.org/${esc(e.doi)}" target="_blank" rel="noopener">${esc(e.quelle)}</a>`
+               : `${esc(e.quelle)}${e.unvollstaendig?' <span class="hl-offen">DOI noch nicht verifiziert</span>':""}`)
+      : "";
+    return `<div class="hl-p">
+      <div class="row" style="gap:8px;align-items:baseline">
+        <span class="hl-p-n">${esc(k)}</span>
+        <span class="metric xs" style="margin-left:auto">${typeof e.wert==="number"?String(Math.round(e.wert*1000)/1000).replace(".",","):esc(String(e.wert))} ${esc(e.einheit||"")}</span>
+      </div>
+      <p class="hl-p-t" style="color:${TYP_FARBE[e.typ]||"var(--t3)"}">${esc(TYP_WORT[e.typ]||e.typ)}${e.evidenz?" · "+esc(e.evidenz):""}</p>
+      <p class="hl-p-b">${esc(e.begruendung||"")}</p>
+      ${e.sensitivitaet?`<p class="hl-p-s">Bei ±20 %: ${esc(e.sensitivitaet)}</p>`:""}
+      ${q?`<p class="hl-p-q">${q}</p>`:""}
+    </div>`;}).join("");
+}
+
 /* Der Bericht. Gibt je Muskel UND gesamt zurück, worauf sich alles stützt. */
 function effizienzBericht(a){
   a=a||(S.profile&&S.profile.a)||{};
@@ -8363,6 +8576,52 @@ const root=document.getElementById("root"), tabbarEl=document.getElementById("ta
       appbarEl=document.getElementById("appbar"), fabEl=document.getElementById("fab");
 window.A={};
 A.closeModal=()=>{overlay.innerHTML="";};
+
+/* ── HERLEITUNG: das Blatt (A2) ───────────────────────────────────────────
+   Oben das Ergebnis und zwei Zeilen. Der Rest ist zugeklappt: wer die Zahl
+   nur glauben will, liest zwei Zeilen; wer sie pruefen will, klappt auf.  */
+A.herleitung=(art,ctxJson)=>{
+  let ctx={}; try{ ctx=ctxJson?JSON.parse(decodeURIComponent(ctxJson)):{}; }catch(e){}
+  let h=null; try{ h=herleitung(art,ctx); }catch(e){}
+  if(!h){ toast("Für diese Zahl gibt es noch keine Herleitung"); return; }
+  try{ track("derivation_opened",{art}); }catch(e){}
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="label" style="margin:0 0 6px">${esc(h.titel)}</p>
+    <p class="hl-erg">${esc(h.ergebnis)}</p>
+    <p class="hl-kurz">${h.kurz}</p>
+    <details class="hl-det" ontoggle="try{if(this.open)track('derivation_expanded',{art:'${esc(art)}'})}catch(e){}">
+      <summary class="hl-sum"><span>So wird gerechnet</span>${icon("chevron",15)}</summary>
+      <div class="hl-body">
+        ${h.schritte.map((st,i)=>`<div class="hl-s">
+          <span class="hl-s-n">${i+1}</span>
+          <div style="flex:1;min-width:0"><p class="hl-s-w">${esc(st.was)}</p><p class="hl-s-t">${st.text}</p></div>
+        </div>`).join("")}
+        ${h.params&&h.params.length?`<p class="label" style="margin:16px 0 8px">Die Zahlen dahinter</p>${herleitungParamHTML(h.params)}`:""}
+        ${h.hinweis?`<p class="hl-hinweis">${esc(h.hinweis)}</p>`:""}
+        <p class="hl-fuss">Jede Zahl der Engine steht im Register mit Typ, Begründung und ihrer Wirkung bei ±20 %.
+          <button class="btn ghost" style="justify-content:flex-start;padding-left:0;min-height:34px" onclick="A.menuGo('sources')">Register öffnen</button></p>
+      </div>
+    </details>
+    <button class="btn mt12" onclick="A.closeModal()">Schließen</button>
+  </div></div>`;
+};
+
+/* Eine Zahl antippbar machen. Bewusst KEIN eigener Knopf daneben: ein
+   zusaetzliches Symbol an jeder Zahl haette die Oberflaeche zugemuellt. */
+function hlZahl(inhalt,art,ctx,klasse){
+  const c=encodeURIComponent(JSON.stringify(ctx||{}));
+  /* SPAN, kein BUTTON: mehrere dieser Zahlen stehen INNERHALB einer Karte,
+     die selbst ein <button> ist. Ein Button im Button ist ungueltiges HTML —
+     gemessen: der Parser hat beide Zahlen aus der Karte herausgehoben, womit
+     sie an der falschen Stelle im Dokument landeten. Ein span mit role und
+     Tastaturbedienung verhaelt sich fuer den Nutzer gleich und bleibt stehen,
+     wo es hingehoert. stopPropagation verhindert, dass der Tipp zusaetzlich
+     die Karte oeffnet. */
+  return `<span class="hl-z ${klasse||""}" role="button" tabindex="0"
+    onclick="event.stopPropagation();A.herleitung('${art}','${c}')"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();A.herleitung('${art}','${c}')}"
+    aria-label="Herleitung anzeigen">${inhalt}</span>`;
+}
 
 /* ---------- CSV-IMPORT (B5): Hevy & Strong ----------
    Wechsler-Pipeline: CSV wählen → Format-Autodetektion an der Headerzeile →
@@ -13269,10 +13528,10 @@ function renderHome(){
 
     ${renderSection("Ernährung",
       `<button class="card" style="width:100%;cursor:pointer;font-family:inherit;color:var(--t1);text-align:left" onclick="A.q('nutrition')" aria-label="Zur Ernährung">
-        <div class="row mb8"><span class="metric" style="font-size:20px">${nfi.format(sum.k)} / ${nfi.format(tg.kcal)} kcal</span>
+        <div class="row mb8"><span class="metric" style="font-size:20px">${nfi.format(sum.k)} / ${hlZahl(nfi.format(tg.kcal),"kcal",{})} kcal</span>
           <span class="metric xs t2">${Math.round(Math.min(100,sum.k/tg.kcal*100))} %</span></div>
         <div class="progress" style="height:8px;margin-bottom:10px"><div style="width:${Math.min(100,sum.k/tg.kcal*100)}%"></div></div>
-        <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${nfi.format(tg.p)} g</span> Protein</p>
+        <p class="sm t2"><span class="metric">${nfi.format(sum.p)} / ${hlZahl(nfi.format(tg.p),"protein",{})} g</span> Protein</p>
       </button>`)}
 
     ${renderSection("Eintragen",checklistCard())}
@@ -15118,7 +15377,7 @@ function effizienzHTML(){
     return `<div class="row" style="padding:5px 0;border-top:1px solid var(--hairline);gap:8px">
       <span class="sm" style="flex:1;min-width:0">${esc(g.m)}</span>
       ${kz}
-      <span class="xs t3" style="min-width:62px;text-align:right">${g.saetze} Sätze</span>
+      <span class="xs t3" style="min-width:62px;text-align:right">${hlZahl(g.saetze,"saetze",{muskel:g.m,ist:g.saetze})} Sätze</span>
       ${bar(g.reiz,farbe)}
       <span class="metric xs" style="color:${farbe};min-width:40px;text-align:right">${g.reiz}&thinsp;%</span>
     </div>`;}).join("");
@@ -16673,7 +16932,7 @@ function renderAnalytics(){
     html+=`<div class="card"><p class="ct">Dein Kraftfortschritt ${infoBtn("trajectory")}</p>${top.map(n=>{
       const s=e1Series(n), fc=forecast12w(s);
       return `<p class="sm mb8" style="font-weight:500">${n}</p>${lineChart(s,fc)}
-        ${fc?`<p class="sm volt-txt metric mt8">Prognose: ${fmtKg(fc[2].v)} bis ${fmtD(new Date(s[s.length-1].t+84*dayMs))} <span class="conf">· ${esc(evidence(s.length).label)} · beruht auf ${s.length} Kraftwerten</span></p>`:""}
+        ${fc?`<p class="sm volt-txt metric mt8">Prognose: ${hlZahl(fmtKg(fc[2].v),"prognose",{uebung:n,wert:fmtKg(fc[2].v)})} bis ${fmtD(new Date(s[s.length-1].t+84*dayMs))} <span class="conf">· ${esc(evidence(s.length).label)} · beruht auf ${s.length} Kraftwerten</span></p>`:""}
         <p class="xs t2 mt8 mb16">Die Prognose wird mit jedem Training sicherer: aktuell ${s.length} Messwerte — ab 12 steht sie deutlich fester.</p>`;
     }).join("")}
     ${lockedLifts>0?`<div class="lockcard"><p class="sm">${icon("lock",13)} ${lockedLifts} weitere ${lockedLifts===1?"Übung":"Übungen"} mit Prognose (z. B. ${sorted[1]}) — Teil von PERFORMANCE.</p>
