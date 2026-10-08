@@ -53,6 +53,9 @@ jobs:
       - name: Effizienz (Saettigungskurve · individuelle Eichung · Rauschfestigkeit)
         run: NODE_PATH=$(npm root -g) node metricgym-netlify/tests/effizienz-tests.mjs
 
+      - name: PARAMS-Tor — jede Engine-Zahl braucht einen Registereintrag
+        run: node metricgym-netlify/tests/params-gate.mjs
+
       # Die Belegpruefung braucht weder Browser noch Server — nur eine
       # Testzertifikatskette, die das Skript selbst erzeugt.
       - name: Apple-Belegpruefung (Zertifikatskette · Signatur)

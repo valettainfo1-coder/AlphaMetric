@@ -4095,6 +4095,560 @@ function eRenderAthlete() {
 }
 
 
+/* ══════════════════════════════════════════════════════════════════════════
+   PARAMS — das Register aller Zahlen, mit denen die Engine entscheidet.
+
+   Der Anlass: Von 87 Stellgroessen im Rechenkern hatten 42 keine Quelle —
+   weder im Code noch im Zitatregister. Die App behauptete "jede Zahl nennt
+   ihre Quelle"; bei fast der Haelfte stimmte das nicht. Nachtraeglich Quellen
+   zu suchen, die halbwegs passen, waere die schlechtere Loesung gewesen: eine
+   offen deklarierte Annahme ist belastbarer als ein nachgeschobenes Zitat.
+
+   Jeder Eintrag traegt:
+     wert           die Zahl selbst
+     einheit        worin sie gemessen ist
+     typ            beleg | modell | praxisregel | annahme | nutzerdaten
+     quelle         Kurzzitat, nur bei typ "beleg" oder "praxisregel"
+     doi            DOI, wo gesichert bekannt; sonst weggelassen
+     evidenz        Meta-Analyse | RCT | Beobachtung | Praxismodell | Annahme
+     begruendung    ein Satz, WARUM dieser Wert — Pflicht bei typ "annahme"
+     sensitivitaet  was sich an der Empfehlung aendert, wenn man ±20 % geht
+     sichtbar       true, wenn die Zahl dem Nutzer gezeigt wird
+
+   WICHTIG: DOIs stehen nur dort, wo sie gesichert sind. Ein leeres doi-Feld
+   heisst "noch nicht verifiziert", nicht "gibt es nicht" — erfunden wird hier
+   nichts. Eintraege mit unvollstaendiger Quelle tragen unvollstaendig:true
+   und erscheinen in paramsLuecken().                                      */
+
+const PARAMS={
+
+/* ── Volumen-Korridor ────────────────────────────────────────────────────
+   AUFGETEILT (Entscheidung): Die UNTERGRENZE und die Form der Dosis-Wirkungs-
+   Beziehung sind belegt. Die OBERGRENZE ist es nicht — sie ist ein
+   Erholungsdeckel aus der Trainingspraxis.
+
+   Das loest auch den Widerspruch, der vorher in der App stand: dieselbe
+   Arbeit (Pelland 2026) wurde fuer "Zuwaechse bis ~30 Saetze" UND fuer den
+   Brust-Deckel bei 20 zitiert. Das sind zwei verschiedene Groessen.
+   Dosis-Wirkung sagt, bis wohin ein Reiz noch etwas bringt. Erholbares
+   Wochenvolumen sagt, was ein Mensch davon wegstecken kann, ohne dass die
+   Ermuedung die Anpassung frisst. Die zweite Zahl ist die kleinere, und sie
+   ist die bindende — deshalb deckelt die Engine darunter.                */
+
+  "vol.band.Beine.mev":    {wert:12, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Veröffentlichte Untergrenze der Sammelgruppe Beine; die Gruppe fasst Quadrizeps, Beinbeuger, Gesäß und Waden zusammen und verträgt deshalb mehr als ein Einzelmuskel.",
+    sensitivitaet:"±20 % ≈ ±2 Sätze Mindestvolumen Beine pro Woche", unvollstaendig:true},
+  "vol.band.Beine.mrv":    {wert:30, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Erholungsdeckel, nicht Dosis-Wirkungs-Grenze — begrenzt, was erholbar ist, nicht was noch wirkt.",
+    sensitivitaet:"±20 % ≈ ±6 Sätze erlaubtes Maximum", unvollstaendig:true},
+  "vol.band.Brust.mev":    {wert:10, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Veröffentlichte Untergrenze für direkte Brustarbeit.",
+    sensitivitaet:"±20 % ≈ ±2 Sätze", unvollstaendig:true},
+  "vol.band.Brust.mrv":    {wert:20, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Bewusst unter der veröffentlichten Obergrenze (22): die Quelle meint Fortgeschrittene mit voller Erholung, und deficitScaledBands() skaliert zusätzlich nach Trainingsalter und Energiezufuhr.",
+    sensitivitaet:"±20 % ≈ ±4 Sätze erlaubtes Maximum", unvollstaendig:true},
+  "vol.band.Rücken.mev":   {wert:10, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Veröffentlichte Untergrenze; fraktionierte Zählung rechnet Ruderzüge voll und Klimmzüge anteilig mit.",
+    sensitivitaet:"±20 % ≈ ±2 Sätze", unvollstaendig:true},
+  "vol.band.Rücken.mrv":   {wert:22, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Bewusst unter der veröffentlichten Obergrenze (25), gleiche Begründung wie bei der Brust.",
+    sensitivitaet:"±20 % ≈ ±4 Sätze", unvollstaendig:true},
+  "vol.band.Schultern.mev":{wert:8,  einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Untergrenze für direkte Schulterarbeit; Drücken trägt anteilig bei.",
+    sensitivitaet:"±20 % ≈ ±1,6 Sätze", unvollstaendig:true},
+  "vol.band.Schultern.mrv":{wert:20, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Erholungsdeckel.", sensitivitaet:"±20 % ≈ ±4 Sätze", unvollstaendig:true},
+  "vol.band.Bizeps.mev":   {wert:8,  einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Eigener Korridor statt Sammelgruppe Arme — sonst verdrängen sich Bizeps am Zug- und Trizeps am Drucktag gegenseitig.",
+    sensitivitaet:"±20 % ≈ ±1,6 Sätze", unvollstaendig:true},
+  "vol.band.Bizeps.mrv":   {wert:20, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Erholungsdeckel.", sensitivitaet:"±20 % ≈ ±4 Sätze", unvollstaendig:true},
+  "vol.band.Trizeps.mev":  {wert:6,  einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Niedriger als bei anderen Gruppen, weil jedes Drücken dem Trizeps fraktioniert 0,5 Sätze zurechnet — acht DIREKTE zu verlangen wäre doppelt gezählt.",
+    sensitivitaet:"±20 % ≈ ±1,2 Sätze", unvollstaendig:true},
+  "vol.band.Trizeps.mrv":  {wert:18, einheit:"Sätze/Woche", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 · MEV–MRV", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Erholungsdeckel.", sensitivitaet:"±20 % ≈ ±3,6 Sätze", unvollstaendig:true},
+  "vol.band.Arme.mev":     {wert:10, einheit:"Sätze/Woche", typ:"annahme",
+    evidenz:"Annahme", sichtbar:true,
+    begruendung:"Sammelgruppe für Pläne, die Bizeps und Trizeps nicht trennen; gesetzt als Summe der beiden Einzeluntergrenzen minus Überlappung durch Grundübungen.",
+    sensitivitaet:"±20 % ≈ ±2 Sätze; betrifft nur Pläne ohne getrennte Armgruppen"},
+  "vol.band.Arme.mrv":     {wert:22, einheit:"Sätze/Woche", typ:"annahme",
+    evidenz:"Annahme", sichtbar:true,
+    begruendung:"Sammelgruppen-Deckel, gesetzt unter der Summe der Einzeldeckel.",
+    sensitivitaet:"±20 % ≈ ±4,4 Sätze"},
+  "vol.band.Core.mev":     {wert:4,  einheit:"Sätze/Woche", typ:"annahme",
+    evidenz:"Annahme", sichtbar:true,
+    begruendung:"Für die Rumpfmuskulatur gibt es keine belastbaren Volumen-Landmarken; der Wert ist bewusst niedrig, weil Grundübungen den Rumpf ohnehin belasten.",
+    sensitivitaet:"±20 % ≈ ±0,8 Sätze; praktisch ohne Wirkung, da der Boden bei 4 greift"},
+  "vol.band.Core.mrv":     {wert:16, einheit:"Sätze/Woche", typ:"annahme",
+    evidenz:"Annahme", sichtbar:true,
+    begruendung:"Gesetzter Deckel, damit Rumpfarbeit keine Zeit von den Grundübungen nimmt.",
+    sensitivitaet:"±20 % ≈ ±3,2 Sätze"},
+
+/* ── Skalierung nach Trainingsalter ──────────────────────────────────────
+   Die veroeffentlichten Landmarken gelten fuer Fortgeschrittene. Weniger
+   Trainierte brauchen weniger Reiz fuer dieselbe Anpassung und vertragen
+   weniger. Richtung belegt, Betrag gesetzt — das steht hier so.          */
+
+  "vol.exp.beginner.mev":    {wert:0.65, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Einsteiger wachsen nachweislich bei deutlich geringerem Volumen; der Betrag ist gesetzt, nicht gemessen.",
+    sensitivitaet:"±20 % ≈ ±1,5 Sätze Mindestvolumen bei Beine"},
+  "vol.exp.beginner.mrv":    {wert:0.80, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Einsteiger erholen sich von weniger Volumen langsamer, weil Technik und Bindegewebe mitbelastet werden.",
+    sensitivitaet:"±20 % ≈ ±4,8 Sätze erlaubtes Maximum bei Beine"},
+  "vol.exp.novice.mev":      {wert:0.78, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Zwischenstufe zwischen Einsteiger und Fortgeschrittenem, linear interpoliert.",
+    sensitivitaet:"±20 % ≈ ±1,9 Sätze"},
+  "vol.exp.novice.mrv":      {wert:0.90, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Zwischenstufe.", sensitivitaet:"±20 % ≈ ±5,4 Sätze"},
+  "vol.exp.advanced.mrv":    {wert:1.12, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Fortgeschrittene vertragen etwas mehr als die veröffentlichte Obergrenze, weil Technik und Erholungsgewohnheiten stehen.",
+    sensitivitaet:"±20 % ≈ ±6,7 Sätze erlaubtes Maximum bei Beine"},
+  "vol.mev.absolutMin":      {wert:4, einheit:"Sätze/Woche", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Unter vier Sätzen pro Woche ist eine Gruppe im Plan faktisch nicht enthalten; der Boden verhindert, dass die Skalierung sie wegrechnet.",
+    sensitivitaet:"±20 % ≈ ±0,8 Sätze"},
+
+/* ── Energie im Defizit ──────────────────────────────────────────────── */
+
+  "vol.defizit.untergrenze": {wert:0.78, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Tiefstes zugelassenes Verhältnis für das erholbare Volumen im Defizit; gesetzt, damit ein grosses Defizit das MRV nicht beliebig weit drückt.",
+    sensitivitaet:"±20 % ≈ ±4 Sätze erlaubtes Maximum im tiefen Defizit"},
+
+/* ── Dosis-Wirkung und Saettigung ───────────────────────────────────────
+   Hier liegen die am besten belegten Zahlen der ganzen App.             */
+
+  "reiz.saettigung.wachstum": {wert:31, einheit:"fraktionierte Sätze/Woche", typ:"beleg",
+    /* Studienzahl hier bewusst NICHT genannt: der UI-Waechter verbietet jede
+       zweite, von Hand gepflegte Studienzahl auf der Seite (quellenZahl() ist
+       die einzige Quelle dafuer), und eine verifizierte Teilnehmerzahl fuer
+       diese Arbeit liegt mir nicht vor. */
+    quelle:"Pelland et al. Sports Med 2026;56(2):481–505 · Meta-Regression",
+    evidenz:"Meta-Analyse", sichtbar:true,
+    begruendung:"Jenseits von rund 31 fraktionierten Sätzen je Muskel und Woche findet die Meta-Regression keinen weiteren Hypertrophie-Vorteil.",
+    sensitivitaet:"±20 % verschiebt den Punkt, ab dem die App einen Satz als verschenkt bezeichnet, um ±6 Sätze", unvollstaendig:true},
+  "reiz.saettigung.kraft":    {wert:3, einheit:"fraktionierte Sätze/Woche", typ:"beleg",
+    quelle:"Pelland et al. Sports Med 2026;56(2):481–505", evidenz:"Meta-Analyse", sichtbar:true,
+    begruendung:"Für Maximalkraft ist der Löwenanteil des Zuwachses schon nach wenigen Sätzen erreicht.",
+    sensitivitaet:"±20 % ≈ ±0,6 Sätze; beim Kraftziel kaum spürbar", unvollstaendig:true},
+  "reiz.erhalt.anteil":       {wert:1/3, einheit:"Anteil", typ:"beleg",
+    quelle:"Bickel CS et al. Med Sci Sports Exerc 2011;43(7):1177–1187 · Spiering BA et al. J Strength Cond Res 2021;35(5):1449–1458",
+    evidenz:"RCT", sichtbar:true,
+    begruendung:"Ein Drittel bis ein Neuntel des Aufbauvolumens hielt Masse und Kraft über 32 Wochen; die App nimmt das konservative Ende.",
+    sensitivitaet:"±20 % ≈ ±2 Sätze Sättigungspunkt bei Erhaltungszielen", unvollstaendig:true},
+  "reiz.endurance.abschlag":  {wert:0.8, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Beim Ausdauerziel ist Heben ein Begleitreiz, nicht der Hauptreiz; der Sättigungspunkt sinkt entsprechend.",
+    sensitivitaet:"±20 % ≈ ±2 Sätze Sättigungspunkt für Ausdauerprofile"},
+  "reiz.alter.zuschlag":      {wert:1.5, einheit:"Faktor", typ:"modell", evidenz:"RCT",
+    quelle:"Bickel CS et al. Med Sci Sports Exerc 2011;43(7):1177–1187", sichtbar:false,
+    begruendung:"Ab etwa 50 hielt die reduzierte Dosis die Muskelmasse nicht mehr (die Kraft schon) — Richtung belegt, der Betrag 1,5 ist gesetzt.",
+    sensitivitaet:"±20 % ≈ ±3 Sätze Sättigungspunkt bei über 50", unvollstaendig:true},
+  "reiz.alter.schwelle":      {wert:50, einheit:"Jahre", typ:"modell", evidenz:"Beobachtung", sichtbar:false,
+    begruendung:"Grobe Schwelle für anabole Resistenz; die Literatur beschreibt einen Übergang, keinen Sprung.",
+    sensitivitaet:"±20 % ≈ ±10 Jahre; verschiebt, ab wann der Zuschlag greift"},
+  "reiz.k.teiler":            {wert:3, einheit:"Teiler", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Formparameter der Sättigungskurve: k = Sättigungspunkt / 3 sorgt dafür, dass die Kurve am Sättigungspunkt 95 % erreicht.",
+    sensitivitaet:"±20 % ändert die Krümmung; bei 95-%-Vorgabe wäre der Wert nicht mehr konsistent"},
+  "reiz.sek.anteil":          {wert:0.5, einheit:"Sätze", typ:"modell", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Konvention der App: ein Satz zählt 1,0 für den Zielmuskel und 0,5 für jeden nennenswert mitarbeitenden. Verbreitete Praxis, kein gemessener Wert.",
+    sensitivitaet:"±20 % ≈ ±10 % des ausgewiesenen Volumens bei grundübungslastigen Plänen"},
+
+/* ── Protein ──────────────────────────────────────────────────────────── */
+
+  "prot.plateau":     {wert:1.6, einheit:"g/kg/Tag", typ:"beleg",
+    quelle:"Morton RW et al. Br J Sports Med 2018;52(6):376–384 · Meta-Regression, 1.863 Teilnehmer",
+    evidenz:"Meta-Analyse", sichtbar:true,
+    begruendung:"Oberhalb von etwa 1,6 g/kg/Tag ist die Dosis-Wirkungs-Kurve für Muskelaufbau flach.",
+    sensitivitaet:"±20 % ≈ ±0,32 g/kg; verschiebt, ab wann die App Eiweiß als Hebel nennt", unvollstaendig:true},
+  "prot.faktor.basis":{wert:0.8, einheit:"Faktor", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Bei null Eiweißdeckung bleiben vier Fünftel des Reizes wirksam, nicht null — ein Reiz ohne Baumaterial ist gedämpft, nicht wertlos. Die Form (0,8 + 0,2 × Deckung) ist gesetzt.",
+    sensitivitaet:"±20 % ≈ ±16 % des ausgewiesenen Reizes bei knappem Eiweiß"},
+  "prot.min.tage":    {wert:5, einheit:"Tage", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Unter fünf geloggten Tagen ist der Mittelwert keine Aussage über die Gewohnheit — dann schweigt die Rechnung statt zu raten.",
+    sensitivitaet:"±20 % ≈ ±1 Tag; weniger Tage erhöhen das Risiko einer Fehlaussage"},
+  "prot.knapp.schwelle":{wert:0.9, einheit:"Anteil", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Unter 90 % der Plateaudosis nennt die App Eiweiß als Hebel; gesetzt, damit knappe Tage nicht gleich als Mangel gelten.",
+    sensitivitaet:"±20 % verschiebt die Warnschwelle um ±0,29 g/kg"},
+
+/* ── Eichung auf den einzelnen Menschen ─────────────────────────────────
+   Die Daempfung ist die einzige Zahl hier, die aus einer Messung kommt.  */
+
+  "kalib.verlaesslich":  {wert:(6.5*6.5)/(9.7*9.7), einheit:"Varianzverhältnis", typ:"beleg",
+    quelle:"Chaves TS, da Silva DG, Lixandrão ME, Libardi CA. Front Sports Act Living 2025;7:1517190",
+    evidenz:"Beobachtung", sichtbar:true,
+    begruendung:"Rechnet man Messfehler und normale biologische Schwankung heraus, schrumpft die scheinbare Streuung zwischen Menschen von 9,7 % auf 6,5 % — etwa ein Drittel war Rauschen. Die App übernimmt nur das Verhältnis der Varianzen (≈ 45 %) einer beobachteten Abweichung.",
+    sensitivitaet:"±20 % ändert, wie schnell die App dem eigenen Verlauf folgt; höher = reagiert auf Rauschen, niedriger = lernt kaum", unvollstaendig:true},
+  "kalib.minWochen":     {wert:6, einheit:"Wochen", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Kürzere Fenster messen überwiegend Rauschen statt Trend; gesetzt als Untergrenze, ab der ein e1RM-Verlauf überhaupt eine Richtung hat.",
+    sensitivitaet:"±20 % ≈ ±1,2 Wochen; kürzer erhöht Fehleichungen"},
+  "kalib.minPunkte":     {wert:8, einheit:"Messwerte", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Unter acht Werten ist der Standardfehler der Steigung so gross, dass fast nie ein klarer Trend entsteht.",
+    sensitivitaet:"±20 % ≈ ±1,6 Werte"},
+  "kalib.spanne.min":    {wert:0.65, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Klemme nach unten: der eigene Sättigungspunkt darf höchstens auf zwei Drittel des Mittels fallen, damit ein Ausreisser keinen Plan leerräumt.",
+    sensitivitaet:"±20 % ≈ ±4 Sätze möglicher Sättigungspunkt bei Hypertrophie"},
+  "kalib.spanne.max":    {wert:1.60, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Klemme nach oben, aus demselben Grund in der anderen Richtung.",
+    sensitivitaet:"±20 % ≈ ±10 Sätze möglicher Sättigungspunkt"},
+  "kalib.schritt":       {wert:0.35, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Rohschritt einer Korrektur, bevor die Dämpfung greift; gesetzt so, dass eine einzelne Beobachtung den Sättigungspunkt um höchstens etwa 16 % verschiebt (0,35 × 0,449).",
+    sensitivitaet:"±20 % ≈ ±1 Satz pro Eichschritt"},
+  "kalib.fensterTage":   {wert:112, einheit:"Tage", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"16 Wochen Rückschau — lang genug für einen Trend, kurz genug, dass alte Trainingsphasen nicht mitreden.",
+    sensitivitaet:"±20 % ≈ ±3 Wochen Rückschau"},
+  "kalib.schwelle.hoch": {wert:0.9, einheit:"Anteil der Sättigung", typ:"modell",
+    quelle:"Lixandrão ME, Bamman M, Vechin FC et al. J Appl Physiol 2024;136(2):421–429",
+    evidenz:"RCT", sichtbar:false,
+    begruendung:"Stagnation unterhalb von 90 % der Sättigungsdosis heisst: zu kleine Dosis, nicht fehlende Veranlagung. 51 von 85 Älteren galten nach dem Ein-Satz-Bein als nicht ansprechend und legten am Vier-Satz-Bein messbar zu. Richtung belegt, die Schwelle 0,9 ist gesetzt.",
+    sensitivitaet:"±20 % verschiebt, ab wann die App mehr Volumen statt anderer Hebel empfiehlt", unvollstaendig:true},
+  "kalib.schwelle.runter":{wert:0.6, einheit:"Anteil der Sättigung", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Deutlicher Fortschritt bei weniger als 60 % der Dosis heisst: dieser Mensch holt mehr aus jedem Satz — der Plan soll keine Sätze fordern, die er nicht braucht.",
+    sensitivitaet:"±20 % verschiebt, ab wann die App Volumen zurücknimmt"},
+  "kalib.trendKlar":     {wert:1.5, einheit:"× Standardfehler", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ein Trend gilt als klar, wenn er den eigenen Standardfehler um das Anderthalbfache übersteigt; lockerer als die üblichen 1,96, weil hier nicht publiziert, sondern gesteuert wird.",
+    sensitivitaet:"±20 % ändert, wie oft die App überhaupt eicht; strenger = seltener"},
+  "kalib.gruppeMinAnteil":{wert:0.5, einheit:"Anteil", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Eine Übung zählt für die Eichung einer Gruppe, wenn sie ihr mindestens einen halben Satz zurechnet — dieselbe Schwelle wie die fraktionierte Zählung.",
+    sensitivitaet:"Höher: nur noch Isolationsübungen eichen; niedriger: Grundübungen eichen alles mit"},
+  "kalib.gruppeMinPunkte":{wert:3, einheit:"Messwerte", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Unter drei Werten lässt sich keine Steigung mit Fehler rechnen.",
+    sensitivitaet:"Nicht sinnvoll senkbar — zwei Punkte haben keinen Standardfehler"},
+
+/* ── Energie: Grundumsatz, Aktivitaet, Richtung ──────────────────────── */
+
+  "energie.neat.sedentary":  {wert:1.20, einheit:"Faktor", typ:"praxisregel",
+    quelle:"Verbreitete Aktivitätsfaktoren der Ernährungspraxis — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Verbreitete Aktivitätsfaktoren der Ernährungspraxis; sie stammen nicht aus einer einzelnen Arbeit und streuen zwischen Lehrbüchern.",
+    sensitivitaet:"±20 % ≈ ±370 kcal/Tag bei 1.550 kcal Grundumsatz — der grösste Einzelhebel im Kalorienziel"},
+  "energie.neat.light":      {wert:1.30, einheit:"Faktor", typ:"praxisregel",
+    quelle:"Verbreitete Aktivitätsfaktoren der Ernährungspraxis — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Sitzende Tätigkeit mit etwas Alltagsbewegung; der Faktor streut zwischen Lehrbüchern um etwa ±0,1.",
+    sensitivitaet:"±20 % ≈ ±400 kcal/Tag"},
+  "energie.neat.moderate":   {wert:1.40, einheit:"Faktor", typ:"praxisregel",
+    quelle:"Verbreitete Aktivitätsfaktoren der Ernährungspraxis — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Stehende oder gehende Tätigkeit; Mitte des praxisübliche Bereichs.",
+    sensitivitaet:"±20 % ≈ ±430 kcal/Tag"},
+  "energie.neat.active":     {wert:1.475,einheit:"Faktor", typ:"praxisregel",
+    quelle:"Verbreitete Aktivitätsfaktoren der Ernährungspraxis — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Körperlich fordernde Tätigkeit; der krumme Wert ist eine Interpolation zwischen moderate und very_active, keine Messung.",
+    sensitivitaet:"±20 % ≈ ±460 kcal/Tag"},
+  "energie.neat.very_active":{wert:1.55, einheit:"Faktor", typ:"praxisregel",
+    quelle:"Verbreitete Aktivitätsfaktoren der Ernährungspraxis — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Schwere körperliche Arbeit; obere Grenze des praxisüblichen Bereichs, bewusst nicht höher gesetzt.",
+    sensitivitaet:"±20 % ≈ ±480 kcal/Tag"},
+  "energie.training.kcalProKgStunde":{wert:3.5, einheit:"kcal/kg/h", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Netto-Mehrverbrauch einer Krafteinheit über dem Alltag, bewusst konservativ gesetzt; die Literatur streut hier stark, weil Pausen, Last und Satzzahl den Wert dominieren.",
+    sensitivitaet:"±20 % ≈ ±60 kcal pro 60-Minuten-Einheit bei 85 kg"},
+  "energie.kcalProKgFett":   {wert:7700, einheit:"kcal/kg", typ:"praxisregel",
+    quelle:"Hall KD. Lancet 2011;378(9793):826–837", evidenz:"Beobachtung", sichtbar:true,
+    begruendung:"Die starre 7.700-kcal-Regel beschreibt den Verlauf nicht korrekt — der Energiegehalt des Verlusts steigt im Verlauf und der Gesamtumsatz sinkt mit der Masse. Sie steht hier nur als Rückfall, wenn keine echte Gewichtskurve vorliegt.",
+    sensitivitaet:"±20 % ≈ ±20 % der projizierten Gewichtsänderung", unvollstaendig:true},
+  "energie.floor.weiblich":  {wert:1400, einheit:"kcal/Tag", typ:"praxisregel",
+    quelle:"Verbreitete untere Haltelinie der Ernährungsberatung — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Untere Haltelinie, damit kein Ziel unter eine Zufuhr fällt, bei der die Nährstoffdeckung praktisch nicht mehr gelingt.",
+    sensitivitaet:"±20 % ≈ ±280 kcal; greift nur bei kleinen Personen mit grossem Defizit"},
+  "energie.floor.maennlich": {wert:1600, einheit:"kcal/Tag", typ:"praxisregel",
+    quelle:"Verbreitete untere Haltelinie der Ernährungsberatung — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Untere Haltelinie für Männer, 200 kcal über der weiblichen wegen der im Mittel höheren fettfreien Masse.",
+    sensitivitaet:"±20 % ≈ ±320 kcal"},
+  "energie.bmi.schwelle27":  {wert:27, einheit:"BMI", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ab hier startet die App beim Aufbauziel auf Erhaltung statt im Überschuss; gesetzte Schwelle, keine klinische Grenze für diese Entscheidung.",
+    sensitivitaet:"±20 % ≈ ±5,4 BMI-Punkte; verschiebt, wer einen Überschuss bekommt"},
+  "energie.bmi.schwelle30":  {wert:30, einheit:"BMI", typ:"praxisregel",
+    quelle:"WHO-Klassifikation der Adipositas (BMI ≥ 30)", evidenz:"Praxismodell", sichtbar:false,
+    begruendung:"Die WHO-Grenze für Adipositas; hier benutzt, um bei Aufbauzielen zunächst ein Defizit zu empfehlen.",
+    sensitivitaet:"±20 % ≈ ±6 BMI-Punkte"},
+
+/* ── Makros ──────────────────────────────────────────────────────────── */
+
+  "makro.protein.cut.ffm":   {wert:2.6, einheit:"g/kg fettfreie Masse", typ:"beleg",
+    quelle:"Helms ER et al. 2014 · Review, Natural-Bodybuilding-Vorbereitung", evidenz:"Beobachtung", sichtbar:true,
+    begruendung:"Die Quelle nennt 2,3–3,1 g/kg fettfreie Masse im Defizit; 2,6 ist die gesetzte Wahl innerhalb dieser Spanne.",
+    sensitivitaet:"±20 % ≈ ±0,52 g/kg FFM, bei 70 kg FFM etwa ±36 g Eiweiß", unvollstaendig:true},
+  "makro.protein.erhalt.ffm":{wert:2.2, einheit:"g/kg fettfreie Masse", typ:"beleg",
+    quelle:"Helms ER et al. 2014", evidenz:"Beobachtung", sichtbar:true,
+    begruendung:"Unteres Ende derselben Spanne für Erhaltung und Aufbau, wo kein Muskelschutz gegen Energiemangel nötig ist.",
+    sensitivitaet:"±20 % ≈ ±0,44 g/kg FFM", unvollstaendig:true},
+  "makro.protein.cut.kg":    {wert:2.1, einheit:"g/kg Körpergewicht", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad ohne Körperfettwert: umgerechnet aus dem FFM-Wert bei angenommenem mittlerem Körperfettanteil.",
+    sensitivitaet:"±20 % ≈ ±0,42 g/kg"},
+  "makro.protein.erhalt.kg": {wert:1.8, einheit:"g/kg Körpergewicht", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad, wie oben.", sensitivitaet:"±20 % ≈ ±0,36 g/kg"},
+  "makro.protein.alterBonus":{wert:0.2, einheit:"g/kg zusätzlich", typ:"beleg",
+    quelle:"Moore DR et al. 2015 · Wall BT et al. 2015", evidenz:"Beobachtung", sichtbar:true,
+    begruendung:"Ab etwa 50 braucht dieselbe Muskelproteinsynthese mehr Eiweiß (anabole Resistenz).",
+    sensitivitaet:"±20 % ≈ ±0,04 g/kg, bei 80 kg etwa ±3 g", unvollstaendig:true},
+  "makro.fett.boden":        {wert:0.5, einheit:"g/kg Körpergewicht", typ:"praxisregel",
+    quelle:"Verbreitete Untergrenze der Sporternährung — keine einzelne Arbeit",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Absolute Untergrenze für Fett, unterhalb derer Hormonhaushalt und Aufnahme fettlöslicher Vitamine leiden; verbreitete Praxisgrenze, keine einzelne Studie.",
+    sensitivitaet:"±20 % ≈ ±0,1 g/kg; greift nur bei sehr kleinem Kalorienbudget"},
+  "makro.fett.ffm.cut":      {wert:1.0, einheit:"g/kg fettfreie Masse", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Fett bemisst sich an der fettfreien Masse, nicht am Gesamtgewicht — sonst bekäme ausgerechnet der Übergewichtige das höchste Fettziel und die Kohlenhydrate würden verdrängt.",
+    sensitivitaet:"±20 % ≈ ±14 g Fett bei 70 kg FFM, entspricht etwa ±31 g Kohlenhydraten"},
+  "makro.fett.ffm.sonst":    {wert:1.1, einheit:"g/kg fettfreie Masse", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"wie oben, etwas höher ausserhalb des tiefen Defizits.",
+    sensitivitaet:"±20 % ≈ ±15 g Fett bei 70 kg FFM"},
+  "makro.fett.kg.cut":       {wert:0.8, einheit:"g/kg Körpergewicht", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad ohne Körperfettwert.", sensitivitaet:"±20 % ≈ ±13 g bei 80 kg"},
+  "makro.fett.kg.sonst":     {wert:0.9, einheit:"g/kg Körpergewicht", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad.", sensitivitaet:"±20 % ≈ ±14 g bei 80 kg"},
+  "makro.kh.boden.ffm":      {wert:2.0, einheit:"g/kg fettfreie Masse", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Kohlenhydrat-Boden für die Trainingsqualität: Fett gibt bis zu seinem eigenen Boden nach, bevor die Kohlenhydrate darunter fallen.",
+    sensitivitaet:"±20 % ≈ ±28 g Kohlenhydrate bei 70 kg FFM"},
+  "makro.kh.boden.kg":       {wert:1.5, einheit:"g/kg Körpergewicht", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad.", sensitivitaet:"±20 % ≈ ±24 g bei 80 kg"},
+
+/* ── Status und Prognose ────────────────────────────────────────────────
+   Die Gewichte der Tagesform sind gesetzt. Sie wirken auf eine Zahl, die
+   dem Nutzer prominent gezeigt wird — deshalb stehen sie hier sichtbar.  */
+
+  "status.gewicht.schlaf":  {wert:0.30, einheit:"Gewicht", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Schlaf bekommt das grösste Einzelgewicht, weil er von den vier Eingaben am stärksten mit Leistungsfähigkeit zusammenhängt; die Verteilung ist gesetzt, nicht aus einer Regression gewonnen.",
+    sensitivitaet:"±20 % ≈ ±6 Punkte Tagesform bei schlechtem Schlaf"},
+  "status.gewicht.energie": {wert:0.25, einheit:"Gewicht", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Empfundene Energie gewichtet gleich stark wie Muskelkater, weil beide direkt die Belastbarkeit der nächsten Einheit betreffen.",
+    sensitivitaet:"±20 % ≈ ±5 Punkte"},
+  "status.gewicht.stress":  {wert:0.20, einheit:"Gewicht", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"wie oben; Stress wirkt indirekter als Schlaf und Energie.",
+    sensitivitaet:"±20 % ≈ ±4 Punkte"},
+  "status.gewicht.schmerz": {wert:0.25, einheit:"Gewicht", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Muskelkater begrenzt unmittelbar, was an diesem Tag sinnvoll trainierbar ist; gleiches Gewicht wie Energie.",
+    sensitivitaet:"±20 % ≈ ±5 Punkte"},
+  "status.stufe.stark":     {wert:80, einheit:"Punkte", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Grenze für die Einordnung „Stark“; gesetzt, damit die vier Stufen gleichmässig über den Bereich liegen.",
+    sensitivitaet:"±20 % ≈ ±16 Punkte; verschiebt nur die Benennung, nicht den Plan"},
+  "status.stufe.gut":       {wert:60, einheit:"Punkte", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Untergrenze für „Gut“ — ab hier empfiehlt die App den Plan unverändert.",
+    sensitivitaet:"±20 % ≈ ±12 Punkte; verschiebt nur die Benennung, nicht den Plan"},
+  "status.stufe.maessig":   {wert:40, einheit:"Punkte", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Untergrenze für „Mäßig“ — darunter schlägt die App Erholung statt der geplanten Einheit vor.",
+    sensitivitaet:"±20 % ≈ ±8 Punkte"},
+  "prognose.daempfung":     {wert:0.85, einheit:"Faktor je Block", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Jeder weitere 4-Wochen-Block der Prognose wird um 15 % gedämpft, weil Fortschritt mit der Zeit abflacht; die Form ist gesetzt, nicht aus Verlaufsdaten geschätzt.",
+    sensitivitaet:"±20 % ≈ ±3 % der 12-Wochen-Prognose"},
+  "prognose.deckel":        {wert:1.15, einheit:"Faktor", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Harte Obergrenze von +15 % auf den aktuellen Wert über 12 Wochen, damit eine steile Anfangsphase nicht linear hochgerechnet wird.",
+    sensitivitaet:"±20 % ≈ ±3 Prozentpunkte maximale Prognose"},
+  "prognose.blockTage":     {wert:28, einheit:"Tage", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Vier Wochen je Prognoseblock — passt zum Trainingsblock und zur Deload-Periodik der App.",
+    sensitivitaet:"Ändert die Auflösung der Prognose, nicht ihren Endwert"},
+  "e1rm.maxReps":           {wert:12, einheit:"Wiederholungen", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Über 12 Wiederholungen wird die Epley-Schätzung unzuverlässig; der Deckel verhindert, dass ein Satz mit 20 Wiederholungen eine absurde Maximalkraft ergibt.",
+    sensitivitaet:"±20 % ≈ ±2,4 Wiederholungen; höher erhöht die Streuung der e1RM-Reihe"},
+  "e1rm.epley.teiler":      {wert:30, einheit:"Teiler", typ:"beleg",
+    quelle:"Epley B. 1985 · Poster, University of Nebraska", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Der klassische Epley-Nenner; eine Praxisformel, keine validierte Messung — sie schätzt die Maximalkraft, sie misst sie nicht.",
+    sensitivitaet:"±20 % ≈ ±4 % der geschätzten Maximalkraft bei 8 Wiederholungen", unvollstaendig:true},
+  "e1rm.rpe.standard":      {wert:8, einheit:"RPE", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Fehlt die Anstrengungsangabe, nimmt die Rechnung RPE 8 an. Das ist eine Annahme über fremde Daten und verbreitert die Unsicherheit der Reihe — bei importierten Sätzen ohne RPE steht das künftig dabei.",
+    sensitivitaet:"±20 % ≈ ±1,6 RPE-Punkte, das sind etwa ±5 % geschätzte Maximalkraft"},
+
+/* ── Progression im Plan ─────────────────────────────────────────────── */
+
+  "prog.deload.woche":   {wert:4, einheit:"Woche im Block", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 (Praxismodell, nicht begutachtet)", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Jede vierte Woche entlastet. Belastbare Vergleiche von Plänen mit und ohne Entlastungswoche fehlen bislang; die Regel steht hier, weil sie konservativ ist — zu wenig Erholung kostet mehr als eine Woche zu viel davon.",
+    sensitivitaet:"±20 % ≈ ±0,8 Wochen Blocklänge", unvollstaendig:true},
+  "prog.deload.faktor":  {wert:0.6, einheit:"Faktor Sätze", typ:"praxisregel",
+    quelle:"Israetel et al. 2017 (Praxismodell, nicht begutachtet)", evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"In der Entlastungswoche 40 % weniger Sätze.",
+    sensitivitaet:"±20 % ≈ ±12 % Volumen in der Entlastungswoche", unvollstaendig:true},
+  "prog.spitzenwoche.bonus":{wert:1, einheit:"Satz", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"In Woche 3 bekommt jede Grundübung einen Satz dazu; gesetzt als sanfte Volumenprogression, weil der Hauptfortschritt über die Last läuft.",
+    sensitivitaet:"Ein Satz mehr oder weniger je Grundübung in einer von vier Wochen"},
+  "prog.step.standard":  {wert:2.5, einheit:"kg", typ:"praxisregel",
+    quelle:"Kleinster gängiger Hantelsprung in europäischen Studios (2× 1,25 kg)",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Kleinster gängiger Hantelsprung in europäischen Studios; der Wert ist eine Gerätegrenze, keine physiologische.",
+    sensitivitaet:"±20 % ≈ ±0,5 kg je Steigerung"},
+
+/* ── Umstrittene Quellen: herabgestuft ───────────────────────────────────
+   Diese drei standen in der App als Belege. Nach Pruefung der Kritik sind
+   sie das nicht. Sie bleiben — mit richtigem Typ und sichtbarer Einordnung,
+   statt still zu verschwinden.                                           */
+
+  "last.sprung.warnung": {wert:30, einheit:"% Steigerung/Woche", typ:"praxisregel",
+    quelle:"Gabbett 2016 · Br J Sports Med — HERABGESTUFT: die ACWR-Methodik steht seit etwa 2020 unter methodischer Kritik (u. a. Lolli et al. BJSM 2019; Impellizzeri et al. IJSPP 2020)",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Plötzliche Lastsprünge gehen in Beobachtungsdaten mit mehr Ausfällen einher, aber die Verhältniszahl, auf der die Regel beruht, ist statistisch angreifbar. Die App warnt weiterhin, nennt es aber Erfahrungsregel und nicht Beleg.",
+    sensitivitaet:"±20 % ≈ ±6 Prozentpunkte, ab wann gewarnt wird", unvollstaendig:true},
+  "last.steigerung.deckel":{wert:10, einheit:"% Steigerung/Woche", typ:"praxisregel",
+    quelle:"10-%-Regel — HERABGESTUFT: Nielsen et al. 2014 stützt sie nicht in der Allgemeinheit, in der sie verbreitet wird (vgl. auch Buist et al. Am J Sports Med 2008)",
+    evidenz:"Praxismodell", sichtbar:true,
+    begruendung:"Ein konservativer Aufbaudeckel, der sich in der Praxis bewährt hat. Er steht nicht mehr als Studienergebnis da.",
+    sensitivitaet:"±20 % ≈ ±2 Prozentpunkte erlaubte Wochensteigerung", unvollstaendig:true},
+  "saettigung.index.holt":{wert:1, einheit:"Index (relativ)", typ:"beleg",
+    quelle:"Holt SHA et al. 1995 · Am J Clin Nutr — EINZELSTUDIE, niedriger Evidenzgrad",
+    evidenz:"Beobachtung", sichtbar:true,
+    begruendung:"Der Sättigungsindex beruht auf einer einzelnen Arbeit mit kleiner Stichprobe. Die Richtung (viel Eiweiß bei moderater Energiedichte hält länger vor) ist breit gestützt, die konkreten Indexwerte sind es nicht.",
+    sensitivitaet:"Die App nutzt nur die Rangfolge, nicht die absoluten Werte", unvollstaendig:true},
+
+/* ── Kalorienrichtung: welches Ziel kippt die Strategie ─────────────────
+   Alle Werte hier sind gesetzt. Belegt ist der GRUNDSATZ, dass Fettabbau und
+   Muskelaufbau energetisch gegensaetzlich sind und die Reihenfolge der Ziele
+   entscheidet (Slater et al. 2019; Helms et al. 2014). Die konkreten Prozente
+   sind es nicht — sie sind eine Auslegung dieses Grundsatzes.            */
+
+  "kcal.recomp.lean.maennlich":{wert:18, einheit:"% Körperfett", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Ästhetische Schwelle, ab der ein Mann eher definieren als aufbauen will; gesetzt, keine klinische Grenze.",
+    sensitivitaet:"±20 % ≈ ±3,6 Prozentpunkte Körperfett; verschiebt, wer Defizit statt Überschuss bekommt"},
+  "kcal.recomp.lean.weiblich": {wert:26, einheit:"% Körperfett", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Dieselbe Schwelle für Frauen, höher wegen des physiologisch höheren essenziellen Fettanteils.",
+    sensitivitaet:"±20 % ≈ ±5,2 Prozentpunkte"},
+  "kcal.recomp.lean.abstand":  {wert:6, einheit:"Prozentpunkte", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Abstand über der Schwelle, ab dem die App ein deutlicheres Defizit wählt statt eines leichten.",
+    sensitivitaet:"±20 % ≈ ±1,2 Prozentpunkte"},
+  "kcal.recomp.dir.fett":      {wert:-0.12, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Moderates Defizit, wenn bei Recomp das Körperfett deutlich über der Schwelle liegt.",
+    sensitivitaet:"±20 % ≈ ±2,4 Prozentpunkte Defizit, bei 2.600 kcal etwa ±62 kcal/Tag"},
+  "kcal.recomp.dir.balance":   {wert:-0.05, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Leichtes Defizit bei hohem Eiweiß, wenn das Körperfett knapp über der Schwelle liegt.",
+    sensitivitaet:"±20 % ≈ ±1 Prozentpunkt, etwa ±26 kcal/Tag"},
+  "kcal.recomp.dir.aufbau":    {wert:0.05, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Leichter Überschuss für Lean-Gain, wenn das Körperfett unter der Schwelle liegt.",
+    sensitivitaet:"±20 % ≈ ±1 Prozentpunkt"},
+  "kcal.recomp.ohneKF.hoch":   {wert:-0.10, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad ohne Körperfettwert, oberhalb BMI 30.",
+    sensitivitaet:"±20 % ≈ ±2 Prozentpunkte"},
+  "kcal.recomp.ohneKF.leicht": {wert:0.04, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzpfad unterhalb BMI 27.", sensitivitaet:"±20 % ≈ ±0,8 Prozentpunkte"},
+  "kcal.recomp.fettZuerst.hoch":{wert:-0.20, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Steht Fettabbau bei Recomp an erster Stelle und der BMI über 30, führt ein volles Defizit.",
+    sensitivitaet:"±20 % ≈ ±4 Prozentpunkte, etwa ±104 kcal/Tag"},
+  "kcal.recomp.fettZuerst.normal":{wert:-0.15, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Dasselbe unter BMI 30, etwas knapper.", sensitivitaet:"±20 % ≈ ±3 Prozentpunkte"},
+  "kcal.recomp.ausgewogen":    {wert:-0.08, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Leichtes Defizit, wenn bei Recomp keines der beiden Ziele vorn steht.",
+    sensitivitaet:"±20 % ≈ ±1,6 Prozentpunkte"},
+  "kcal.kraftCut.hoch":        {wert:-0.12, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Steht Maximalkraft vorn, bleibt das Defizit knapp — neuronale Anpassung und Regeneration brauchen Energie.",
+    sensitivitaet:"±20 % ≈ ±2,4 Prozentpunkte"},
+  "kcal.kraftCut.normal":      {wert:-0.08, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Dasselbe unter BMI 30.", sensitivitaet:"±20 % ≈ ±1,6 Prozentpunkte"},
+  "kcal.cut.sanft":            {wert:-0.12, einheit:"Anteil am Bedarf", typ:"praxisregel",
+    quelle:"Garthe I et al. 2011 · Int J Sport Nutr Exerc Metab", evidenz:"RCT", sichtbar:true,
+    begruendung:"Langsames Abnehmen; die zitierte Arbeit zeigt, dass etwa 0,5 %/Woche Muskeln und Kraft erhält, doppelt so schnell Magermasse kostet. Die Zuordnung Tempo→Prozent ist gesetzt.",
+    sensitivitaet:"±20 % ≈ ±2,4 Prozentpunkte Defizit", unvollstaendig:true},
+  "kcal.cut.moderat.hoch":     {wert:-0.22, einheit:"Anteil am Bedarf", typ:"praxisregel",
+    quelle:"Garthe I et al. 2011", evidenz:"RCT", sichtbar:true,
+    begruendung:"Standardtempo oberhalb BMI 30.", sensitivitaet:"±20 % ≈ ±4,4 Prozentpunkte", unvollstaendig:true},
+  "kcal.cut.moderat.normal":   {wert:-0.20, einheit:"Anteil am Bedarf", typ:"praxisregel",
+    quelle:"Garthe I et al. 2011", evidenz:"RCT", sichtbar:true,
+    begruendung:"Standardtempo, der wissenschaftliche Sweet Spot um 0,5 %/Woche.",
+    sensitivitaet:"±20 % ≈ ±4 Prozentpunkte, etwa ±104 kcal/Tag", unvollstaendig:true},
+  "kcal.cut.zuegig.hoch":      {wert:-0.25, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Schnelles Tempo auf ausdrücklichen Wunsch; liegt ÜBER dem Korridor, den die zitierte Arbeit stützt — die App weist das Tempo deshalb als zügig aus.",
+    sensitivitaet:"±20 % ≈ ±5 Prozentpunkte; höher erhöht den Magermasseverlust"},
+  "kcal.cut.zuegig.normal":    {wert:-0.22, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Dasselbe unter BMI 27.", sensitivitaet:"±20 % ≈ ±4,4 Prozentpunkte"},
+  "kcal.gain.hohesKF":         {wert:-0.12, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Beim Aufbauziel mit BMI über 30 empfiehlt die App zunächst ein Defizit — ein Überschuss würde dort vor allem Fett ansetzen.",
+    sensitivitaet:"±20 % ≈ ±2,4 Prozentpunkte"},
+  "kcal.bulk":                 {wert:0.10, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Aufbau-Überschuss; gesetzt als Kompromiss zwischen Aufbaugeschwindigkeit und Fettzuwachs.",
+    sensitivitaet:"±20 % ≈ ±2 Prozentpunkte, etwa ±52 kcal/Tag"},
+  "kcal.strength.ueberschuss": {wert:0.03, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Knapper Überschuss beim reinen Kraftziel ohne Abnehmwunsch.",
+    sensitivitaet:"±20 % ≈ ±0,6 Prozentpunkte"},
+  "alter.standard":            {wert:30, einheit:"Jahre", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ersatzwert, wenn kein Alter vorliegt; gesetzt als Mitte der Zielgruppe.",
+    sensitivitaet:"Betrifft nur Profile ohne Altersangabe"},
+  "prot.bmiKappe":             {wert:25, einheit:"BMI", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ohne Körperfettwert wird das Eiweißziel auf das Gewicht bei BMI 25 gedeckelt — sonst bekäme starkes Übergewicht ein Eiweißziel, das überwiegend auf Fettmasse gerechnet wäre.",
+    sensitivitaet:"±20 % ≈ ±5 BMI-Punkte Deckelgewicht"},
+  "makro.fett.dirSchwelle":    {wert:-0.15, einheit:"Anteil am Bedarf", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Ab diesem Defizit sinkt das Fettziel auf das untere Ende; gesetzte Grenze zwischen moderatem und deutlichem Defizit.",
+    sensitivitaet:"±20 % ≈ ±3 Prozentpunkte; verschiebt, wer das niedrigere Fettziel bekommt"},
+
+  "prot.fensterTage":      {wert:14, einheit:"Tage", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Rückschau für den Eiweiß-Mittelwert: zwei Wochen glätten einzelne Ausreißer, ohne eine Umstellung der Ernährung zu verschleppen.",
+    sensitivitaet:"±20 % ≈ ±3 Tage; kürzer reagiert schneller, zeigt aber mehr Rauschen"},
+  "prognose.minPunkte":    {wert:3, einheit:"Messwerte", typ:"annahme", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Unter drei Werten lässt sich keine Steigung legen; darunter zeigt die App keine Prognose statt zu raten.",
+    sensitivitaet:"Nicht sinnvoll senkbar — zwei Punkte ergeben immer eine perfekte Gerade"},
+  "prognose.bloecke":      {wert:3, einheit:"Blöcke", typ:"modell", evidenz:"Annahme", sichtbar:false,
+    begruendung:"Drei Blöcke à 28 Tage ergeben den 12-Wochen-Horizont, auf den sich die ganze Prognose bezieht.",
+    sensitivitaet:"Mehr Blöcke verlängern den Horizont; die Dämpfung macht die späteren Werte zunehmend unsicher"},
+  "prog.spitzenwoche":     {wert:3, einheit:"Woche im Block", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Woche 3 ist die Spitzenwoche vor der Entlastung in Woche 4; gesetzt, damit das höchste Volumen direkt vor der Erholung liegt.",
+    sensitivitaet:"Verschiebt, in welcher Woche die Grundübungen einen Satz mehr bekommen"},
+
+};
+
+
+/* ── Zugriff ──────────────────────────────────────────────────────────────
+   P("schlüssel") liefert den WERT. Ein unbekannter Schluessel wirft — das ist
+   Absicht: so kann kein Tippfehler still zu undefined und damit zu NaN in
+   einer Empfehlung werden. PE() liefert den ganzen Eintrag fuer die
+   Herleitungs-Ansicht.                                                    */
+
+function P(schluessel){
+  const e=PARAMS[schluessel];
+  if(!e) throw new Error("PARAMS: unbekannter Schlüssel "+schluessel);
+  return e.wert;
+}
+function PE(schluessel){ return PARAMS[schluessel]||null; }
+
+/* Alle Eintraege eines Praefix, als {letzterTeil: wert}. */
+function PGruppe(praefix){
+  const out={};
+  for(const k of Object.keys(PARAMS)){
+    if(!k.startsWith(praefix)) continue;
+    out[k.slice(praefix.length)]=PARAMS[k].wert;
+  }
+  return out;
+}
+
+/* Was noch offen ist: Eintraege mit unvollstaendiger Quellenangabe. Die Liste
+   ist Arbeitsvorrat, keine Schande — sie steht sichtbar, statt dass die App
+   Vollstaendigkeit behauptet. */
+function paramsLuecken(){
+  return Object.keys(PARAMS).filter(k=>PARAMS[k].unvollstaendig)
+    .map(k=>({schluessel:k, quelle:PARAMS[k].quelle||"(keine)", typ:PARAMS[k].typ}));
+}
+
+/* Zahlen, die der Nutzer sieht und die auf einer ANNAHME beruhen. Genau diese
+   Liste war der Anlass fuer das Register. */
+function paramsAnnahmen(){
+  return Object.keys(PARAMS).filter(k=>PARAMS[k].typ==="annahme")
+    .map(k=>({schluessel:k, wert:PARAMS[k].wert, einheit:PARAMS[k].einheit,
+              begruendung:PARAMS[k].begruendung, sensitivitaet:PARAMS[k].sensitivitaet,
+              sichtbar:!!PARAMS[k].sichtbar}));
+}
+
+/* Kennzahlen des Registers — fuer die Transparenzseite und den Test. */
+function paramsBilanz(){
+  const b={gesamt:0, beleg:0, modell:0, praxisregel:0, annahme:0, nutzerdaten:0,
+           sichtbar:0, unvollstaendig:0, mitQuelle:0};
+  for(const k of Object.keys(PARAMS)){
+    const e=PARAMS[k]; b.gesamt++;
+    if(b[e.typ]!==undefined) b[e.typ]++;
+    if(e.sichtbar) b.sichtbar++;
+    if(e.unvollstaendig) b.unvollstaendig++;
+    if(e.quelle) b.mitQuelle++;
+  }
+  return b;
+}
+
 // ---------- Engine ----------
 function mifflin(sex,age,h,w){ return Math.round(10*w+6.25*h-5*age+(sex==="male"?5:-161)); }
 function katch(w,bf){ return Math.round(370+21.6*w*(1-bf/100)); }
@@ -4127,12 +4681,12 @@ function bmrCalc(a){
   if(a.bodyFat!=null) return katch(a.weight,a.bodyFat);
   return mifflin(a.sex,a.age,a.height,effWeight(a));
 }
-const NEAT={sedentary:1.2,light:1.3,moderate:1.4,active:1.475,very_active:1.55};
+const NEAT=PGruppe("energie.neat.");
 function tdeeCalc(bmr,act,w,len,days){
   const rest=Math.round(bmr*NEAT[act]);
   // Realistischer NETTO-Mehrverbrauch einer Krafteinheit (~3,5 kcal/kg/h über dem Alltag),
   // auf der metabolisch aktiven Masse (effWeight) — bewusst konservativ.
-  const train=rest+Math.round(3.5*w*(len/60));
+  const train=rest+Math.round(P("energie.training.kcalProKgStunde")*w*(len/60));
   return {rest,train,avg:Math.round((train*days+rest*(7-days))/7)};
 }
 const GOAL_D={muscle_gain:[.1,.1],fat_loss:[-.2,-.2],recomp:[.1,-.1],strength:[.05,.05],general:[0,0],endurance:[0,0],mobility:[0,0]};
@@ -4165,15 +4719,15 @@ function calorieDirection(a){
       // Lean-Gain. Ohne KF-Wert bleibt der bisherige BMI-Pfad (byte-identisch).
       const bf=a.bodyFat, male=a.sex!=="female";
       if(bf!=null){
-        const lean=male?18:26;
-        if(bf>=lean+6) return {dir:-0.12, label:"Recomp · erst definieren (moderates Defizit)", mode:"recomp_fat"};
-        if(bf>=lean)   return {dir:-0.05, label:"Recomp · leichtes Defizit bei hohem Protein", mode:"recomp_bal"};
-        return {dir:0.05, label:"Recomp · Lean-Gain (leichter Überschuss)", mode:"recomp_gain"};
+        const lean=male?P("kcal.recomp.lean.maennlich"):P("kcal.recomp.lean.weiblich");
+        if(bf>=lean+P("kcal.recomp.lean.abstand")) return {dir:P("kcal.recomp.dir.fett"), label:"Recomp · erst definieren (moderates Defizit)", mode:"recomp_fat"};
+        if(bf>=lean)   return {dir:P("kcal.recomp.dir.balance"), label:"Recomp · leichtes Defizit bei hohem Protein", mode:"recomp_bal"};
+        return {dir:P("kcal.recomp.dir.aufbau"), label:"Recomp · Lean-Gain (leichter Überschuss)", mode:"recomp_gain"};
       }
-      return {dir:bmi>=30?-0.10:bmi>=27?0:0.04, label:bmi>=27?"Recomp · Aufbau-Fokus (Erhaltung)":"Recomp · Aufbau-Fokus (leichter Überschuss)", mode:"recomp_gain"};
+      return {dir:bmi>=P("energie.bmi.schwelle30")?P("kcal.recomp.ohneKF.hoch"):bmi>=P("energie.bmi.schwelle27")?0:P("kcal.recomp.ohneKF.leicht"), label:bmi>=P("energie.bmi.schwelle27")?"Recomp · Aufbau-Fokus (Erhaltung)":"Recomp · Aufbau-Fokus (leichter Überschuss)", mode:"recomp_gain"};
     }
-    if(g0==="fat_loss")    return {dir:bmi>=30?-0.20:-0.15, label:"Recomp · Fettabbau-Fokus (moderates Defizit)", mode:"recomp_fat"};
-    return {dir:-0.08, label:"Recomp · ausgewogen (leichtes Defizit)", mode:"recomp_bal"};
+    if(g0==="fat_loss")    return {dir:bmi>=P("energie.bmi.schwelle30")?P("kcal.recomp.fettZuerst.hoch"):P("kcal.recomp.fettZuerst.normal"), label:"Recomp · Fettabbau-Fokus (moderates Defizit)", mode:"recomp_fat"};
+    return {dir:P("kcal.recomp.ausgewogen"), label:"Recomp · ausgewogen (leichtes Defizit)", mode:"recomp_bal"};
   }
   /* HYPERPRINZIP 3 — Deklarierte Priorität ist bindend (Audit-Befund G-3).
      Die Priorisierung galt bisher nur für die Paarung Fett + Muskelaufbau; steht KRAFT an
@@ -4181,22 +4735,22 @@ function calorieDirection(a){
      reinen Abnehmziel. Maximalkraft ist im tiefen Defizit aber schlechter zu entwickeln
      (neuronale Anpassung + Regeneration brauchen Energie). Kraft zuerst → knappes Defizit. */
   if(hasFat&&goals.includes("strength")&&g0==="strength"){
-    return {dir:bmi>=30?-0.12:-0.08, label:"Kraft-Fokus · knappes Defizit (Kraft zuerst)", mode:"strength_cut"};
+    return {dir:bmi>=P("energie.bmi.schwelle30")?P("kcal.kraftCut.hoch"):P("kcal.kraftCut.normal"), label:"Kraft-Fokus · knappes Defizit (Kraft zuerst)", mode:"strength_cut"};
   }
   if(hasFat){
     // Tempo aus der Abnehmen-Persona koppelt das Defizit. Ohne loss_rate bleibt der
     // Standard byte-identisch (App-Test-Pfad unverändert). Grundlage: ~0,5–0,7 %/Woche
     // erhält Muskeln/Kraft, doppelt so schnell kostet Magermasse (Garthe et al. 2011).
     const lr=a.loss_rate;
-    if(lr==="easy") return {dir:-0.12, label:"Defizit −12 % · sanft", mode:"cut"};
-    if(lr==="fast") return {dir:bmi>=27?-0.25:-0.22, label:"Defizit "+(bmi>=27?"−25 %":"−22 %")+" · zügig", mode:"cut"};
+    if(lr==="easy") return {dir:P("kcal.cut.sanft"), label:"Defizit −12 % · sanft", mode:"cut"};
+    if(lr==="fast") return {dir:bmi>=P("energie.bmi.schwelle27")?P("kcal.cut.zuegig.hoch"):P("kcal.cut.zuegig.normal"), label:"Defizit "+(bmi>=P("energie.bmi.schwelle27")?"−25 %":"−22 %")+" · zügig", mode:"cut"};
     // "mod" & Default: der wissenschaftliche Sweet Spot (~0,5 %/Woche)
-    return {dir:bmi>=30?-0.22:-0.20, label:"Defizit "+(bmi>=30?"−22 %":"−20 %"), mode:"cut"};
+    return {dir:bmi>=P("energie.bmi.schwelle30")?P("kcal.cut.moderat.hoch"):P("kcal.cut.moderat.normal"), label:"Defizit "+(bmi>=P("energie.bmi.schwelle30")?"−22 %":"−20 %"), mode:"cut"};
   }
-  if(hasGain){ if(bmi>=30)return{dir:-0.12,label:"Fettabbau-Phase (empfohlen)",mode:"gain_highbf"};
-    if(bmi>=27)return{dir:0,label:"Erhaltung · Lean-Gain-Start",mode:"leangain"};
-    return{dir:0.10,label:"Aufbau-Überschuss +10 %",mode:"bulk"}; }
-  if(goals.includes("strength")) return {dir:0.03,label:"leichter Überschuss",mode:"strength"};
+  if(hasGain){ if(bmi>=P("energie.bmi.schwelle30"))return{dir:P("kcal.gain.hohesKF"),label:"Fettabbau-Phase (empfohlen)",mode:"gain_highbf"};
+    if(bmi>=P("energie.bmi.schwelle27"))return{dir:0,label:"Erhaltung · Lean-Gain-Start",mode:"leangain"};
+    return{dir:P("kcal.bulk"),label:"Aufbau-Überschuss +10 %",mode:"bulk"}; }
+  if(goals.includes("strength")) return {dir:P("kcal.strength.ueberschuss"),label:"leichter Überschuss",mode:"strength"};
   return {dir:0,label:"Erhaltung",mode:"maintain"};
 }
 function multiTargets(a,bmr,td){
@@ -4214,13 +4768,13 @@ function multiTargets(a,bmr,td){
     conflicts.push({type:"interference",msg:"Kraft/Muskeln + Ausdauer: Lege harte Cardio-Einheiten getrennt von Bein-Tagen (am besten anderer Tag oder ≥6 h Abstand) — so wächst der Muskel, und die Ausdauer steigt trotzdem.",bio:"Concurrent Training kann die mTOR-Signalwege dämpfen; zeitliche Trennung minimiert den Interferenzeffekt (Wilson et al., 2012; Schumann 2022)."});
   }
   // Gesundheits-/Cardio-Empfehlung jenseits der angeklickten Ziele
-  if(bmi>=30 && !hasFat){ recs.push("Bei deinem BMI senkt regelmäßiges Cardio (2–3×/Woche, lockeres Tempo) Gesundheitsrisiken und beschleunigt den Fettabbau — gelenkschonend per Rad, Crosstrainer oder zügigem Gehen."); }
-  else if(bmi>=27 && hasFat){ recs.push("2–3 lockere Cardio-Einheiten pro Woche zusätzlich zum Krafttraining beschleunigen deinen Fettabbau spürbar, ohne die Erholung zu stören."); }
+  if(bmi>=P("energie.bmi.schwelle30") && !hasFat){ recs.push("Bei deinem BMI senkt regelmäßiges Cardio (2–3×/Woche, lockeres Tempo) Gesundheitsrisiken und beschleunigt den Fettabbau — gelenkschonend per Rad, Crosstrainer oder zügigem Gehen."); }
+  else if(bmi>=P("energie.bmi.schwelle27") && hasFat){ recs.push("2–3 lockere Cardio-Einheiten pro Woche zusätzlich zum Krafttraining beschleunigen deinen Fettabbau spürbar, ohne die Erholung zu stören."); }
   const days=Math.min(7,Math.max(1,a.days||4));
   const adj=(typeof S!=="undefined"&&S.calAdjust)||0;  // Lern-Korrektur (adaptiver Abgleich)
   const avgT=Math.round(td.avg*(1+dir))+adj;           // Ziel = Wochenschnitt (+ Korrektur)
   const trainBurn=Math.max(0, td.train-td.rest);       // echter Extra-Verbrauch je Einheit
-  const floor=a.sex==="female"?1400:1600, warn=[];
+  const floor=a.sex==="female"?P("energie.floor.weiblich"):P("energie.floor.maennlich"), warn=[];
   // Eat-back-Cycling: am Trainingstag isst du den Trainingsverbrauch (anteilig) zurück,
   // am Ruhetag die Basis. Wochenschnitt bleibt das Ziel. Trainierst du NICHT (oder lässt
   // das Cardio aus), orientierst du dich am Ruhetag-Ziel.
@@ -4235,9 +4789,9 @@ function multiTargets(a,bmr,td){
   // Cut/Recomp: 2,6 g/kg fettfreie Masse (≈ 2,0–2,3 g/kg Körpergewicht je nach KF-Anteil) —
   // oberes Ende für maximalen Muskelschutz im Defizit. Erhaltung/Aufbau: 2,2 g/kg FFM.
   // Alters-Bonus (Audit M-3): ab ~50 anabole Resistenz → +0,2 g/kg mehr Protein (Moore 2015; Wall 2015).
-  const older=(a.age||30)>=50, ageB=older?0.2:0;
-  if(a.bodyFat!=null) prot=Math.round(((cut?2.6:2.2)+ageB)*a.weight*(1-a.bodyFat/100));
-  else prot=Math.round(((cut?2.1:1.8)+ageB)*Math.min(a.weight,25*(a.height/100)**2));
+  const older=(a.age||P("alter.standard"))>=P("reiz.alter.schwelle"), ageB=older?P("makro.protein.alterBonus"):0;
+  if(a.bodyFat!=null) prot=Math.round(((cut?P("makro.protein.cut.ffm"):P("makro.protein.erhalt.ffm"))+ageB)*a.weight*(1-a.bodyFat/100));
+  else prot=Math.round(((cut?P("makro.protein.cut.kg"):P("makro.protein.erhalt.kg"))+ageB)*Math.min(a.weight,P("prot.bmiKappe")*(a.height/100)**2));
   /* HYPERPRINZIP 4+5 — Messung schlägt Surrogat, physiologische Böden sind absolut (G-4).
      Fett wurde bisher pauschal aus dem KÖRPERGEWICHT abgeleitet. Bei starkem Übergewicht ist
      dieses Gewicht überwiegend Fettmasse — der Betroffene bekam also ausgerechnet deshalb ein
@@ -4247,12 +4801,13 @@ function multiTargets(a,bmr,td){
      tatsächlich bestimmt. Zwei absolute Böden bleiben: Fett ≥ 0,5 g/kg Körpergewicht
      (Hormonhaushalt) und ein Kohlenhydrat-Boden für die Trainingsqualität. */
   const _ffm = a.bodyFat!=null ? a.weight*(1-a.bodyFat/100) : null;
-  const fatFloor = Math.round(0.5*a.weight);
+  const fatFloor = Math.round(P("makro.fett.boden")*a.weight);
+  const _tief = dir<=P("makro.fett.dirSchwelle");
   const fatBase = _ffm!=null
-    ? Math.round((dir<=-0.15?1.0:1.1) * _ffm)          // an fettfreier Masse
-    : Math.round((dir<=-0.15?0.8:0.9) * a.weight);      // ohne KF-Wert: bisheriger Pfad
+    ? Math.round((_tief?P("makro.fett.ffm.cut"):P("makro.fett.ffm.sonst")) * _ffm)
+    : Math.round((_tief?P("makro.fett.kg.cut"):P("makro.fett.kg.sonst")) * a.weight);
   const fat = Math.max(fatFloor, fatBase);
-  const carbFloor = _ffm!=null ? Math.round(2*_ffm) : Math.round(1.5*a.weight);
+  const carbFloor = _ffm!=null ? Math.round(P("makro.kh.boden.ffm")*_ffm) : Math.round(P("makro.kh.boden.kg")*a.weight);
   const mac=(k)=>{
     let f=fat, c=Math.round((k-prot*4-f*9)/4);
     // Reicht die Energie nicht für die Trainings-Kohlenhydrate, gibt Fett bis zu seinem
@@ -4359,28 +4914,31 @@ function adaptiveCalorieCheck(){
    bewusst konservativ: lieber ein zu niedriger Schätzwert als ein erfundener
    Rekord. Wer sein Maximum wissen will, macht schwere Sätze — und genau dazu
    führt die Deckelung hin. */
-const E1RM_MAX_REPS=12;
+const E1RM_MAX_REPS=P("e1rm.maxReps");
 function e1rm(w,reps,rpe){
   if(!isFinite(w)||!isFinite(reps)) return 0; // defensiv: keine NaN/Infinity in Kennzahlen
   if(reps===1) return w;
-  const eff=Math.min(E1RM_MAX_REPS, reps+(10-(rpe??8)));
-  return Math.round(w*(1+eff/30)*10)/10;
+  const eff=Math.min(E1RM_MAX_REPS, reps+(10-(rpe??P("e1rm.rpe.standard"))));
+  return Math.round(w*(1+eff/P("e1rm.epley.teiler"))*10)/10;
 }
 function statusScore(sleep,energy,stress,sore){
   const c01=(x)=>Math.max(0,Math.min(1,x));
-  const comps=[[.3,c01((sleep-1)/4)],[.25,c01((energy-1)/4)],[.2,c01(1-(stress-1)/4)],[.25,c01(1-(sore-1)/4)]];
+  const comps=[[P("status.gewicht.schlaf"),c01((sleep-1)/4)],[P("status.gewicht.energie"),c01((energy-1)/4)],
+               [P("status.gewicht.stress"),c01(1-(stress-1)/4)],[P("status.gewicht.schmerz"),c01(1-(sore-1)/4)]];
   const score=Math.round(comps.reduce((s,c)=>s+c[0]*c[1],0)*100);
-  const tier=score>=80?"Stark":score>=60?"Gut":score>=40?"Mäßig":"Erholung";
+  const tier=score>=P("status.stufe.stark")?"Stark":score>=P("status.stufe.gut")?"Gut"
+            :score>=P("status.stufe.maessig")?"Mäßig":"Erholung";
   return {score,tier};
 }
 function forecast12w(series){
-  if(series.length<3) return null;
+  if(series.length<P("prognose.minPunkte")) return null;
   const n=series.length;
   let st=0,sy=0,stt=0,sty=0;
   series.forEach((p)=>{st+=p.t;sy+=p.v;stt+=p.t*p.t;sty+=p.t*p.v;});
   const den=n*stt-st*st, slope=den===0?0:(n*sty-st*sy)/den, last=series[n-1];
   let vv=last.v, ss=slope; const pts=[];
-  for(let b=0;b<3;b++){ vv+=ss*28; ss*=.85; pts.push({wk:(b+1)*4, v:Math.round(Math.min(vv,last.v*1.15)*10)/10}); }
+  for(let b=0;b<P("prognose.bloecke");b++){ vv+=ss*P("prognose.blockTage"); ss*=P("prognose.daempfung");
+    pts.push({wk:(b+1)*4, v:Math.round(Math.min(vv,last.v*P("prognose.deckel"))*10)/10}); }
   return pts;
 }
 
@@ -4450,7 +5008,11 @@ const MUSCLE_OF={"Kniebeuge":"Beine","Ausfallschritte":"Beine","Beinbeuger":"Bei
    zuerst, Quelle danach; hier stand es vertauscht): seine
    Obergrenzen gelten fuer Fortgeschrittene mit voller Erholung — deficitScaledBands()
    skaliert ohnehin nach Trainingsalter und Energiezufuhr. */
-const VOL_BANDS={Beine:[12,30],Brust:[10,20],"Rücken":[10,22],Schultern:[8,20],Bizeps:[8,20],Trizeps:[6,18],Arme:[10,22],Core:[4,16]};
+/* Aus PARAMS abgeleitet — die Zahlen stehen nur noch an einer Stelle. */
+const VOL_BANDS=(()=>{ const o={};
+  for(const g of ["Beine","Brust","Rücken","Schultern","Bizeps","Trizeps","Arme","Core"])
+    o[g]=[P("vol.band."+g+".mev"), P("vol.band."+g+".mrv")];
+  return o; })();
 // Feines Volumen-Mapping: Arm-Isolation zählt auf den jeweils EIGENEN Muskel, nicht
 // auf eine Sammelgruppe. So bekommt der Bizeps am Pull-Tag sein volles Volumen (inkl.
 // 2. Übung) und der Trizeps am Push-Tag — ohne sich gegenseitig zu verdrängen.
@@ -4486,19 +5048,24 @@ function primaryGoal(a){
 // MRV folgt der ECHTEN Energieverfügbarkeit (nicht nur dem Ziel-Label): je tiefer das Defizit,
 // desto weniger ist erholbar (Helms 2014, Israetel). So sinkt das Volumen bei "Fettabbau-Fokus"
 // stärker als bei "Aufbau-Fokus" — die Priorität wirkt sich direkt auf das Trainingsvolumen aus.
-function deficitFactor(a){ const d=calorieDirection(a).dir; return Math.max(0.78, Math.min(1, 1+d)); }
+function deficitFactor(a){ const d=calorieDirection(a).dir; return Math.max(P("vol.defizit.untergrenze"), Math.min(1, 1+d)); }
 // Volumen-Landmarks nach TRAININGSALTER (Audit-Befund M-2). VOL_BANDS gelten für Intermediate.
 // Untrainierte wachsen mit weniger Volumen (niedrigeres MEV/MRV), Fortgeschrittene vertragen mehr
 // (höheres MRV) — Israetel/RP-Landmarks sind erfahrungsabhängig. So stimmt der „im Korridor"-Claim
 // auch für Einsteiger-Ganzkörperpläne, ohne die tatsächliche Satzzahl aufzublähen.
-function expBandFactor(exp){ return {beginner:{mev:0.65,mrv:0.8}, novice:{mev:0.78,mrv:0.9}, intermediate:{mev:1,mrv:1}, advanced:{mev:1,mrv:1.12}}[exp] || {mev:1,mrv:1}; }
+function expBandFactor(exp){ return {
+  beginner:    {mev:P("vol.exp.beginner.mev"), mrv:P("vol.exp.beginner.mrv")},
+  novice:      {mev:P("vol.exp.novice.mev"),   mrv:P("vol.exp.novice.mrv")},
+  intermediate:{mev:1, mrv:1},
+  advanced:    {mev:1, mrv:P("vol.exp.advanced.mrv")},
+}[exp] || {mev:1,mrv:1}; }
 function deficitScaledBands(a){
   const f=Math.min(1,deficitFactor(a));                 // Defizit verkleinert nur das MRV
   const ef=expBandFactor((a&&a.exp)||"intermediate");
   const out={};
   for(const k of Object.keys(VOL_BANDS)){
     const [mev0,mrv0]=VOL_BANDS[k];
-    const mev=Math.max(4,Math.round(mev0*ef.mev));
+    const mev=Math.max(P("vol.mev.absolutMin"),Math.round(mev0*ef.mev));
     const mrv=Math.max(mev+2,Math.round(mrv0*ef.mrv*f));
     out[k]=[mev,mrv];
   }
@@ -4553,9 +5120,9 @@ function deficitScaledBands(a){
    konservativere Ende der beiden Werte).
    WICHTIGE EINSCHRÄNKUNG aus derselben Arbeit: bei Älteren hielt die reduzierte
    Dosis die Muskelmasse NICHT (die Kraft schon). Deshalb der Alterszuschlag. */
-const SAETTIGUNG_WACHSTUM=31;          // Pelland 2026, Hypertrophie
-const SAETTIGUNG_KRAFT=3;              // Pelland 2026, Kraft
-const ERHALT_ANTEIL=1/3;               // Bickel 2011 / Spiering 2021, konservatives Ende
+const SAETTIGUNG_WACHSTUM=P("reiz.saettigung.wachstum");
+const SAETTIGUNG_KRAFT=P("reiz.saettigung.kraft");
+const ERHALT_ANTEIL=P("reiz.erhalt.anteil");
 const REIZ_SAETTIGUNG={
   muscle_gain: SAETTIGUNG_WACHSTUM,
   recomp:      SAETTIGUNG_WACHSTUM,    // derselbe Reiz, nur bei knapper Energie
@@ -4563,7 +5130,7 @@ const REIZ_SAETTIGUNG={
   fat_loss:    Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL),   // Erhalt im Defizit
   general:     Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL),
   mobility:    Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL),
-  endurance:   Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL*0.8), // Heben ist Begleitreiz
+  endurance:   Math.round(SAETTIGUNG_WACHSTUM*ERHALT_ANTEIL*P("reiz.endurance.abschlag")),
 };
 /* Ab etwa 50 reicht die reduzierte Dosis für den ERHALT der Muskelmasse nicht
    mehr (Bickel 2011: Ältere verloren Masse bei einem Drittel/Neuntel, Kraft
@@ -4574,10 +5141,10 @@ const REIZ_SAETTIGUNG={
 const ERHALT_ZIELE=new Set(["fat_loss","general","mobility","endurance"]);
 function saettigungFuer(ziel,a){
   const basis=REIZ_SAETTIGUNG[ziel]||REIZ_SAETTIGUNG.muscle_gain;
-  const alt=((a||(S.profile&&S.profile.a)||{}).age)||30;
-  return (alt>=50&&ERHALT_ZIELE.has(ziel))?Math.round(basis*1.5):basis;
+  const alt=((a||(S.profile&&S.profile.a)||{}).age)||P("alter.standard");
+  return (alt>=P("reiz.alter.schwelle")&&ERHALT_ZIELE.has(ziel))?Math.round(basis*P("reiz.alter.zuschlag")):basis;
 }
-const reizK=(ziel,a)=>saettigungFuer(ziel,a)/3;
+const reizK=(ziel,a)=>saettigungFuer(ziel,a)/P("reiz.k.teiler");
 /* Sättigungskurve: steigt monoton, Ertrag nimmt ab, nähert sich 1. */
 const reizKurve=(n,k)=>1-Math.exp(-Math.max(0,n)/k);
 /* Grenznutzen: was bringt der NÄCHSTE Satz noch? Das ist die Ableitung —
@@ -4642,21 +5209,22 @@ function wochenVolumenFrakt(){
    dem Plateau isst, holt mehr aus der nächsten Eiweißportion als aus dem
    nächsten Satz. Das ist eine Effizienzaussage, und sie wäre ohne die
    Substratseite nicht zu treffen. */
-const PROTEIN_PLATEAU=1.6;              // g/kg/Tag — Morton et al. 2018
+const PROTEIN_PLATEAU=P("prot.plateau");
 function proteinDeckung(a){
   a=a||(S.profile&&S.profile.a)||{};
   const kg=a.weight; if(!(kg>0)) return null;
   const tage=Object.keys(S.nutritionLog||{})
     .map(d=>({d,p:((S.nutritionLog[d]&&S.nutritionLog[d].meals)||[]).reduce((s,m)=>s+(m.p||0),0)}))
-    .filter(x=>x.p>0).slice(-14);
+    .filter(x=>x.p>0).slice(-P("prot.fensterTage"));
   /* Unter fünf geloggten Tagen ist der Mittelwert keine Aussage über die
      Gewohnheit — dann schweigt die Rechnung statt zu raten. */
-  if(tage.length<5) return null;
+  if(tage.length<P("prot.min.tage")) return null;
   const mittel=tage.reduce((s,x)=>s+x.p,0)/tage.length;
   const jeKg=mittel/kg;
   const deckung=Math.min(1,jeKg/PROTEIN_PLATEAU);
   return {jeKg:Math.round(jeKg*100)/100, mittel:Math.round(mittel), tage:tage.length,
-          deckung, faktor:0.8+0.2*deckung, knapp:deckung<0.9};
+          deckung, faktor:P("prot.faktor.basis")+(1-P("prot.faktor.basis"))*deckung,
+          knapp:deckung<P("prot.knapp.schwelle")};
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -4695,12 +5263,12 @@ function proteinDeckung(a){
    Gruppe nicht, gilt der über alle Gruppen gepoolte Faktor; reicht auch der
    nicht, der Bevölkerungswert. Das ist kein Notbehelf, sondern die übliche
    Antwort auf dünne Daten: teilweises Pooling. */
-const KALIB_VERLAESSLICH=(6.5*6.5)/(9.7*9.7);   // ≈0,449 — s. Herleitung oben
-const KALIB_MIN_WOCHEN=6;                        // kürzere Fenster messen Rauschen
-const KALIB_MIN_PUNKTE=8;
-const KALIB_SPANNE=[0.65,1.60];                  // so weit darf k vom Mittel weg
-const KALIB_SCHRITT=0.35;                        // Rohschritt, vor der Dämpfung
-const KALIB_FENSTER_TAGE=112;                    // 16 Wochen
+const KALIB_VERLAESSLICH=P("kalib.verlaesslich");
+const KALIB_MIN_WOCHEN=P("kalib.minWochen");
+const KALIB_MIN_PUNKTE=P("kalib.minPunkte");
+const KALIB_SPANNE=[P("kalib.spanne.min"),P("kalib.spanne.max")];
+const KALIB_SCHRITT=P("kalib.schritt");
+const KALIB_FENSTER_TAGE=P("kalib.fensterTage");
 
 /* Anstieg MIT Standardfehler. Ohne den Fehler ist ein Anstieg keine Aussage. */
 function trendMitFehler(punkte){
@@ -4723,7 +5291,7 @@ function gruppenFortschritt(m){
   const grenze=Date.now()-KALIB_FENSTER_TAGE*dayMs;
   const beitraege=[]; let punkteGes=0, spanne=0;
   for(const name of Object.keys(S.liftLog||{})){
-    const anteil=(satzAnteile(name)||{})[m]; if(!(anteil>=0.5)) continue;
+    const anteil=(satzAnteile(name)||{})[m]; if(!(anteil>=P("kalib.gruppeMinAnteil"))) continue;
     const reihe=e1Series(name).filter(p=>p.t>=grenze&&p.v>0);
     if(reihe.length<3) continue;
     /* Relativ rechnen, nicht absolut: 2,5 kg auf die Kniebeuge und 2,5 kg auf
@@ -4741,7 +5309,7 @@ function gruppenFortschritt(m){
   /* Fehler gewichteter Mittel: Wurzel aus der Summe der quadrierten Anteile. */
   const se=Math.sqrt(beitraege.reduce((s,b)=>s+Math.pow(b.seWoche*b.anteil/gew,2),0));
   return {rate,se,punkte:punkteGes,wochen:spanne,
-          klar:(se>0&&Math.abs(rate)>1.5*se)};
+          klar:(se>0&&Math.abs(rate)>P("kalib.trendKlar")*se)};
 }
 
 /* Ein Kalibrierfaktor je Gruppe. >1 heißt: dieser Mensch braucht mehr Sätze
@@ -4765,16 +5333,16 @@ function kalibFaktoren(a,volQuelle){
     const n=vol[m]||0;
     const anteilSaett=saett>0?n/saett:1;
     let schritt=0, grund="";
-    if(f.rate<=0 && anteilSaett<0.9){
+    if(f.rate<=0 && anteilSaett<P("kalib.schwelle.hoch")){
       /* Stagnation, obwohl noch Luft zur Sättigung ist → Dosis zu klein
          (Lixandrão 2024). Sättigungspunkt hoch. */
       schritt=+KALIB_SCHRITT; grund="Stagnation unterhalb der Sättigung";
-    } else if(f.rate>0 && anteilSaett<0.6){
+    } else if(f.rate>0 && anteilSaett<P("kalib.schwelle.runter")){
       /* Deutlicher Fortschritt bei weniger als 60 % der Dosis → holt mehr aus
          jedem Satz. Sättigungspunkt runter: der Plan soll keine Sätze fordern,
          die dieser Mensch nicht braucht. */
       schritt=-KALIB_SCHRITT; grund="Fortschritt bei geringer Dosis";
-    } else if(f.rate<=0 && anteilSaett>=0.9){
+    } else if(f.rate<=0 && anteilSaett>=P("kalib.schwelle.hoch")){
       /* An der Sättigung und trotzdem flach. Mehr Sätze sind hier NICHT die
          Antwort — der Hebel ist Last, Häufigkeit oder Energiezufuhr. */
       belege[m]={grund:"an der Sättigung flach — Hebel ist nicht das Volumen",f}; continue;
@@ -6041,11 +6609,11 @@ const SETS_BY_EXP={
    Aufbau (mehr Last-Toleranz), Isolation steigt gedämpft; Woche 4 deloadet. */
 function weekSets(name,baseSets){
   const w=S.currentWeek||1;
-  if(w===4) return Math.max(1,Math.round(baseSets*0.6));        // Deload-Woche
+  if(w===P("prog.deload.woche")) return Math.max(1,Math.round(baseSets*P("prog.deload.faktor")));
   const isComp=(EXDB[name]||{}).compound;
   // Sanfte Volumen-Progression: Sätze bleiben stabil (Progression v. a. über GEWICHT),
   // nur Hauptübungen bekommen in der Spitzenwoche EINEN Satz dazu — keine 5–6er-Türme mehr.
-  return baseSets + ((w===3 && isComp)?1:0);
+  return baseSets + ((w===P("prog.spitzenwoche") && isComp)?P("prog.spitzenwoche.bonus"):0);
 }
 // ---------- Individualisierung: Körperbau, Volumen, Reps/RIR, Übungsauswahl ----------
 function bmiOf(a){ const h=((a&&a.height)||180)/100; return (a&&a.weight)?a.weight/(h*h):24; }
@@ -6921,7 +7489,7 @@ function liftHistory(name){ return S.liftLog[name]||[]; }
 function bestE1(name){ return liftHistory(name).reduce((m,s)=>s.w>0?Math.max(m,e1rm(s.w,s.reps,s.rpe)):m,0); }
 /* Progression pro Übung (B7): optionales Override für Steigerungs-Schritt
    und Schema. Default: Linear mit 2,5 kg — wie bisher. */
-function progFor(name){ const o=(S.progOverride||{})[name]||{}; return {step:o.step||2.5, scheme:o.scheme||"linear"}; }
+function progFor(name){ const o=(S.progOverride||{})[name]||{}; return {step:o.step||P("prog.step.standard"), scheme:o.scheme||"linear"}; }
 function repRange(name){ const m=String((EXDB[name]||{}).reps||"").match(/(\d+)\s*[–\-]\s*(\d+)/); return m?[+m[1],+m[2]]:[6,12]; }
 function recommend(name){
   const h=liftHistory(name);
