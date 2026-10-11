@@ -49,7 +49,7 @@ if [ "${1:-}" != "--ohne-tests" ]; then
   GESAMT=0
   # params-gate braucht keinen Browser und laeuft zuerst: steht eine Zahl ohne
   # Registereintrag in einer Entscheidungsfunktion, hat das Packen keinen Sinn.
-  for T in params-gate app-tests endurance-tests ui-guard-tests dsgvo-tests ios-tests effizienz-tests; do
+  for T in params-gate app-tests endurance-tests ui-guard-tests dsgvo-tests ios-tests effizienz-tests audit-tests; do
     if OUT=$(node "metricgym-netlify/tests/$T.mjs" 2>&1); then
       N=$(printf '%s' "$OUT" | grep -c '^✓' || true)
       GESAMT=$((GESAMT+N))
