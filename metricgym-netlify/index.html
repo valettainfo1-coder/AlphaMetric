@@ -986,28 +986,82 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .corr-fill.high{background:linear-gradient(90deg,#D69E6A,#C9915C);}
   .corr-fill.fehlt{background:transparent;}
   /* ===== Plan-Pruefung ===== */
-  .au-hero{text-align:center; padding:18px 0 16px; border-bottom:1px solid var(--hairline); margin-bottom:18px;}
-  .au-hero-row{display:flex; justify-content:center; gap:26px; margin-top:14px;}
-  .au-hero-row>div{text-align:center;}
-  .au-sec{padding-top:18px; margin-top:18px; border-top:1px solid var(--hairline);}
-  .au-sec:first-child{border-top:none; margin-top:0;}
-  .au-h{font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--t3); margin:0 0 4px;}
-  .au-ta{width:100%; min-height:150px; border-radius:16px; border:1px solid var(--hairline);
-    background:var(--s2); color:var(--t1); padding:13px 14px; font-size:14px; line-height:1.6;
+  .au-hero{text-align:center; padding:6px 0 18px; border-bottom:1px solid var(--hairline); margin-bottom:20px;}
+  .au-ring{position:relative; width:142px; height:142px; margin:0 auto 12px;}
+  .au-ring svg{width:100%; height:100%; transform:rotate(-90deg);}
+  .au-ring circle{fill:none; stroke-linecap:round;}
+  .au-ring .trk{stroke:var(--s3); stroke-width:9;}
+  .au-ring .val{stroke:url(#auGrad); stroke-width:9;
+    transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1);}
+  .au-ring .mid{position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:1px;}
+  .au-ring .mid b{font-size:38px; font-weight:300; letter-spacing:-.02em; line-height:1;
+    font-variant-numeric:tabular-nums;}
+  .au-ring .mid i{font-style:normal; font-size:10px; font-weight:700; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--t3);}
+  .au-verdict{font-size:14.5px; line-height:1.55; max-width:310px; margin:0 auto;}
+  .au-hero-row{display:flex; justify-content:center; gap:0; margin-top:16px;}
+  .au-hero-row>div{flex:1; text-align:center; position:relative;}
+  .au-hero-row>div+div::before{content:""; position:absolute; left:0; top:12%; bottom:12%;
+    width:1px; background:var(--hairline);}
+  .au-sec{padding-top:20px; margin-top:20px; border-top:1px solid var(--hairline);}
+  .au-sec.first{border-top:none; margin-top:0; padding-top:0;}
+  .au-h{font-size:10px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--t3); margin:0 0 5px;}
+  .au-ta{width:100%; min-height:158px; border-radius:16px; border:1px solid var(--hairline);
+    background:var(--s2); color:var(--t1); padding:14px; font-size:14px; line-height:1.6;
     font-family:inherit; resize:vertical; -webkit-appearance:none;}
   .au-ta:focus{outline:none; border-color:var(--hl); background:var(--s3);}
-  .au-find{background:var(--surface); border-radius:16px; padding:14px; margin-bottom:10px;}
+  /* Gestufte Enthuellung: jede Zeile traegt die Zahl, die sie gerade gemessen hat */
+  .au-steps{list-style:none; margin:0; padding:0;}
+  .au-step{display:flex; align-items:baseline; gap:10px; padding:9px 0;
+    border-bottom:1px solid var(--hairline); opacity:0; transform:translateY(4px);
+    animation:auStep .45s cubic-bezier(.22,1,.36,1) forwards;}
+  .au-step:last-child{border-bottom:none;}
+  @keyframes auStep{to{opacity:1; transform:none}}
+  .au-step .lbl{flex:1; font-size:13px; color:var(--t2);}
+  .au-step .num{font-size:13.5px; font-weight:650; font-variant-numeric:tabular-nums;}
+  .au-step .tick{color:var(--hl); font-size:12px;}
+  .au-find{background:var(--surface); border-radius:16px; padding:15px; margin-bottom:10px;}
+  .au-find.safe{background:rgba(201,122,122,.07); box-shadow:inset 0 0 0 1px rgba(201,122,122,.16);}
   .au-num{flex-shrink:0; width:22px; height:22px; border-radius:999px; background:var(--s3);
     color:var(--t2); font-size:11.5px; font-weight:700; display:flex; align-items:center;
     justify-content:center; margin-top:1px;}
+  .au-num.safe{background:rgba(201,122,122,.18); color:#C97A7A;}
   .au-pill{font-size:10.5px; font-weight:650; padding:3px 8px; border-radius:999px; white-space:nowrap;}
   .au-pill.stark{background:rgba(169,196,222,.18); color:var(--hl);}
   .au-pill.mittel{background:var(--s3); color:var(--t2);}
   .au-pill.klein{background:var(--s3); color:var(--t3);}
-  .au-link{font-size:11.5px; font-weight:600; color:var(--t2); text-decoration:underline;
+  .au-pill.fok{background:rgba(143,184,220,.16); color:#8FB8DC;}
+  .au-link{font-size:11.5px; font-weight:600; color:var(--t2); white-space:nowrap;
+    text-decoration:underline;
     text-decoration-color:var(--t3); text-underline-offset:3px; cursor:pointer; margin-left:auto;}
   .au-link:hover,.au-link:focus-visible{color:var(--t1);}
+  /* Korridor mit Vorher-Marke */
+  /* Punkt, nicht Strich: neben der MEV-Marke standen zwei graue Striche, und
+     man konnte nicht sehen, welcher was bedeutet. */
+  .au-ghost{position:absolute; top:50%; width:7px; height:7px; border-radius:999px;
+    transform:translate(-50%,-50%); background:var(--t2);
+    box-shadow:0 0 0 2px var(--s1); opacity:.9;}
+  .au-delta{font-size:10.5px; font-weight:700; color:var(--hl); font-variant-numeric:tabular-nums;}
+  /* Reparatur: Tagesspalten mit linker Schiene */
+  .au-day{position:relative; padding:0 0 2px 15px; margin-bottom:14px;}
+  .au-day::before{content:""; position:absolute; left:0; top:4px; bottom:6px; width:2px;
+    border-radius:2px; background:var(--s3);}
+  .au-day-h{display:flex; align-items:baseline; gap:8px; margin-bottom:8px;}
+  .au-day-h b{font-size:12.5px; font-weight:650;}
+  .au-day-h span{font-size:10.5px; color:var(--t3); margin-left:auto; font-variant-numeric:tabular-nums;}
+  /* Zweizeilig: Name in Zeile eins, Begruendung darunter. Einzeilig umfloss
+     der Grund den Minutenwert und die Spalte franste aus. */
+  .au-edit{display:grid; grid-template-columns:17px 1fr auto; gap:2px 9px; padding:8px 0;}
+  .au-edit .sign{grid-row:1; width:17px; height:17px; border-radius:999px; font-size:11px;
+    font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px;}
+  .au-edit .sign.add{background:rgba(169,196,222,.2); color:var(--hl);}
+  .au-edit .sign.cut{background:rgba(214,158,106,.18); color:#D69E6A;}
+  .au-edit .nm{grid-row:1; grid-column:2; font-size:13.5px; font-weight:600; line-height:1.35;}
+  .au-edit .mn{grid-row:1; grid-column:3; font-size:11px; color:var(--t3);
+    font-variant-numeric:tabular-nums; white-space:nowrap; align-self:center;}
+  .au-edit .wy{grid-row:2; grid-column:2/4; font-size:11px; line-height:1.5; color:var(--t3);}
   .au-vs{display:flex; gap:10px; align-items:stretch;}
   .au-vs-c{flex:1; background:var(--s2); border-radius:16px; padding:13px; text-align:center;}
   .au-vs-c.win{background:var(--accent);}
@@ -1016,6 +1070,22 @@ TODO Real: Stripe Checkout / In-App-Purchase + Webhook-Tier-Sync im Backend.
   .au-list li{font-size:11.5px; line-height:1.65; color:var(--t2); margin-bottom:7px;}
   .au-list li:last-child{margin-bottom:0;}
   .au-list b{color:var(--t1); font-weight:650;}
+  /* Das Blatt ist Milchglas, kein Vollton. Ein Verlauf nach --bg traf die
+     Flaeche deshalb nicht und der Inhalt schien durch die Leiste hindurch.
+     Jetzt dieselbe Glas-Rezeptur wie das Blatt, mit Haarlinie oben, randlos
+     bis an die Blattkanten und buendig auf dessen Unterkante. */
+  .au-bar{position:sticky; bottom:calc(-22px - env(safe-area-inset-bottom)); z-index:3;
+    margin:22px -20px calc(-22px - env(safe-area-inset-bottom));
+    padding:12px 20px calc(14px + env(safe-area-inset-bottom));
+    /* Voll deckend, nicht noch einmal Milchglas: ein backdrop-filter in einem
+       Element, das selbst schon einen traegt, komponiert nicht — der Inhalt
+       schien durch die Leiste hindurch. */
+    background:var(--s1);
+    border-top:1px solid var(--hairline); display:flex; gap:8px;}
+  @media (prefers-reduced-motion:reduce){
+    .au-step{animation:none; opacity:1; transform:none}
+    .au-ring .val{transition:none}
+  }
   .dupviz{display:flex; align-items:stretch; gap:10px; margin-top:14px;}
   .dupcard{flex:1; background:var(--surface); border:none; border-radius:14px; padding:10px;
     display:flex; flex-direction:column; align-items:center; gap:5px;}
@@ -4337,6 +4407,22 @@ const PARAMS={
   "reiz.sek.anteil":          {wert:0.5, einheit:"Sätze", typ:"modell", evidenz:"Annahme", sichtbar:true,
     begruendung:"Konvention der App: ein Satz zählt 1,0 für den Zielmuskel und 0,5 für jeden nennenswert mitarbeitenden. Verbreitete Praxis, kein gemessener Wert.",
     sensitivitaet:"±20 % ≈ ±10 % des ausgewiesenen Volumens bei grundübungslastigen Plänen"},
+  /* Die Plan-Reparatur ergaenzt Saetze in einem fremden Plan. Diese zwei
+     Zahlen DOSIEREN und gehoeren deshalb hierher; die Gewichte, mit denen
+     unter mehreren passenden Uebungen eine ausgewaehlt wird, sind reine
+     Rangordnung und stehen als kommentierte Konstanten in planReparieren(). */
+  "reparatur.mrv.puffer":     {wert:2, einheit:"Sätze", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Abstand, den eine ergänzte Übung zur Obergrenze jeder mitbelasteten Gruppe einhält. Ein Loch zu schließen und dabei eine andere Gruppe ans MRV zu drücken wäre keine Reparatur. Zwei Sätze, weil die fraktionierte Zählung (0,5 je Sekundärmuskel) schon bei vier mitgeladenen Sätzen einen ganzen Satz Unsicherheit trägt.",
+    sensitivitaet:"±20 % verschiebt die ergänzte Satzzahl um bis zu einen Satz; bei 0 würde die Reparatur Gruppen exakt aufs MRV setzen, was keine Reserve für eine schlechte Woche lässt"},
+  "reparatur.besser.schwelle": {wert:3, einheit:"Reizpunkte", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Ab wie viel Gewinn im Durchschnittsreiz ein Reparaturvorschlag überhaupt gezeigt wird, wenn sich die Zahl der Gruppen im Korridor nicht ändert. Darunter liegt der Gewinn innerhalb der Unsicherheit der fraktionierten Zählung (0,5 je Sekundärmuskel). Derselbe Wert ist die kleinste Wirkung, mit der die Prüfung einen Befund überhaupt erwähnt — eine Reparatur soll nicht unterhalb dessen liegen, was als Befund schon zu klein wäre.",
+    sensitivitaet:"±20 % entscheidet nur in Grenzfällen, ob ein Vorschlag erscheint; wird die Schwelle 0, gilt jede Rundungsbewegung als Verbesserung"},
+  "reparatur.zeit.aufschlag": {wert:0.25, einheit:"Anteil", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Um wie viel die Reparatur den Umfang des eingefügten Plans höchstens wachsen lässt, wenn kein Profil-Budget bekannt ist. Eine Reparatur, die aus 85 Minuten 200 macht, ist kein Vorschlag, den jemand umsetzt — sie ist ein anderer Plan. Ist im Profil eine Wochenzeit angegeben (Tage × Einheitslänge), gilt die stattdessen: das ist die eigene Aussage des Nutzers über seine Verfügbarkeit.",
+    sensitivitaet:"±20 % entscheidet bei knappen Plänen, ob eine Lücke ganz oder halb geschlossen wird; der Korridor selbst bleibt unberührt"},
+  "reparatur.satz.max":       {wert:4, einheit:"Sätze", typ:"annahme", evidenz:"Annahme", sichtbar:true,
+    begruendung:"Höchstzahl Sätze, die EINE ergänzte Übung beiträgt. Begrenzt, damit eine große Lücke auf zwei Übungen verteilt wird statt auf eine einzige mit acht Sätzen — verteiltes Volumen wird besser vertragen und trifft den Muskel über mehr Winkel.",
+    sensitivitaet:"±20 % ändert, ob eine Lücke mit einer oder zwei Übungen geschlossen wird; der erreichte Volumenwert bleibt gleich"},
 
 /* ── Protein ──────────────────────────────────────────────────────────── */
 
@@ -10893,7 +10979,7 @@ function renderLanding(){
       <div class="lp-dark" style="text-align:left">
         <p class="lp-eyebrow" style="color:rgba(255,255,255,.6)">Ohne Konto, sofort</p>
         <p class="lp-quote mb8" style="font-size:25px;line-height:1.2">Und wie steht<br>dein Plan da?</p>
-        <p class="sm mb16" style="line-height:1.6;color:rgba(255,255,255,.78)">Füge deinen Trainingsplan ein — aus ChatGPT, von Instagram, vom Trainer. Du bekommst jede Muskelgruppe im Korridor, die drei wichtigsten Lücken und zu jeder Zahl ihre Herleitung. Die Rechnung läuft auf deinem Gerät, der Text verlässt es nicht.</p>
+        <p class="sm mb16" style="line-height:1.6;color:rgba(255,255,255,.78)">Füge deinen Trainingsplan ein — aus ChatGPT, von Instagram, vom Trainer. Du bekommst jede Muskelgruppe im Korridor, die drei wichtigsten Lücken, zu jeder Zahl ihre Herleitung und <b style="color:#fff">einen Vorschlag, der die Lücken schließt, ohne deinen Plan wegzuwerfen</b>. Die Rechnung läuft auf deinem Gerät, der Text verlässt es nicht.</p>
         <button class="btn volt" onclick="showPlanAudit()">${icon("chart",15)} Plan prüfen — dauert eine Minute</button>
       </div>
     </section>
@@ -15305,31 +15391,21 @@ function importedPlanAnalysis(){
    grenzNutzen(), satzSekunden(). Ein Befund hier und ein Befund im eigenen
    Plan-Editor koennen deshalb nicht auseinanderlaufen.                     */
 
-/* Freitext in Uebungen zerlegen. Erwartet, was Menschen tatsaechlich
-   einfuegen: "Bankdruecken 3 × 6–8 · Klimmzuege 3 × 6–10", eine Uebung je
-   Zeile, mit oder ohne Satzangabe, deutsch oder englisch. */
-function planTextParsen(text){
-  const roh=String(text||"")
-    .split(/[\n·;]+/)                       // Zeilen, Mittelpunkte, Semikolon
-    .map(z=>z.trim()).filter(Boolean);
-  const items=[];
-  for(const zeile of roh){
-    /* Kopfzeilen ueberspringen: Wochentage, Tagestitel ohne Uebung. */
-    if(/^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|tag\s*\d|day\s*\d)\b/i.test(zeile) && zeile.length<40) continue;
-    if(/^(ruhetag|rest|cardio|aktive regeneration|pause)\b/i.test(zeile)) continue;
-    /* "Name 3 × 6–8" / "Name 3x10" / "Name 3 Sätze" / nur "Name" */
-    const m=zeile.match(/^(.+?)\s*[,:]?\s*(\d{1,2})\s*(?:×|x|\*)\s*([\d–\-—\s]+)/i)
-          ||zeile.match(/^(.+?)\s*[,:]?\s*(\d{1,2})\s*(?:sätze|saetze|sets)\b/i);
-    let name, saetze=null, reps=null;
-    if(m){ name=m[1]; saetze=parseInt(m[2],10); reps=(m[3]||"").trim()||null; }
-    else { name=zeile.replace(/\s*\(.*?\)\s*$/,""); }
-    name=name.replace(/^[-–—•*\d.)\s]+/,"").replace(/\s{2,}/g," ").trim();
-    if(name.length<3||name.length>60) continue;
-    if(!/[a-zA-ZäöüÄÖÜß]/.test(name)) continue;
-    items.push({roh:zeile, name, saetze, reps});
-  }
-  return items;
-}
+/* ── Zerlegen ──────────────────────────────────────────────────────────────
+   Freitext in Uebungen UND TAGE. Die erste Fassung verwarf Tagesueberschriften;
+   damit zaehlte `freq` Uebungen statt Einheiten, und der Frequenz-Befund — der
+   genau dann greifen soll, wenn eine Gruppe nur an einem Tag drankommt — konnte
+   bei drei Brustuebungen an einem Tag NIE auslaesen. Dieselbe Fehlerklasse wie
+   ein Stagnations-Zweig, der auf Stagnation nicht anspringt.
+
+   Die Reihenfolge der Entscheidung ist wichtig: ZUERST wird versucht, die
+   Zeile als Uebung aufzuloesen, erst danach gilt sie als Ueberschrift. Sonst
+   verschwindet "Pull-ups" als Kopfzeile "pull" — und verlorenes Volumen
+   faellt niemandem auf, waehrend eine nicht erkannte Kopfzeile ehrlich unter
+   "nicht erkannt" auftaucht.                                               */
+
+const TAG_KOPF=/^(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|mo|di|mi|do|fr|sa|so)\b|^(?:tag|day|einheit|session|workout|woche)\s*[\dA-Fa-f]|^(?:push|pull|legs?|beine|oberkörper|unterkörper|upper|lower|ganzkörper|full\s*body|ober|unter)\b/i;
+const TAG_PAUSE=/^(?:ruhetag|rest\s*day|rest|frei|pause|aktive\s*regeneration|cardio|off)\b/i;
 
 /* DIE REIHENFOLGE IST DIE LOGIK. Durchlaufen wird von oben nach unten, der
    erste Treffer gewinnt — also stehen die SPEZIFISCHEN Muster vor den
@@ -15382,91 +15458,191 @@ const PLAN_SYNONYM=[
   [/\b(plank|unterarmstütz|unterarmstuetz)\b/i,"Plank"],
 ];
 
-function planZuordnen(items){
+/* Ein Name → eine Uebung aus EXDB. Ein Weg, von Parser und Zuordnung geteilt. */
+function exAufloesen(name){
   const norm=(x)=>String(x).toLowerCase()
     .replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u").replace(/ß/g,"ss")
     .replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
-  const DB=Object.keys(EXDB);
-  const dbNorm=DB.map(n=>[n,norm(n)]);
-  return items.map(it=>{
-    const n=norm(it.name);
-    // 1) exakt
-    let treffer=dbNorm.find(([,x])=>x===n);
-    let art=treffer?"exakt":null;
-    // 2) Synonym
-    if(!treffer){ for(const [re,ziel] of PLAN_SYNONYM){
-      if(re.test(it.name) && EXDB[ziel]){ treffer=[ziel,norm(ziel)]; art="Synonym"; break; } } }
-    // 3) Teilwort
-    if(!treffer){ treffer=dbNorm.find(([,x])=>x.length>=5&&(n.includes(x)||x.includes(n))); if(treffer) art="Teilwort"; }
-    return {...it, ex:treffer?treffer[0]:null, zuordnung:art,
-            muskel:treffer?null:matchExerciseMuscle(it.name)};
-  });
+  const n=norm(name); if(!n) return null;
+  for(const k of Object.keys(EXDB)) if(norm(k)===n) return {ex:k, art:"exakt"};
+  /* Die Synonym-Muster enden auf einer Wortgrenze. "Pull-ups" scheiterte
+     deshalb am Plural-s — und fiel danach durch, bis TAG_KOPF es als
+     Ueberschrift "pull" verschluckte: eine Uebung weg, ohne Spur. Deshalb
+     wird zusaetzlich gegen eine entpluralisierte Fassung geprueft. */
+  const einzahl=String(name).replace(/\b(\w{2,}?)s\b/g,"$1");
+  for(const [re,ziel] of PLAN_SYNONYM){
+    if(!EXDB[ziel]) continue;
+    if(re.test(name)||re.test(einzahl)) return {ex:ziel, art:"Synonym"};
+  }
+  /* Teilwort zuletzt und ENG: ein Datenbankname darf die Eingabe nur
+     fortsetzen, nicht ihr etwas VORANSTELLEN. Sonst wurde "Push-ups" zu
+     "Pike Push-ups" — eine Schulteruebung fuer eine Brustangabe, also
+     Volumen auf der falschen Gruppe. Umgekehrt bleibt erlaubt: "Bankdruecken
+     mit Langhantel" enthaelt "Bankdruecken". */
+  const kand=Object.keys(EXDB).map(k=>[k,norm(k)]).filter(([,x])=>x.length>=5);
+  const vorn=kand.filter(([,x])=>x===n||x.startsWith(n+" "))
+    .sort((a,b)=>a[1].length-b[1].length)[0];
+  if(vorn) return {ex:vorn[0], art:"Teilwort"};
+  const drin=kand.filter(([,x])=>n.startsWith(x+" ")||n.endsWith(" "+x))
+    .sort((a,b)=>b[1].length-a[1].length)[0];
+  if(drin) return {ex:drin[0], art:"Teilwort"};
+  return null;
 }
 
-/* Die Pruefung selbst. Gibt Korridor-Zeilen und hoechstens drei Befunde
-   zurueck, sortiert nach erwarteter Wirkung — nicht nach Reihenfolge im Plan. */
+function planTextParsen(text){
+  const quelle=String(text||"");
+  /* Leerzeilen sind ein Tagessignal, wenn gar keine Ueberschrift drinsteht —
+     genau so fuegt man einen Plan ohne Titel ein. */
+  const bloecke=quelle.split(/\n\s*\n+/);
+  const items=[]; let tag=-1, tagName=null, offen=false;
+  const neuerTag=(name)=>{ tag++; tagName=name||`Einheit ${tag+1}`; offen=true; };
+  for(let bi=0; bi<bloecke.length; bi++){
+    const zeilen=bloecke[bi].split(/[\n·;]+/).map(z=>z.trim()).filter(Boolean);
+    if(!zeilen.length) continue;
+    if(bi>0&&bloecke.length>1) offen=false;    // Leerzeile beendet den Tag
+    for(const zeile of zeilen){
+      /* "Name 3 × 6–8" / "Name 3x10" / "Name 3 Sätze" / nur "Name" */
+      const m=zeile.match(/^(.+?)\s*[,:]?\s*(\d{1,2})\s*(?:×|x|\*)\s*([\d–\-—\s]+)/i)
+            ||zeile.match(/^(.+?)\s*[,:]?\s*(\d{1,2})\s*(?:sätze|saetze|sets)\b/i);
+      let name, saetze=null, reps=null;
+      if(m){ name=m[1]; saetze=parseInt(m[2],10); reps=(m[3]||"").trim()||null; }
+      else { name=zeile.replace(/\s*\(.*?\)\s*$/,""); }
+      name=name.replace(/^[-–—•*\d.)\s]+/,"").replace(/[\s:—–-]+$/,"").replace(/\s{2,}/g," ").trim();
+      const auf=name.length>=3?exAufloesen(name):null;
+      /* Ueberschrift nur, wenn es KEINE Uebung ist. */
+      if(!auf&&!m){
+        if(TAG_PAUSE.test(zeile)){ offen=false; continue; }
+        if(TAG_KOPF.test(zeile)&&zeile.length<44){ neuerTag(zeile.replace(/[:\s—–-]+$/,"")); continue; }
+      }
+      if(name.length<3||name.length>60) continue;
+      if(!/[a-zA-ZäöüÄÖÜß]/.test(name)) continue;
+      if(!offen) neuerTag(null);
+      items.push({roh:zeile, name, saetze, reps, tag, tagName,
+                  ex:auf?auf.ex:null, zuordnung:auf?auf.art:null});
+    }
+  }
+  return items;
+}
+
+/* Die Tagesliste aus den Items — eine Quelle, nicht zwei. */
+function planTage(items){
+  const map=new Map();
+  for(const it of items){ if(!map.has(it.tag)) map.set(it.tag,{tag:it.tag, name:it.tagName, items:[]});
+    map.get(it.tag).items.push(it); }
+  return [...map.values()].sort((x,y)=>x.tag-y.tag);
+}
+
+function planZuordnen(items){
+  return items.map(it=>{ if(it.ex!==undefined&&it.zuordnung!==undefined&&it.ex!==null)
+      return {...it, muskel:null};
+    const auf=exAufloesen(it.name);
+    return {...it, ex:auf?auf.ex:null, zuordnung:auf?auf.art:null,
+            muskel:auf?null:matchExerciseMuscle(it.name)}; });
+}
+
+/* ── Die Pruefung ──────────────────────────────────────────────────────────
+   Rechnet NICHT neu: deficitScaledBands(), satzAnteile(), reizKurve(),
+   grenzNutzen(), satzSekunden(). Ein Befund hier und ein Befund im eigenen
+   Plan-Editor koennen deshalb nicht auseinanderlaufen.
+
+   Zwei getrennte Listen, und das ist Absicht:
+     `befunde`     — Reizbefunde, jeder mit seiner Wirkung in REIZPUNKTEN,
+                     danach sortiert. Eine Zahl, eine Einheit.
+     `sicherheit`  — Verletzung und fehlendes Gerät. Die haben keinen
+                     Reizwert; ihnen einen zu geben, um sie einsortieren zu
+                     koennen, waere eine erfundene Vergleichbarkeit. Sie
+                     stehen deshalb VOR den Reizbefunden, ungewichtet —
+                     dieselbe Rangfolge, die der Planbauer selbst anwendet
+                     ("Sicherheit dominiert Variation").                    */
 const AUDIT_STD_SAETZE=3;
-function planAudit(text,a){
-  a=a||(S.profile&&S.profile.a)||{sex:"male",age:30,height:180,weight:80,
-      goals:["muscle_gain"],exp:"intermediate",days:4,equipment:"gym_full",act:"light"};
-  const items=planZuordnen(planTextParsen(text));
+const AUDIT_PROFIL_STD={sex:"male",age:30,height:180,weight:80,
+  goals:["muscle_gain"],exp:"intermediate",days:4,equipment:"gym_full",
+  act:"light",injuries:[],focus:[]};
+
+function auditAusItems(items,a){
+  a={...AUDIT_PROFIL_STD, ...(a||{})};
   if(!items.length) return null;
   const erkannt=items.filter(x=>x.ex);
   if(!erkannt.length) return {leer:true, items};
 
   const ziel=primaryGoal(a), k=reizK(ziel,a), bands=deficitScaledBands(a);
   const GR=["Brust","Rücken","Schultern","Bizeps","Trizeps","Beine","Core"];
-  const vol={}, zeit={}, freq={}, geschaetzt=[];
+  const fokus=(a.focus||[]);
+  const tage=planTage(items);
+
+  const vol={}, zeit={}, tagSet={}, uebz={}, geschaetzt=[];
   for(const it of erkannt){
     const n=it.saetze||AUDIT_STD_SAETZE;
     if(!it.saetze) geschaetzt.push(it.name);
     const d=EXDB[it.ex]||{};
-    const sek=satzSekunden({tempo:d.tempo, reps:it.reps||d.reps, rest:d.rest||90});
+    /* rest NICHT selbst mit einem Standard belegen — satzSekunden hat seinen
+       eigenen. Zwei Standards fuer dieselbe Groesse sind zwei Modelle. */
+    const sek=satzSekunden({tempo:d.tempo, reps:it.reps||d.reps, rest:d.rest});
     for(const [m,f] of Object.entries(satzAnteile(it.ex)||{})){
       vol[m]=(vol[m]||0)+n*f; zeit[m]=(zeit[m]||0)+n*sek*f/60;
-      freq[m]=(freq[m]||0)+1;
+      uebz[m]=(uebz[m]||0)+1;
+      (tagSet[m]=tagSet[m]||new Set()).add(it.tag);
     }
   }
   const zeilen=GR.map(m=>{
     const n=vol[m]||0, b=bands[m]||[0,99];
+    const tl=[...(tagSet[m]||[])].sort((x,y)=>x-y);
     return {g:m, tot:Math.round(n*10)/10, mev:b[0], mrv:b[1],
       reiz:Math.round(reizKurve(n,k)*100), grenz:grenzNutzen(n,k),
-      minuten:Math.round(zeit[m]||0), uebungen:freq[m]||0,
+      minuten:Math.round(zeit[m]||0), uebungen:uebz[m]||0,
+      tage:tl.length, tagListe:tl, tagNamen:tl.map(t=>(tage.find(x=>x.tag===t)||{}).name),
+      fokus:fokus.includes(m),
       st:n===0?"fehlt":n<b[0]?"low":n>b[1]?"high":"ok"};
   });
   const minGes=zeilen.reduce((s,z)=>s+z.minuten,0);
+  /* Der Vergleichswert fuer eine FEHLENDE Gruppe ist der beste Grenznutzen
+     unter den Gruppen, die bereits trainiert werden. Die erste Fassung nahm
+     das Maximum ueber ALLE Zeilen — darin steckte die fehlende Gruppe selbst,
+     die als einzige bei null steht und damit immer den hoechsten Grenznutzen
+     hat. Heraus kam unweigerlich "1,0-mal so hoch wie beim besten anderen":
+     ein Satz, der sich selbst widerlegt. */
+  const grenzAnderer=(g)=>{ const q=zeilen.filter(x=>x.g!==g&&x.tot>0).map(x=>x.grenz);
+    return q.length?Math.max(...q):null; };
+  const dez=(x)=>String(x).replace(".",",");
 
-  /* Befunde. Jeder traegt seine erwartete Wirkung in Reizpunkten — so laesst
-     sich sortieren, statt eine Reihenfolge zu behaupten. */
+  /* ── Reizbefunde ─────────────────────────────────────────────────────── */
   const befunde=[];
+  const wo=(z)=>z.tagNamen.length===1?` (${z.tagNamen[0]})`:"";
   for(const z of zeilen){
     if(z.st==="fehlt"){
-      const bis=z.mev, gewinn=Math.round(reizKurve(bis,k)*100);
-      befunde.push({wirkung:gewinn, art:"fehlt", g:z.g,
+      befunde.push({wirkung:Math.round(reizKurve(z.mev,k)*100), art:"fehlt", g:z.g, fokus:z.fokus,
         titel:`${z.g} kommt im Plan nicht vor`,
-        text:`Keine einzige Übung lädt ${z.g} nennenswert. Der erste Satz bringt hier mehr als jeder weitere anderswo — der Grenznutzen bei null Sätzen ist ${(grenzNutzen(0,k)/Math.max(1e-9,Math.max(...zeilen.map(q=>q.grenz)))).toFixed(1)}-mal so hoch wie beim derzeit besten anderen.`,
-        rat:`${bis} Sätze pro Woche einplanen, verteilt auf zwei Einheiten.`});
+        text:(()=>{ const v=grenzAnderer(z.g);
+          return `Keine einzige Übung lädt ${z.g} nennenswert.`+(v
+            ? ` Der erste Satz bringt hier mehr als jeder weitere anderswo: der Grenznutzen bei null Sätzen ist ${dez((grenzNutzen(0,k)/v).toFixed(1))}-mal so hoch wie bei der Gruppe, die von einem zusätzlichen Satz derzeit am meisten hätte.`
+            : ` Es gibt im Plan keine andere Gruppe zum Vergleich.`); })(),
+        rat:`${z.mev} Sätze pro Woche einplanen, verteilt auf zwei Einheiten.`});
     } else if(z.st==="low"){
       const fehlt=Math.round((z.mev-z.tot)*10)/10;
-      const gewinn=Math.round((reizKurve(z.mev,k)-reizKurve(z.tot,k))*100);
-      befunde.push({wirkung:gewinn, art:"low", g:z.g,
+      befunde.push({wirkung:Math.round((reizKurve(z.mev,k)-reizKurve(z.tot,k))*100), art:"low", g:z.g, fokus:z.fokus,
         titel:`${z.g} liegt unter dem Mindestreiz`,
-        text:`${z.tot} von mindestens ${z.mev} Sätzen pro Woche${z.uebungen<=1?`, und das aus nur einer Übung`:""}. Unter dieser Schwelle ist der Reiz zu klein, um verlässlich Wachstum auszulösen.`,
-        rat:`${fehlt} Sätze ergänzen${z.uebungen<=1?" und auf eine zweite Einheit verteilen":""}.`});
+        text:`${z.tot} von mindestens ${z.mev} Sätzen pro Woche, aus ${z.uebungen} Übung${z.uebungen===1?"":"en"} an ${z.tage} Tag${z.tage===1?"":"en"}${wo(z)}. Unter dieser Schwelle ist der Reiz zu klein, um verlässlich Wachstum auszulösen.`,
+        rat:`${fehlt} Sätze ergänzen${z.tage<2?" und auf zwei Einheiten verteilen":""}.`});
     } else if(z.st==="high"){
       const zuviel=Math.round((z.tot-z.mrv)*10)/10;
-      befunde.push({wirkung:Math.round(zuviel*2), art:"high", g:z.g,
+      befunde.push({wirkung:Math.round(zuviel*2), art:"high", g:z.g, fokus:z.fokus,
         titel:`${z.g} über dem erholbaren Volumen`,
         text:`${z.tot} Sätze bei einer Obergrenze von ${z.mrv}. Darüber entsteht mehr Ermüdung als Anpassung — die zusätzlichen Sätze kosten Erholung, die anderen Gruppen fehlt.`,
         rat:`${zuviel} Sätze streichen und die Zeit dorthin geben, wo noch Luft ist.`});
     }
   }
-  /* Frequenz: viel Volumen auf einer einzigen Einheit. */
+  /* Frequenz: Volumen im Korridor, aber alles an EINEM Tag. Gezaehlt werden
+     Tage, nicht Uebungen — das war der Defekt der ersten Fassung. */
   for(const z of zeilen){
-    if(z.st==="ok"&&z.uebungen===1&&z.tot>=z.mev*1.4){
-      befunde.push({wirkung:4, art:"freq", g:z.g,
-        titel:`${z.g} nur in einer Einheit`,
-        text:`${z.tot} Sätze an einem Tag. Dasselbe Volumen auf zwei Einheiten verteilt wird besser vertragen und bringt bei gleichem Aufwand mehr.`,
+    /* Kein Schwellenfaktor: die App beruft sich anderswo auf "jeder Muskel
+       2×/Woche". Die erste Fassung forderte zusaetzlich tot >= mev*1.4 — ein
+       von mir erfundener Riegel, der bei 12 Saetzen Brust an einem Tag (MEV
+       10) nicht aufging. Damit konnte der Befund fuer genau den Fall, fuer
+       den er da ist, nicht auslaesen. */
+    if(z.st==="ok"&&z.tage===1&&tage.length>=2){
+      befunde.push({wirkung:4, art:"freq", g:z.g, fokus:z.fokus,
+        titel:`${z.g} nur an einem Tag`,
+        text:`${z.tot} Sätze, alle an einem einzigen Tag${wo(z)}, aus ${z.uebungen} Übung${z.uebungen===1?"":"en"}. Dasselbe Volumen auf zwei Einheiten verteilt wird besser vertragen und bringt bei gleichem Aufwand mehr.`,
         rat:`Die Hälfte in eine zweite Einheit der Woche verschieben.`});
     }
   }
@@ -15474,26 +15650,363 @@ function planAudit(text,a){
   const schwach=zeilen.filter(z=>z.st==="low"||z.st==="fehlt").sort((x,y)=>x.reiz-y.reiz)[0];
   const satt=zeilen.filter(z=>z.st==="ok"&&z.reiz>=88).sort((x,y)=>y.minuten-x.minuten)[0];
   if(schwach&&satt&&satt.minuten>=15){
-    befunde.push({wirkung:3, art:"tausch", g:satt.g,
+    befunde.push({wirkung:3, art:"tausch", g:satt.g, fokus:satt.fokus,
       titel:`${satt.minuten} Minuten liegen bei ${satt.g} fast wirkungslos`,
       text:`${satt.g} steht bei ${satt.reiz} % des erreichbaren Reizes — der nächste Satz dort bringt fast nichts mehr, während ${schwach.g} unter dem Mindestreiz liegt.`,
       rat:`Ein paar Sätze von ${satt.g} zu ${schwach.g} verschieben. Gleiche Zeit, mehr Wirkung.`});
   }
   befunde.sort((x,y)=>y.wirkung-x.wirkung);
 
-  return { zeilen, befunde:befunde.slice(0,3), alleBefunde:befunde,
+  /* Schwerpunkt-Vorzug: Ein Loch in einem selbst gewaehlten Schwerpunkt
+     waere in reiner Reizsortierung manchmal nicht unter den ersten drei. Es
+     wird vorgezogen — und das wird dazugesagt, statt die Wirkungszahl zu
+     frisieren, damit die Reihenfolge von selbst passt. */
+  let vorgezogen=null;
+  if(befunde.length>3){
+    const i=befunde.findIndex((b,ix)=>ix>=3&&b.fokus);
+    if(i>=0){ vorgezogen=befunde[i].g; befunde.splice(2,0,befunde.splice(i,1)[0]); }
+  }
+
+  /* ── Sicherheit und Machbarkeit — ohne Reizwert ───────────────────────── */
+  const sicherheit=[];
+  const inj=(a.injuries||[]).filter(x=>INJURY_RISK[x]);
+  for(const it of erkannt){
+    const treffer=inj.filter(x=>INJURY_RISK[x].includes(it.ex));
+    if(treffer.length) sicherheit.push({art:"risiko", ex:it.ex,
+      titel:`${it.ex} ist bei „${treffer.map(x=>INJURY_LABEL[x]||x).join(", ")}" riskant`,
+      text:`Du hast diese Einschränkung im Profil angegeben. Der eigene Planbauer würde diese Übung deshalb nicht an den Anfang eines Tages setzen und bei verfügbarer Alternative ganz meiden.`,
+      rat:INJURY_ALT[it.ex]?`Stattdessen: ${INJURY_ALT[it.ex]}.`:`Übung ersetzen oder Bewegungsumfang begrenzen.`});
+  }
+  const erlaubt=EQ_ALLOWED[a.equipment]||EQ_ALLOWED.gym_full;
+  const bank=EQ_BENCH[a.equipment]!==false;
+  for(const it of erkannt){
+    const d=EXDB[it.ex]||{};
+    const fehltGeraet=d.eq&&!erlaubt.includes(d.eq), fehltBank=d.bench&&!bank;
+    if(fehltGeraet||fehltBank) sicherheit.push({art:"geraet", ex:it.ex,
+      titel:`${it.ex} brauchst du ${fehltBank&&!fehltGeraet?"eine Bank":"ein Gerät"}, das du nicht angegeben hast`,
+      text:`Nach deinem Profil (${a.equipment}) steht ${fehltBank&&!fehltGeraet?"keine Bank":"dieses Gerät"} zur Verfügung. Die Sätze stehen in der Rechnung, aber du kannst sie so nicht ausführen.`,
+      rat:d.alt?`Stattdessen: ${d.alt}.`:`Gleichwertige Übung mit deiner Ausstattung wählen.`});
+  }
+
+  return { zeilen, befunde:befunde.slice(0,3), alleBefunde:befunde, sicherheit,
+    vorgezogen, tage:tage.map(t=>({tag:t.tag, name:t.name, n:t.items.length})),
     imKorridor:zeilen.filter(z=>z.st==="ok").length, gruppen:GR.length,
     reiz:Math.round(zeilen.reduce((s,z)=>s+z.reiz,0)/GR.length),
     minuten:minGes, saetze:erkannt.reduce((s,x)=>s+(x.saetze||AUDIT_STD_SAETZE),0),
     erkannt:erkannt.length, gesamt:items.length,
     nichtErkannt:items.filter(x=>!x.ex).map(x=>x.name),
-    geschaetzt, ziel };
+    geschaetzt, ziel, fokus, k };
+}
+
+function planAudit(text,a){ return auditAusItems(planZuordnen(planTextParsen(text)),a); }
+
+/* ── Die Reparatur ─────────────────────────────────────────────────────────
+   Der eigentliche Punkt. Ein Urteil ohne Weg daraus ist eine Sackgasse: die
+   Pruefung weiss genau, was fehlt, und der Nutzer darf es dann von Hand
+   suchen. Diese Funktion schliesst die Luecken MINIMAL — der fremde Plan
+   bleibt stehen, es kommen Saetze dazu und gehen Saetze weg.
+
+   Vier Regeln, die nicht verhandelbar sind:
+     1. Das Uebungs-Vokabular ist SESSION_SLOTS — dasselbe, aus dem der
+        Planbauer einen METRICGYM-Plan baut. Kein zweiter Wortschatz, und je
+        Bewegungsmuster hoechstens eine Uebung.
+     2. Keine Ergaenzung darf eine andere Gruppe ueber ihr MRV schieben. Ein
+        Loch mit einem neuen Loch zu schliessen ist keine Reparatur.
+     3. Nur was das Profil zulaesst: Ausstattung, Bank, Erfahrung, und keine
+        Uebung, die bei einer angegebenen Einschraenkung als riskant gilt.
+        Laesst sich eine Luecke damit nicht schliessen, wird das GESAGT
+        (`offen`) und nicht mit dem gefuellt, was gerade durchkommt.
+     4. Am Ende laeuft der reparierte Plan durch DIESELBE Pruefung. Wird er
+        dabei nicht messbar besser, gibt es keinen Vorschlag.              */
+
+/* Jeder innere Array in SESSION_SLOTS ist EIN Bewegungsmuster, nach Vorzug
+   geordnet (Gerät zuerst, Körpergewicht als Rückfall). Daraus folgt die
+   Mustervielfalt geschenkt. Die erste Fassung scannte ganz EXDB und schlug
+   bei Knie-Einschränkung "Wadenheben" UND "Sitzendes Wadenheben" vor: acht
+   Sätze Waden für eine Oberschenkel-Lücke. */
+function reparaturMuster(){
+  const raus=[], gesehen=new Set();
+  for(const key of Object.keys(SESSION_SLOTS))
+    for(const slot of SESSION_SLOTS[key]){
+      const sig=slot.join("|"); if(gesehen.has(sig)) continue;
+      gesehen.add(sig); raus.push(slot);
+    }
+  /* SESSION_SLOTS deckt den Rumpf NICHT ab: die Engine führt ihn getrennt in
+     ABS_BLOCK (Plank, Dead Bug — vier Sätze). Für eine Core-Lücke gab es
+     deshalb kein Muster zu holen, und die Reparatur meldete die Lücke als
+     "offen" mit einer Begründung, die nicht stimmte. Statt ein zweites
+     kuratiertes Vokabular zu erfinden, werden Gruppen ohne Slot-Deckung aus
+     EXDB nachgetragen — jede Übung als eigenes Muster, damit die Regel
+     "höchstens eine Übung je Muster" weiter greift. Die Mustervielfalt, die
+     SESSION_SLOTS geschenkt liefert, gibt es dort allerdings nicht. */
+  const GR=["Brust","Rücken","Schultern","Bizeps","Trizeps","Beine","Core"];
+  for(const g of GR){
+    const gedeckt=raus.some(slot=>slot.some(n=>((satzAnteile(n)||{})[g]||0)>=0.5));
+    if(gedeckt) continue;
+    for(const n of Object.keys(EXDB)) if(((satzAnteile(n)||{})[g]||0)>=0.5) raus.push([n]);
+  }
+  return raus;
+}
+
+/* Dieselbe Bewegung in zwei Slots. "Rumänisches Kreuzheben" und
+   "KH-Rumänisches Kreuzheben" führen zwei verschiedene Slots an, also griff
+   die Muster-Sperre über slot[0] nicht — die Reparatur schlug beide vor, acht
+   Sätze Hüftbeuge als zwei "verschiedene" Muster. Dasselbe Muster bei
+   "Stehendes Wadenheben (Maschine)" und "Sitzendes Wadenheben".
+   Die Wurzel streift ab, was nur das Gerät oder die Körperposition benennt;
+   was übrig bleibt, ist die Bewegung. */
+function bewegungsWurzel(name){
+  return String(name).toLowerCase()
+    .replace(/\s*\([^)]*\)/g,"")
+    .replace(/\b(kh|lh|sz|kb)[-\s]/g,"")
+    .replace(/\b(kabel|maschinen?|band|smith|landmine|hammer)[-\s]/g,"")
+    .replace(/\b(sitzende?s?|stehende?s?|liegende?s?|hängende?s?|haengende?s?|einarmige?s?|einbeinige?s?|vertiefte?s?|erhöhte?s?|erhoehte?s?|enge?s?|breite?s?|archer|schräg|schraeg)[-\s]/g,"")
+    .replace(/[^a-zäöüß]/g,"");
+}
+
+function planReparieren(text,a){
+  a={...AUDIT_PROFIL_STD, ...(a||{})};
+  const items=planZuordnen(planTextParsen(text));
+  const vor=auditAusItems(items,a);
+  if(!vor||vor.leer) return null;
+
+  const erlaubt=EQ_ALLOWED[a.equipment]||EQ_ALLOWED.gym_full;
+  const bank=EQ_BENCH[a.equipment]!==false;
+  const reich=richGymEq(a.equipment);
+  const inj=(a.injuries||[]).filter(x=>INJURY_RISK[x]);
+  const riskant=(n)=>inj.some(x=>INJURY_RISK[x].includes(n));
+  /* Derselbe Filter, den buildMain() benutzt — inklusive des harten
+     Ausschlusses von Koerpergewichts-Ersatz bei voller Ausstattung. Ohne den
+     schlug die Reparatur einem Studio-Nutzer "Vertiefte Liegestütze" vor. */
+  const geht=(n)=>{ const d=EXDB[n];
+    if(!d||!(!d.eq||erlaubt.includes(d.eq))||(d.bench&&!bank)||!skillOk(n,a.exp)) return false;
+    if(riskant(n)) return false;
+    if(reich&&isCalisthenic(n)) return false;
+    return true; };
+
+  const band={}, jetzt={}; for(const z of vor.zeilen){ band[z.g]=[z.mev,z.mrv]; jetzt[z.g]=z.tot; }
+  const puffer=P("reparatur.mrv.puffer"), maxSatz=P("reparatur.satz.max");
+  const schonDa=new Set(items.filter(x=>x.ex).map(x=>x.ex));
+  const musterBenutzt=new Set();
+  /* Gesperrt wird die BEWEGUNG, nicht der Slot-Kopf — und auch das, was im
+     eingefuegten Plan schon steht: wer bereits Kreuzheben macht, braucht von
+     der Reparatur keine zweite Hueftbeuge. */
+  for(const x of items) if(x.ex) musterBenutzt.add(bewegungsWurzel(x.ex));
+  const muster=reparaturMuster();
+
+  /* Und ein Budget JE EINHEIT. Das Wochenbudget allein liess neun Ergaenzungen
+     auf einen einzigen Tag zu: 123 Minuten in einer Sitzung, formal innerhalb
+     von 3x60. Ist im Profil eine Einheitslaenge angegeben, gilt die; sonst die
+     laengste Einheit des eingefuegten Plans plus Aufschlag. */
+  const minutenTag=(t)=>t.items.filter(x=>x.ex).reduce((sm,x)=>
+    sm+(x.saetze||AUDIT_STD_SAETZE)*satzSekunden({tempo:(EXDB[x.ex]||{}).tempo,
+      reps:x.reps||(EXDB[x.ex]||{}).reps, rest:(EXDB[x.ex]||{}).rest})/60,0);
+  /* Tagesstand, der MITWÄCHST. Die erste Fassung rechnete ihn einmal und
+     legte deshalb sechs Ergänzungen auf denselben Tag. */
+  const tagStand=planTage(items).map(t=>{
+    const v={};
+    for(const x of t.items){ if(!x.ex) continue;
+      for(const [m,f] of Object.entries(satzAnteile(x.ex)||{}))
+        v[m]=(v[m]||0)+(x.saetze||AUDIT_STD_SAETZE)*f; }
+    return {tag:t.tag, name:t.name, n:t.items.length, vol:v, min:minutenTag(t)};
+  });
+  const tagBudget=a.sessionTime||Math.round(Math.max(1,...tagStand.map(t=>t.min))*(1+P("reparatur.zeit.aufschlag")));
+  /* Wird eine Gruppe bisher an GENAU einem Tag geladen und hat der Plan
+     mindestens zwei Tage, kommt die Ergänzung auf einen ANDEREN Tag — das ist
+     der Frequenzgewinn, auf den sich die App sonst beruft. Sonst in die
+     Einheit, die die Gruppe schon trainiert: warmer Muskel, zusammen-
+     gehörendes Muster, kein Brustheben am Rückentag. Bei Gleichstand der
+     kürzeste Tag, damit die Einheiten nicht auseinanderlaufen. */
+  const tagWaehlen=(g,braucht)=>{
+    if(!tagStand.length) return null;
+    const platz=tagStand.filter(t=>t.min+braucht<=tagBudget);
+    if(!platz.length) return null;                 // kein Tag hat Luft
+    const mitG=platz.filter(t=>(t.vol[g]||0)>0);
+    const kand=(mitG.length===1&&platz.length>=2)
+      ? platz.filter(t=>(t.vol[g]||0)===0)
+      : (mitG.length?mitG:platz);
+    return [...(kand.length?kand:platz)].sort((x,y)=>x.min-y.min)[0];
+  };
+
+  /* Zeitbudget. Kennt die App ein Profil-Budget (Tage × Einheitslaenge), gilt
+     das — es ist die eigene Aussage des Nutzers darueber, was er hat. Sonst
+     der Umfang des eingefuegten Plans plus Aufschlag aus dem Register. Ohne
+     diese Schranke schlug die Reparatur einem 85-Minuten-Plan 26 zusaetzliche
+     Saetze vor; das ist kein Vorschlag mehr, das ist ein anderer Plan. */
+  const profilBudget=(a.days&&a.sessionTime)?a.days*a.sessionTime:0;
+  const budget=Math.max(profilBudget, Math.round(vor.minuten*(1+P("reparatur.zeit.aufschlag"))));
+  const budgetQuelle=profilBudget>=Math.round(vor.minuten*(1+P("reparatur.zeit.aufschlag")))&&profilBudget
+    ?"profil":"plan";
+  const minutenVon=(n,saetze,reps)=>{ const d=EXDB[n]||{};
+    return saetze*satzSekunden({tempo:d.tempo, reps:reps||d.reps, rest:d.rest})/60; };
+  let minGenutzt=vor.minuten;
+
+  const luecken=vor.zeilen.filter(z=>z.st==="fehlt"||z.st==="low")
+    .sort((x,y)=>(y.mev-y.tot)-(x.mev-x.tot));
+  const edits=[], offen=[];
+
+  for(const z of luecken){
+    let fehlt=Math.max(0, z.mev-(jetzt[z.g]||0));
+    let runde=0, erreicht=false, warum=null;
+    /* Vier Runden: bei maxSatz=4 reicht das fuer eine Luecke von 16 Saetzen.
+       Die erste Fassung hatte zwei und meldete deshalb bei Beine (MEV 12, von
+       null) vier Saetze als "offen", obwohl genug Muster frei waren — eine
+       erfundene Grenze, die sich als Sachaussage ausgab. Gebunden wird jetzt
+       durch MRV, Muster, Satz-Maximum und Zeit, also durch Gruende. */
+    while(fehlt>0.4&&runde++<4){
+      let beste=null;
+      for(const slot of muster){
+        const n=slot.find(x=>geht(x)&&!schonDa.has(x)); if(!n) continue;
+        const sig=bewegungsWurzel(n); if(musterBenutzt.has(sig)) continue;
+        const an=satzAnteile(n)||{}; const anteil=an[z.g]||0;
+        if(anteil<0.5) continue;                       // keine Randtreffer
+        /* Gewichte = Rangordnung unter mehreren passenden Mustern, keine
+           Dosis. Die Dosis (Sätze, MRV-Puffer) kommt aus dem Register. */
+        let punkte=anteil*10;
+        for(const [m,f] of Object.entries(an)){
+          if(m===z.g) continue;
+          if(((band[m]||[0,99])[1]-(jetzt[m]||0))<=0){ punkte=-1; break; }
+          const lueckeM=Math.max(0,(band[m]||[0,0])[0]-(jetzt[m]||0));
+          punkte+=lueckeM>0?f*4:-f*1.5;                // Mitnahme belohnen, Überlauf meiden
+        }
+        if(punkte<0) continue;
+        const d=EXDB[n]||{};
+        if(d.lengthened) punkte+=1.5;                  // gedehnte Position (Wolf 2024, Maeo 2021)
+        if((FOCUS_EX[z.g]||[]).includes(n)) punkte+=1; // was die Engine für Schwerpunkte nimmt
+        if(!d.compound) punkte+=0.8;                   // gezielt statt systemisch ermüdend
+        if(!beste||punkte>beste.punkte) beste={n, punkte, an, sig};
+      }
+      if(!beste){ warum="muster"; break; }
+
+      const prim=beste.an[z.g]||1;
+      let saetze=Math.min(maxSatz, Math.ceil(fehlt/prim));
+      for(const [m,f] of Object.entries(beste.an)){
+        const platz=(band[m]||[0,99])[1]-puffer-(jetzt[m]||0);
+        if(f>0&&platz<saetze*f) saetze=Math.max(0,Math.floor(platz/f));
+      }
+      if(saetze<1){ warum="mrv"; break; }
+      /* Zeit: so viele Saetze, wie ins Budget passen. */
+      const dB=EXDB[beste.n]||{}, repsB=dB.reps||"8–12";
+      const proSatz=minutenVon(beste.n,1,repsB);
+      const platzMin=budget-minGenutzt;
+      if(proSatz>0&&platzMin<saetze*proSatz) saetze=Math.floor(platzMin/proSatz);
+      if(saetze<1){ warum="zeit"; break; }
+
+      const d=dB;
+      let ziel=tagWaehlen(z.g,saetze*proSatz);
+      /* Kein Tag mit Platz? Weniger Saetze versuchen, bevor aufgegeben wird. */
+      while(!ziel&&saetze>1){ saetze--; ziel=tagWaehlen(z.g,saetze*proSatz); }
+      if(!ziel&&tagStand.length){ warum="zeit"; break; }
+      edits.push({art:"add", ex:beste.n, sets:saetze, g:z.g,
+        tag:ziel?ziel.tag:0, tagName:ziel?ziel.name:"Einheit 1",
+        reps:repsB, minuten:Math.round(minutenVon(beste.n,saetze,repsB)),
+        muskel:d.m||z.g, warum:d.why||"",
+        grund:`${z.g} lag bei ${Math.round((jetzt[z.g]||0)*10)/10} von ${z.mev} Sätzen`});
+
+      minGenutzt+=minutenVon(beste.n,saetze,repsB);
+      schonDa.add(beste.n); musterBenutzt.add(beste.sig);
+      for(const [m,f] of Object.entries(beste.an)) jetzt[m]=(jetzt[m]||0)+saetze*f;
+      if(ziel){ ziel.n++; ziel.min+=saetze*proSatz;
+        for(const [m,f] of Object.entries(beste.an)) ziel.vol[m]=(ziel.vol[m]||0)+saetze*f; }
+      fehlt=Math.max(0, z.mev-(jetzt[z.g]||0));
+      if(fehlt<=0.4) erreicht=true;
+    }
+    /* Offen gebliebene Lücke benennen, statt sie mit dem zu füllen, was
+       gerade durchkommt. Bei Knie-Einschränkung bleiben für die Oberschenkel
+       kaum zulässige Muster — das ist eine Aussage, kein Fehler. */
+    if(!erreicht&&fehlt>0.4) offen.push({g:z.g, fehlt:Math.round(fehlt*10)/10, warum,
+      grund: warum==="zeit"
+        ? `dafür reicht die Zeit nicht: ${budget} Minuten pro Woche und ${tagBudget} je Einheit sind ${budgetQuelle==="profil"?"dein Profil-Budget":"der Umfang deines Plans plus ein Viertel"}`
+        : warum==="mrv"
+        ? `weiter geht es nur, indem eine andere Gruppe über ihre Obergrenze geschoben wird`
+        : warum==="muster"
+          ? (inj.length||reich===false
+              ? `mit deinen Angaben (${inj.map(x=>INJURY_LABEL[x]||x).join(", ")||a.equipment}) bleibt dafür kein zulässiges Bewegungsmuster übrig`
+              : `jedes passende Bewegungsmuster ist im Plan schon belegt`)
+          : `die Lücke ließ sich in zwei Ergänzungen nicht ganz schließen`});
+  }
+
+  /* Überschuss: beim stärksten Treiber kürzen, nicht pauschal. */
+  for(const z of vor.zeilen){
+    if(z.st!=="high") continue;
+    let zuviel=(jetzt[z.g]||0)-z.mrv; if(zuviel<=0.4) continue;
+    const treiber=items.filter(x=>x.ex&&((satzAnteile(x.ex)||{})[z.g]||0)>=0.5)
+      .sort((x,y)=>(y.saetze||AUDIT_STD_SAETZE)-(x.saetze||AUDIT_STD_SAETZE));
+    /* PROPORTIONAL kürzen, nicht den Größten ausbluten. Die erste Fassung
+       nahm bei 28 Sätzen Brust (MRV 20) acht Sätze aus EINER Übung und ließ
+       zwei stehen — arithmetisch richtig, als Rat unbrauchbar. Jetzt tragen
+       alle Treiber nach ihrem Anteil, und keiner fällt unter einen Satz. */
+    const summe=treiber.reduce((s,t)=>s+(t.saetze||AUDIT_STD_SAETZE),0)||1;
+    const sollWeg=zuviel;
+    for(const t of treiber){
+      if(zuviel<=0.4) break;
+      const an=satzAnteile(t.ex)||{}, f=an[z.g]||1;
+      const hat=t.saetze||AUDIT_STD_SAETZE;
+      const anteilig=Math.ceil(sollWeg*(hat/summe)/f);
+      let weg=Math.max(1, Math.min(hat-1, anteilig, Math.ceil(zuviel/f)));
+      /* Symmetrisch zur Ergaenzung: die Ergaenzung darf keine Gruppe ueber ihr
+         MRV schieben, also darf die Kuerzung keine unter ihr MEV ziehen. Ohne
+         diese Pruefung loeste die Reparatur ein Problem und schuf ein neues:
+         acht Saetze Brust weniger nahmen dem Trizeps vier Saetze mit und
+         kippten ihn unter den Mindestreiz — der Korridor stand danach
+         unveraendert bei 2 von 7, nur mit anderer Luecke. */
+      for(const [m,ff] of Object.entries(an)){
+        if(m===z.g||!ff) continue;
+        const luft=(jetzt[m]||0)-(band[m]||[0,0])[0];      // bis zum MEV
+        if(luft<weg*ff) weg=Math.max(0, Math.floor(luft/ff));
+      }
+      if(weg<1||hat-weg<1) continue;
+      edits.push({art:"cut", ex:t.ex, sets:weg, g:z.g, tag:t.tag, tagName:t.tagName,
+        minuten:-Math.round(minutenVon(t.ex,weg,t.reps)),
+        grund:`${z.g} lag bei ${z.tot} von höchstens ${z.mrv} Sätzen`});
+      minGenutzt-=minutenVon(t.ex,weg,t.reps);
+      for(const [m,ff] of Object.entries(an)) jetzt[m]=(jetzt[m]||0)-weg*ff;
+      zuviel=(jetzt[z.g]||0)-z.mrv;
+    }
+    /* Bleibt ein Rest ueber der Grenze, weil weiteres Kuerzen eine andere
+       Gruppe unter ihren Mindestreiz zoege, wird das GESAGT — genauso wie
+       eine nicht geschlossene Luecke. Sonst stuende im Korridor weiter
+       "ueber dem Limit" und die Reparatur haette dazu geschwiegen. */
+    if(zuviel>0.4) offen.push({g:z.g, fehlt:Math.round(zuviel*10)/10, warum:"mev-kollision",
+      ueber:true, grund:`weiteres Kürzen würde eine mitbelastete Gruppe unter ihren Mindestreiz ziehen`});
+  }
+
+  if(!edits.length) return {vor, nach:vor, edits:[], offen, besser:false,
+    budget, budgetQuelle, tagBudget, minutenNach:Math.round(minGenutzt),
+    tageNach:tagStand.map(t=>({name:t.name, min:Math.round(t.min), n:t.n})),
+    grund:offen.length?"keine zulässige Ergänzung gefunden":"nichts zu tun"};
+
+  /* Verifikation durch DIESELBE Prüfung — angewandt auf die Item-Liste, nicht
+     auf Text. Ein zweiter Parser-Durchlauf wäre eine zweite Fehlerquelle. */
+  const neu=items.map(x=>({...x}));
+  for(const e of edits){
+    if(e.art==="cut"){ const t=neu.find(x=>x.ex===e.ex&&x.tag===e.tag);
+      if(t) t.saetze=(t.saetze||AUDIT_STD_SAETZE)-e.sets; }
+    else neu.push({roh:`${e.ex} ${e.sets} × ${e.reps}`, name:e.ex, ex:e.ex,
+      zuordnung:"exakt", saetze:e.sets, reps:e.reps, tag:e.tag, tagName:e.tagName});
+  }
+  const nach=auditAusItems(neu,a);
+  /* "Besser" braucht eine Schwelle. Ohne sie galt ein Vorschlag als
+     Verbesserung, der den Durchschnittsreiz um EINEN Prozentpunkt hob — das
+     liegt innerhalb der Unsicherheit der fraktionierten Zaehlung und ist kein
+     Ergebnis, das man jemandem als Rat hinlegt. Die Schwelle ist dieselbe
+     Groesse, ab der die Pruefung einen Befund ueberhaupt erwaehnt. */
+  const schwelle=P("reparatur.besser.schwelle");
+  const besser=!!nach&&!nach.leer&&
+    (nach.imKorridor>vor.imKorridor||nach.reiz>=vor.reiz+schwelle);
+  return {vor, nach, edits, offen, besser, items:neu,
+    budget, budgetQuelle, tagBudget, minutenNach:Math.round(minGenutzt),
+    tageNach:tagStand.map(t=>({name:t.name, min:Math.round(t.min), n:t.n})),
+    grund:besser?null:"keine messbare Verbesserung — deshalb kein Vorschlag"};
 }
 
 /* ── Oberflaeche ───────────────────────────────────────────────────────────
-   Nur im Speicher, nicht in S: der eingefuegte Text ist nichts, was in
-   localStorage altern muss. */
-let _audit=null, _auditText="";
+   Der eingefuegte Text bleibt im Speicher. Gespeichert wird nur das ERGEBNIS
+   (Zahlen, Befunde, Reparatur) — damit man wiederkommen kann, ohne dass der
+   Rohtext in localStorage altert. Was das Geraet nie verlaesst, steht auf der
+   Landing als Versprechen; eine Pruefung dafuer steht in audit-tests.mjs.   */
+let _auditText="", _auditRep=null;
+
 const AUDIT_BEISPIEL=`Tag 1 — Oberkörper
 Bankdrücken 4 × 6-8
 Langhantelrudern 4 × 8-10
@@ -15507,19 +16020,129 @@ Rumänisches Kreuzheben 3 × 8-10
 Beinpresse 3 × 10-12
 Wadenheben 4 × 12-15`;
 
-function auditPill(n){
-  const f=n>=10?"stark":n>=4?"mittel":"klein";
-  return `<span class="au-pill ${f}">+${n} Reizpunkte</span>`;
+function auditRing(voll,von,unten){
+  const U=2*Math.PI*62, p=Math.max(0,Math.min(1,von?voll/von:0));
+  return `<div class="au-ring">
+    <svg viewBox="0 0 142 142" aria-hidden="true">
+      <defs><linearGradient id="auGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#A9C4DE"/><stop offset="100%" stop-color="#6E93B8"/>
+      </linearGradient></defs>
+      <circle class="trk" cx="71" cy="71" r="62"></circle>
+      <circle class="val" cx="71" cy="71" r="62"
+        stroke-dasharray="${U.toFixed(1)}" stroke-dashoffset="${(U*(1-p)).toFixed(1)}"></circle>
+    </svg>
+    <span class="mid"><b>${voll}<span style="font-size:17px;color:var(--t3)">/${von}</span></b><i>${esc(unten)}</i></span>
+  </div>`;
 }
 
-function auditErgebnisHTML(r,a){
-  const ring=Math.round(100*r.imKorridor/r.gruppen);
-  /* Der Gegenentwurf: dieselbe Zeit, von der Engine aufgeteilt. Ohne das
-     bleibt der Befund eine Kritik — mit ihm ist er eine Antwort. */
-  let gegen=null;
-  try{ gegen=besteAufteilung(Math.max(60,r.minuten),a); }catch(e){}
-  const g=gegen&&gegen.beste;
+/* Ein Satz, der sagt, was zu tun ist — nicht nur, wie es steht. Oura macht
+   genau das: Ring, dann EIN Satz. Alles andere ist Begruendung darunter. */
+function auditSatz(r,rep){
+  if(r.sicherheit.length) return `<b>${esc(r.sicherheit[0].ex)}</b> passt nicht zu deinen Angaben — das steht vor allem anderen.`;
+  if(!r.befunde.length) return `Alle ${r.gruppen} Gruppen liegen im Korridor. Über das Volumen ist hier nichts mehr zu holen.`;
+  const b=r.befunde[0];
+  if(rep&&rep.besser){
+    const e=rep.edits.filter(x=>x.art==="add"&&x.g===b.g)[0];
+    if(e) return `<b>${esc(b.g)}</b> ist die größte Lücke. ${e.sets} Sätze ${esc(e.ex)} am ${esc(e.tagName)} schließen sie — ohne eine andere Gruppe zu überlasten.`;
+  }
+  return `<b>${esc(b.g)}</b> ist die größte Lücke: ${esc(b.rat)}`;
+}
 
+function auditPill(b){
+  const f=b.wirkung>=10?"stark":b.wirkung>=4?"mittel":"klein";
+  return `<span class="au-pill ${f}">+${b.wirkung} Reizpunkte</span>`
+    +(b.fokus?`<span class="au-pill fok">dein Schwerpunkt</span>`:"");
+}
+
+/* Korridor mit Vorher-Marke. Der Balken zeigt den reparierten Stand, ein
+   zweiter Strich den alten — eine Zeile, zwei Zustaende, kein Vorher/Nachher
+   nebeneinander, das man vergleichen muesste. */
+function auditKorridorHTML(r,rep){
+  const nach=rep&&rep.besser?rep.nach:null;
+  const rows=r.zeilen.map(z=>{
+    const n=nach?nach.zeilen.find(x=>x.g===z.g):null;
+    return {...(n||z), vorTot:z.tot, vorSt:z.st};
+  });
+  return rows.map((q,i)=>{
+    const CHIP={max:["max","Maximum ausgereizt"],ok:["ok","optimal"],low:["low","im Aufbau"],
+                high:["high","über dem Limit"],fehlt:["fehlt","fehlt ganz"]};
+    const st=q.st||(q.tot>=q.mrv-1?"max":q.tot>=q.mev?"ok":"low");
+    const [cls,txt]=CHIP[st]||CHIP.low;
+    const pct=Math.max(st==="fehlt"?0:4,Math.min(100,Math.round(100*q.tot/q.mrv)));
+    const mevPct=Math.round(100*q.mev/q.mrv);
+    const vorPct=Math.max(0,Math.min(100,Math.round(100*q.vorTot/q.mrv)));
+    const delta=Math.round((q.tot-q.vorTot)*10)/10;
+    return `<div class="corr" style="animation-delay:${i*60}ms">
+      <div class="row" style="margin-bottom:6px"><span class="sm" style="font-weight:650">${q.g}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          ${delta?`<span class="au-delta">${delta>0?"+":""}${delta}</span>`:""}
+          <span class="corr-chip ${cls}">${txt}</span>
+          <span class="metric xs t2">${q.tot}/${q.mrv} Sätze</span></span></div>
+      <div class="corr-track">
+        <div class="corr-opt" style="left:${mevPct}%;width:${100-mevPct}%"></div>
+        <div class="corr-fill ${cls}" style="width:${pct}%;animation-delay:${110+i*60}ms"></div>
+        <span class="corr-tick" style="left:${mevPct}%"></span>
+        ${delta?`<span class="au-ghost" style="left:${vorPct}%" title="vorher ${q.vorTot}"></span>`:""}
+      </div>
+      <div class="corr-lbls"><span class="xs t3">0</span><span class="xs t3 corr-mev" style="left:${mevPct}%">MEV ${q.mev}</span><span class="xs t3">MRV ${q.mrv}</span></div>
+    </div>`;}).join("");
+}
+
+function auditReparaturHTML(rep){
+  if(!rep) return "";
+  if(!rep.besser) return `<div class="au-sec"><p class="au-h">Reparatur</p>
+    <p class="xs t3 mb12" style="line-height:1.6">${rep.edits.length
+      ? `Es gibt einen Umbau, aber er bringt messbar nichts (${rep.vor.reiz} → ${rep.nach.reiz} % Reiz bei ${rep.vor.imKorridor} → ${rep.nach.imKorridor} Gruppen im Korridor). Deshalb steht hier kein Vorschlag — ${esc(rep.grund||"")}.`
+      : `Hier ist nichts zu reparieren.${rep.offen.length?` Offen bleibt: ${rep.offen.map(o=>`${o.g} ${o.fehlt} ${o.fehlt===1?"Satz":"Sätze"} ${o.ueber?"über der Grenze":"unter dem Mindestreiz"} — ${esc(o.grund)}`).join("; ")}.`:""}`}</p></div>`;
+  const nachTag={};
+  for(const e of rep.edits){ (nachTag[e.tagName]=nachTag[e.tagName]||[]).push(e); }
+  const tagMin={}; for(const t of (rep.tageNach||[])) tagMin[t.name]=t.min;
+  const bloecke=Object.entries(nachTag).map(([tn,es])=>`
+    <div class="au-day">
+      <div class="au-day-h"><b>${esc(tn)}</b><span>${tagMin[tn]!=null?`${tagMin[tn]} Min.`:""}</span></div>
+      ${es.map(e=>`<div class="au-edit">
+        <span class="sign ${e.art}">${e.art==="add"?"+":"−"}</span>
+        <span class="nm">${e.sets} ${e.sets===1?"Satz":"Sätze"} ${esc(e.ex)}</span>
+        <span class="mn">${e.minuten>0?"+":""}${e.minuten} Min.</span>
+        <span class="wy">${e.art==="add"?`${esc(String(e.reps))} Wdh. · ${esc(e.grund)}`:esc(e.grund)}</span>
+      </div>`).join("")}
+    </div>`).join("");
+  const dK=rep.nach.imKorridor-rep.vor.imKorridor, dR=rep.nach.reiz-rep.vor.reiz;
+  return `<div class="au-sec">
+    <p class="au-h">Die Reparatur</p>
+    <p class="xs t3 mb12" style="line-height:1.6">Dein Plan bleibt stehen. Es kommen Sätze dazu und gehen Sätze weg — nicht mehr. Jede Ergänzung kommt aus demselben Übungs-Vorrat, aus dem die Engine einen eigenen Plan baut, und keine schiebt eine andere Gruppe über ihre Obergrenze.</p>
+    <div class="au-vs mb12">
+      <div class="au-vs-c"><p class="xs t3">vorher</p>
+        <p class="hero-num" style="font-size:27px;line-height:1.05">${rep.vor.imKorridor}<span style="font-size:13px;color:var(--t2)">/${rep.vor.gruppen}</span></p>
+        <p class="xs t2">Ø ${rep.vor.reiz} % · ${rep.vor.minuten} Min.</p></div>
+      <div class="au-vs-c win"><p class="xs" style="color:rgba(255,255,255,.7)">repariert</p>
+        <p class="hero-num" style="font-size:27px;line-height:1.05;color:#fff">${rep.nach.imKorridor}<span style="font-size:13px;color:rgba(255,255,255,.75)">/${rep.nach.gruppen}</span></p>
+        <p class="xs" style="color:rgba(255,255,255,.85)">Ø ${rep.nach.reiz} % · ${rep.minutenNach} Min.</p></div>
+    </div>
+    <p class="xs t2 mb12" style="line-height:1.6"><b style="color:var(--t1)">${dK>0?`${dK} Gruppe${dK>1?"n":""} mehr im Korridor`:""}${dK>0&&dR>0?", ":""}${dR>0?`${dR} Prozentpunkte mehr Reiz`:""}</b> für ${rep.minutenNach-rep.vor.minuten>0?`${rep.minutenNach-rep.vor.minuten} Minuten mehr`:`${rep.vor.minuten-rep.minutenNach} Minuten weniger`} pro Woche. Budget: ${rep.budget} Min./Woche, ${rep.tagBudget} je Einheit${rep.budgetQuelle==="profil"?" — aus deinem Profil":" — aus dem Umfang deines Plans"}.</p>
+    ${bloecke}
+    ${rep.offen.length?`<p class="xs t3 mt8" style="line-height:1.6"><b style="color:var(--t2)">Nicht ganz gelöst:</b> ${rep.offen.map(o=>o.ueber
+      ?`${o.g} bleibt ${o.fehlt} ${o.fehlt===1?"Satz":"Sätze"} über der Grenze, ${esc(o.grund)}`
+      :`${o.g} fehlen ${o.fehlt} Sätze, ${esc(o.grund)}`).join("; ")}.</p>`:""}
+    <div class="row mt12" style="gap:8px">
+      <button class="btn ghost" style="flex:1;min-height:42px" onclick="A.auditKopieren()">${icon("rows",14)} Als Text kopieren</button>
+      ${S.currentUser!=null?`<button class="btn" style="flex:1;min-height:42px" onclick="A.auditSpeichern()">${icon("check",14)} In der App merken</button>`:""}
+    </div>
+  </div>`;
+}
+
+function auditErgebnisHTML(r,rep,a){
+  let gegen=null; try{ gegen=besteAufteilung(Math.max(60,r.minuten),a); }catch(e){}
+  const g=gegen&&gegen.beste;
+  const sicher=r.sicherheit.map((s,i)=>`
+    <div class="au-find safe">
+      <div class="row" style="gap:9px;align-items:flex-start">
+        <span class="au-num safe">!</span>
+        <div style="flex:1;min-width:0">
+          <p class="sm" style="font-weight:650;line-height:1.4">${esc(s.titel)}</p>
+          <p class="xs t2 mt4" style="line-height:1.6">${esc(s.text)}</p>
+          <p class="xs mt8" style="line-height:1.6;color:#C97A7A"><b>${esc(s.rat)}</b></p>
+        </div></div></div>`).join("");
   const befundHTML=r.befunde.map((b,i)=>`
     <div class="au-find">
       <div class="row" style="gap:9px;align-items:flex-start">
@@ -15528,95 +16151,104 @@ function auditErgebnisHTML(r,a){
           <p class="sm" style="font-weight:650;line-height:1.4">${esc(b.titel)}</p>
           <p class="xs t2 mt4" style="line-height:1.6">${esc(b.text)}</p>
           <p class="xs mt8" style="line-height:1.6;color:var(--hl)"><b>${esc(b.rat)}</b></p>
-        </div>
-      </div>
-      <div class="row mt8" style="gap:8px">
-        ${auditPill(b.wirkung)}
+        </div></div>
+      <div class="row mt8" style="gap:6px;flex-wrap:wrap;row-gap:6px">${auditPill(b)}
         <span role="button" tabindex="0" class="au-link" onclick="A.auditHerleitung('${b.g}')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();A.auditHerleitung('${b.g}')}"
-          >Woher die Zahl kommt</span>
-      </div>
+          >Woher die Zahl kommt</span></div>
     </div>`).join("");
 
   return `
   <div class="au-hero">
-    <p class="xs t3" style="letter-spacing:.08em;text-transform:uppercase">Abdeckung</p>
-    <p class="hero-num" style="font-size:56px;line-height:1.02;margin:2px 0 0">${r.imKorridor}<span style="font-size:24px;color:var(--t2)">/${r.gruppen}</span></p>
-    <p class="sm t2" style="margin-top:2px">Muskelgruppen im Wachstums-Korridor</p>
+    ${auditRing(r.imKorridor, r.gruppen, "im Korridor")}
+    <p class="au-verdict">${auditSatz(r,rep)}</p>
     <div class="au-hero-row">
-      <div><p class="metric" style="font-size:19px">${r.reiz} %</p><p class="xs t3">Ø Reiz</p></div>
-      <div><p class="metric" style="font-size:19px">${r.minuten}</p><p class="xs t3">Min./Woche</p></div>
-      <div><p class="metric" style="font-size:19px">${Math.round(r.saetze)}</p><p class="xs t3">Sätze</p></div>
+      <div><p class="metric" style="font-size:18px">${r.reiz} %</p><p class="xs t3">Ø Reiz</p></div>
+      <div><p class="metric" style="font-size:18px">${r.minuten}</p><p class="xs t3">Min./Woche</p></div>
+      <div><p class="metric" style="font-size:18px">${r.tage.length}</p><p class="xs t3">Einheit${r.tage.length===1?"":"en"}</p></div>
+      <div><p class="metric" style="font-size:18px">${Math.round(r.saetze)}</p><p class="xs t3">Sätze</p></div>
     </div>
   </div>
 
+  ${sicher?`<div class="au-sec first"><p class="au-h">Zuerst: Sicherheit</p>
+    <p class="xs t3 mb12" style="line-height:1.6">Diese Punkte haben keinen Reizwert — ihnen einen zu geben, nur damit sie sich einsortieren lassen, wäre eine erfundene Vergleichbarkeit. Sie stehen deshalb vorn und ungewichtet, genau wie es der eigene Planbauer hält.</p>
+    ${sicher}</div>`:""}
+
+  ${auditReparaturHTML(rep)}
+
   <div class="au-sec">
     <p class="au-h">Jede Gruppe im Korridor</p>
-    <p class="xs t3 mb12" style="line-height:1.55">Sätze fraktioniert gezählt — eine Übung, die zwei Muskeln lädt, wird beiden zugerechnet. MEV ist der Mindestreiz, MRV die Grenze des Erholbaren.</p>
-    ${corridorHTML(r.zeilen.map(z=>({g:z.g,tot:z.tot,mev:z.mev,mrv:z.mrv,st:z.st})))}
+    <p class="xs t3 mb12" style="line-height:1.6">Sätze fraktioniert gezählt — eine Übung, die zwei Muskeln lädt, wird beiden zugerechnet. MEV ist der Mindestreiz, MRV die Grenze des Erholbaren.${rep&&rep.besser?" Der Balken zeigt den reparierten Stand, der graue Strich deinen jetzigen.":""}</p>
+    ${auditKorridorHTML(r,rep)}
   </div>
 
   <div class="au-sec">
     <p class="au-h">${r.befunde.length?`Die ${r.befunde.length===1?"wichtigste Stelle":r.befunde.length===2?"zwei wichtigsten Stellen":"drei wichtigsten Stellen"}`:"Befund"}</p>
-    <p class="xs t3 mb12" style="line-height:1.55">${r.befunde.length?`Sortiert nach erwarteter Wirkung, nicht nach Reihenfolge im Plan.${r.alleBefunde.length>r.befunde.length?` ${r.alleBefunde.length-r.befunde.length} weitere kleinere Punkte sind hier weggelassen.`:""}`:"Keine Gruppe liegt außerhalb ihres Korridors. Das ist selten."}</p>
+    <p class="xs t3 mb12" style="line-height:1.6">${r.befunde.length
+      ? `Sortiert nach erwarteter Wirkung in Reizpunkten, nicht nach Reihenfolge im Plan.${r.alleBefunde.length>r.befunde.length?` ${r.alleBefunde.length-r.befunde.length} weitere kleinere Punkte sind hier weggelassen.`:""}${r.vorgezogen?` ${r.vorgezogen} ist vorgezogen, weil es einer deiner Schwerpunkte ist — die Wirkungszahl allein hätte es nicht unter die ersten drei gebracht.`:""}`
+      : `Keine Gruppe liegt außerhalb ihres Korridors. Das ist selten.`}</p>
     ${befundHTML||`<div class="au-find"><p class="sm" style="line-height:1.5">Dieser Plan deckt alle ${r.gruppen} Gruppen im Korridor ab. Mehr lässt sich über das Volumen nicht herausholen — der nächste Hebel ist die Ausführung.</p></div>`}
   </div>
 
   ${g?`<div class="au-sec">
-    <p class="au-h">Dieselbe Zeit, anders aufgeteilt</p>
-    <p class="xs t3 mb12" style="line-height:1.55">Die Engine baut aus ${r.minuten} Minuten pro Woche einen Plan und rechnet ihn mit denselben Größen durch. Kein Mehraufwand, nur eine andere Verteilung.</p>
+    <p class="au-h">Zum Vergleich: ganz neu gebaut</p>
+    <p class="xs t3 mb12" style="line-height:1.6">Die Reparatur oben lässt deinen Plan stehen. Hier baut die Engine aus denselben ${r.minuten} Minuten einen Plan von null — zum Vergleich, nicht als Ersatz.</p>
     <div class="au-vs">
-      <div class="au-vs-c">
-        <p class="xs t3">dein Plan</p>
-        <p class="hero-num" style="font-size:30px;line-height:1.05">${r.imKorridor}<span style="font-size:14px;color:var(--t2)">/${r.gruppen}</span></p>
-        <p class="xs t2">Ø ${r.reiz} % Reiz</p>
-      </div>
-      <div class="au-vs-c win">
-        <p class="xs" style="color:rgba(255,255,255,.7)">METRICGYM · ${g.tage}× ${g.sessionTime} Min.</p>
-        <p class="hero-num" style="font-size:30px;line-height:1.05;color:#fff">${g.imKorridor}<span style="font-size:14px;color:rgba(255,255,255,.75)">/${r.gruppen}</span></p>
-        <p class="xs" style="color:rgba(255,255,255,.85)">Ø ${g.reiz} % Reiz</p>
-      </div>
+      <div class="au-vs-c"><p class="xs t3">dein Plan</p>
+        <p class="hero-num" style="font-size:27px;line-height:1.05">${r.imKorridor}<span style="font-size:13px;color:var(--t2)">/${r.gruppen}</span></p>
+        <p class="xs t2">Ø ${r.reiz} % Reiz</p></div>
+      <div class="au-vs-c win"><p class="xs" style="color:rgba(255,255,255,.7)">METRICGYM · ${g.tage}× ${g.sessionTime} Min.</p>
+        <p class="hero-num" style="font-size:27px;line-height:1.05;color:#fff">${g.imKorridor}<span style="font-size:13px;color:rgba(255,255,255,.75)">/${r.gruppen}</span></p>
+        <p class="xs" style="color:rgba(255,255,255,.85)">Ø ${g.reiz} % Reiz</p></div>
     </div>
-    <p class="xs t3 mt8" style="line-height:1.55">${g.imKorridor>r.imKorridor||g.reiz>r.reiz
-      ? `Unterschied: <b style="color:var(--t1)">${g.imKorridor-r.imKorridor>0?`${g.imKorridor-r.imKorridor} Gruppe${g.imKorridor-r.imKorridor>1?"n":""} mehr im Korridor`:""}${g.imKorridor-r.imKorridor>0&&g.reiz>r.reiz?", ":""}${g.reiz>r.reiz?`${g.reiz-r.reiz} Prozentpunkte mehr Reiz`:""}</b> bei gleicher Zeit.`
+    <p class="xs t3 mt8" style="line-height:1.6">${g.imKorridor>r.imKorridor||g.reiz>r.reiz
+      ? `Unterschied bei gleicher Zeit: <b style="color:var(--t1)">${g.imKorridor-r.imKorridor>0?`${g.imKorridor-r.imKorridor} Gruppe${g.imKorridor-r.imKorridor>1?"n":""} mehr im Korridor`:""}${g.imKorridor-r.imKorridor>0&&g.reiz>r.reiz?", ":""}${g.reiz>r.reiz?`${g.reiz-r.reiz} Prozentpunkte mehr Reiz`:""}</b>.`
       : `Dein Plan hält hier mit. Das kommt vor — und wird hier auch so gesagt.`}</p>
   </div>`:""}
 
   <div class="au-sec">
     <p class="au-h">Was diese Prüfung nicht sieht</p>
     <ul class="au-list">
-      <li>${r.erkannt} von ${r.gesamt} Zeilen wurden einer Übung zugeordnet.${r.nichtErkannt.length?` Nicht erkannt: ${esc(r.nichtErkannt.slice(0,6).join(", "))}${r.nichtErkannt.length>6?" u. a.":""}. Diese Sätze fehlen in der Rechnung.`:""}</li>
+      <li>${r.erkannt} von ${r.gesamt} Zeilen wurden einer Übung zugeordnet, verteilt auf ${r.tage.length} Einheit${r.tage.length===1?"":"en"}.${r.nichtErkannt.length?` Nicht erkannt: ${esc(r.nichtErkannt.slice(0,6).join(", "))}${r.nichtErkannt.length>6?" u. a.":""}. Diese Sätze fehlen in der Rechnung.`:""}</li>
       ${r.geschaetzt.length?`<li>Bei ${r.geschaetzt.length} Übung${r.geschaetzt.length>1?"en":""} stand keine Satzzahl im Text — gerechnet wurde mit ${AUDIT_STD_SAETZE}.</li>`:""}
-      <li>Beurteilt wird <b>Volumen, Frequenz und Zeitnutzen</b>. Nicht beurteilt: Technik, Übungsreihenfolge, Gewichtssteigerung über die Wochen, Verletzungsgeschichte.</li>
+      <li>Beurteilt wird <b>Volumen, Frequenz und Zeitnutzen</b>. Nicht beurteilt: Technik, Übungsreihenfolge, Gewichtssteigerung über die Wochen, Verletzungsgeschichte über das hinaus, was im Profil steht.</li>
+      <li>Die sieben Gruppen sind grob: alle Beinübungen zählen auf <b>Beine</b>, Waden eingeschlossen. Eine Lücke im Oberschenkel lässt sich damit nicht von einer in der Wade unterscheiden.</li>
       <li>Der Korridor ist auf <b>${r.ziel==="muscle_gain"?"Muskelaufbau":r.ziel==="fat_loss"?"Fettabbau":"dein Ziel"}</b> eingestellt und folgt Praxisregeln, nicht einer einzelnen Studie. Jede Zahl nennt über „Woher die Zahl kommt“ ihren Typ und ihre Quelle.</li>
     </ul>
   </div>
 
-  <div class="row" style="gap:8px">
-    <button class="btn ghost" style="flex:1" onclick="A.auditReset()">Anderen Plan prüfen</button>
+  <div class="au-bar">
+    <button class="btn ghost" style="flex:1" onclick="A.auditReset()">Anderer Plan</button>
     ${S.currentUser!=null?`<button class="btn volt" style="flex:1.3" onclick="A.closeModal();A.tab('train')">Zu meinem Plan</button>`
       :`<button class="btn volt" style="flex:1.3" onclick="A.closeModal();A.toRegister()">Eigenen Plan bauen</button>`}
   </div>`;
 }
 
 function auditEingabeHTML(){
+  const letzte=S.auditLetzte;
   return `
-  <div class="au-sec" style="border:none;padding-top:0">
-    <p class="xs t3 mb12" style="line-height:1.6">Füge einen Trainingsplan ein — aus ChatGPT, von Instagram, vom Trainer, aus deinem Notizzettel. Eine Übung je Zeile, Satzangaben wie „4 × 6-8“ werden gelesen, müssen aber nicht dabeistehen. Die Prüfung läuft auf deinem Gerät; der Text verlässt es nicht.</p>
-    <textarea id="au-text" class="au-ta" rows="9" placeholder="Bankdrücken 4 × 6-8&#10;Langhantelrudern 4 × 8-10&#10;Kniebeuge 4 × 6-8&#10;…">${esc(_auditText)}</textarea>
-    <div class="row mt8" style="gap:8px">
-      <span role="button" tabindex="0" class="au-link" onclick="A.auditBeispiel()"
+  <div class="au-sec first">
+    <p class="xs t3 mb12" style="line-height:1.6">Füge einen Trainingsplan ein — aus ChatGPT, von Instagram, vom Trainer, aus deinem Notizzettel. Eine Übung je Zeile; Tagesüberschriften und Satzangaben wie „4 × 6-8“ werden gelesen, müssen aber nicht dabeistehen. Die Prüfung läuft auf deinem Gerät; der Text verlässt es nicht.</p>
+    <textarea id="au-text" class="au-ta" rows="9" placeholder="Tag 1 — Oberkörper&#10;Bankdrücken 4 × 6-8&#10;Langhantelrudern 4 × 8-10&#10;…">${esc(_auditText)}</textarea>
+    <div class="row mt8" style="gap:14px">
+      <span role="button" tabindex="0" class="au-link" style="margin-left:0" onclick="A.auditBeispiel()"
         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();A.auditBeispiel()}">Beispiel einsetzen</span>
+      ${letzte?`<span role="button" tabindex="0" class="au-link" style="margin-left:auto" onclick="A.auditLetzte()"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();A.auditLetzte()}">Letzte Prüfung ansehen</span>`:""}
     </div>
     <button class="btn volt mt12" onclick="A.auditRun()">Plan prüfen</button>
     <p id="au-err" class="xs mt8" style="color:#C97A7A;display:none"></p>
+  </div>
+  <div class="au-sec" style="border:none;padding-top:0;margin-top:14px">
+    <button class="btn ghost" onclick="A.closeModal()">Schließen</button>
   </div>
   <div class="au-sec">
     <p class="au-h">Was geprüft wird</p>
     <ul class="au-list">
       <li><b>Volumen je Muskel</b> gegen den Korridor aus Mindestreiz und erholbarer Grenze — fraktioniert gezählt, nicht nach Übungsnamen.</li>
-      <li><b>Frequenz</b>: viel Volumen an einem Tag wirkt schlechter als dasselbe Volumen auf zwei Tage.</li>
+      <li><b>Frequenz</b>: gezählt werden Einheiten, nicht Übungen. Zwölf Sätze Brust an einem Tag sind nicht dasselbe wie zweimal sechs.</li>
       <li><b>Zeitnutzen</b>: welche Sätze nahe der Sättigung liegen und fast nichts mehr bringen, während eine andere Gruppe unter dem Mindestreiz steht.</li>
+      <li><b>Dein Profil</b>, wenn eines da ist: Einschränkungen, Ausstattung, Schwerpunkte und deine Wochenzeit gehen in Befund und Reparatur ein.</li>
     </ul>
   </div>`;
 }
@@ -15625,50 +16257,153 @@ function showPlanAudit(){
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade" id="au-sheet">
     <p class="pw-eyebrow">${icon("chart",12)} Plan-Prüfung</p>
     <p class="display-m mb4">Jeden Plan prüfen</p>
-    <p class="sm t2 mb16" style="line-height:1.55">Eingefügt, geprüft, mit Herleitung — in unter einer Minute.</p>
-    <div id="au-body">${_audit?auditErgebnisHTML(_audit,(S.profile&&S.profile.a)||null):auditEingabeHTML()}</div>
-    <button class="btn ghost mt12" onclick="A.closeModal()">Schließen</button>
+    <p class="sm t2 mb16" style="line-height:1.55">Eingefügt, geprüft, repariert — mit Herleitung zu jeder Zahl.</p>
+    <div id="au-body">${auditEingabeHTML()}</div>
   </div></div>`;
 }
 
 A.auditBeispiel=()=>{ const t=document.getElementById("au-text"); if(t){ t.value=AUDIT_BEISPIEL; t.focus(); } };
-A.auditReset=()=>{ _audit=null; _auditText=""; showPlanAudit(); };
+A.auditReset=()=>{ _auditRep=null; _auditText=""; showPlanAudit(); };
+
+/* Gestufte Enthuellung. Jede Stufe traegt die Zahl, die sie GERADE gemessen
+   hat — kein Fortschrittsbalken, der nur Zeit vergehen laesst. Bei
+   reduzierter Bewegung erscheint das Ergebnis sofort. */
+function auditStufen(r,rep){
+  const st=[
+    ["Übungen zugeordnet", `${r.erkannt}/${r.gesamt}`],
+    ["Einheiten erkannt", `${r.tage.length}`],
+    ["Sätze fraktioniert gezählt", `${Math.round(r.saetze)}`],
+    ["Korridor auf dein Ziel skaliert", `${r.gruppen} Gruppen`],
+    ["Befunde nach Wirkung sortiert", `${r.alleBefunde.length}`],
+    ["Reparatur geprüft", rep?(rep.besser?`${rep.edits.length} Änderungen`:"kein Vorschlag"):"—"],
+  ];
+  return `<div class="au-sec first"><p class="au-h">Rechnung läuft</p>
+    <ul class="au-steps">${st.map(([l,n],i)=>`<li class="au-step" style="animation-delay:${i*150}ms">
+      <span class="tick">${icon("check",12)}</span><span class="lbl">${l}</span><span class="num">${n}</span></li>`).join("")}</ul></div>`;
+}
+
 A.auditRun=()=>{
   const t=document.getElementById("au-text"), err=document.getElementById("au-err");
   const txt=t?t.value:""; _auditText=txt;
   const zeig=(m)=>{ if(err){ err.textContent=m; err.style.display="block"; } };
   if(!txt.trim()) return zeig("Da steht noch kein Plan. Du kannst auch das Beispiel einsetzen.");
-  let r=null; try{ r=planAudit(txt,(S.profile&&S.profile.a)||null); }catch(e){ return zeig("Die Prüfung ist gescheitert: "+e.message); }
+  const a=(S.profile&&S.profile.a)||null;
+  let r=null, rep=null;
+  try{ r=planAudit(txt,a); }catch(e){ return zeig("Die Prüfung ist gescheitert: "+e.message); }
   if(!r) return zeig("Aus diesem Text konnte keine einzige Übung gelesen werden. Eine Übung je Zeile hilft.");
   if(r.leer) return zeig(`${r.items.length} Zeile${r.items.length>1?"n":""} gelesen, aber keine davon einer Übung zugeordnet. Deutsche oder englische Übungsnamen werden erkannt — „Bankdrücken“, „bench press“, „Kniebeuge“, „squat“.`);
-  _audit=r;
-  const b=document.getElementById("au-body");
-  if(b){ b.innerHTML=auditErgebnisHTML(r,(S.profile&&S.profile.a)||null);
+  try{ rep=planReparieren(txt,a); }catch(e){ rep=null; }
+  _auditRep={r, rep};
+  /* Nur das ERGEBNIS wandert in den Speicher, nie der eingefuegte Text. */
+  try{
+    S.auditLetzte={zeit:Date.now(), imKorridor:r.imKorridor, gruppen:r.gruppen, reiz:r.reiz,
+      minuten:r.minuten, tage:r.tage.length, saetze:Math.round(r.saetze),
+      zeilen:r.zeilen.map(z=>({g:z.g,tot:z.tot,mev:z.mev,mrv:z.mrv,st:z.st,tage:z.tage})),
+      befunde:r.befunde.map(b=>({art:b.art,g:b.g,titel:b.titel,rat:b.rat,wirkung:b.wirkung})),
+      sicherheit:r.sicherheit.length, reparatur:rep&&rep.besser?rep.edits.length:0};
+    save();
+  }catch(e){}
+  const body=document.getElementById("au-body"); if(!body) return showPlanAudit();
+  const fix=(typeof matchMedia==="function")&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fertig=()=>{ body.innerHTML=auditErgebnisHTML(r,rep,a);
     try{ document.getElementById("au-sheet").scrollTop=0; }catch(e){}
-    requestAnimationFrame(()=>animateCounts()); }
-  else showPlanAudit();
-  try{ track("audit_run",{gruppen:r.imKorridor,erkannt:r.erkannt}); }catch(e){}
+    requestAnimationFrame(()=>animateCounts()); };
+  if(fix) fertig(); else { body.innerHTML=auditStufen(r,rep); setTimeout(fertig,1150); }
+  try{ track("audit_run",{gruppen:r.imKorridor,erkannt:r.erkannt,reparatur:rep&&rep.besser?1:0}); }catch(e){}
 };
+
+A.auditLetzte=()=>{
+  const l=S.auditLetzte; if(!l) return;
+  const d=new Date(l.zeit);
+  overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
+    <p class="pw-eyebrow">${icon("chart",12)} Letzte Prüfung</p>
+    <p class="display-m mb4">${l.imKorridor} von ${l.gruppen} im Korridor</p>
+    <p class="sm t2 mb16" style="line-height:1.55">${d.toLocaleDateString("de-DE",{day:"numeric",month:"long"})} · Ø ${l.reiz} % Reiz · ${l.minuten} Min. in ${l.tage} Einheit${l.tage===1?"":"en"} · ${l.saetze} Sätze</p>
+    <div class="au-sec first"><p class="au-h">Korridor</p>
+      ${corridorHTML(l.zeilen)}</div>
+    ${l.befunde.length?`<div class="au-sec"><p class="au-h">Befunde</p>
+      ${l.befunde.map((b,i)=>`<div class="au-find"><div class="row" style="gap:9px;align-items:flex-start">
+        <span class="au-num">${i+1}</span><div style="flex:1;min-width:0">
+        <p class="sm" style="font-weight:650;line-height:1.4">${esc(b.titel)}</p>
+        <p class="xs mt4" style="line-height:1.6;color:var(--hl)"><b>${esc(b.rat)}</b></p></div></div></div>`).join("")}
+    </div>`:""}
+    <p class="xs t3 mt12" style="line-height:1.6">Gespeichert sind nur diese Zahlen — der Text, den du eingefügt hast, wird nicht aufbewahrt. Für eine neue Prüfung fügst du ihn wieder ein.</p>
+    <button class="btn volt mt12" onclick="A.auditReset()">Neuen Plan prüfen</button>
+    <button class="btn ghost mt8" onclick="A.closeModal()">Schließen</button>
+  </div></div>`;
+};
+
+/* Den reparierten Plan ALS TEXT — der Weg, der ohne Konto und ohne
+   Datenänderung funktioniert. */
+function auditRepText(rep){
+  const tage={};
+  for(const it of rep.items){ if(!it.ex) continue;
+    (tage[it.tagName]=tage[it.tagName]||[]).push(it); }
+  const neu=new Set(rep.edits.filter(e=>e.art==="add").map(e=>e.ex));
+  const raus=["METRICGYM — geprüft und repariert",""];
+  for(const [tn,es] of Object.entries(tage)){
+    raus.push(tn);
+    for(const e of es){ if((e.saetze||AUDIT_STD_SAETZE)<1) continue;
+      raus.push(`  ${e.ex} ${e.saetze||AUDIT_STD_SAETZE} × ${e.reps||"8–12"}${neu.has(e.ex)?"   (neu)":""}`); }
+    raus.push("");
+  }
+  raus.push(`${rep.nach.imKorridor} von ${rep.nach.gruppen} Muskelgruppen im Wachstums-Korridor · Ø ${rep.nach.reiz} % Reiz · ${rep.minutenNach} Min./Woche`);
+  return raus.join("\n");
+}
+A.auditKopieren=()=>{
+  if(!_auditRep||!_auditRep.rep||!_auditRep.rep.besser) return;
+  const txt=auditRepText(_auditRep.rep);
+  const fertig=()=>toast("✓ Reparierter Plan kopiert");
+  try{ navigator.clipboard.writeText(txt).then(fertig,()=>{
+    const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand("copy"); fertig();}catch(e){toast("Kopieren nicht möglich");}
+    ta.remove(); }); }catch(e){ toast("Kopieren nicht möglich"); }
+};
+/* "In der App merken" legt den reparierten Plan in dieselbe Ablage, die der
+   Bild-Import benutzt (S.importedPlan). Der EIGENE METRICGYM-Plan wird NICHT
+   angetastet: ein fremder Plan, der die eigene Planung ueberschreibt, waere
+   eine Aenderung an Nutzerdaten, die niemand bestellt hat. */
+A.auditSpeichern=()=>{
+  if(!_auditRep||!_auditRep.rep||!_auditRep.rep.besser) return;
+  const rep=_auditRep.rep, tage={};
+  for(const it of rep.items){ if(!it.ex||(it.saetze||AUDIT_STD_SAETZE)<1) continue;
+    (tage[it.tagName]=tage[it.tagName]||[]).push(`${it.ex} ${it.saetze||AUDIT_STD_SAETZE} × ${it.reps||"8–12"}`); }
+  S.importedPlan={ quelle:"plan-pruefung",
+    summary:`Geprüft und repariert: ${rep.nach.imKorridor} von ${rep.nach.gruppen} Muskelgruppen im Korridor, Ø ${rep.nach.reiz} % Reiz, ${rep.minutenNach} Min./Woche.`,
+    days:Object.entries(tage).map(([name,exercises])=>({name, exercises})),
+    verdict:"adopt",
+    reasoning:`Dein eingefügter Plan lag bei ${rep.vor.imKorridor} von ${rep.vor.gruppen} Gruppen im Korridor. Die Reparatur ergänzt ${rep.edits.filter(e=>e.art==="add").length} Übungen und kürzt ${rep.edits.filter(e=>e.art==="cut").length} — dein eigener METRICGYM-Plan bleibt unverändert.`,
+    adopt_exercises:rep.edits.filter(e=>e.art==="add").map(e=>e.ex) };
+  save(); A.closeModal();
+  toast("✓ Gemerkt — im Training-Tab unter „Plan bearbeiten“");
+};
+
 /* Herleitung je Gruppe: dieselben Register-Eintraege, die der eigene Plan
    zitiert. Kein zweiter Text, der auseinanderlaufen kann. */
 A.auditHerleitung=(g)=>{
-  const z=_audit&&_audit.zeilen.find(x=>x.g===g); if(!z) return;
-  const keys=[`vol.band.${g}.mev`,`vol.band.${g}.mrv`,"reiz.saettigung.wachstum","reiz.k.teiler"];
+  const r=_auditRep&&_auditRep.r; const z=r&&r.zeilen.find(x=>x.g===g); if(!z) return;
+  const keys=[`vol.band.${g}.mev`,`vol.band.${g}.mrv`,"reiz.saettigung.wachstum","reiz.k.teiler","reiz.sek.anteil"];
   overlay.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)A.closeModal()"><div class="sheet fade">
     <p class="pw-eyebrow">${icon("info",12)} Herleitung</p>
     <p class="display-m mb4">${esc(g)}</p>
-    <p class="sm t2 mb16" style="line-height:1.55">${z.tot} Sätze pro Woche aus ${z.uebungen} Übung${z.uebungen>1?"en":""}, fraktioniert gezählt. Der Korridor läuft von ${z.mev} bis ${z.mrv}. Daraus ergeben sich ${z.reiz} % des erreichbaren Reizes.</p>
-    <div class="au-sec" style="border:none;padding-top:0">
+    <p class="sm t2 mb16" style="line-height:1.55">${z.tot} Sätze pro Woche aus ${z.uebungen} Übung${z.uebungen===1?"":"en"} an ${z.tage} Tag${z.tage===1?"":"en"}, fraktioniert gezählt. Der Korridor läuft von ${z.mev} bis ${z.mrv}. Daraus ergeben sich ${z.reiz} % des erreichbaren Reizes.</p>
+    <div class="au-sec first">
       <p class="au-h">Die Rechnung</p>
-      <p class="xs t2" style="line-height:1.7;font-family:var(--mono,monospace)">Reiz = 1 − e<sup>−n/k</sup><br>n = ${z.tot} Sätze · k = ${Math.round(reizK(_audit.ziel,(S.profile&&S.profile.a)||{})*10)/10}<br>→ ${z.reiz} %</p>
-      <p class="xs t3 mt8" style="line-height:1.55">k ist der Sättigungspunkt geteilt durch ${P("reiz.k.teiler")}. Die Kurve steigt anfangs steil und flacht ab — deshalb bringt der erste Satz einer fehlenden Gruppe mehr als der zwanzigste einer gesättigten.</p>
+      <p class="xs t2" style="line-height:1.8;font-variant-numeric:tabular-nums">Reiz = 1 − e<sup>−n/k</sup><br>n = ${z.tot} Sätze · k = ${Math.round(reizK(r.ziel,(S.profile&&S.profile.a)||{})*10)/10}<br>→ ${z.reiz} %</p>
+      <p class="xs t3 mt8" style="line-height:1.6">k ist der Sättigungspunkt geteilt durch ${P("reiz.k.teiler")}. Die Kurve steigt anfangs steil und flacht ab — deshalb bringt der erste Satz einer fehlenden Gruppe mehr als der zwanzigste einer gesättigten.</p>
     </div>
     <div class="au-sec">
       <p class="au-h">Die Stellgrößen dahinter</p>
       ${herleitungParamHTML(keys)}
     </div>
-    <button class="btn ghost mt12" onclick="showPlanAudit()">Zurück zur Prüfung</button>
+    <button class="btn ghost mt12" onclick="A.auditZurueck()">Zurück zur Prüfung</button>
   </div></div>`;
+};
+A.auditZurueck=()=>{
+  if(!_auditRep) return showPlanAudit();
+  showPlanAudit();
+  const body=document.getElementById("au-body");
+  if(body) body.innerHTML=auditErgebnisHTML(_auditRep.r,_auditRep.rep,(S.profile&&S.profile.a)||null);
 };
 
 function showImportedPlan(){
@@ -15676,7 +16411,19 @@ function showImportedPlan(){
   const days=(j.days||[]).map(d=>`<div class="mb8"><p class="sm" style="font-weight:600">${esc(d.name||"Tag")}</p>
     <p class="xs t2" style="line-height:1.55">${esc((d.exercises||[]).join(" · ")||"—")}</p></div>`).join("");
   const adopt=j.verdict==="adopt";
-  const an=importedPlanAnalysis();
+  /* Kommt der Plan aus der Plan-Pruefung, ist er bereits repariert und hat
+     dort eine Bewertung bekommen — fraktioniert, ueber sieben Gruppen, mit
+     Herleitung. importedPlanAnalysis() wuerde ihn daneben ein zweites Mal
+     bewerten: sechs grobe Gruppen, ungewichtet gezaehlt, und ihn obendrein
+     "dein alter Plan" nennen. Zwei Zahlen ueber denselben Plan, die
+     auseinandergehen duerfen — genau das, wogegen dieses Paket angetreten
+     ist. Deshalb hier nicht. */
+  const an=(j.quelle==="plan-pruefung")?null:importedPlanAnalysis();
+  const gepruft=(j.quelle==="plan-pruefung")?`<div class="card" data-tone="good" style="margin:0 0 12px">
+      <p class="ct">${icon("check",14)} Aus der Plan-Prüfung übernommen</p>
+      <p class="xs t2" style="line-height:1.6">Dieser Plan ist bereits geprüft und repariert — die Bewertung steht dort, mit Korridor und Herleitung zu jeder Zahl. Dein eigener METRICGYM-Plan ist davon unberührt.</p>
+      ${S.auditLetzte?`<button class="btn ghost mt8" style="min-height:38px;font-size:12.5px" onclick="A.auditLetzte()">Prüfung ansehen</button>`:""}
+    </div>`:"";
   const cmp=an?`<div class="card" data-tone="hl" style="margin:0 0 12px">
       <p class="ct" style="margin-bottom:10px">${icon("chart",14)} Dein Plan vs. METRICGYM — der Beweis</p>
       <div class="row" style="gap:10px;align-items:stretch;margin-bottom:10px">
@@ -15696,6 +16443,7 @@ function showImportedPlan(){
     <p class="pw-eyebrow">${icon("sparkle",12)} Plan-Analyse</p>
     <p class="display-m mb4">Dein importierter Plan</p>
     <p class="sm t2 mb12" style="line-height:1.55">${j.summary||""}</p>
+    ${gepruft}
     ${days?`<div class="card" style="margin:0 0 12px">${days}</div>`:""}
     ${cmp}
     <div class="card" data-tone="${adopt?"good":"hl"}" style="margin:0 0 12px">
@@ -16498,12 +17246,15 @@ function renderTrain(){
         ${!rotMode&&S.currentWeek===4?`<button class="btn volt mt8" onclick="A.newBlock()">✦ Block ${(S.blockNum||1)+1} generieren — aus deinen Logs gelernt</button>
         <p class="xs t2 mt8" style="line-height:1.55">Die Engine analysiert deinen Block: Übungen ohne Kraft-Fortschritt werden gegen frische Alternativen getauscht, die Ermüdung (RPE) steuert den Volumen-Start.</p>`:""}
         ${rotMode?`<p class="xs t2 mt8">Nach jeder Einheit rückt die Rotation automatisch weiter.</p>`:""}
+        <div class="card" data-tone="hl" style="margin:12px 0 0">
+          <p class="ct">${icon("chart",14)} Fremden Plan prüfen${S.auditLetzte?` · zuletzt ${S.auditLetzte.imKorridor}/${S.auditLetzte.gruppen}`:""}</p>
+          <p class="xs t2" style="line-height:1.6">Plan aus ChatGPT, von Instagram oder vom Trainer einfügen — die Engine rechnet jede Muskelgruppe gegen den Korridor, nennt die drei wichtigsten Lücken und <b style="color:var(--t1)">schließt sie, ohne deinen Plan wegzuwerfen</b>. Ohne KI, ohne Netz, auf deinem Gerät.</p>
+          <button class="btn volt mt12" style="min-height:44px" onclick="showPlanAudit()">${icon("chart",15)} Plan prüfen und reparieren</button>
+          ${S.auditLetzte?`<button class="btn ghost mt8" style="min-height:38px;font-size:12.5px" onclick="A.auditLetzte()">Letzte Prüfung ansehen</button>`:""}
+        </div>
         <details class="acc" style="margin-top:12px;border:1px solid var(--border);border-radius:18px;background:var(--s2);overflow:hidden">
           <summary style="font-size:13.5px;font-weight:600;padding:14px 14px"><span style="display:flex;align-items:center;gap:8px">${icon("edit",15)} Plan bearbeiten, importieren oder neu berechnen</span><span class="t2 chev">${icon("chevron",16)}</span></summary>
           <div class="accbody" style="padding:0 14px 12px">
-            <p class="xs t2 mb8" style="line-height:1.55">Einen fremden Plan als <b style="color:var(--t1)">Text</b> einfügen und gegen den Korridor prüfen — ohne KI, ohne Netz, rein gerechnet. Du bekommst jede Gruppe im Korridor, die drei wichtigsten Lücken und zu jeder Zahl ihre Herleitung.</p>
-            <button class="btn" onclick="showPlanAudit()">${icon("chart",15)} Plan als Text prüfen</button>
-            <div style="height:1px;background:var(--hairline);margin:14px 0"></div>
             <p class="xs t2 mb8" style="line-height:1.55">Lade deinen aktuellen Plan hoch (bis 8 Bilder) — <b style="color:var(--t1)">Foto machen oder aus der Galerie wählen</b>. Coach Metric liest ihn, vergleicht ihn mit METRICGYM und übernimmt ihn — oder zeigt dir, warum METRICGYM stärker ist.</p>
             <button class="btn" onclick="A.planImportPick()">${icon("camera",15)} Plan-Bilder hochladen</button>
             <input type="file" id="plan-import-file" accept="image/*" multiple style="display:none" onchange="A.planImportFiles(this)">
