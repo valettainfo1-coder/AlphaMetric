@@ -939,15 +939,21 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
       const woche = S.schedule.filter(k => k && k !== 'rest' && k !== 'cardio');
       const ohneDup = {}, mitAllen = {};
       S.currentWeek = 1;
-      for (const k of peDays()) for (const e of peExArr(k)) {
-        const g = volGroupOf(e.n); if (g) ohneDup[g] = (ohneDup[g] || 0) + weekSets(e.n, e.sets); }
-      for (const k of woche) for (const e of peExArr(k)) {
-        const g = volGroupOf(e.n); if (g) mitAllen[g] = (mitAllen[g] || 0) + weekSets(e.n, e.sets); }
+      /* FRAKTIONIERT gegenrechnen. Der Bio-Check zaehlt seit V1 fraktioniert
+         (ein Satz 1,0 fuer den Zielmuskel, 0,5 fuer jeden mitarbeitenden) —
+         eine direkt gezaehlte Vergleichssumme misst dann etwas anderes und der
+         Test faellt aus dem falschen Grund. Geprueft wird weiterhin genau
+         dasselbe: ob wiederholte Einheiten mitgezaehlt werden. */
+      const zaehl = (ziel, keys) => { for (const k of keys) for (const e of peExArr(k)) {
+        const n = weekSets(e.n, e.sets);
+        for (const [g, f] of Object.entries(satzAnteile(e.n) || {})) ziel[g] = (ziel[g] || 0) + n * f; } };
+      zaehl(ohneDup, peDays());
+      zaehl(mitAllen, woche);
       const check = planBioCheck();
       aus[tage] = { je, wiederholt: woche.length !== peDays().length,
-        checkSumme: check.reduce((s, r) => s + r.v, 0),
-        echteSumme: Object.values(mitAllen).reduce((s, x) => s + x, 0),
-        dupSumme: Object.values(ohneDup).reduce((s, x) => s + x, 0) };
+        checkSumme: Math.round(check.reduce((s, r) => s + r.v, 0) * 10) / 10,
+        echteSumme: Math.round(Object.values(mitAllen).reduce((s, x) => s + x, 0) * 10) / 10,
+        dupSumme: Math.round(Object.values(ohneDup).reduce((s, x) => s + x, 0) * 10) / 10 };
     }
     return aus;
   });
@@ -967,7 +973,14 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
   const mitWdh = [2,3,4,5,6].filter(t => v[t].wiederholt);
   check('Volumen: es gibt überhaupt einen Plan mit wiederholter Einheit (sonst misst Test 4 nichts)',
     mitWdh.length > 0, `wiederholt bei ${mitWdh.join(', ')} Tagen`);
-  const falschGezaehlt = mitWdh.filter(t => v[t].checkSumme !== v[t].echteSumme);
+  /* 0,2 Toleranz: planBioCheck rundet je Gruppe auf eine Nachkommastelle,
+     die Vergleichssumme erst am Ende. Groessere Abweichungen sind echte. */
+  const falschGezaehlt = mitWdh.filter(t => Math.abs(v[t].checkSumme - v[t].echteSumme) > 0.2);
+  // Negativkontrolle: der Test muss ueberhaupt ausschlagen koennen — ohne die
+  // Duplikate muesste die Summe KLEINER sein, sonst misst er nichts.
+  check('Volumen: Negativkontrolle — ohne Duplikate wäre die Summe kleiner',
+    mitWdh.every(t => v[t].dupSumme < v[t].echteSumme),
+    mitWdh.map(t => `${t} Tage: ${v[t].dupSumme} < ${v[t].echteSumme}`).join(' | '));
   check('Volumen: der Bio-Check zählt wiederholte Einheiten mit',
     falschGezaehlt.length === 0,
     falschGezaehlt.length
@@ -1178,6 +1191,69 @@ check('Profile: nach dem Anlegen ist das NEUE Profil aktiv, nicht das alte',
     m.unbewegt === true, 'Plansätze verdoppeln bewegt den Log-Bericht nicht');
   check('L1 Negativkontrolle: zu wenig Log fällt auf den Plan zurück',
     m.zuWenig === 'plan', `${m.zuWenigSaetze} Sätze im Fenster`);
+}
+
+// ── V1: fraktionierter Deckel, ein Zeitmodell, Budget, Aufteilungs-Berater ───
+// Der Deckel zaehlte nur direkte Arbeit: Bankdruecken 1,0 auf die Brust, 0,0 auf
+// den Trizeps. Gemessen lag der Trizeps bei 22,5 Saetzen (MRV 18), ohne dass es
+// jemand bemerkte. Und es gab nur einen Fueller, keinen Trimmer — ein
+// 40-Minuten-Budget lief auf 225 Minuten hinaus.
+{
+  const m = await page.evaluate(() => {
+    const GR = ['Brust','Rücken','Schultern','Bizeps','Trizeps','Beine','Core'];
+    const basis = { sex:'male', age:25, height:180, weight:80, bodyFat:15,
+      goals:['muscle_gain'], exp:'intermediate', injury:[], equipment:'gym_full',
+      act:'light', split:'auto', focus:[], schedule_pref:'consistent',
+      recovery_profile:'average' };
+    const lauf = (tage, st) => {
+      const a = { ...basis, days: tage, sessionTime: st };
+      const plan = generateTrainingPlan({ a });
+      const sch = generateOptimalSchedule(a).schedule.filter(x => x && x !== 'rest' && x !== 'cardio');
+      const bands = deficitScaledBands(a);
+      const vol = {}; let min = 0;
+      for (const key of sch) {
+        const b = parseTypeKey(key).base, d = plan[b]; if (!d) continue;
+        min += d.est || 0;
+        for (const e of [...(d.main||[]), ...(d.abs||[])]) {
+          const n = weekSets(e.n, e.sets);
+          for (const [g, f] of Object.entries(satzAnteile(e.n) || {})) vol[g] = (vol[g]||0) + n*f;
+        }
+      }
+      return { tage, st, budget: tage*st, min,
+        ueber: GR.filter(g => (vol[g]||0) > (bands[g]||[0,99])[1]),
+        gemeldet: plan.__budget ? plan.__budget.grund : null,
+        trizeps: Math.round((vol['Trizeps']||0)*10)/10, mrvTri: bands['Trizeps'][1] };
+    };
+    const faelle = [[3,40],[3,60],[3,75],[4,60],[5,60],[6,45]].map(([t,s]) => lauf(t,s));
+    return { faelle: faelle.map(f => ({ ...f, drueber: f.min - f.budget })),
+      best160: besteAufteilung(160, basis), best300: besteAufteilung(300, basis) };
+  });
+
+  check('V1: kein Muskel überschreitet sein MRV — fraktioniert gezählt',
+    m.faelle.every(f => f.ueber.length === 0),
+    m.faelle.filter(f => f.ueber.length).map(f => `${f.tage}×${f.st}: ${f.ueber.join(',')}`).join(' · ')
+      || `${m.faelle.length} Profile geprüft`);
+  check('V1: der Trizeps liegt unter seinem Deckel (vorher 22,5 bei MRV 18)',
+    m.faelle.every(f => f.trizeps <= f.mrvTri),
+    m.faelle.map(f => `${f.tage}×${f.st}: ${f.trizeps}≤${f.mrvTri}`).join(' · '));
+  /* Entweder der Plan passt ins Budget — oder er sagt, warum nicht. Still
+     darueberzulaufen ist das einzige, was nicht erlaubt ist. */
+  check('V1: der Plan hält das Zeitbudget — oder meldet, warum nicht',
+    m.faelle.every(f => f.drueber <= 15 || f.gemeldet === 'mev'),
+    m.faelle.map(f => `${f.tage}×${f.st} ${f.min}/${f.budget}${f.gemeldet?" ("+f.gemeldet+")":""}`).join(' · '));
+  check('V1: bei knappem Budget nennt die Engine den Mindestreiz als Grund',
+    m.faelle.filter(f => f.drueber > 15).every(f => f.gemeldet === 'mev'),
+    m.faelle.filter(f => f.drueber > 15).map(f => `${f.tage}×${f.st}: ${f.gemeldet}`).join(' · ') || 'kein Fall über Budget');
+  check('V1: Aufteilungs-Berater empfiehlt für 160 und 300 Min',
+    !!(m.best160 && m.best160.beste && m.best300 && m.best300.beste),
+    m.best160 ? `160→${m.best160.beste.tage}×${m.best160.beste.sessionTime} · 300→${m.best300.beste.tage}×${m.best300.beste.sessionTime}` : '—');
+  check('V1: bei 300 Min deckt die Empfehlung alle sieben Gruppen ab',
+    !!m.best300 && m.best300.beste.imKorridor === 7,
+    m.best300 ? `${m.best300.beste.imKorridor}/7 · Ø ${m.best300.beste.reiz} %` : '—');
+  check('V1: keine Alternative ist besser als die Empfehlung',
+    !!m.best300 && m.best300.alle.every(v => v.imKorridor < m.best300.beste.imKorridor ||
+      (v.imKorridor === m.best300.beste.imKorridor && v.reiz <= m.best300.beste.reiz)),
+    m.best300 ? m.best300.alle.map(v => `${v.tage}×${v.sessionTime}:${v.imKorridor}/${v.reiz}%`).join(' ') : '—');
 }
 
 check('Keine Seiten-Fehler während der Suite', errs.length === 0, errs.join(' | ').slice(0, 140));

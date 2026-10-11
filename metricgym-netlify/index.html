@@ -5659,6 +5659,67 @@ function herleitungParamHTML(keys){
     </div>`;}).join("");
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   BESTE AUFTEILUNG EINES WOCHENBUDGETS
+
+   Wer sagt "ich habe 160 Minuten pro Woche", hat damit noch nicht gesagt, wie
+   er sie aufteilt — und die Aufteilung entscheidet messbar mit. Auf- und
+   Abwaermen fallen JE EINHEIT an: bei fuenf kurzen Einheiten gehen davon
+   65 Minuten weg, bei zwei langen nur 26. Gemessen fuer 160 Minuten und das
+   Ziel Muskelaufbau:
+
+     2×80  →  6/7 im Korridor, Ø 66 %, 25 Reiz/h
+     3×53  →  5/7,             Ø 61 %, 22 Reiz/h
+     4×40  →  5/7,             Ø 53 %, 20 Reiz/h
+     5×32  →  5/7,             Ø 52 %, 19 Reiz/h
+
+   Bei grossem Budget kippt es: dort begrenzt nicht die Zeit, sondern das
+   erholbare Volumen, und mehr Einheiten verteilen dasselbe Volumen besser.
+   Bei 300 Minuten gewinnt 5×60 mit 7/7 und Ø 80 %.
+
+   Die Funktion rechnet das fuer das konkrete Profil durch, statt eine
+   Faustregel zu behaupten. Sie ist absichtlich teuer (sie baut je Variante
+   einen ganzen Plan) und gehoert deshalb nicht in den Render-Pfad. */
+function besteAufteilung(wochenMinuten,a){
+  a=a||(S.profile&&S.profile.a)||{};
+  if(!(wochenMinuten>=60)) return null;
+  const GR=["Brust","Rücken","Schultern","Bizeps","Trizeps","Beine","Core"];
+  const bands=deficitScaledBands(a);
+  const kk=reizK(primaryGoal(a),a);
+  const raus=[];
+  for(let tage=2;tage<=6;tage++){
+    const st=Math.round(wochenMinuten/tage/5)*5;
+    if(st<30||st>120) continue;                 // ausserhalb sinnvoller Einheitslaengen
+    let plan,sch;
+    try{
+      const aa={...a, days:tage, sessionTime:st};
+      plan=generateTrainingPlan({a:aa});
+      sch=generateOptimalSchedule(aa).schedule.filter(x=>x&&x!=="rest"&&x!=="cardio");
+    }catch(e){ continue; }
+    const vol={}; let min=0, saetze=0;
+    for(const key of sch){
+      const base=parseTypeKey(key).base, d=plan[base]; if(!d) continue;
+      min+=d.est||0;
+      for(const e of [...(d.main||[]),...(d.abs||[])]){
+        const n=weekSets(e.n,e.sets); saetze+=n;
+        for(const [m,f] of Object.entries(satzAnteile(e.n)||{})) vol[m]=(vol[m]||0)+n*f;
+      }
+    }
+    let imKorridor=0, reizSum=0;
+    for(const m of GR){ const n=vol[m]||0, b=bands[m]||[0,99];
+      reizSum+=reizKurve(n,kk);
+      if(n>=b[0]&&n<=b[1]) imKorridor++; }
+    const reiz=reizSum/GR.length*100;
+    raus.push({tage, sessionTime:st, minuten:min, saetze, imKorridor,
+      reiz:Math.round(reiz), proStunde:min>0?Math.round(reiz/(min/60)):0});
+  }
+  if(!raus.length) return null;
+  /* Sortiert wird nach Abdeckung ZUERST: eine Gruppe unter ihrem Mindestreiz
+     ist ein Loch, das kein hoeherer Durchschnitt ausgleicht. Danach der Reiz. */
+  raus.sort((x,y)=> (y.imKorridor-x.imKorridor) || (y.reiz-x.reiz) || (y.proStunde-x.proStunde));
+  return {beste:raus[0], alle:raus, budget:wochenMinuten};
+}
+
 /* Der Bericht. Gibt je Muskel UND gesamt zurück, worauf sich alles stützt. */
 function effizienzBericht(a){
   a=a||(S.profile&&S.profile.a)||{};
@@ -7051,7 +7112,19 @@ function capWeeklyVolume(PLAN,a,ctx){
     if(!sch.length) return;
     const bases=[...new Set(sch)];
     const exesOf=(base)=>[...PLAN[base].main,...(PLAN[base].abs||[])];
-    const weekly=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+peak(e); } } return w; };
+    /* FRAKTIONIERT ZAEHLEN — der Deckel war blind.
+       volGroupOf() liefert EINEN Muskel, den primaeren: Bankdruecken zaehlte
+       1,0 auf die Brust und 0,0 auf den Trizeps. Genau die fraktionierte
+       Zaehlung, mit der die App wirbt und mit der Effizienzbericht und Eichung
+       rechnen, sah ihr eigener Sicherheitsdeckel nicht. Gemessen an einem
+       3-Tage-Plan: der Deckel sah 12 Trizeps-Saetze, tatsaechlich waren es
+       22,5 — bei einem MRV von 18. Er war blind fuer 10,5 Saetze.
+       Jetzt zaehlen Deckel, Bericht und Eichung gleich. */
+    const anteileVon=(n)=>satzAnteile(n)||{};
+    const weekly=()=>{ const w={};
+      for(const base of sch){ for(const e of exesOf(base)){
+        for(const [m,f] of Object.entries(anteileVon(e.n))) w[m]=(w[m]||0)+peak(e)*f;
+      } } return w; };
     /* DER BODEN GEHOERT AN DIE NIEDRIGSTE WOCHE, DIE DECKE AN DIE HOECHSTE.
        Bis hierher wurde BEIDES an der Woche-3-Spitze gemessen (peak = sets+1 bei
        Grunduebungen). Die MRV-Deckelung ist damit richtig — sie muss die
@@ -7068,11 +7141,17 @@ function capWeeklyVolume(PLAN,a,ctx){
        Haelfte der Trainingszeit unter der Schwelle, ab der das Modell der App
        ueberhaupt Wachstum erwartet. Die Untergrenze wird deshalb jetzt an den
        Grundsaetzen gemessen (Woche 1), die Obergrenze weiter an der Spitze. */
-    const weeklyBasis=()=>{ const w={}; for(const base of sch){ for(const e of exesOf(base)){ const g=grpOf(e.n); if(g)w[g]=(w[g]||0)+e.sets; } } return w; };
+    const weeklyBasis=()=>{ const w={};
+      for(const base of sch){ for(const e of exesOf(base)){
+        for(const [m,f] of Object.entries(anteileVon(e.n))) w[m]=(w[m]||0)+e.sets*f;
+      } } return w; };
     // 1) SÄTZE senken (Floor 2) — hält die Übungszahl hoch und das Volumen mittig im Korridor.
     let w=weekly();
     for(const [g,band] of Object.entries(BANDS)){ const hi=band[1]; if((w[g]||0)<=hi)continue; const scale=hi/(w[g]);
-      for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } } }
+      for(const base of bases){ for(const e of exesOf(base)){
+        /* Jede Uebung, die zu g BEITRAEGT, nicht nur die mit g als Zielmuskel —
+           sonst schrumpft man Curls, waehrend das Rudern das Volumen traegt. */
+        if(anteileVon(e.n)[g]) e.sets=Math.max(2,Math.floor(e.sets*scale)); } } }
     // 2) Falls TROTZ Floor-2 noch über MRV (extreme Frequenz): Isolation/Abs entfernen, ≥1 Hauptübung/Gruppe.
     for(const [g,band] of Object.entries(BANDS)){
       const hi=band[1]; let guard=0; w=weekly();
@@ -7081,7 +7160,9 @@ function capWeeklyVolume(PLAN,a,ctx){
         for(const base of bases){
           for(const arr of ["main","abs"]){
             const list=PLAN[base][arr]; if(!list)continue;
-            const gIdx=list.map((e,i)=>grpOf(e.n)===g?i:-1).filter(i=>i>=0);
+            /* Entfernt wird bevorzugt, was g DIREKT laedt — eine Grunduebung
+               wegen ihres Nebenbeitrags zu streichen waere der falsche Hebel. */
+            const gIdx=list.map((e,i)=>(grpOf(e.n)===g||(anteileVon(e.n)[g]||0)>=1)?i:-1).filter(i=>i>=0);
             if(arr==="main" && gIdx.length<=1)continue;
             for(const i of gIdx){ const s=(isCompound(list[i].n)?0:100)+(arr==="abs"?50:0)+gIdx.length; if(s>pickScore){ pickScore=s; pick=[base,arr,i]; } }
           }
@@ -7216,7 +7297,18 @@ function capWeeklyVolume(PLAN,a,ctx){
     //    stapeln). NIE über MRV — ein Satz mehr erhöht das WOCHENvolumen um die Frequenz f.
     const budget=Math.max(30,a.sessionTime||60);
     const freqOf={}; for(const base of sch) freqOf[base]=(freqOf[base]||0)+1; // wie oft eine Einheit/Woche vorkommt
-    const estOfBase=(base)=>{ const d=PLAN[base]; const sm=d.main.reduce((s,e)=>s+e.sets*(0.75+e.rest/60),0)+(d.abs||[]).reduce((s,e)=>s+e.sets*1.5,0); return Math.round((8+sm+5)/5)*5; };
+    /* EIN ZEITMODELL. Hier stand sets*(0,75+rest/60) — eine pauschale
+       Arbeitszeit von 45 s je Satz, die Tempo und Wiederholungen ignoriert.
+       Der Effizienzbericht rechnet daneben mit satzSekunden() aus Tempo und
+       Wiederholungen. Gemessen wichen beide um bis zu 44 Min/Woche
+       voneinander ab (225 gegen 181 bei einem 40-Min-Budget). Zwei
+       Zeitmodelle heissen: eine der beiden Zahlen luegt den Nutzer an.
+       Jetzt rechnen beide gleich, plus Aufwaermen und Abschluss. */
+    const AUFWAERMEN=8, ABSCHLUSS=5;
+    const minSatz=(e)=>satzSekunden(e)/60;
+    const estOfBase=(base)=>{ const d=PLAN[base];
+      const sm=[...d.main,...(d.abs||[])].reduce((s,e)=>s+e.sets*minSatz(e),0);
+      return Math.round((AUFWAERMEN+sm+ABSCHLUSS)/5)*5; };
     const scheme=ctx.scheme, PP=ctx.PP, mk=ctx.mk, fits=ctx.fits||(()=>false), SLOTS=ctx.SLOTS||{};
     const canBuild=!!(scheme&&PP&&mk);
     for(const base of bases){ const d=PLAN[base]; let guard=0; const f=freqOf[base]||1;
@@ -7265,16 +7357,130 @@ function capWeeklyVolume(PLAN,a,ctx){
         }
       }
     }
+    /* 5) ZEITBUDGET — trimmen UND fuellen, nach Grenznutzen je Minute.
+       ------------------------------------------------------------------
+       Bis hierher gab es nur einen Fueller: `while(est < budget)` fuegte
+       hinzu, entfernte aber nie. War der Grundplan schon ueber Budget, trimmte
+       ihn niemand — gemessen lief ein 40-Minuten-Budget auf 60+ Minuten je
+       Einheit hinaus. Wer 40 Minuten angibt, bekommt dann einen Plan, den er
+       nicht zu Ende trainieren kann, und faellt unter das Volumen, das die
+       App ihm zugesagt hat.
+
+       Und die Reihenfolge war fest ("Schultern, Bizeps, Trizeps, Brust, …").
+       Welcher Satz als naechstes am meisten bringt, haengt aber davon ab, wo
+       man steht: der Grenznutzen faellt mit dem Volumen. Die App RECHNET das
+       bereits (grenzNutzen) — sie hat es beim Planbau nur nicht benutzt.
+
+       Jetzt entscheidet bei jedem Schritt derselbe Massstab wie im
+       Effizienzbericht: Reizgewinn geteilt durch Zeitkosten. Nach unten
+       schuetzt das MEV, nach oben das MRV. */
+    (()=>{
+      const zielG=primaryGoal(a), kk=reizK(zielG,a);
+      const budgetWoche=budget*sch.length;
+      const freqB2={}; for(const b of sch) freqB2[b]=(freqB2[b]||0)+1;
+      const minutenWoche=()=>sch.reduce((s,b)=>s+estOfBase(b),0);
+      /* Reizgewinn eines zusaetzlichen Satzes: ueber alle Muskeln, die die
+         Uebung laedt, der Grenznutzen an der Stelle, wo die Gruppe steht. */
+      const gewinn=(e,f,w)=>{ let g=0;
+        for(const [m,an] of Object.entries(anteileVon(e.n)))
+          g+=an*grenzNutzen((w[m]||0), kk);
+        return g*f; };
+      const kosten=(e,f)=>Math.max(0.1, f*minSatz(e));
+
+      // ── trimmen, solange ueber Budget ──
+      let guard=0;
+      while(minutenWoche()>budgetWoche && guard++<160){
+        /* MEV gegen die GRUNDWOCHE pruefen, MRV gegen die Spitze — dieselbe
+           Trennung, die der Deckel oben schon macht. Erster Versuch pruefte
+           beides gegen die Spitze; dadurch trimmte der Budget-Pass Gruppen in
+           Woche 1 unter ihren Mindestreiz, und zwei bestehende Pruefungen
+           wurden zu Recht rot (Beine 10/12, Ruecken 9/10, Schultern 6/8). */
+        const w=weekly(), wb=weeklyBasis(); let pick=null, schlechtest=Infinity;
+        for(const base of bases){
+          const f=freqB2[base]||1;
+          for(const arr of ["main","abs"]){
+            const list=PLAN[base][arr]; if(!list) continue;
+            for(let i=0;i<list.length;i++){
+              const e=list[i]; if(e.sets<=1) continue;
+              // kein Muskel darf unter sein MEV fallen
+              let verboten=false;
+              for(const [m,an] of Object.entries(anteileVon(e.n))){
+                const band=BANDS[m]; if(!band) continue;
+                if((wb[m]||0)-f*an < band[0]) { verboten=true; break; }
+              }
+              if(verboten) continue;
+              const r=gewinn(e,f,w)/kosten(e,f);
+              if(r<schlechtest){ schlechtest=r; pick=[base,arr,i]; }
+            }
+          }
+        }
+        if(!pick){
+          /* Nichts mehr kuerzbar, ohne eine Gruppe unter ihren Mindestreiz zu
+             druecken. Der Plan bleibt dann ueber Budget — das ist richtig
+             (ein Plan unter MEV waere wirkungslos), aber es gehoert gesagt
+             statt verschwiegen. Beispiel: 3×40 Min reichen fuer sieben
+             Muskelgruppen schlicht nicht, weil Auf- und Abwaermen allein
+             39 Minuten der 120 kosten. */
+          PLAN.__budget={ueber:Math.round(minutenWoche()-budgetWoche), grund:"mev"};
+          break;
+        }
+        PLAN[pick[0]][pick[1]][pick[2]].sets--;
+      }
+      if(!PLAN.__budget && minutenWoche()>budgetWoche)
+        PLAN.__budget={ueber:Math.round(minutenWoche()-budgetWoche), grund:"rest"};
+
+      // ── fuellen, solange Luft bleibt ──
+      const schwelle=Math.max(5,Math.round(budget*0.12));
+      guard=0;
+      while(minutenWoche() < budgetWoche-schwelle && guard++<160){
+        const w=weekly(); let pick=null, best=-1;
+        for(const base of bases){
+          const f=freqB2[base]||1;
+          for(const arr of ["main","abs"]){
+            const list=PLAN[base][arr]; if(!list) continue;
+            for(let i=0;i<list.length;i++){
+              const e=list[i]; if(e.sets>=5) continue;
+              let verboten=false;
+              for(const [m,an] of Object.entries(anteileVon(e.n))){
+                const band=BANDS[m]; if(!band) continue;
+                if((w[m]||0)+f*an > band[1]) { verboten=true; break; }
+              }
+              if(verboten) continue;
+              const r=gewinn(e,f,w)/kosten(e,f);
+              if(r>best){ best=r; pick=[base,arr,i]; }
+            }
+          }
+        }
+        if(!pick) break;
+        PLAN[pick[0]][pick[1]][pick[2]].sets++;
+      }
+    })();
     // 4) SICHERHEITS-DECKEL: Nach MEV-Garantie & Zeit-Füllung erneut hart auf MRV begrenzen —
     //    Injektion/Füllung dürfen NIE über das (defizit-angepasste) MRV schießen (Übertraining).
     for(const [g,band] of Object.entries(BANDS)){ const hi=band[1]; let w2=weekly(); if((w2[g]||0)<=hi)continue;
-      const scale=hi/(w2[g]); for(const base of bases){ for(const e of exesOf(base)){ if(grpOf(e.n)===g) e.sets=Math.max(2,Math.floor(e.sets*scale)); } }
+      /* MIT BODEN. Seit der Deckel fraktioniert zaehlt, findet dieser letzte
+         Sicherheitsschritt mehr Ueberschreitungen — und kuerzte dabei Gruppen
+         unter ihren Mindestreiz. Gemessen fielen Ruecken auf 7/10 und
+         Schultern auf 7/8. Ein Plan, der die Obergrenze einhaelt, indem er die
+         Untergrenze reisst, ist nicht sicherer, nur wirkungsloser.
+         Gekuerzt wird deshalb nur, solange die Grundwoche ueber MEV bleibt. */
+      const haeltMev=(e,anzahl)=>{ const wb=weeklyBasis();
+        for(const [m,an] of Object.entries(anteileVon(e.n))){
+          const bd=BANDS[m]; if(!bd) continue;
+          if((wb[m]||0)-anzahl*an < bd[0]) return false; }
+        return true; };
+      const scale=hi/(w2[g]);
+      for(const base of bases){ for(const e of exesOf(base)){
+        if(!anteileVon(e.n)[g]) continue;
+        const neu=Math.max(2,Math.floor(e.sets*scale));
+        if(neu<e.sets && haeltMev(e, e.sets-neu)) e.sets=neu; } }
       let guard=0; w2=weekly();
       while((w2[g]||0)>hi && guard++<24){
         let pick=null,ps=-1;
         for(const base of bases){ for(const arr of ["main","abs"]){ const list=PLAN[base][arr]; if(!list)continue;
-          const gIdx=list.map((e,i)=>grpOf(e.n)===g?i:-1).filter(i=>i>=0); if(arr==="main"&&gIdx.length<=1)continue;
-          for(const i of gIdx){ const s=(isCompound(list[i].n)?0:100)+(arr==="abs"?50:0)+gIdx.length; if(s>ps){ps=s;pick=[base,arr,i];} } } }
+          const gIdx=list.map((e,i)=>(grpOf(e.n)===g||(anteileVon(e.n)[g]||0)>=1)?i:-1).filter(i=>i>=0); if(arr==="main"&&gIdx.length<=1)continue;
+          for(const i of gIdx){ if(!haeltMev(list[i], list[i].sets)) continue;
+            const s=(isCompound(list[i].n)?0:100)+(arr==="abs"?50:0)+gIdx.length; if(s>ps){ps=s;pick=[base,arr,i];} } } }
         if(!pick)break; PLAN[pick[0]][pick[1]].splice(pick[2],1); w2=weekly();
       }
     }
@@ -15357,7 +15563,20 @@ function peCandidates(key){ const base=parseTypeKey(key).base; const a=(S.profil
    Anzeige log. */
 function planBioCheck(){ const a=(S.profile&&S.profile.a)||{}; const bands=deficitScaledBands(a); const weekly={};
   const woche=(typeof schedule==="function"?schedule():(S.schedule||[])).filter(k=>k&&k!=="rest"&&k!=="cardio");
-  for(const key of woche){ for(const e of peExArr(key)){ const g=volGroupOf(e.n); if(!g)continue; weekly[g]=(weekly[g]||0)+weekSets(e.n,e.sets); } } const rows=[]; for(const g of Object.keys(bands)){ const [mev,mrv]=bands[g]; const v=Math.round(weekly[g]||0); if(v===0)continue; rows.push({g,v,mev,mrv,st:v<mev?"low":v>mrv?"high":"ok"}); } const ord={low:0,high:1,ok:2}; return rows.sort((x,y)=>ord[x.st]-ord[y.st]); }
+  /* FRAKTIONIERT — dieselbe Konvention wie Deckel, Effizienzbericht und
+     Eichung. Zaehlte dieser Check weiter nur direkte Arbeit, waehrend der
+     Deckel seit V1 fraktioniert deckelt, arbeiten beide gegeneinander: der
+     Deckel kuerzt wegen des Gesamtvolumens, der Check meldet dieselbe Gruppe
+     als "unter MEV". Die Baender sind ohnehin fuer fraktionierte Zaehlung
+     gesetzt — Trizeps-MEV 6, weil jedes Druecken 0,5 Saetze zurechnet. */
+  for(const key of woche){ for(const e of peExArr(key)){
+    const n=weekSets(e.n,e.sets);
+    for(const [g,f] of Object.entries(satzAnteile(e.n)||{})) weekly[g]=(weekly[g]||0)+n*f;
+  } }
+  const rows=[]; for(const g of Object.keys(bands)){ const [mev,mrv]=bands[g];
+    const roh=weekly[g]||0; if(roh===0)continue;
+    const v=Math.round(roh*10)/10;
+    rows.push({g,v,mev,mrv,st:roh<mev?"low":roh>mrv?"high":"ok"}); } const ord={low:0,high:1,ok:2}; return rows.sort((x,y)=>ord[x.st]-ord[y.st]); }
 /* Effizienz-Tafel für den Plan-Editor: zeigt, wo die investierte Zeit
    tatsächlich Anpassung erzeugt — und wo nicht mehr. */
 function effizienzHTML(){
@@ -15951,6 +16170,13 @@ function bioProofParts(typeKey){
     const weekly={},freq={};
     for(const t of sch){ if(t==="rest"||t==="cardio")continue; const b=parseTypeKey(t).base; freq[b]=(freq[b]||0)+1;
       const dd=sessionDef(t);
+      /* OFFEN: Dieser Check zaehlt weiter nur DIREKTE Arbeit (volGroupOf),
+         waehrend Deckel, Effizienzbericht und Eichung seit V1 fraktioniert
+         zaehlen. Ein Umstellen hier wurde versucht und wieder zurueckgenommen:
+         der Check rekonstruiert den Tag ueber peExArr() aus dem aktuellen
+         Zustand, nicht aus dem uebergebenen Plan, und zeigte dadurch andere
+         Zahlen als derselbe Plan direkt gemessen (Ruecken 7 statt 10,5).
+         Das ist eine eigene Baustelle und wird nicht nebenbei halb gemacht. */
       for(const e of [...dd.main,...(dd.abs||[])]){ const g=volGroupOf(e.n); if(g)weekly[g]=(weekly[g]||0)+weekSets(e.orig||e.n,e.sets); } }
     const groups=[...new Set([...d.main,...(d.abs||[])].map(e=>volGroupOf(e.n)).filter(g=>g&&bands[g]))];
     if(!groups.length) return null;

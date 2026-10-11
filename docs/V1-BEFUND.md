@@ -1,7 +1,11 @@
 # V1 — Volumenzählung und Zeitbudget: Befund und offener Rest
 
-Stand 2026-10-11 · Branch `phase1-fundament` · **Code zurückgesetzt, nicht ausgeliefert**
-Entwurf als Patch: `docs/entwuerfe/V1-volumen-und-budget.patch`
+Stand 2026-10-11 · Branch `phase1-fundament` · **ERLEDIGT und ausgeliefert in v80**
+
+Dieses Dokument hielt den Befund fest, solange die Umsetzung offen war. Sie ist
+es nicht mehr: v80 enthält alle fünf Reparaturen. Der Abschnitt „Der offene
+Rest" unten beschreibt, was gefehlt hat — er ist erledigt, bleibt aber stehen,
+weil er die Fehlersuche dokumentiert.
 
 ## Warum zurückgesetzt
 
